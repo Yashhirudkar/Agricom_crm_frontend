@@ -45,11 +45,37 @@
   text-decoration: none !important;
 }
 
-/* Weekly Off Date Numbers styling (soft round light red highlight for active current month days) */
-.holiday-calendar-container .fc-day-sun:not(.fc-day-other):not(.fc-day-today) .fc-daygrid-day-number,
+/* Weekly Off Date Numbers styling */
+.holiday-calendar-container .sunday-off-cell:not(.fc-day-other):not(.fc-day-today) .fc-daygrid-day-number,
+.holiday-calendar-container .fc-day-sun:not(.fc-day-other):not(.fc-day-today) .fc-daygrid-day-number {
+  color: #ef4444 !important; /* Red text */
+  background-color: rgba(239, 68, 68, 0.1) !important; /* Soft transparent red circle */
+  border-radius: 9999px !important;
+  min-width: 26px;
+  height: 26px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 6px !important;
+  padding: 0 !important;
+}
+
+.holiday-calendar-container .saturday-off-cell:not(.fc-day-other):not(.fc-day-today) .fc-daygrid-day-number {
+  color: #ec4899 !important; /* Pink text */
+  background-color: rgba(236, 72, 153, 0.1) !important; /* Soft transparent pink circle */
+  border-radius: 9999px !important;
+  min-width: 26px;
+  height: 26px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 6px !important;
+  padding: 0 !important;
+}
+
 .holiday-calendar-container .has-weekly-off:not(.fc-day-other):not(.fc-day-today) .fc-daygrid-day-number {
-  color: #ef4444 !important; /* Soft premium red */
-  background-color: rgba(239, 68, 68, 0.08) !important; /* Soft transparent red circle background */
+  color: #8b5cf6 !important; /* Purple text for other weekly offs */
+  background-color: rgba(139, 92, 246, 0.1) !important;
   border-radius: 9999px !important;
   min-width: 26px;
   height: 26px;

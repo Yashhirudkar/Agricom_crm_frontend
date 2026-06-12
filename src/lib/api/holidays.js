@@ -20,6 +20,11 @@ export const createHoliday = async (data) => {
   return response.data;
 };
 
+export const createRecurringHolidays = async (data) => {
+  const response = await axiosClient.post("/holidays/recurring", data);
+  return response.data;
+};
+
 export const updateHoliday = async (id, data) => {
   const response = await axiosClient.put(`/holidays/${id}`, data);
   return response.data;

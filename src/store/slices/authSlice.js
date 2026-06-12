@@ -11,8 +11,8 @@ export const loginUser = createAsyncThunk(
       const loginRes = await axiosClient.post("/auth/login", { email, password });
       const { accessToken } = loginRes.data;
 
-      // Step 2: Save token to localStorage so interceptor can use it immediately
-      localStorage.setItem("accessToken", accessToken);
+      // Step 2: Save token to sessionStorage so interceptor can use it immediately
+      sessionStorage.setItem("accessToken", accessToken);
 
       // Step 3: Fetch current user profile
       const meRes = await axiosClient.get("/auth/me");
@@ -46,7 +46,7 @@ export const logoutUser = createAsyncThunk(
     } catch (_) {
       // Even if the API call fails, we still clear local session
     } finally {
-      localStorage.removeItem("accessToken");
+      sessionStorage.removeItem("accessToken");
     }
   }
 );
@@ -70,7 +70,7 @@ const authSlice = createSlice({
     // Called on app boot to rehydrate token from localStorage
     rehydrateToken(state) {
       if (typeof window !== "undefined") {
-        const token = localStorage.getItem("accessToken");
+        const token = sessionStorage.getItem("accessToken");
         if (token) {
           state.accessToken = token;
         }
@@ -118,7 +118,7 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.isInitialized = true;
         if (typeof window !== "undefined") {
-          localStorage.removeItem("accessToken");
+          sessionStorage.removeItem("accessToken");
         }
       });
 

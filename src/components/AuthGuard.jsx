@@ -25,7 +25,7 @@ export function AuthGuard({ children }) {
 
   useEffect(() => {
     // On first load: rehydrate token from localStorage and fetch user
-    const token = localStorage.getItem("accessToken");
+    const token = sessionStorage.getItem("accessToken");
     if (token) {
       dispatch(rehydrateToken());
       dispatch(fetchCurrentUser());

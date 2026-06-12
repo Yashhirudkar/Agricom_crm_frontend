@@ -96,30 +96,28 @@ const getRelativeDays = (dateStr) => {
   return `In ${diffDays} days`;
 };
 
-const isWeeklyOff = (title) => {
-  if (!title) return false;
-  const t = title.toLowerCase().trim();
-  
-  // Check if title is just a weekday name (including misspellings)
+const isWeeklyOffHelper = (h) => {
+  if (h.isWeeklyOff) return true;
+  if (!h.title) return false;
+  const t = h.title.toLowerCase().trim();
+
   const weekdays = [
-    "sunday", "sinday", 
-    "saturday", "saturaday", 
+    "sunday", "sinday",
+    "saturday", "saturaday",
     "monday", "tuesday", "wednesday", "thursday", "friday"
   ];
   if (weekdays.includes(t)) return true;
-  
-  // Check common keywords
+
   const words = t.split(/[\s-_]+/);
   const isOff = words.includes("off") || words.includes("offday") || t.includes("weekly off") || t.includes("weekly-off");
-  const isHalfDay = t.includes("half day") || t.includes("half-day");
-  
+
   const hasWeekday = words.some(w => [
-    "sun", "sunday", "sinday", 
-    "sat", "satday", "saturday", "saturaday", 
+    "sun", "sunday", "sinday",
+    "sat", "satday", "saturday", "saturaday",
     "mon", "monday", "tue", "tuesday", "wed", "wednesday", "thu", "thursday", "fri", "friday"
   ].includes(w));
-  
-  if ((isOff && hasWeekday) || isHalfDay || t.includes("weekly off") || t.includes("weekly-off")) {
+
+  if ((isOff && hasWeekday) || t.includes("weekly off") || t.includes("weekly-off")) {
     return true;
   }
   return false;
@@ -134,7 +132,7 @@ export default function UpcomingHolidaysWidget() {
       try {
         const res = await getUpcomingHolidays();
         const data = res?.data || res || [];
-        const filtered = data.filter((h) => !isWeeklyOff(h.title));
+        const filtered = data.filter((h) => !isWeeklyOffHelper(h));
         setHolidays(filtered);
       } catch (err) {
         console.error("Failed to fetch upcoming holidays:", err);
@@ -214,7 +212,7 @@ export default function UpcomingHolidaysWidget() {
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className={`h-1.5 w-1.5 rounded-full ${theme.dot}`} />
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                      {h.isOptional ? "Optional Holiday" : `${h.holidayType} Holiday`}
+                      {h.isOptional ? "Optional Holiday" : h.isHalfDay ? "Half Day Holiday" : `${h.holidayType} Holiday`}
                     </span>
                   </div>
                 </div>
@@ -226,4 +224,3 @@ export default function UpcomingHolidaysWidget() {
     </div>
   );
 }
-

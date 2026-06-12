@@ -101,7 +101,7 @@ export function Sidebar() {
     if (user?.permissions && Array.isArray(user.permissions)) {
       return user.permissions.includes(perm);
     }
-    return true;
+    return false;
   };
 
   // Filter config based on role and permissions

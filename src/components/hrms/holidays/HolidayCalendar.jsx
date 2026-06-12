@@ -28,30 +28,28 @@ const getHolidayColor = (type, isOptional) => {
   }
 };
 
-const isWeeklyOff = (title) => {
-  if (!title) return false;
-  const t = title.toLowerCase().trim();
-  
-  // Check if title is just a weekday name (including misspellings)
+const isWeeklyOffHelper = (h) => {
+  if (h.isWeeklyOff) return true;
+  if (!h.title) return false;
+  const t = h.title.toLowerCase().trim();
+
   const weekdays = [
-    "sunday", "sinday", 
-    "saturday", "saturaday", 
+    "sunday", "sinday",
+    "saturday", "saturaday",
     "monday", "tuesday", "wednesday", "thursday", "friday"
   ];
   if (weekdays.includes(t)) return true;
-  
-  // Check common keywords
+
   const words = t.split(/[\s-_]+/);
   const isOff = words.includes("off") || words.includes("offday") || t.includes("weekly off") || t.includes("weekly-off");
-  const isHalfDay = t.includes("half day") || t.includes("half-day");
-  
+
   const hasWeekday = words.some(w => [
-    "sun", "sunday", "sinday", 
-    "sat", "satday", "saturday", "saturaday", 
+    "sun", "sunday", "sinday",
+    "sat", "satday", "saturday", "saturaday",
     "mon", "monday", "tue", "tuesday", "wed", "wednesday", "thu", "thursday", "fri", "friday"
   ].includes(w));
-  
-  if ((isOff && hasWeekday) || isHalfDay || t.includes("weekly off") || t.includes("weekly-off")) {
+
+  if ((isOff && hasWeekday) || t.includes("weekly off") || t.includes("weekly-off")) {
     return true;
   }
   return false;
@@ -71,19 +69,37 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [monthHolidaysCount, setMonthHolidaysCount] = useState(0);
 
-  const events = holidays.map((h) => {
-    const isWeekly = isWeeklyOff(h.title);
-    return {
-      id: h.id,
-      title: h.title,
-      start: h.holidayDate,
-      allDay: true,
-      backgroundColor: isWeekly ? "#f8fafc" : getHolidayColor(h.holidayType, h.isOptional),
-      borderColor: isWeekly ? "#e2e8f0" : getHolidayColor(h.holidayType, h.isOptional),
-      textColor: isWeekly ? "#94a3b8" : undefined,
-      extendedProps: { ...h },
-    };
-  });
+  const events = holidays
+    .filter((h) => !(isWeeklyOffHelper(h) && currentView === "dayGridMonth"))
+    .map((h) => {
+      const isWeekly = isWeeklyOffHelper(h);
+      return {
+        id: h.id,
+        title: h.title,
+        start: h.holidayDate,
+        allDay: true,
+        backgroundColor: isWeekly ? "transparent" : getHolidayColor(h.holidayType, h.isOptional),
+        borderColor: isWeekly ? "transparent" : getHolidayColor(h.holidayType, h.isOptional),
+        textColor: isWeekly ? "inherit" : undefined,
+        extendedProps: { ...h },
+      };
+    });
+
+  const getDayCellClassNames = (arg) => {
+    const year = arg.date.getFullYear();
+    const month = String(arg.date.getMonth() + 1).padStart(2, '0');
+    const day = String(arg.date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    const isWeekly = holidays.some((h) => h.holidayDate === dateStr && isWeeklyOffHelper(h));
+    if (isWeekly) {
+      const dayOfWeek = arg.date.getDay();
+      if (dayOfWeek === 0) return ["sunday-off-cell"];
+      if (dayOfWeek === 6) return ["saturday-off-cell"];
+      return ["has-weekly-off"];
+    }
+    return [];
+  };
 
   const handleEventClick = (clickInfo) => {
     const holidayData = clickInfo.event.extendedProps;
@@ -129,25 +145,11 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
     const { extendedProps, title } = eventInfo.event;
     const holidayType = extendedProps.holidayType;
     const isOptional = extendedProps.isOptional;
-    const isWeekly = isWeeklyOff(title);
+    const isWeekly = extendedProps.isWeeklyOff;
     const isMonthView = eventInfo.view.type === "dayGridMonth";
 
     if (isWeekly) {
-      if (isMonthView) {
-        return <div className="absolute inset-0 bg-transparent pointer-events-none" />;
-      }
-      return (
-        <div
-          className="relative w-full h-full bg-transparent px-3.5 pb-3 pt-9 border-l-2 border-slate-200 overflow-hidden"
-        >
-          {/* Holiday Name */}
-          <div className="text-[10px] font-semibold text-slate-400 leading-tight line-clamp-2">
-            {title
-              ?.toLowerCase()
-              .replace(/\b\w/g, (char) => char.toUpperCase())}
-          </div>
-        </div>
-      );
+      return null;
     }
 
     let colorTheme = {
@@ -217,18 +219,30 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
       }
     }
 
+    const isHalfDay = extendedProps.isHalfDay;
+    if (isHalfDay) {
+      colorTheme = {
+        border: "border-amber-500",
+        text: "text-amber-700",
+        btn: "bg-amber-100",
+        bg: "bg-amber-50"
+      };
+    }
+
     const isFestival = holidayType === "FESTIVAL";
 
     return (
       <div
-        className={`relative w-full h-full bg-[#f4f8fc] px-3.5 pb-3 pt-9 border-l-[4px] ${colorTheme.border} overflow-hidden`}
+        className={`relative w-full h-full ${colorTheme.bg || 'bg-[#f4f8fc]'} px-3 pt-8 pb-2 border-l-[3px] ${colorTheme.border} overflow-hidden cursor-pointer rounded-r-md flex flex-col justify-end`}
       >
-        {/* Holiday Name */}
-        <div className={`text-[12px] font-semibold ${colorTheme.text} leading-tight line-clamp-2`}>
-          {title
-            ?.toLowerCase()
-            .replace(/\b\w/g, (char) => char.toUpperCase())}
+        <div className={`text-[11px] font-bold ${colorTheme.text} leading-tight line-clamp-1`}>
+          {title}
         </div>
+        {isHalfDay && (
+          <div className="text-[9px] font-semibold text-amber-600/80 mt-0.5">
+            Half Day • {extendedProps.halfDayStart && extendedProps.halfDayStart.slice(0, 5)} - {extendedProps.halfDayEnd && extendedProps.halfDayEnd.slice(0, 5)}
+          </div>
+        )}
       </div>
     );
   };
@@ -236,7 +250,7 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
   // Get upcoming holidays
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const upcomingHolidays = holidays
-    .filter((h) => h.holidayDate >= todayStr && !isWeeklyOff(h.title))
+    .filter((h) => h.holidayDate >= todayStr && !isWeeklyOffHelper(h))
     .sort((a, b) => parseLocalDate(a.holidayDate) - parseLocalDate(b.holidayDate))
     .slice(0, 5);
 
@@ -322,15 +336,7 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
           dayMaxEvents={3}
           datesSet={handleDatesSet}
           eventContent={renderEventContent}
-          eventDidMount={(info) => {
-            const title = info.event.title;
-            if (isWeeklyOff(title)) {
-              const cell = info.el.closest(".fc-daygrid-day");
-              if (cell) {
-                cell.classList.add("has-weekly-off");
-              }
-            }
-          }}
+          dayCellClassNames={getDayCellClassNames}
         />
       </div>
 

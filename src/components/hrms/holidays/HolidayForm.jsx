@@ -1,52 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createHoliday, updateHoliday } from "../../../lib/api/holidays";
+import { createHoliday, updateHoliday, createRecurringHolidays } from "../../../lib/api/holidays";
 import axiosClient from "../../../lib/axios";
-
-// Helper function to calculate the exact occurrence of a weekday in its month (1st, 2nd, etc.)
-const getOccurrenceInMonth = (date) => {
-  const day = date.getDay();
-  let count = 0;
-  // Use noon to avoid timezone/DST shift issues
-  for (let d = 1; d <= date.getDate(); d++) {
-    const current = new Date(date.getFullYear(), date.getMonth(), d, 12, 0, 0);
-    if (current.getDay() === day) {
-      count++;
-    }
-  }
-  return count;
-};
-
-// Helper function to calculate matching dates for selected weekdays in a range
-const getDatesForWeekdays = (startDateStr, endDateStr, selectedDays, selectedWeeks) => {
-  const dates = [];
-  
-  // Parse YYYY-MM-DD manually to prevent UTC timezone shift
-  const [sYear, sMonth, sDay] = startDateStr.split("-").map(Number);
-  const [eYear, eMonth, eDay] = endDateStr.split("-").map(Number);
-  
-  const start = new Date(sYear, sMonth - 1, sDay, 12, 0, 0);
-  const end = new Date(eYear, eMonth - 1, eDay, 12, 0, 0);
-
-  const current = new Date(start);
-  while (current <= end) {
-    const dayOfWeek = current.getDay(); // 0 is Sunday, 6 is Saturday
-    if (selectedDays.includes(dayOfWeek)) {
-      const occurrence = getOccurrenceInMonth(current);
-      
-      if (selectedWeeks.includes(occurrence)) {
-        const year = current.getFullYear();
-        const month = String(current.getMonth() + 1).padStart(2, "0");
-        const day = String(current.getDate()).padStart(2, "0");
-        dates.push(`${year}-${month}-${day}`);
-      }
-    }
-    // Safely increment date (retaining noon hour)
-    current.setDate(current.getDate() + 1);
-  }
-  return dates;
-};
 
 export default function HolidayForm({ holiday, onSave, onCancel }) {
   const currentYear = new Date().getFullYear();
@@ -93,22 +49,11 @@ export default function HolidayForm({ holiday, onSave, onCancel }) {
     if (holiday) {
       setMode("single");
       
-      const desc = holiday.description || "";
-      const metaMatch = desc.match(/\[HalfDayTime:(\d{2}:\d{2})-(\d{2}:\d{2})\]/);
-      const isHalfDay = !!metaMatch;
-      const startTime = isHalfDay ? metaMatch[1] : "09:30";
-      const endTime = isHalfDay ? metaMatch[2] : "15:00";
-      let cleanDesc = desc;
-      if (isHalfDay) {
-        cleanDesc = cleanDesc.replace(/\[HalfDayTime:\d{2}:\d{2}-\d{2}:\d{2}\]/g, "").trim();
-        cleanDesc = cleanDesc.replace(/Half Day Timings:[^\n]*\n?/g, "").trim();
-      }
-
       setFormData({
         title: holiday.title || "",
         holidayDate: holiday.holidayDate || "",
         holidayType: holiday.holidayType || "PUBLIC",
-        description: cleanDesc,
+        description: holiday.description || "",
         isOptional: holiday.isOptional || false,
         appliesTo: holiday.holidayCompanies?.length > 0 ? "selected" : "all",
         companyIds: holiday.holidayCompanies?.map((hc) => hc.companyId) || [],
@@ -116,9 +61,9 @@ export default function HolidayForm({ holiday, onSave, onCancel }) {
         endDate: `${currentYear}-12-31`,
         selectedDays: [0],
         selectedWeeks: [1, 2, 3, 4, 5],
-        isHalfDay,
-        startTime,
-        endTime,
+        isHalfDay: holiday.isHalfDay || false,
+        startTime: holiday.halfDayStart || "09:30",
+        endTime: holiday.halfDayEnd || "15:00",
       });
     }
   }, [holiday, currentYear]);
@@ -172,22 +117,7 @@ export default function HolidayForm({ holiday, onSave, onCancel }) {
     setLoading(true);
     setError(null);
 
-    // Helper to format time
-    const formatTime12h = (time24) => {
-      if (!time24) return "";
-      const [hourStr, minStr] = time24.split(":");
-      const hour = parseInt(hourStr, 10);
-      const ampm = hour >= 12 ? "PM" : "AM";
-      const hour12 = hour % 12 || 12;
-      return `${hour12}:${minStr} ${ampm}`;
-    };
-
-    // Construct description with half day timing
-    let finalDescription = formData.description;
-    if (formData.isHalfDay) {
-      const timingStr = `Half Day Timings: ${formatTime12h(formData.startTime)} - ${formatTime12h(formData.endTime)}`;
-      finalDescription = `${timingStr}\n${formData.description || ""}\n[HalfDayTime:${formData.startTime}-${formData.endTime}]`.trim();
-    }
+    const isWeeklyOff = mode === "bulk";
 
     // Single Holiday mode
     if (holiday?.id || mode === "single") {
@@ -195,8 +125,12 @@ export default function HolidayForm({ holiday, onSave, onCancel }) {
         title: formData.title,
         holidayDate: formData.holidayDate,
         holidayType: formData.holidayType,
-        description: finalDescription,
+        description: formData.description,
         isOptional: formData.isOptional,
+        isWeeklyOff: false, // Explicit boolean field
+        isHalfDay: formData.isHalfDay,
+        halfDayStart: formData.isHalfDay ? formData.startTime : null,
+        halfDayEnd: formData.isHalfDay ? formData.endTime : null,
         companyIds: formData.appliesTo === "selected" ? formData.companyIds : [],
       };
 
@@ -235,48 +169,35 @@ export default function HolidayForm({ holiday, onSave, onCancel }) {
       return;
     }
 
-    const matchingDates = getDatesForWeekdays(formData.startDate, formData.endDate, selectedDays, selectedWeeks);
-    if (matchingDates.length === 0) {
-      setError("No matching days found in the selected date range.");
-      setLoading(false);
-      return;
-    }
-
-    const confirmMsg = `This will generate ${matchingDates.length} holidays in the calendar. Do you want to proceed?`;
+    const confirmMsg = `This will generate recurring holidays in the calendar based on your selection. Do you want to proceed?`;
     if (!window.confirm(confirmMsg)) {
       setLoading(false);
       return;
     }
 
-    setBulkProgress({ current: 0, total: matchingDates.length });
-
     try {
-      const companyIds = formData.appliesTo === "selected" ? formData.companyIds : [];
-      
-      for (let i = 0; i < matchingDates.length; i++) {
-        const dateStr = matchingDates[i];
-        const payload = {
-          title: formData.title,
-          holidayDate: dateStr,
-          holidayType: formData.holidayType,
-          description: finalDescription,
-          isOptional: formData.isOptional,
-          companyIds,
-        };
+      const payload = {
+        title: formData.title,
+        holidayType: formData.holidayType,
+        description: formData.description,
+        isOptional: formData.isOptional,
+        isWeeklyOff: true, // Explicit boolean field
+        isHalfDay: formData.isHalfDay,
+        halfDayStart: formData.isHalfDay ? formData.startTime : null,
+        halfDayEnd: formData.isHalfDay ? formData.endTime : null,
+        companyIds: formData.appliesTo === "selected" ? formData.companyIds : [],
+        weekdays: selectedDays,
+        occurrences: selectedWeeks,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+      };
 
-        await createHoliday(payload);
-        setBulkProgress({ current: i + 1, total: matchingDates.length });
-      }
-
+      await createRecurringHolidays(payload);
       onSave();
     } catch (err) {
-      setError(
-        `Failed at holiday ${bulkProgress?.current + 1 || 1} of ${matchingDates.length}: ` + 
-        (err?.response?.data?.message || err.message || "Something went wrong.")
-      );
+      setError(err?.response?.data?.message || err.message || "Something went wrong.");
     } finally {
       setLoading(false);
-      setBulkProgress(null);
     }
   };
 

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { store } from "@/store/store";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -9,17 +10,42 @@ const axiosClient = axios.create({
   },
 });
 
-// Request interceptor — attach Bearer token and activeCompanyId from localStorage
+// Request interceptor — attach Bearer token and activeCompanyId
 axiosClient.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken");
+      const token = sessionStorage.getItem("accessToken");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-      const activeCompanyId = localStorage.getItem("activeCompanyId");
-      if (activeCompanyId) {
-        config.headers["x-company-id"] = activeCompanyId;
+      
+      const rawCompanyId = localStorage.getItem("activeCompanyId");
+      if (rawCompanyId) {
+        let activeCompanyId = rawCompanyId;
+        
+        if (store) {
+          const state = store.getState();
+          const user = state.auth?.user;
+          
+          if (user && user.type !== "super_admin") {
+            const workspaces = user.workspaces || [];
+            const hasAccess = workspaces.some(w => w.id.toString() === rawCompanyId.toString());
+            
+            if (!hasAccess) {
+              if (workspaces.length > 0) {
+                activeCompanyId = workspaces[0].id.toString();
+                localStorage.setItem("activeCompanyId", activeCompanyId);
+              } else {
+                activeCompanyId = null;
+                localStorage.removeItem("activeCompanyId");
+              }
+            }
+          }
+        }
+        
+        if (activeCompanyId) {
+          config.headers["x-company-id"] = activeCompanyId;
+        }
       }
     }
     return config;
@@ -33,7 +59,7 @@ axiosClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       if (typeof window !== "undefined") {
-        localStorage.removeItem("accessToken");
+        sessionStorage.removeItem("accessToken");
         window.location.href = "/login";
       }
     }
