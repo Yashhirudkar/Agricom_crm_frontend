@@ -1,0 +1,191 @@
+.holiday-calendar-container {
+  font-family: inherit;
+}
+
+/* Show a premium border around the calendar grid wrapper */
+.holiday-calendar-container .fc-theme-standard .fc-scrollgrid {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+/* Make Weekday Header Row a Premium Clean Row */
+.holiday-calendar-container .fc-col-header {
+  background: #f1f5f9 !important; /* Soft slate background */
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.holiday-calendar-container .fc-col-header-cell {
+  border: none !important;
+}
+
+.holiday-calendar-container .fc-col-header-cell-cushion {
+  color: #475569 !important; /* Sleek slate gray text */
+  text-transform: uppercase;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em;
+  padding: 10px 8px !important;
+  display: block;
+}
+
+/* Styled Table Borders */
+.holiday-calendar-container .fc-theme-standard td,
+.holiday-calendar-container .fc-theme-standard th {
+  border-color: #f1f5f9 !important;
+  /* Tailwind slate-100 */
+}
+
+/* Day Numbers styling */
+.holiday-calendar-container .fc-daygrid-day-number {
+  color: #4b5563 !important;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+  padding: 8px 12px !important;
+  text-decoration: none !important;
+}
+
+/* Weekly Off Date Numbers styling (soft round light red highlight for active current month days) */
+.holiday-calendar-container .fc-day-sun:not(.fc-day-other):not(.fc-day-today) .fc-daygrid-day-number,
+.holiday-calendar-container .has-weekly-off:not(.fc-day-other):not(.fc-day-today) .fc-daygrid-day-number {
+  color: #ef4444 !important; /* Soft premium red */
+  background-color: rgba(239, 68, 68, 0.08) !important; /* Soft transparent red circle background */
+  border-radius: 9999px !important;
+  min-width: 26px;
+  height: 26px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 6px !important;
+  padding: 0 !important;
+}
+
+/* Day Cell Hover Effect */
+.holiday-calendar-container .fc-daygrid-day:hover {
+  background-color: #f8fafc !important;
+  transition: background-color 0.2s ease;
+}
+
+/* Today Cell Highlight */
+.holiday-calendar-container .fc-day-today {
+  background-color: rgba(37, 99, 235, 0.04) !important;
+}
+
+.holiday-calendar-container .fc-day-today .fc-daygrid-day-number {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  min-width: 26px;
+  height: 26px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 6px !important;
+  padding: 0 !important;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+}
+
+/* Remove default FullCalendar Event background & borders to allow full custom render */
+.holiday-calendar-container .fc-daygrid-event {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  height: 100% !important;
+}
+
+.holiday-calendar-container .fc-h-event {
+  border: none !important;
+  background: transparent !important;
+  height: 100% !important;
+}
+
+.holiday-calendar-container .fc-daygrid-block-event .fc-event-main {
+  padding: 0 !important;
+  height: 100% !important;
+}
+
+/* Force all wrapping containers within day-events to span full height and width */
+.holiday-calendar-container .fc-daygrid-day-events>div,
+.holiday-calendar-container .fc-daygrid-event-wrapper,
+.holiday-calendar-container .fc-daygrid-event-hdom,
+.holiday-calendar-container .fc-daygrid-event,
+.holiday-calendar-container .fc-event-main {
+  height: 100% !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.holiday-calendar-container .fc-daygrid-day-events {
+  margin: 0 !important;
+  padding: 0 !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 1 !important;
+  /* Layered behind the date number */
+}
+
+.holiday-calendar-container .fc-daygrid-day-frame {
+  position: relative !important;
+  height: 100% !important;
+  min-height: 80px !important;
+}
+
+/* Day number position and z-index to overlay on event card background */
+.holiday-calendar-container .fc-daygrid-day-top {
+  position: relative !important;
+  z-index: 3 !important;
+  pointer-events: none !important;
+  /* Allow clicking the card through the date number */
+}
+
+/* Event More Link (e.g. "+2 more") styling */
+.holiday-calendar-container .fc-daygrid-more-link {
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  color: #4f46e5 !important;
+  padding: 2px 6px !important;
+  background-color: #e0e7ff !important;
+  border-radius: 4px !important;
+  display: inline-block;
+  margin: 2px 6px !important;
+  text-decoration: none !important;
+}
+
+/* FullCalendar List View Style Fixes */
+.holiday-calendar-container .fc-list {
+  border: none !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  background-color: #ffffff;
+}
+
+.holiday-calendar-container .fc-list-day-cushion {
+  background-color: #f8fafc !important;
+  padding: 12px 16px !important;
+}
+
+.holiday-calendar-container .fc-list-day-text,
+.holiday-calendar-container .fc-list-day-side-text {
+  font-weight: 600 !important;
+  color: #1e293b !important;
+}
+
+.holiday-calendar-container .fc-list-event {
+  cursor: pointer;
+}
+
+.holiday-calendar-container .fc-list-event:hover td {
+  background-color: #f8fafc !important;
+}
+
+.holiday-calendar-container .fc-list-event-title a {
+  color: #1e293b !important;
+  font-weight: 500 !important;
+}
