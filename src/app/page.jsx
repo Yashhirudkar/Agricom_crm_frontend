@@ -53,7 +53,8 @@ export default function Home() {
       dispatch(fetchCompanies());
       dispatch(fetchUsers());
     } else {
-      dispatch(fetchCompanies());
+      // Standard users do not have companies:read permission.
+      // They get their accessible workspaces directly from /auth/me payload.
     }
   }, [dispatch, userType]);
 

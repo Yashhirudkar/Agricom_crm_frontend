@@ -63,7 +63,7 @@ export default function EditEmployeePage() {
         dispatch(fetchDesignations({ limit: 1000 }));
 
         const [rolesRes, empRes] = await Promise.all([
-          axiosClient.get("/GetRoles", { headers: { "x-company-id": companyId } }),
+          axiosClient.get("/GetRoles", { headers: { "x-company-id": companyId } }).catch(() => ({ data: [] })),
           axiosClient.get(`/employees/${empId}`, { headers: { "x-company-id": companyId } })
         ]);
 
@@ -114,8 +114,14 @@ export default function EditEmployeePage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const payload = { ...form };
-      if (!payload.createLogin) {
+      const payload = { 
+        ...form,
+        departmentId: form.departmentId ? Number(form.departmentId) : null,
+        designationId: form.designationId ? Number(form.designationId) : null,
+      };
+      if (payload.createLogin && payload.roleId) {
+        payload.roleId = Number(payload.roleId);
+      } else {
         delete payload.roleId;
       }
       

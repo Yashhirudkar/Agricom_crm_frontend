@@ -11,7 +11,7 @@ const parseLocalDate = (dateStr) => {
   return new Date(year, month - 1, day);
 };
 
-export default function HolidayDrawer({ isOpen, onClose, holiday, onSave, onDelete, canManage }) {
+export default function HolidayDrawer({ isOpen, onClose, holiday, onSave, onDelete, canUpdate, canDelete }) {
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
@@ -39,22 +39,26 @@ export default function HolidayDrawer({ isOpen, onClose, holiday, onSave, onDele
             <h3 className="text-lg text-gray-700 font-semibold flex items-center gap-2">
               <Info size={18} className="text-blue-600" /> Overview
             </h3>
-            {canManage && (
+            {(canUpdate || canDelete) && (
               <div className="flex gap-2">
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                  title="Edit Holiday"
-                >
-                  <Edit2 size={16} />
-                </button>
-                <button
-                  onClick={() => onDelete(holiday.id)}
-                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                  title="Delete Holiday"
-                >
-                  <Trash2 size={16} />
-                </button>
+                {canUpdate && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                    title="Edit Holiday"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={() => onDelete(holiday.id)}
+                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                    title="Delete Holiday"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
               </div>
             )}
           </div>

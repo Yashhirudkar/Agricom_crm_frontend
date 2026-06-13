@@ -7,8 +7,10 @@ export const loginUser = createAsyncThunk(
   "auth/login",
   async ({ email, password }, { rejectWithValue }) => {
     try {
+      console.log(`[Frontend Login] Attempting login for: ${email}`);
       // Step 1: Login to get tokens
       const loginRes = await axiosClient.post("/auth/login", { email, password });
+      console.log(`[Frontend Login] Tokens received. AccessToken length: ${loginRes.data.accessToken?.length}`);
       const { accessToken } = loginRes.data;
 
       // Step 2: Save token to sessionStorage so interceptor can use it immediately
@@ -16,9 +18,11 @@ export const loginUser = createAsyncThunk(
 
       // Step 3: Fetch current user profile
       const meRes = await axiosClient.get("/auth/me");
+      console.log(`[Frontend Login] Current user profile fetched:`, meRes.data);
 
       return { accessToken, user: meRes.data };
     } catch (err) {
+      console.error(`[Frontend Login] Login failed:`, err.response?.data || err.message);
       return rejectWithValue(
         err.response?.data?.message || "Login failed. Check your credentials."
       );
@@ -147,5 +151,6 @@ export const selectAuthLoading = (state) => state.auth.isLoading;
 export const selectAuthError = (state) => state.auth.error;
 export const selectIsInitialized = (state) => state.auth.isInitialized;
 export const selectUserType = (state) => state.auth.user?.type;
+export const selectUserPermissions = (state) => state.auth.user?.permissions || [];
 
 export default authSlice.reducer;

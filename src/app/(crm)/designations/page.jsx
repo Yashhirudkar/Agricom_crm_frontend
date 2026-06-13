@@ -141,11 +141,15 @@ function DesignationsContent() {
     e.preventDefault();
     setIsSaving(true);
     try {
+      const payload = {
+        ...form,
+        departmentId: form.departmentId ? Number(form.departmentId) : null
+      };
       if (editingDesig) {
-        await dispatch(updateDesignation({ id: editingDesig.id, data: form })).unwrap();
+        await dispatch(updateDesignation({ id: editingDesig.id, data: payload })).unwrap();
         showToast("Designation updated successfully");
       } else {
-        await dispatch(createDesignation(form)).unwrap();
+        await dispatch(createDesignation(payload)).unwrap();
         showToast("Designation created successfully");
       }
       dispatch(fetchDesignations({ page: currentPage, limit: itemsPerPage, search }));

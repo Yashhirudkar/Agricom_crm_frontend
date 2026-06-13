@@ -14,6 +14,7 @@ import {
 } from "@/store/slices/employeesSlice";
 import Drawer from "@/components/drawers/Drawer";
 import ConfirmModal from "@/components/modals/ConfirmModal";
+import HasPermission from "@/components/rbac/HasPermission";
 import {
   Plus,
   Edit2,
@@ -269,13 +270,15 @@ function EmployeesContent() {
               ))}
             </select>
           )}
-          <button
-            onClick={() => router.push("/employees/create")}
-            disabled={!selectedCompanyId}
-            className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors self-start sm:self-auto"
-          >
-            <Plus className="h-4 w-4" /> Add Employee
-          </button>
+          <HasPermission permission="employees:create">
+            <button
+              onClick={() => router.push("/employees/create")}
+              disabled={!selectedCompanyId}
+              className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors self-start sm:self-auto"
+            >
+              <Plus className="h-4 w-4" /> Add Employee
+            </button>
+          </HasPermission>
         </div>
       </div>
 
@@ -359,28 +362,34 @@ function EmployeesContent() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <button 
-                        onClick={(e) => handleOpenDocDrawer(e, emp)}
-                        className="flex items-center gap-1 text-[#007aff] hover:underline font-semibold"
-                      >
-                        <FileText className="h-4 w-4" /> Manage
-                      </button>
+                      <HasPermission permission="documents:read">
+                        <button 
+                          onClick={(e) => handleOpenDocDrawer(e, emp)}
+                          className="flex items-center gap-1 text-[#007aff] hover:underline font-semibold"
+                        >
+                          <FileText className="h-4 w-4" /> Manage
+                        </button>
+                      </HasPermission>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => router.push(`/employees/${emp.id}/edit`)}
-                        className="p-1 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
-                        title="Edit details"
-                      >
-                        <Edit2 className="h-4 w-4 inline" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(emp)}
-                        className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                        title="Delete employee"
-                      >
-                        <Trash2 className="h-4 w-4 inline" />
-                      </button>
+                      <HasPermission permission="employees:update">
+                        <button
+                          onClick={() => router.push(`/employees/${emp.id}/edit`)}
+                          className="p-1 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
+                          title="Edit details"
+                        >
+                          <Edit2 className="h-4 w-4 inline" />
+                        </button>
+                      </HasPermission>
+                      <HasPermission permission="employees:delete">
+                        <button
+                          onClick={() => setDeleteTarget(emp)}
+                          className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                          title="Delete employee"
+                        >
+                          <Trash2 className="h-4 w-4 inline" />
+                        </button>
+                      </HasPermission>
                     </td>
                   </tr>
                 );

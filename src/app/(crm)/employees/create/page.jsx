@@ -60,7 +60,7 @@ export default function CreateEmployeePage() {
         dispatch(fetchDesignations({ limit: 1000 }));
 
         const [rolesRes] = await Promise.all([
-          axiosClient.get("/GetRoles", { headers: { "x-company-id": companyId } })
+          axiosClient.get("/GetRoles", { headers: { "x-company-id": companyId } }).catch(() => ({ data: [] }))
         ]);
 
         setRoles(rolesRes.data || []);
@@ -102,10 +102,17 @@ export default function CreateEmployeePage() {
     setIsSubmitting(true);
     try {
       // 1. Create Employee
-      const payload = { ...form };
-      if (!payload.createLogin) {
+      const payload = { 
+        ...form,
+        departmentId: form.departmentId ? Number(form.departmentId) : null,
+        designationId: form.designationId ? Number(form.designationId) : null,
+      };
+      if (payload.createLogin && payload.roleId) {
+        payload.roleId = Number(payload.roleId);
+      } else {
         delete payload.roleId;
       }
+      console.log("[Frontend Create] Sending payload to backend:", payload);
       
       const res = await dispatch(createEmployee(payload)).unwrap();
       const employeeId = res.id;
@@ -290,6 +297,10 @@ export default function CreateEmployeePage() {
 
           {form.createLogin && (
             <div className="mt-4 animate-in fade-in slide-in-from-top-2 p-4 bg-blue-50/50 rounded-xl border border-blue-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-1">Password *</label>
+                <input type="text" required name="password" value={form.password || ""} onChange={handleChange} placeholder="Enter login password" className="w-full border border-blue-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-gray-700 bg-white" />
+              </div>
               <div>
                 <label className="block text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-1">Assign System Role *</label>
                 <select required name="roleId" value={form.roleId} onChange={handleChange} className="w-full border border-blue-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-gray-700 bg-white">

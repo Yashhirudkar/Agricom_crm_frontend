@@ -14,11 +14,14 @@ export default function HolidaysPage() {
   const [selectedHoliday, setSelectedHoliday] = useState(null);
   const { user } = useSelector((state) => state.auth);
 
-  const canManage =
+  const isSuperOrClientAdmin = 
     user?.type === "super_admin" ||
     user?.type === "client_admin" ||
-    user?.permissions?.includes("Holidays:write") ||
     user?.roles?.some(r => r.name === "Super Admin" || r.name === "Client Admin");
+
+  const canCreate = isSuperOrClientAdmin || user?.permissions?.includes("holidays:create");
+  const canUpdate = isSuperOrClientAdmin || user?.permissions?.includes("holidays:update");
+  const canDelete = isSuperOrClientAdmin || user?.permissions?.includes("holidays:delete");
 
   const fetchHolidays = async () => {
     try {
@@ -70,7 +73,7 @@ export default function HolidaysPage() {
           </h1>
           <p className="text-sm text-slate-400 mt-1">Manage public, regional, festival and company holidays across all offices.</p>
         </div>
-        {canManage && (
+        {canCreate && (
           <button
             onClick={handleCreate}
             className="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-700 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-blue-500/10 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer shrink-0"
@@ -97,7 +100,8 @@ export default function HolidaysPage() {
         holiday={selectedHoliday}
         onSave={handleSave}
         onDelete={handleDelete}
-        canManage={canManage}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
       />
     </div>
   );

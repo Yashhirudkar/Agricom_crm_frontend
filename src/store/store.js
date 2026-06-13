@@ -9,6 +9,8 @@ import departmentsReducer from "./slices/departmentsSlice";
 import designationsReducer from "./slices/designationsSlice";
 import employeesReducer from "./slices/employeesSlice";
 
+import { injectStore } from "../lib/axios";
+
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -23,3 +25,5 @@ export const store = configureStore({
   },
   devTools: process.env.NODE_ENV !== "production",
 });
+
+injectStore(store);

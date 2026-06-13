@@ -1,5 +1,10 @@
 import axios from "axios";
-import { store } from "@/store/store";
+
+let store;
+
+export const injectStore = (_store) => {
+  store = _store;
+};
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 

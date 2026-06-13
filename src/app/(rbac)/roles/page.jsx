@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, Suspense, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
@@ -57,6 +57,7 @@ function RolesContent() {
   const [activeTab, setActiveTab] = useState("overview");
 
   const [assignedPermissions, setAssignedPermissions] = useState([]);
+  const latestAssignedIdsRef = useRef(new Set());
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [expandedModules, setExpandedModules] = useState({});
 
@@ -103,6 +104,7 @@ function RolesContent() {
       const res = await axiosClient.get(`/GetRolePermissions?roleId=${roleObj.id}`);
       const perms = res.data?.permissions || res.data || [];
       setAssignedPermissions(perms);
+      latestAssignedIdsRef.current = new Set(perms.map((p) => p.id));
     } catch (err) {
       console.error("Failed to load role permissions:", err);
       showToast("Failed to load role permissions", "error");
@@ -197,57 +199,58 @@ function RolesContent() {
     {
       category: "HR Module",
       modules: [
-        { id: "employees", label: "Employees", resources: ["employees"] },
-        { id: "departments", label: "Departments", resources: ["departments"] },
-        { id: "designations", label: "Designations", resources: ["designations"] },
-        { id: "documents", label: "Documents", resources: ["documents"] },
-        { id: "holidays", label: "Holidays", resources: ["Holidays"] },
+        { id: "employees", label: "Employees", resource: "employees" },
+        { id: "departments", label: "Departments", resource: "departments" },
+        { id: "designations", label: "Designations", resource: "designations" },
+        { id: "documents", label: "Documents", resource: "documents" },
+        { id: "holidays", label: "Holidays", resource: "holidays" },
       ]
     },
     {
       category: "CRM Module",
       modules: [
-        { id: "clients", label: "Clients", resources: ["clients"] },
+        { id: "clients", label: "Clients", resource: "clients" },
       ]
     },
     {
       category: "Administration Module",
       modules: [
-        { id: "users", label: "Users", resources: ["users"] },
-        { id: "roles", label: "Roles", resources: ["roles"] },
-        { id: "permissions", label: "Permissions", resources: ["permissions"] },
-        { id: "companies", label: "Companies", resources: ["companies"] },
+        { id: "users", label: "Users", resource: "users" },
+        { id: "roles", label: "Roles", resource: "roles" },
+        { id: "permissions", label: "Permissions", resource: "permissions" },
+        { id: "companies", label: "Companies", resource: "companies" },
       ]
     }
   ];
 
   const assignedIds = new Set(assignedPermissions.map((p) => p.id));
 
-  const getModulePermissionIds = (resources) => {
-    return allPermissions
-      .filter(p => resources.includes(p.resource))
-      .map(p => p.id);
+  const getPermissionId = (resource, action) => {
+    const perm = allPermissions.find(p => p.resource === resource && p.action === action);
+    return perm ? perm.id : null;
   };
 
-  // Toggle module assignment (adds/removes all underlying CRUD perms)
-  const handleModuleToggle = async (resources, isCurrentlyAssigned) => {
-    const targetIds = getModulePermissionIds(resources);
-    if (targetIds.length === 0) return; // No permissions match
-
+  // Toggle individual permission assignment
+  const handlePermissionToggle = async (permissionId, isCurrentlyAssigned) => {
+    const currentIds = latestAssignedIdsRef.current;
     let newAssignedIds;
-    if (isCurrentlyAssigned) {
-      newAssignedIds = Array.from(assignedIds).filter(id => !targetIds.includes(id));
+    
+    if (currentIds.has(permissionId)) {
+      newAssignedIds = Array.from(currentIds).filter(id => id !== permissionId);
     } else {
-      newAssignedIds = [...new Set([...Array.from(assignedIds), ...targetIds])];
+      newAssignedIds = [...new Set([...Array.from(currentIds), permissionId])];
     }
+    
+    // Optimistic update of refs and UI
+    latestAssignedIdsRef.current = new Set(newAssignedIds);
+    setAssignedPermissions(allPermissions.filter(p => newAssignedIds.includes(p.id)));
 
     try {
       await axiosClient.post("/UpdateRolePermissions", {
         roleId: selectedRole.id,
         permissionIds: newAssignedIds,
       });
-      setAssignedPermissions(allPermissions.filter(p => newAssignedIds.includes(p.id)));
-      showToast(isCurrentlyAssigned ? "Module disabled" : "Module enabled");
+      showToast(currentIds.has(permissionId) ? "Permission disabled" : "Permission enabled");
     } catch (err) {
       showToast("Failed to update role permission settings", "error");
     }
@@ -500,77 +503,83 @@ function RolesContent() {
               </div>
             )}
 
-            {/* PERMISSIONS ACCORDION TAB */}
+            {/* PERMISSIONS MATRIX TAB */}
             {activeTab === "permissions" && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    Role Access Rights
+                    Enterprise Permission Matrix
                   </h3>
                   <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                    Toggle module to assign
+                    Toggle individual rights
                   </span>
                 </div>
 
-                <div className="space-y-2.5">
-                  {BUSINESS_MODULES.map((categoryObj) => {
-                    const { category, modules } = categoryObj;
-                    const isExpanded = expandedModules[category];
-
-                    return (
-                      <div
-                        key={category}
-                        className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-2xs"
-                      >
-                        {/* Accordion Header */}
-                        <div
-                          onClick={() => toggleModuleAccordion(category)}
-                          className="px-4 py-3 bg-gray-50/20 hover:bg-gray-50 flex items-center justify-between cursor-pointer transition-colors"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Key className="h-4 w-4 text-gray-400" />
-                            <span className="text-xs font-bold text-gray-700">
-                              {category}
-                            </span>
-                          </div>
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4 text-gray-400 transform rotate-180 transition-transform" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-gray-400 transition-transform" />
-                          )}
-                        </div>
-
-                        {/* Accordion Body */}
-                        {isExpanded && (
-                          <div className="p-4 border-t border-gray-50 bg-white grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
-                            {modules.map((mod) => {
-                              const modulePermIds = getModulePermissionIds(mod.resources);
-                              // We consider the module 'Assigned' if they have AT LEAST ONE permission of that module
-                              // Or you could use .every to strictly require all
-                              const isAssigned = modulePermIds.length > 0 && modulePermIds.every(id => assignedIds.has(id));
-
-                              return (
-                                <div
-                                  key={mod.id}
-                                  className="flex items-center justify-between gap-2.5 text-xs text-gray-600 font-semibold"
-                                >
-                                  <span>{mod.label}</span>
-                                  <button
-                                    onClick={() => handleModuleToggle(mod.resources, isAssigned)}
-                                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isAssigned ? 'bg-green-500' : 'bg-gray-200'}`}
-                                  >
-                                    <span
-                                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isAssigned ? 'translate-x-4' : 'translate-x-0'}`}
-                                    />
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                <div className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-2xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50/20 text-gray-400 uppercase tracking-widest text-[10px] font-bold">
+                          <th className="px-4 py-3">Module</th>
+                          <th className="px-4 py-3 text-center">Read</th>
+                          <th className="px-4 py-3 text-center">Create</th>
+                          <th className="px-4 py-3 text-center">Update</th>
+                          <th className="px-4 py-3 text-center">Delete</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-xs">
+                        {BUSINESS_MODULES.map((categoryObj) => {
+                          const isExpanded = expandedModules[categoryObj.category];
+                          return (
+                            <React.Fragment key={categoryObj.category}>
+                              <tr 
+                                className="bg-gray-50/80 cursor-pointer hover:bg-gray-100 transition-colors"
+                                onClick={() => toggleModuleAccordion(categoryObj.category)}
+                              >
+                                <td colSpan="5" className="px-4 py-2.5 font-bold text-gray-700 text-[11px] uppercase tracking-wider">
+                                  <div className="flex items-center gap-2">
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4 text-gray-400 transition-transform" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4 text-gray-400 transition-transform" />
+                                    )}
+                                    <Key className="h-3.5 w-3.5 text-gray-400" />
+                                    {categoryObj.category}
+                                  </div>
+                                </td>
+                              </tr>
+                              {isExpanded && categoryObj.modules.map((mod) => (
+                                <tr key={mod.id} className="hover:bg-gray-50/30 transition-colors">
+                                  <td className="px-4 py-3 font-semibold text-gray-600 pl-8">{mod.label}</td>
+                                  {['read', 'create', 'update', 'delete'].map((action) => {
+                                    const permId = getPermissionId(mod.resource, action);
+                                    const isAssigned = permId ? assignedIds.has(permId) : false;
+                                    
+                                    return (
+                                      <td key={action} className="px-4 py-3 text-center align-middle">
+                                        {permId ? (
+                                          <div className="flex justify-center items-center h-full">
+                                            <input
+                                              type="checkbox"
+                                              className="w-4 h-4 text-[#007aff] bg-white border-gray-300 rounded cursor-pointer focus:ring-[#007aff]"
+                                              checked={isAssigned}
+                                              onChange={() => handlePermissionToggle(permId, isAssigned)}
+                                            />
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-300">-</span>
+                                        )}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}

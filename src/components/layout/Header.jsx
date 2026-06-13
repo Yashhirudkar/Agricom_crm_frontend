@@ -27,7 +27,7 @@ export function Header() {
   // Switch Workspace
   const handleSwitchWorkspace = async (companyId) => {
     try {
-      await axiosClient.post("/auth/switch-workspace", { companyId });
+      await axiosClient.post("/auth/switch-workspace", { companyId: Number(companyId) });
       localStorage.setItem("activeCompanyId", companyId.toString());
       await dispatch(fetchCurrentUser());
       setIsSwitcherOpen(false);
@@ -94,7 +94,7 @@ export function Header() {
                 alt="Agricom CRM Logo"
                 width={160}
                 height={45}
-                style={{ height: "auto" }}
+                style={{ width: "auto", height: "auto" }}
                 className="object-contain"
                 priority
               />

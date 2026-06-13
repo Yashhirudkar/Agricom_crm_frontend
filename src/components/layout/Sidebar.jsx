@@ -4,7 +4,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   LayoutDashboard,
   Handshake,
   ShoppingCart,
@@ -116,32 +115,31 @@ export function Sidebar() {
       href: item.route,
       icon: iconMap[item.icon] || LayoutDashboard
     }));
-    return { ...section, type: section.id === "overview" ? "parent" : "parent_collapsible", title: section.name, items };
+    return { ...section, type: "parent", title: section.name, items };
   }).filter((section) => {
     return section.items.length > 0;
   });
 
-  // Group HR modules under a single collapsible parent, but keep the data structure flat for others to match backend
-  // The new DB structure has HR as multiple modules (hr_employee_management, hr_attendance, hr_payroll)
-  // Let's dynamically group them if their key starts with "hr_"
-
+  // Group HR modules under a single parent, and flatten their sub-modules into a single list
   const formattedMenu = [];
-  const hrModules = [];
+  const hrItems = [];
 
   filteredMenu.forEach(section => {
     if (section.key?.startsWith('hr_')) {
-      hrModules.push({ ...section, title: section.name, id: section.key });
+      if (section.items) {
+        hrItems.push(...section.items);
+      }
     } else {
       formattedMenu.push(section);
     }
   });
 
-  if (hrModules.length > 0) {
+  if (hrItems.length > 0) {
     formattedMenu.push({
       id: "hr_department",
       title: "HR DEPARTMENT",
-      type: "parent_collapsible_nested",
-      modules: hrModules
+      type: "parent",
+      items: hrItems
     });
   }
 
@@ -219,6 +217,7 @@ export function Sidebar() {
     Employees: "text-cyan-500",
     "Daily Log": "text-purple-500",
     "Leave Requests": "text-pink-500",
+    "Holiday Calendar": "text-pink-500",
     "Salary Details": "text-green-600",
   };
 
@@ -290,115 +289,55 @@ export function Sidebar() {
             );
           }
 
-          if (section.type === "parent_collapsible") {
-            const isParentExpanded = !!expandedParents[section.id];
+          if (section.type === "parent_nested") {
             return (
               <div key={section.id} className={`space-y-2 ${idx !== 0 ? "pt-5 border-t border-gray-100" : ""}`}>
                 {!isSidebarCollapsed ? (
-                  <button
-                    onClick={() => toggleParent(section.id)}
-                    className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 rounded cursor-pointer transition-colors group"
-                  >
-                    <span className="text-[12px] font-bold text-gray-500 tracking-widest uppercase group-hover:text-gray-700 transition-colors">
+                  <div className="px-3 py-1.5">
+                    <span className="text-[12px] font-bold text-gray-500 tracking-widest uppercase">
                       {section.title}
                     </span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform duration-300 ${isParentExpanded ? "rotate-180" : ""}`} />
-                  </button>
+                  </div>
                 ) : (
                   <div className="flex justify-center mb-2 mt-4">
                     <span className="w-4 h-px bg-gray-200"></span>
                   </div>
                 )}
 
-                <div className={`space-y-3 overflow-hidden transition-all duration-300 ${!isParentExpanded && !isSidebarCollapsed ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"}`}>
-                  <ul className="space-y-1">
-                    {section.items.map((item) => {
-                      const Icon = item.icon;
-                      const isActive = item.href !== "#" && (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href));
-                      return (
-                        <li key={item.id}>
-                          <Link
-                            href={item.href}
-                            className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"} px-3 py-2.5 rounded-xl transition-colors ${isActive ? "bg-blue-50 text-[#007aff]" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"}`}
-                            title={isSidebarCollapsed ? item.name : undefined}
-                          >
-                            <div className="flex items-center gap-3">
-                              <Icon className={`h-[18px] w-[18px] stroke-[1.5] ${isActive ? "text-[#007aff]" : iconColors[item.name] || "text-gray-500"}`} />
-                              {!isSidebarCollapsed && (
-                                <span className={`text-[13px] font-medium whitespace-nowrap ${isActive ? "text-[#007aff]" : ""}`}>{item.name}</span>
-                              )}
-                            </div>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              </div>
-            );
-          }
-
-          if (section.type === "parent_collapsible_nested") {
-            const isParentExpanded = !!expandedParents[section.id];
-            return (
-              <div key={section.id} className={`space-y-2 ${idx !== 0 ? "pt-5 border-t border-gray-100" : ""}`}>
-                {!isSidebarCollapsed ? (
-                  <button
-                    onClick={() => toggleParent(section.id)}
-                    className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 rounded cursor-pointer transition-colors group"
-                  >
-                    <span className="text-[12px] font-bold text-gray-500 tracking-widest uppercase group-hover:text-gray-700 transition-colors">
-                      {section.title}
-                    </span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform duration-300 ${isParentExpanded ? "rotate-180" : ""}`} />
-                  </button>
-                ) : (
-                  <div className="flex justify-center mb-2 mt-4">
-                    <span className="w-4 h-px bg-gray-200"></span>
-                  </div>
-                )}
-
-                <div className={`space-y-2 mt-2 overflow-hidden transition-all duration-300 ${!isParentExpanded && !isSidebarCollapsed ? "max-h-0 opacity-0" : "max-h-[1000px] opacity-100"}`}>
+                <div className="space-y-2 mt-2">
                   {section.modules.map((mod) => {
-                    const isModuleExpanded = !!expandedModules[mod.id];
                     return (
                       <div key={mod.id} className="pl-4 border-l border-gray-100 ml-3">
                         {!isSidebarCollapsed && (
-                          <button
-                            onClick={() => toggleModule(mod.id)}
-                            className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 rounded cursor-pointer transition-colors group"
-                          >
-                            <span className="text-[10px] font-bold text-gray-400 tracking-widest uppercase group-hover:text-gray-600 transition-colors">
+                          <div className="px-3 py-1.5">
+                            <span className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">
                               {mod.title}
                             </span>
-                            <ChevronDown className={`h-3 w-3 text-gray-400 transition-transform duration-300 ${isModuleExpanded ? "rotate-180" : ""}`} />
-                          </button>
+                          </div>
                         )}
 
-                        <div className={`overflow-hidden transition-all duration-300 ${!isModuleExpanded && !isSidebarCollapsed ? "max-h-0 opacity-0" : "max-h-[500px] opacity-100"}`}>
-                          <ul className="space-y-1 mt-1">
-                            {mod.items.map((item) => {
-                              const Icon = item.icon;
-                              const isActive = item.href !== "#" && (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href));
-                              return (
-                                <li key={item.id}>
-                                  <Link
-                                    href={item.href}
-                                    className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"} px-3 py-2.5 rounded-xl transition-colors ${isActive ? "bg-blue-50 text-[#007aff]" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"}`}
-                                    title={isSidebarCollapsed ? item.name : undefined}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <Icon className={`h-[18px] w-[18px] stroke-[1.5] ${isActive ? "text-[#007aff]" : iconColors[item.name] || "text-gray-500"}`} />
-                                      {!isSidebarCollapsed && (
-                                        <span className={`text-[13px] font-medium whitespace-nowrap ${isActive ? "text-[#007aff]" : ""}`}>{item.name}</span>
-                                      )}
-                                    </div>
-                                  </Link>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
+                        <ul className="space-y-1 mt-1">
+                          {mod.items.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = item.href !== "#" && (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href));
+                            return (
+                              <li key={item.id}>
+                                <Link
+                                  href={item.href}
+                                  className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"} px-3 py-2.5 rounded-xl transition-colors ${isActive ? "bg-blue-50 text-[#007aff]" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"}`}
+                                  title={isSidebarCollapsed ? item.name : undefined}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <Icon className={`h-[18px] w-[18px] stroke-[1.5] ${isActive ? "text-[#007aff]" : iconColors[item.name] || "text-gray-500"}`} />
+                                    {!isSidebarCollapsed && (
+                                      <span className={`text-[13px] font-medium whitespace-nowrap ${isActive ? "text-[#007aff]" : ""}`}>{item.name}</span>
+                                    )}
+                                  </div>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
                       </div>
                     );
                   })}

@@ -348,14 +348,37 @@ function CompaniesContent() {
                     </td>
 
                     <td className="px-6 py-4">
-                      ...
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleActiveInline(company);
+                        }}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-full border transition-colors cursor-pointer ${
+                          company.isActive
+                            ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                            : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100"
+                        }`}
+                      >
+                        {company.isActive ? "Active" : "Disabled"}
+                      </button>
                     </td>
 
                     <td
                       className="px-6 py-4 text-right space-x-2"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      ...
+                      {(userType === "super_admin" || userType === "client_admin") && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(company);
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-red-500 transition-colors cursor-pointer rounded-lg hover:bg-red-50 inline-flex items-center justify-center"
+                          title="Delete Workspace"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

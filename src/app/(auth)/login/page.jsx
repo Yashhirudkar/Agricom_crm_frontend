@@ -41,7 +41,7 @@ export default function LoginPage() {
               alt="Agricom CRM"
               width={180}
               height={50}
-              style={{ height: "auto" }}
+              style={{ width: "auto", height: "auto" }}
               className="object-contain"
               priority
             />

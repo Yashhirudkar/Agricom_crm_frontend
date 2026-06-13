@@ -78,7 +78,7 @@ export default function SelectCompanyPage() {
               alt="Agricom CRM"
               width={160}
               height={45}
-              style={{ height: "auto" }}
+              style={{ width: "auto", height: "auto" }}
               className="object-contain"
               priority
             />
