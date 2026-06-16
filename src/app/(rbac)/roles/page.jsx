@@ -77,9 +77,25 @@ function RolesContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
+  const [permissionRegistry, setPermissionRegistry] = useState([]);
+  const [registryLoading, setRegistryLoading] = useState(false);
+
   useEffect(() => {
     dispatch(fetchRoles());
     dispatch(fetchPermissions());
+
+    const fetchRegistry = async () => {
+      setRegistryLoading(true);
+      try {
+        const res = await axiosClient.get("/GetPermissionRegistry");
+        setPermissionRegistry(res.data || []);
+      } catch (err) {
+        console.error("Failed to load permission registry:", err);
+      } finally {
+        setRegistryLoading(false);
+      }
+    };
+    fetchRegistry();
   }, [dispatch]);
 
   // Handle query parameter (for automatic drawer opening from Command Palette)
@@ -194,34 +210,30 @@ function RolesContent() {
     }
   };
 
-  // Define business modules mapping
-  const BUSINESS_MODULES = [
-    {
-      category: "HR Module",
-      modules: [
-        { id: "employees", label: "Employees", resource: "employees" },
-        { id: "departments", label: "Departments", resource: "departments" },
-        { id: "designations", label: "Designations", resource: "designations" },
-        { id: "documents", label: "Documents", resource: "documents" },
-        { id: "holidays", label: "Holidays", resource: "holidays" },
-      ]
-    },
-    {
-      category: "CRM Module",
-      modules: [
-        { id: "clients", label: "Clients", resource: "clients" },
-      ]
-    },
-    {
-      category: "Administration Module",
-      modules: [
-        { id: "users", label: "Users", resource: "users" },
-        { id: "roles", label: "Roles", resource: "roles" },
-        { id: "permissions", label: "Permissions", resource: "permissions" },
-        { id: "companies", label: "Companies", resource: "companies" },
-      ]
-    }
-  ];
+  const getCategory = (moduleName) => {
+    if (!moduleName) return "Other Modules";
+    const mod = moduleName.toUpperCase();
+    if (mod === "HR") return "HR Module";
+    if (mod === "CRM") return "CRM Module";
+    if (mod === "ADMINISTRATION") return "Administration Module";
+    return `${moduleName} Module`;
+  };
+
+  const formatLabel = (str) => {
+    if (!str) return "";
+    if (str === 'hrpolicy') return 'HR Policy';
+    return str
+      .split(/[-_]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  const groupedRegistry = permissionRegistry.reduce((acc, item) => {
+    const cat = getCategory(item.module);
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(item);
+    return acc;
+  }, {});
 
   const assignedIds = new Set(assignedPermissions.map((p) => p.id));
 
@@ -276,7 +288,7 @@ function RolesContent() {
     currentPage * itemsPerPage
   );
 
-  if (isLoading && roles.length === 0) {
+  if ((isLoading && roles.length === 0) || registryLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <div className="h-8 w-8 rounded-full border-2 border-[#007aff] border-t-transparent animate-spin mb-3" />
@@ -520,23 +532,20 @@ function RolesContent() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-gray-100 bg-gray-50/20 text-gray-400 uppercase tracking-widest text-[10px] font-bold">
-                          <th className="px-4 py-3">Module</th>
-                          <th className="px-4 py-3 text-center">Read</th>
-                          <th className="px-4 py-3 text-center">Create</th>
-                          <th className="px-4 py-3 text-center">Update</th>
-                          <th className="px-4 py-3 text-center">Delete</th>
+                          <th className="px-4 py-3 w-[200px]">Module</th>
+                          <th className="px-4 py-3">Granular Permissions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 text-xs">
-                        {BUSINESS_MODULES.map((categoryObj) => {
-                          const isExpanded = expandedModules[categoryObj.category];
+                        {Object.entries(groupedRegistry).map(([category, modules]) => {
+                          const isExpanded = expandedModules[category];
                           return (
-                            <React.Fragment key={categoryObj.category}>
+                            <React.Fragment key={category}>
                               <tr 
                                 className="bg-gray-50/80 cursor-pointer hover:bg-gray-100 transition-colors"
-                                onClick={() => toggleModuleAccordion(categoryObj.category)}
+                                onClick={() => toggleModuleAccordion(category)}
                               >
-                                <td colSpan="5" className="px-4 py-2.5 font-bold text-gray-700 text-[11px] uppercase tracking-wider">
+                                <td colSpan="2" className="px-4 py-2.5 font-bold text-gray-700 text-[11px] uppercase tracking-wider">
                                   <div className="flex items-center gap-2">
                                     {isExpanded ? (
                                       <ChevronDown className="h-4 w-4 text-gray-400 transition-transform" />
@@ -544,36 +553,48 @@ function RolesContent() {
                                       <ChevronRight className="h-4 w-4 text-gray-400 transition-transform" />
                                     )}
                                     <Key className="h-3.5 w-3.5 text-gray-400" />
-                                    {categoryObj.category}
+                                    {category}
                                   </div>
                                 </td>
                               </tr>
-                              {isExpanded && categoryObj.modules.map((mod) => (
-                                <tr key={mod.id} className="hover:bg-gray-50/30 transition-colors">
-                                  <td className="px-4 py-3 font-semibold text-gray-600 pl-8">{mod.label}</td>
-                                  {['read', 'create', 'update', 'delete'].map((action) => {
-                                    const permId = getPermissionId(mod.resource, action);
-                                    const isAssigned = permId ? assignedIds.has(permId) : false;
-                                    
-                                    return (
-                                      <td key={action} className="px-4 py-3 text-center align-middle">
-                                        {permId ? (
-                                          <div className="flex justify-center items-center h-full">
-                                            <input
-                                              type="checkbox"
-                                              className="w-4 h-4 text-[#007aff] bg-white border-gray-300 rounded cursor-pointer focus:ring-[#007aff]"
-                                              checked={isAssigned}
-                                              onChange={() => handlePermissionToggle(permId, isAssigned)}
-                                            />
-                                          </div>
-                                        ) : (
-                                          <span className="text-gray-300">-</span>
-                                        )}
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              ))}
+                              {isExpanded && modules.map((mod) => {
+                                let modulePerms = allPermissions.filter(p => p.resource === mod.resource);
+                                if (modulePerms.length === 0) return null;
+                                
+                                return (
+                                  <tr key={mod.resource} className="hover:bg-gray-50/30 transition-colors">
+                                    <td className="px-4 py-3 font-semibold text-gray-600 pl-8 align-top pt-4 border-r border-gray-100">
+                                      {mod.label}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <div className="flex flex-wrap gap-2 py-1">
+                                        {modulePerms.map((perm) => {
+                                          const isAssigned = assignedIds.has(perm.id);
+                                          return (
+                                            <label 
+                                              key={perm.id} 
+                                              className={`inline-flex items-center gap-2 border px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors ${
+                                                isAssigned 
+                                                ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-300' 
+                                                : 'bg-white border-gray-200 text-gray-600 hover:border-blue-400 hover:bg-gray-50'
+                                              }`}
+                                              title={perm.description}
+                                            >
+                                              <input
+                                                type="checkbox"
+                                                className="w-3.5 h-3.5 text-[#007aff] bg-white border-gray-300 rounded cursor-pointer focus:ring-[#007aff]"
+                                                checked={isAssigned}
+                                                onChange={() => handlePermissionToggle(perm.id, isAssigned)}
+                                              />
+                                              {perm.action.replace(/_/g, ' ').toUpperCase()}
+                                            </label>
+                                          );
+                                        })}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                             </React.Fragment>
                           );
                         })}

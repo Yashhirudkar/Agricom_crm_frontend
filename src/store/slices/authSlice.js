@@ -7,10 +7,10 @@ export const loginUser = createAsyncThunk(
   "auth/login",
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      console.log(`[Frontend Login] Attempting login for: ${email}`);
+
       // Step 1: Login to get tokens
       const loginRes = await axiosClient.post("/auth/login", { email, password });
-      console.log(`[Frontend Login] Tokens received. AccessToken length: ${loginRes.data.accessToken?.length}`);
+
       const { accessToken } = loginRes.data;
 
       // Step 2: Save token to sessionStorage so interceptor can use it immediately
@@ -18,7 +18,7 @@ export const loginUser = createAsyncThunk(
 
       // Step 3: Fetch current user profile
       const meRes = await axiosClient.get("/auth/me");
-      console.log(`[Frontend Login] Current user profile fetched:`, meRes.data);
+
 
       return { accessToken, user: meRes.data };
     } catch (err) {
@@ -145,12 +145,13 @@ const authSlice = createSlice({
 export const { clearError, rehydrateToken, setInitialized } = authSlice.actions;
 
 // ─── Selectors ────────────────────────────────────────────────────────────────
+const EMPTY_ARRAY = [];
 export const selectUser = (state) => state.auth.user;
 export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
 export const selectAuthLoading = (state) => state.auth.isLoading;
 export const selectAuthError = (state) => state.auth.error;
 export const selectIsInitialized = (state) => state.auth.isInitialized;
 export const selectUserType = (state) => state.auth.user?.type;
-export const selectUserPermissions = (state) => state.auth.user?.permissions || [];
+export const selectUserPermissions = (state) => state.auth.user?.permissions || EMPTY_ARRAY;
 
 export default authSlice.reducer;

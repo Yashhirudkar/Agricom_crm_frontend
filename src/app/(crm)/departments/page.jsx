@@ -13,7 +13,7 @@ import {
   selectDepartmentsLoading,
   selectDepartmentsError,
   clearDepartmentsError,
-} from "@/store/slices/departmentsSlice";
+} from "@/store/entities/departmentsSlice";
 import Drawer from "@/components/drawers/Drawer";
 import Modal from "@/components/modals/Modal";
 import ConfirmModal from "@/components/modals/ConfirmModal";
@@ -30,7 +30,9 @@ import {
   ChevronRight,
   Users,
   Shield,
+  Network
 } from "lucide-react";
+import { Tree, TreeNode } from "react-organizational-chart";
 
 function DepartmentsContent() {
   const dispatch = useDispatch();
@@ -70,12 +72,31 @@ function DepartmentsContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [form, setForm] = useState({ name: "", description: "", status: "Active" });
+  const [form, setForm] = useState({ name: "", description: "", status: "Active", parentId: "" });
 
   // Query states
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [viewMode, setViewMode] = useState("list"); // list, tree
+  const [departmentTree, setDepartmentTree] = useState([]);
+
+  // Load tree
+  useEffect(() => {
+    if (selectedCompanyId && viewMode === "tree") {
+      fetchDepartmentTree();
+    }
+  }, [selectedCompanyId, viewMode]);
+
+  const fetchDepartmentTree = async () => {
+    try {
+      // Assuming you have a /departments/tree endpoint or standard hierarchy structure
+      const res = await import("@/lib/axios").then(m => m.default.get("/departments/tree", { headers: { "x-company-id": selectedCompanyId }}));
+      setDepartmentTree(res.data);
+    } catch(err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     if (userType === "super_admin") {
@@ -108,14 +129,14 @@ function DepartmentsContent() {
 
   const openCreate = () => {
     dispatch(clearDepartmentsError());
-    setForm({ name: "", description: "", status: "Active" });
+    setForm({ name: "", description: "", status: "Active", parentId: "" });
     setEditingDept(null);
     setIsCreateOpen(true);
   };
 
   const openEdit = (dept) => {
     dispatch(clearDepartmentsError());
-    setForm({ name: dept.name, description: dept.description || "", status: dept.status || "Active" });
+    setForm({ name: dept.name, description: dept.description || "", status: dept.status || "Active", parentId: dept.parentId || "" });
     setEditingDept(dept);
     setIsCreateOpen(true);
   };
@@ -131,14 +152,29 @@ function DepartmentsContent() {
     e.preventDefault();
     setIsSaving(true);
     try {
+      const payload = { ...form };
+      if (payload.parentId) {
+        payload.parentDepartmentId = Number(payload.parentId);
+      }
+      delete payload.parentId;
+      
+      // Remove nulls to avoid strict class-validator errors on optional fields
+      if (payload.parentDepartmentId === null || payload.parentDepartmentId === undefined) {
+        delete payload.parentDepartmentId;
+      }
+      if (payload.description === "") {
+        delete payload.description;
+      }
+      
       if (editingDept) {
-        await dispatch(updateDepartment({ id: editingDept.id, data: form })).unwrap();
+        await dispatch(updateDepartment({ id: editingDept.id, data: payload })).unwrap();
         showToast("Department updated successfully");
       } else {
-        await dispatch(createDepartment(form)).unwrap();
+        await dispatch(createDepartment(payload)).unwrap();
         showToast("Department created successfully");
       }
       dispatch(fetchDepartments({ page: currentPage, limit: itemsPerPage, search }));
+      if (viewMode === "tree") fetchDepartmentTree();
       closeModals();
     } catch (err) {
       showToast(err || "Save failed", "error");
@@ -243,12 +279,30 @@ function DepartmentsContent() {
             />
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
           </div>
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-            Total {total} Departments
+          <div className="flex items-center gap-2">
+            <div className="bg-white border border-gray-200 rounded-xl p-1 flex">
+              <button 
+                onClick={() => setViewMode("list")}
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${viewMode === "list" ? "bg-[#007aff] text-white" : "text-gray-500 hover:bg-gray-50"}`}
+              >
+                List
+              </button>
+              <button 
+                onClick={() => setViewMode("tree")}
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors flex items-center gap-1 ${viewMode === "tree" ? "bg-[#007aff] text-white" : "text-gray-500 hover:bg-gray-50"}`}
+              >
+                <Network className="h-3 w-3" /> Tree
+              </button>
+            </div>
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-2">
+              Total {total}
+            </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {viewMode === "list" ? (
+          <>
+            <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/30 text-gray-400 uppercase tracking-widest text-[10px] font-bold">
@@ -338,6 +392,44 @@ function DepartmentsContent() {
             </button>
           </div>
         )}
+        </>
+        ) : (
+          <div className="p-8 overflow-auto flex justify-center min-h-[400px]">
+            {departmentTree.length === 0 ? (
+               <div className="text-gray-400 font-semibold text-xs mt-10">No tree data available</div>
+            ) : (
+               <Tree
+                  lineWidth="2px"
+                  lineColor="#e5e7eb"
+                  lineBorderRadius="10px"
+                  label={
+                    <div className="inline-block px-4 py-2 bg-[#007aff] text-white font-bold text-xs rounded-xl shadow-md">
+                      Company Root
+                    </div>
+                  }
+               >
+                  {departmentTree.map(dept => {
+                    const renderDeptNode = (node) => (
+                      <TreeNode 
+                        key={node.id} 
+                        label={
+                          <div className="inline-block px-4 py-3 bg-white border border-gray-200 rounded-xl shadow-xs hover:shadow-md transition-shadow min-w-[140px] cursor-pointer" onClick={() => handleOpenDrawer(node)}>
+                            <div className="font-bold text-gray-800 text-xs">{node.name}</div>
+                            <div className={`mt-1 text-[9px] font-bold px-2 py-0.5 rounded inline-block ${node.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                              {node.status}
+                            </div>
+                          </div>
+                        }
+                      >
+                        {node.children && node.children.map(child => renderDeptNode(child))}
+                      </TreeNode>
+                    );
+                    return renderDeptNode(dept);
+                  })}
+               </Tree>
+            )}
+          </div>
+        )}
       </div>
       )}
 
@@ -400,6 +492,21 @@ function DepartmentsContent() {
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700"
               placeholder="e.g. Sales, Marketing"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+              Parent Department
+            </label>
+            <select
+              value={form.parentId}
+              onChange={(e) => setForm({ ...form, parentId: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
+            >
+              <option value="">-- None (Root) --</option>
+              {departments.map((d) => (
+                d.id !== editingDept?.id && <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">

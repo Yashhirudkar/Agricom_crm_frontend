@@ -1,15 +1,35 @@
-import { configureStore } from "@reduxjs/toolkit";
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import authReducer from "./slices/authSlice";
 import rolesReducer from "./slices/rolesSlice";
 import permissionsReducer from "./slices/permissionsSlice";
 import companiesReducer from "./slices/companiesSlice";
 import usersReducer from "./slices/usersSlice";
 import clientsReducer from "./slices/clientsSlice";
-import departmentsReducer from "./slices/departmentsSlice";
-import designationsReducer from "./slices/designationsSlice";
-import employeesReducer from "./slices/employeesSlice";
+
+// Entity reducers
+import departmentsReducer from "./entities/departmentsSlice";
+import designationsReducer from "./entities/designationsSlice";
+import employeesReducer from "./entities/employeesSlice";
+import branchesReducer from "./entities/branchesSlice";
+import companyHrPoliciesReducer from "./entities/companyHrPoliciesSlice";
+import holidaysReducer from "./entities/holidaysSlice";
+import leaveTypesReducer from "./entities/leaveTypesSlice";
+import leaveRequestsReducer from "./entities/leaveRequestsSlice";
+import leaveBalancesReducer from "./entities/leaveBalancesSlice";
 
 import { injectStore } from "../lib/axios";
+
+const entitiesReducer = combineReducers({
+  departments: departmentsReducer,
+  designations: designationsReducer,
+  employees: employeesReducer,
+  branches: branchesReducer,
+  companyHrPolicies: companyHrPoliciesReducer,
+  holidays: holidaysReducer,
+  leaveTypes: leaveTypesReducer,
+  leaveRequests: leaveRequestsReducer,
+  leaveBalances: leaveBalancesReducer,
+});
 
 export const store = configureStore({
   reducer: {
@@ -19,9 +39,7 @@ export const store = configureStore({
     companies: companiesReducer,
     users: usersReducer,
     clients: clientsReducer,
-    departments: departmentsReducer,
-    designations: designationsReducer,
-    employees: employeesReducer,
+    entities: entitiesReducer,
   },
   devTools: process.env.NODE_ENV !== "production",
 });

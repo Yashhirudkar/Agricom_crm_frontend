@@ -13,8 +13,8 @@ import {
   selectDesignationsLoading,
   selectDesignationsError,
   clearDesignationsError,
-} from "@/store/slices/designationsSlice";
-import { fetchDepartments, selectDepartmentsData } from "@/store/slices/departmentsSlice";
+} from "@/store/entities/designationsSlice";
+import { fetchDepartments, selectDepartmentsData } from "@/store/entities/departmentsSlice";
 import Drawer from "@/components/drawers/Drawer";
 import Modal from "@/components/modals/Modal";
 import ConfirmModal from "@/components/modals/ConfirmModal";
@@ -27,11 +27,11 @@ import {
   AlertCircle,
   Info,
   Search,
-  ChevronLeft,
-  ChevronRight,
   Users,
   Building2,
+  Network
 } from "lucide-react";
+import { Tree, TreeNode } from "react-organizational-chart";
 
 function DesignationsContent() {
   const dispatch = useDispatch();
@@ -74,12 +74,30 @@ function DesignationsContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [form, setForm] = useState({ name: "", description: "", status: "Active", departmentId: "" });
+  const [form, setForm] = useState({ name: "", description: "", status: "Active", departmentId: "", parentId: "", salaryBandMin: "", salaryBandMax: "" });
 
   // Query states
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [viewMode, setViewMode] = useState("list"); // list, tree
+  const [designationTree, setDesignationTree] = useState([]);
+
+  // Load tree
+  useEffect(() => {
+    if (selectedCompanyId && viewMode === "tree") {
+      fetchDesignationTree();
+    }
+  }, [selectedCompanyId, viewMode]);
+
+  const fetchDesignationTree = async () => {
+    try {
+      const res = await import("@/lib/axios").then(m => m.default.get("/designations/hierarchy", { headers: { "x-company-id": selectedCompanyId }}));
+      setDesignationTree(res.data);
+    } catch(err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     if (userType === "super_admin") {
@@ -113,7 +131,7 @@ function DesignationsContent() {
 
   const openCreate = () => {
     dispatch(clearDesignationsError());
-    setForm({ name: "", description: "", status: "Active", departmentId: "" });
+    setForm({ name: "", description: "", status: "Active", departmentId: "", parentId: "", salaryBandMin: "", salaryBandMax: "" });
     setEditingDesig(null);
     setIsCreateOpen(true);
   };
@@ -124,7 +142,10 @@ function DesignationsContent() {
       name: desig.name, 
       description: desig.description || "", 
       status: desig.status || "Active",
-      departmentId: desig.departmentId || ""
+      departmentId: desig.departmentId || "",
+      parentId: desig.parentId || "",
+      salaryBandMin: desig.salaryBandMin || "",
+      salaryBandMax: desig.salaryBandMax || ""
     });
     setEditingDesig(desig);
     setIsCreateOpen(true);
@@ -143,8 +164,19 @@ function DesignationsContent() {
     try {
       const payload = {
         ...form,
-        departmentId: form.departmentId ? Number(form.departmentId) : null
+        departmentId: form.departmentId ? Number(form.departmentId) : undefined,
+        parentDesignationId: form.parentId ? Number(form.parentId) : undefined,
+        salaryBandMin: form.salaryBandMin ? Number(form.salaryBandMin) : undefined,
+        salaryBandMax: form.salaryBandMax ? Number(form.salaryBandMax) : undefined
       };
+      delete payload.parentId;
+      
+      // Remove undefined/empty to avoid strict validation errors
+      Object.keys(payload).forEach(key => {
+        if (payload[key] === undefined || payload[key] === null || payload[key] === "") {
+          delete payload[key];
+        }
+      });
       if (editingDesig) {
         await dispatch(updateDesignation({ id: editingDesig.id, data: payload })).unwrap();
         showToast("Designation updated successfully");
@@ -153,6 +185,7 @@ function DesignationsContent() {
         showToast("Designation created successfully");
       }
       dispatch(fetchDesignations({ page: currentPage, limit: itemsPerPage, search }));
+      if (viewMode === "tree") fetchDesignationTree();
       closeModals();
     } catch (err) {
       showToast(err || "Save failed", "error");
@@ -256,12 +289,30 @@ function DesignationsContent() {
             />
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
           </div>
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-            Total {total} Designations
+          <div className="flex items-center gap-2">
+            <div className="bg-white border border-gray-200 rounded-xl p-1 flex">
+              <button 
+                onClick={() => setViewMode("list")}
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${viewMode === "list" ? "bg-[#007aff] text-white" : "text-gray-500 hover:bg-gray-50"}`}
+              >
+                List
+              </button>
+              <button 
+                onClick={() => setViewMode("tree")}
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors flex items-center gap-1 ${viewMode === "tree" ? "bg-[#007aff] text-white" : "text-gray-500 hover:bg-gray-50"}`}
+              >
+                <Network className="h-3 w-3" /> Tree
+              </button>
+            </div>
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-2">
+              Total {total}
+            </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {viewMode === "list" ? (
+          <>
+            <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/30 text-gray-400 uppercase tracking-widest text-[10px] font-bold">
@@ -349,6 +400,45 @@ function DesignationsContent() {
             </button>
           </div>
         )}
+        </>
+        ) : (
+          <div className="p-8 overflow-auto flex justify-center min-h-[400px]">
+            {designationTree.length === 0 ? (
+               <div className="text-gray-400 font-semibold text-xs mt-10">No tree data available</div>
+            ) : (
+               <Tree
+                  lineWidth="2px"
+                  lineColor="#e5e7eb"
+                  lineBorderRadius="10px"
+                  label={
+                    <div className="inline-block px-4 py-2 bg-[#007aff] text-white font-bold text-xs rounded-xl shadow-md">
+                      Company Root
+                    </div>
+                  }
+               >
+                  {designationTree.map(desig => {
+                    const renderDesigNode = (node) => (
+                      <TreeNode 
+                        key={node.id} 
+                        label={
+                          <div className="inline-block px-4 py-3 bg-white border border-gray-200 rounded-xl shadow-xs hover:shadow-md transition-shadow min-w-[140px] cursor-pointer" onClick={() => handleOpenDrawer(node)}>
+                            <div className="font-bold text-gray-800 text-xs">{node.name}</div>
+                            {node.department && <div className="text-[9px] text-gray-500 mt-0.5">{node.department.name}</div>}
+                            <div className={`mt-1 text-[9px] font-bold px-2 py-0.5 rounded inline-block ${node.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                              {node.status}
+                            </div>
+                          </div>
+                        }
+                      >
+                        {node.children && node.children.map(child => renderDesigNode(child))}
+                      </TreeNode>
+                    );
+                    return renderDesigNode(desig);
+                  })}
+               </Tree>
+            )}
+          </div>
+        )}
       </div>
       )}
 
@@ -427,6 +517,47 @@ function DesignationsContent() {
                 <option key={dept.id} value={dept.id}>{dept.name}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+              Parent Designation
+            </label>
+            <select
+              value={form.parentId}
+              onChange={(e) => setForm({ ...form, parentId: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
+            >
+              <option value="">-- None (Root) --</option>
+              {designations.map((d) => (
+                d.id !== editingDesig?.id && <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                Salary Min
+              </label>
+              <input
+                type="number"
+                value={form.salaryBandMin}
+                onChange={(e) => setForm({ ...form, salaryBandMin: e.target.value })}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700"
+                placeholder="0"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                Salary Max
+              </label>
+              <input
+                type="number"
+                value={form.salaryBandMax}
+                onChange={(e) => setForm({ ...form, salaryBandMax: e.target.value })}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700"
+                placeholder="0"
+              />
+            </div>
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">

@@ -59,11 +59,13 @@ export function AuthGuard({ children }) {
         if (workspaces.length > 1 && !activeCompanyId) {
           if (pathname !== "/select-company") {
             router.replace("/select-company");
-            return;
           }
+          return;
         } else if (workspaces.length === 1 && !activeCompanyId) {
           localStorage.setItem("activeCompanyId", workspaces[0].id.toString());
-          axiosClient.post("/auth/switch-workspace", { companyId: workspaces[0].id }).catch(console.error);
+          axiosClient
+            .post("/auth/switch-workspace", { companyId: workspaces[0].id })
+            .catch(console.error);
         } else if (activeCompanyId && pathname === "/select-company") {
           router.replace("/");
           return;
@@ -89,6 +91,15 @@ export function AuthGuard({ children }) {
 
   // On protected routes, only render if authenticated
   if (!isAuthenticated) return null;
+
+  // Additional check: prevent rendering children if workspace selection is required but not done
+  if (user && user.type !== "super_admin") {
+    const workspaces = user.workspaces || [];
+    const activeCompanyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
+    if (workspaces.length > 1 && !activeCompanyId && pathname !== "/select-company") {
+      return null;
+    }
+  }
 
   return <>{children}</>;
 }

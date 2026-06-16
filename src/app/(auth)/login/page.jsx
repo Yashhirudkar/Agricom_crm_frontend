@@ -35,14 +35,13 @@ export default function LoginPage() {
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-8 py-10">
           {/* Logo */}
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-8 h-14">
             <Image
               src="/agri_logo.png"
               alt="Agricom CRM"
               width={180}
               height={50}
-              style={{ width: "auto", height: "auto" }}
-              className="object-contain"
+              className="object-contain h-full w-auto"
               priority
             />
           </div>

@@ -11,7 +11,7 @@ import {
   selectEmployeesData,
   selectEmployeesLoading,
   selectEmployeesError,
-} from "@/store/slices/employeesSlice";
+} from "@/store/entities/employeesSlice";
 import Drawer from "@/components/drawers/Drawer";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import HasPermission from "@/components/rbac/HasPermission";
@@ -37,6 +37,12 @@ import {
   User as UserIcon
 } from "lucide-react";
 import axiosClient from "@/lib/axios";
+import EmployeeOverviewTab from "@/components/hrms/employees/EmployeeOverviewTab";
+import EmployeePersonalTab from "@/components/hrms/employees/EmployeePersonalTab";
+import EmployeeEmploymentTab from "@/components/hrms/employees/EmployeeEmploymentTab";
+import EmployeeAccessTab from "@/components/hrms/employees/EmployeeAccessTab";
+import EmployeeLifecycleTab from "@/components/hrms/employees/EmployeeLifecycleTab";
+import EmployeeDocumentsTab from "@/components/hrms/employees/EmployeeDocumentsTab";
 
 function EmployeesContent() {
   const dispatch = useDispatch();
@@ -160,73 +166,6 @@ function EmployeesContent() {
     }
   };
 
-  const handleFileSelect = (e) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files).map(f => ({
-        fileObj: f,
-        documentType: "OTHER"
-      }));
-      setPendingDocs(prev => [...prev, ...newFiles]);
-    }
-    e.target.value = null;
-  };
-
-  const handlePendingDocTypeChange = (index, value) => {
-    setPendingDocs(prev => prev.map((f, i) => i === index ? { ...f, documentType: value } : f));
-  };
-
-  const handleRemovePendingDoc = (index) => {
-    setPendingDocs(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleConfirmUpload = async () => {
-    if (pendingDocs.length === 0) return;
-    setIsUploading(true);
-
-    try {
-      for (const item of pendingDocs) {
-        const formData = new FormData();
-        formData.append("file", item.fileObj);
-        
-        const uploadRes = await axiosClient.post("/attachments/upload", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "x-company-id": selectedCompanyId,
-          },
-        });
-
-        const fileUrl = uploadRes.data.fileUrl;
-        
-        await axiosClient.post(`/employees/${selectedEmp.id}/documents`, {
-          documentType: item.documentType,
-          fileName: item.fileObj.name,
-          fileUrl: fileUrl,
-        }, {
-          headers: { "x-company-id": selectedCompanyId }
-        });
-      }
-      showToast("Documents uploaded successfully");
-      setPendingDocs([]);
-      loadDocuments(selectedEmp.id);
-    } catch (err) {
-      showToast("Failed to upload document", "error");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleDeleteDocument = async (docId) => {
-    try {
-      await axiosClient.delete(`/employees/${selectedEmp.id}/documents/${docId}`, {
-        headers: { "x-company-id": selectedCompanyId }
-      });
-      showToast("Document deleted");
-      loadDocuments(selectedEmp.id);
-    } catch(err) {
-      showToast("Failed to delete", "error");
-    }
-  }
-
   if (isLoading && employees.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
@@ -263,8 +202,8 @@ function EmployeesContent() {
               className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
             >
               <option value="">-- Select Company Context --</option>
-              {allCompanies.map((c) => (
-                <option key={c.id} value={c.id}>
+              {allCompanies.map((c, idx) => (
+                <option key={`company-${c.id || idx}-${idx}`} value={c.id}>
                   {c.name}
                 </option>
               ))}
@@ -326,80 +265,94 @@ function EmployeesContent() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-xs">
-              {employees.map((emp) => {
-                const isSelected = selectedEmp?.id === emp.id;
-                return (
-                  <tr
-                    key={emp.id}
-                    onClick={() => handleOpenDrawer(emp)}
-                    className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${isSelected ? "bg-blue-50/40" : ""}`}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-gray-800">{emp.firstName} {emp.lastName}</span>
-                        <span className="text-[10px] text-gray-400 font-mono mt-0.5">{emp.employeeCode}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1 text-gray-500">
-                        <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-gray-400"/> {emp.email}</div>
-                        {emp.mobile && <div className="text-[10px] text-gray-400">{emp.mobile}</div>}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1 text-gray-500">
-                        <div className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-gray-400"/> {emp.designation?.name || <span className="text-gray-300 italic">No Designation</span>}</div>
-                        <div className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-gray-400"/> {emp.department?.name || <span className="text-gray-300 italic">No Dept</span>}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        emp.status === 'Active' ? 'bg-green-50 text-green-600 border border-green-100' : 
-                        emp.status === 'On Leave' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                        'bg-red-50 text-red-600 border border-red-100'
-                      }`}>
-                        {emp.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <HasPermission permission="documents:read">
-                        <button 
-                          onClick={(e) => handleOpenDocDrawer(e, emp)}
-                          className="flex items-center gap-1 text-[#007aff] hover:underline font-semibold"
-                        >
-                          <FileText className="h-4 w-4" /> Manage
-                        </button>
-                      </HasPermission>
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                      <HasPermission permission="employees:update">
-                        <button
-                          onClick={() => router.push(`/employees/${emp.id}/edit`)}
-                          className="p-1 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
-                          title="Edit details"
-                        >
-                          <Edit2 className="h-4 w-4 inline" />
-                        </button>
-                      </HasPermission>
-                      <HasPermission permission="employees:delete">
-                        <button
-                          onClick={() => setDeleteTarget(emp)}
-                          className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                          title="Delete employee"
-                        >
-                          <Trash2 className="h-4 w-4 inline" />
-                        </button>
-                      </HasPermission>
+              {employees.length > 0 ? (
+                employees.map((emp, idx) => {
+                  const isSelected = selectedEmp?.id === emp.id;
+                  return (
+                    <tr
+                      key={`employee-${emp.id || idx}-${idx}`}
+                      onClick={() => handleOpenDrawer(emp)}
+                      className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${isSelected ? "bg-blue-50/40" : ""}`}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-800">{emp.firstName} {emp.lastName}</span>
+                          <span className="text-[10px] text-gray-400 font-mono mt-0.5">{emp.employeeCode}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1 text-gray-500">
+                          <div className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-gray-400"/> {emp.email}</div>
+                          {emp.mobile && <div className="text-[10px] text-gray-400">{emp.mobile}</div>}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1 text-gray-500">
+                          <div className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5 text-gray-400"/> {emp.designation?.name || <span className="text-gray-300 italic">No Designation</span>}</div>
+                          <div className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-gray-400"/> {emp.department?.name || <span className="text-gray-300 italic">No Dept</span>}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {(() => {
+                          const statusConfig = {
+                            DRAFT: { label: "Draft", className: "bg-gray-50 text-gray-600 border border-gray-100" },
+                            ONBOARDING: { label: "Onboarding", className: "bg-blue-50 text-[#007aff] border border-blue-100" },
+                            PROBATION: { label: "Probation", className: "bg-purple-50 text-purple-600 border border-purple-100" },
+                            ACTIVE: { label: "Active", className: "bg-green-50 text-green-600 border border-green-100" },
+                            CONFIRMED: { label: "Confirmed", className: "bg-emerald-50 text-emerald-600 border border-emerald-100" },
+                            NOTICE_PERIOD: { label: "Notice Period", className: "bg-amber-50 text-amber-600 border border-amber-100" },
+                            RESIGNED: { label: "Resigned", className: "bg-rose-50 text-rose-600 border border-rose-100" },
+                            TERMINATED: { label: "Terminated", className: "bg-red-50 text-red-600 border border-red-100" }
+                          };
+                          const cfg = statusConfig[emp.status] || { label: emp.status, className: "bg-gray-50 text-gray-500 border border-gray-100" };
+                          return (
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${cfg.className}`}>
+                              {cfg.label}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <HasPermission permission="documents:read">
+                          <button 
+                            onClick={(e) => handleOpenDocDrawer(e, emp)}
+                            className="flex items-center gap-1 text-[#007aff] hover:underline font-semibold"
+                          >
+                            <FileText className="h-4 w-4" /> Manage
+                          </button>
+                        </HasPermission>
+                      </td>
+                      <td className="px-6 py-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
+                        <HasPermission permission="employees:update">
+                          <button
+                            onClick={() => router.push(`/employees/${emp.id}/edit`)}
+                            className="p-1 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
+                            title="Edit details"
+                          >
+                            <Edit2 className="h-4 w-4 inline" />
+                          </button>
+                        </HasPermission>
+                        <HasPermission permission="employees:delete">
+                          <button
+                            onClick={() => setDeleteTarget(emp)}
+                            className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                            title="Delete employee"
+                          >
+                            <Trash2 className="h-4 w-4 inline" />
+                          </button>
+                        </HasPermission>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                !isLoading && (
+                  <tr key="no-data">
+                    <td colSpan="7" className="px-6 py-12 text-center text-gray-400 font-semibold">
+                      No matching employees found.
                     </td>
                   </tr>
-                );
-              })}
-              {employees.length === 0 && !isLoading && (
-                <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center text-gray-400 font-semibold">
-                    No matching employees found.
-                  </td>
-                </tr>
+                )
               )}
             </tbody>
           </table>
@@ -427,7 +380,6 @@ function EmployeesContent() {
       </div>
       )}
 
-      {/* Main Employee Details Drawer */}
       <Drawer
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -439,86 +391,25 @@ function EmployeesContent() {
           { id: "overview", label: "Overview" },
           { id: "personal", label: "Personal" },
           { id: "employment", label: "Employment" },
+          { id: "lifecycle", label: "Lifecycle" },
           { id: "access", label: "Access" },
           { id: "activity", label: "Activity" }
         ]}
       >
         <div className="space-y-6">
-          {/* Overvew Tab */}
-          {activeTab === "overview" && empDetails && (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-2xs overflow-hidden">
-              <div className="p-4 border-b border-gray-50 bg-gray-50/20 text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                <Info className="h-4 w-4 text-gray-400" />
-                Employee Profile Snapshot
-              </div>
-              <div className="p-4 space-y-3.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-gray-400 font-medium">Department</span>
-                  <span className="font-bold text-gray-800">{empDetails.department?.name || "-"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400 font-medium">Designation</span>
-                  <span className="font-bold text-gray-800">{empDetails.designation?.name || "-"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400 font-medium">Status</span>
-                  <span className={`font-bold ${empDetails.status === 'Active' ? 'text-green-600' : 'text-red-600'}`}>
-                    {empDetails.status}
-                  </span>
-                </div>
-              </div>
-            </div>
+          {activeTab === "overview" && <EmployeeOverviewTab empDetails={empDetails} />}
+          {activeTab === "personal" && <EmployeePersonalTab empDetails={empDetails} />}
+          {activeTab === "employment" && <EmployeeEmploymentTab empDetails={empDetails} />}
+          {activeTab === "lifecycle" && (
+            <EmployeeLifecycleTab 
+              empDetails={empDetails} 
+              onRefresh={() => {
+                loadFullEmployeeDetails(selectedEmp.id);
+                dispatch(fetchEmployees({ page: currentPage, limit: itemsPerPage, search }));
+              }} 
+            />
           )}
-
-          {/* Personal Tab */}
-          {activeTab === "personal" && empDetails && (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-2xs overflow-hidden">
-              <div className="p-4 border-b border-gray-50 bg-gray-50/20 text-xs font-bold text-gray-800">
-                Personal Information
-              </div>
-              <div className="p-4 space-y-3.5 text-xs">
-                <div className="flex justify-between"><span className="text-gray-400 font-medium">Email</span><span className="font-bold text-gray-800">{empDetails.email}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 font-medium">Mobile</span><span className="font-bold text-gray-800">{empDetails.mobile || "-"}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 font-medium">DOB</span><span className="font-bold text-gray-800">{empDetails.dob || "-"}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 font-medium">Gender</span><span className="font-bold text-gray-800">{empDetails.gender || "-"}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 font-medium">Address</span><span className="font-bold text-gray-800 max-w-[200px] text-right">{empDetails.address || "-"}</span></div>
-                <hr className="my-2" />
-                <div className="flex justify-between"><span className="text-gray-400 font-medium">Emergency Contact</span><span className="font-bold text-gray-800">{empDetails.emergencyContactName || "-"}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 font-medium">Emergency Number</span><span className="font-bold text-gray-800">{empDetails.emergencyContactNumber || "-"}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 font-medium">Relation</span><span className="font-bold text-gray-800">{empDetails.emergencyContactRelation || "-"}</span></div>
-              </div>
-            </div>
-          )}
-
-          {/* Employment Tab */}
-          {activeTab === "employment" && empDetails && (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-2xs overflow-hidden">
-               <div className="p-4 border-b border-gray-50 bg-gray-50/20 text-xs font-bold text-gray-800">Employment Details</div>
-               <div className="p-4 space-y-3.5 text-xs">
-                <div className="flex justify-between"><span className="text-gray-400 font-medium">Joining Date</span><span className="font-bold text-gray-800">{empDetails.joiningDate || "-"}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400 font-medium">Type</span><span className="font-bold text-gray-800">{empDetails.employmentType}</span></div>
-               </div>
-            </div>
-          )}
-
-          {/* Access Tab */}
-          {activeTab === "access" && empDetails && (
-             <div className="bg-white rounded-xl border border-gray-100 shadow-2xs overflow-hidden">
-               <div className="p-4 border-b border-gray-50 bg-gray-50/20 text-xs font-bold text-gray-800">System Access</div>
-               <div className="p-4 space-y-3.5 text-xs">
-                  {empDetails.user ? (
-                    <>
-                      <div className="flex justify-between"><span className="text-gray-400 font-medium">Linked User Email</span><span className="font-bold text-[#007aff]">{empDetails.user.email}</span></div>
-                      <div className="flex justify-between"><span className="text-gray-400 font-medium">Account Status</span><span className="font-bold text-gray-800">{empDetails.user.status}</span></div>
-                    </>
-                  ) : (
-                    <div className="text-gray-400 italic text-center py-4">No login account created for this employee.</div>
-                  )}
-               </div>
-             </div>
-          )}
-          
-          {/* Activity Tab */}
+          {activeTab === "access" && <EmployeeAccessTab empDetails={empDetails} />}
           {activeTab === "activity" && (
             <div className="text-center py-10 text-gray-400 text-xs">
               <Activity className="h-6 w-6 mx-auto mb-2 text-gray-300" />
@@ -538,80 +429,12 @@ function EmployeesContent() {
         onTabChange={() => {}}
         tabs={[{ id: "docs", label: "Documents List" }]}
       >
-         <div className="space-y-6">
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors relative overflow-hidden">
-              <input type="file" multiple id="docUpload" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileSelect} disabled={isUploading} />
-              <div className="flex flex-col items-center gap-2">
-                <UploadCloud className="h-6 w-6 text-gray-400" />
-                <span className="text-sm font-bold text-[#007aff]">
-                  Click or drag to select files
-                </span>
-              </div>
-            </div>
-
-            {pendingDocs.length > 0 && (
-              <div className="space-y-3 border border-blue-100 bg-blue-50/30 p-4 rounded-xl">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-gray-800">Pending Uploads ({pendingDocs.length})</h3>
-                  <button onClick={handleConfirmUpload} disabled={isUploading} className="px-3 py-1.5 bg-[#007aff] text-white text-[10px] font-bold rounded-lg hover:bg-blue-600 disabled:opacity-50">
-                    {isUploading ? "Uploading..." : "Confirm Upload"}
-                  </button>
-                </div>
-                {pendingDocs.map((doc, i) => (
-                  <div key={i} className="flex justify-between items-center text-xs p-2 bg-white border border-blue-100 rounded-lg shadow-sm">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-gray-700 truncate max-w-[150px]">{doc.fileObj.name}</span>
-                      <span className="text-gray-400 text-[10px]">{(doc.fileObj.size / 1024).toFixed(1)} KB</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <select value={doc.documentType} onChange={(e) => handlePendingDocTypeChange(i, e.target.value)} className="border border-gray-200 rounded text-[10px] px-1 py-1 outline-none focus:border-[#007aff] bg-gray-50 text-gray-600">
-                        <option value="PROFILE_PHOTO">Profile Photo</option>
-                        <option value="AADHAAR">Aadhaar</option>
-                        <option value="PAN">PAN</option>
-                        <option value="RESUME">Resume</option>
-                        <option value="OFFER_LETTER">Offer Letter</option>
-                        <option value="OTHER">Other</option>
-                      </select>
-                      <button type="button" onClick={() => handleRemovePendingDoc(i)} className="text-red-500 hover:bg-red-50 p-1 rounded font-bold">X</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="space-y-3">
-              {empDocuments.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-xs font-medium border border-gray-100 rounded-xl">
-                  No documents found.
-                </div>
-              ) : (
-                empDocuments.map(doc => (
-                  <div key={doc.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl bg-white shadow-2xs">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                        <FileText className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-gray-800">{doc.fileName}</p>
-                        <p className="text-[10px] font-bold text-gray-400">{doc.documentType}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <a href={`http://localhost:5000${doc.fileUrl}`} target="_blank" rel="noreferrer" className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg cursor-pointer">
-                        <Eye className="h-4 w-4" />
-                      </a>
-                      <a href={`http://localhost:5000${doc.fileUrl}`} download className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg cursor-pointer">
-                        <Download className="h-4 w-4" />
-                      </a>
-                      <button onClick={() => handleDeleteDocument(doc.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg cursor-pointer">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-         </div>
+        <EmployeeDocumentsTab 
+          selectedEmp={selectedEmp}
+          selectedCompanyId={selectedCompanyId}
+          empDocuments={empDocuments}
+          loadDocuments={loadDocuments}
+        />
       </Drawer>
 
       {/* Delete Cascading Confirmation Dialog */}

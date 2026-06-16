@@ -129,12 +129,12 @@ function ClientsContent() {
     setFormData(
       client
         ? {
-            name: client.name,
-            email: client.email,
-            password: "",
-            allowedCompanies: client.allowedCompanies,
-            allowedUsers: client.allowedUsers,
-          }
+          name: client.name,
+          email: client.email,
+          password: "",
+          allowedCompanies: client.allowedCompanies,
+          allowedUsers: client.allowedUsers,
+        }
         : { name: "", email: "", password: "", allowedCompanies: 3, allowedUsers: 15 }
     );
     setIsModalOpen(true);
@@ -230,9 +230,8 @@ function ClientsContent() {
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6">
       {toast && (
         <div
-          className={`fixed top-5 right-5 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
-            toast.type === "error" ? "bg-red-500" : "bg-green-500"
-          }`}
+          className={`fixed top-5 right-5 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === "error" ? "bg-red-500" : "bg-green-500"
+            }`}
         >
           {toast.type === "error" ? <AlertCircle className="h-4 w-4" /> : <Check className="h-4 w-4" />}
           {toast.msg}
@@ -320,9 +319,8 @@ function ClientsContent() {
                   <tr
                     key={client.id}
                     onClick={() => handleOpenDrawer(client)}
-                    className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${
-                      isSelected ? "bg-blue-50/40" : ""
-                    }`}
+                    className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${isSelected ? "bg-blue-50/40" : ""
+                      }`}
                   >
                     <td className="px-6 py-4 font-bold text-gray-800">{client.name}</td>
                     <td className="px-6 py-4 text-gray-500 font-medium">{client.email}</td>
@@ -442,11 +440,10 @@ function ClientsContent() {
                     {/* Meter Progress Bar */}
                     <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          clientCompanies.length >= selectedClient?.allowedCompanies
+                        className={`h-full rounded-full transition-all duration-500 ${clientCompanies.length >= selectedClient?.allowedCompanies
                             ? "bg-red-500"
                             : "bg-[#007aff]"
-                        }`}
+                          }`}
                         style={{
                           width: `${Math.min(
                             (clientCompanies.length / (selectedClient?.allowedCompanies || 1)) * 100,
@@ -474,9 +471,8 @@ function ClientsContent() {
                     {/* Meter Progress Bar */}
                     <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          clientUsers.length >= selectedClient?.allowedUsers ? "bg-red-500" : "bg-purple-500"
-                        }`}
+                        className={`h-full rounded-full transition-all duration-500 ${clientUsers.length >= selectedClient?.allowedUsers ? "bg-red-500" : "bg-purple-500"
+                          }`}
                         style={{
                           width: `${Math.min(
                             (clientUsers.length / (selectedClient?.allowedUsers || 1)) * 100,
@@ -568,13 +564,12 @@ function ClientsContent() {
                         </div>
                       </div>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                          u.status === "Active"
+                        className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${u.status === "Active"
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
                             : u.status === "Invited"
-                            ? "bg-amber-50 text-amber-700 border border-amber-100"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
+                              ? "bg-amber-50 text-amber-700 border border-amber-100"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
                       >
                         {u.status}
                       </span>

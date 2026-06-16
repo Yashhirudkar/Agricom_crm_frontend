@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchDepartments, selectDepartmentsData } from "@/store/slices/departmentsSlice";
-import { fetchDesignations, selectDesignationsData } from "@/store/slices/designationsSlice";
-import { updateEmployee } from "@/store/slices/employeesSlice";
+import { fetchDepartments, selectDepartmentsData } from "@/store/entities/departmentsSlice";
+import { fetchDesignations, selectDesignationsData } from "@/store/entities/designationsSlice";
+import { updateEmployee, fetchEmployees, selectEmployeesData } from "@/store/entities/employeesSlice";
+import { fetchBranches, selectBranchesData } from "@/store/entities/branchesSlice";
+import { fetchUsers, selectUsers } from "@/store/slices/usersSlice";
 import { ChevronLeft, Save, Shield, Check, AlertCircle } from "lucide-react";
 import axiosClient from "@/lib/axios";
 
@@ -20,6 +22,14 @@ export default function EditEmployeePage() {
 
   const { data: designationsObj } = useSelector(selectDesignationsData) || { data: [] };
   const designations = designationsObj?.data || designationsObj || [];
+
+  const { data: branchesObj } = useSelector(selectBranchesData) || { data: [] };
+  const branches = branchesObj?.data || branchesObj || [];
+
+  const { data: employeesObj } = useSelector(selectEmployeesData) || { data: [] };
+  const managers = employeesObj?.data || employeesObj || [];
+
+  const users = useSelector(selectUsers) || [];
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = "success") => {
@@ -38,15 +48,18 @@ export default function EditEmployeePage() {
     dob: "",
     departmentId: "",
     designationId: "",
+    branchId: "",
+    managerId: "",
     employmentType: "Full-time",
     joiningDate: "",
-    status: "Active",
+    status: "ACTIVE",
     emergencyContactName: "",
     emergencyContactNumber: "",
     emergencyContactRelation: "",
     createLogin: false,
     roleId: "",
     newPassword: "",
+    userId: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,6 +74,9 @@ export default function EditEmployeePage() {
 
         dispatch(fetchDepartments({ limit: 1000 }));
         dispatch(fetchDesignations({ limit: 1000 }));
+        dispatch(fetchBranches({ limit: 1000 }));
+        dispatch(fetchEmployees({ limit: 1000 }));
+        dispatch(fetchUsers());
 
         const [rolesRes, empRes] = await Promise.all([
           axiosClient.get("/GetRoles", { headers: { "x-company-id": companyId } }).catch(() => ({ data: [] })),
@@ -81,15 +97,18 @@ export default function EditEmployeePage() {
           dob: emp.dob || "",
           departmentId: emp.departmentId || "",
           designationId: emp.designationId || "",
+          branchId: emp.branchId || "",
+          managerId: emp.managerId || "",
           employmentType: emp.employmentType || "Full-time",
           joiningDate: emp.joiningDate || "",
-          status: emp.status || "Active",
+          status: emp.status || "ACTIVE",
           emergencyContactName: emp.emergencyContactName || "",
           emergencyContactNumber: emp.emergencyContactNumber || "",
           emergencyContactRelation: emp.emergencyContactRelation || "",
           createLogin: !!emp.user,
           roleId: emp.user?.userCompanies?.[0]?.roleId || "",
           newPassword: "",
+          userId: emp.userId || "",
         });
 
       } catch (err) {
@@ -118,9 +137,13 @@ export default function EditEmployeePage() {
         ...form,
         departmentId: form.departmentId ? Number(form.departmentId) : null,
         designationId: form.designationId ? Number(form.designationId) : null,
+        branchId: form.branchId ? Number(form.branchId) : null,
+        managerId: form.managerId ? Number(form.managerId) : null,
+        userId: form.userId ? Number(form.userId) : null,
       };
       if (payload.createLogin && payload.roleId) {
         payload.roleId = Number(payload.roleId);
+        payload.userId = null;
       } else {
         delete payload.roleId;
       }
@@ -248,6 +271,20 @@ export default function EditEmployeePage() {
               </select>
             </div>
             <div>
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Branch</label>
+              <select name="branchId" value={form.branchId} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700">
+                <option value="">-- Select Branch --</option>
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.branchName}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Reporting Manager</label>
+              <select name="managerId" value={form.managerId} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700">
+                <option value="">-- Select Manager (Self/None) --</option>
+                {managers.map((m) => m.id !== Number(empId) && <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Employment Type</label>
               <select name="employmentType" value={form.employmentType} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700">
                 <option value="Full-time">Full-time</option>
@@ -263,10 +300,14 @@ export default function EditEmployeePage() {
             <div>
               <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Status</label>
               <select name="status" value={form.status} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700">
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="On Leave">On Leave</option>
-                <option value="Terminated">Terminated</option>
+                <option value="DRAFT">Draft</option>
+                <option value="ONBOARDING">Onboarding</option>
+                <option value="PROBATION">Probation</option>
+                <option value="ACTIVE">Active</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="NOTICE_PERIOD">Notice Period</option>
+                <option value="RESIGNED">Resigned</option>
+                <option value="TERMINATED">Terminated</option>
               </select>
             </div>
           </div>
@@ -300,6 +341,19 @@ export default function EditEmployeePage() {
                 <label className="block text-[10px] font-bold text-blue-800 uppercase tracking-wider mb-1">Change Password (Optional)</label>
                 <input type="text" name="newPassword" value={form.newPassword} onChange={handleChange} placeholder="Enter new password to reset" className="w-full border border-blue-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 outline-none text-gray-700" />
               </div>
+            </div>
+          )}
+
+          {!form.createLogin && (
+            <div className="mt-4 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Link to Existing User Account (Optional)</label>
+              <select name="userId" value={form.userId} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white">
+                <option value="">-- None / Keep Unlinked --</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                ))}
+              </select>
+              <p className="text-[9px] text-gray-400 mt-1">Select an existing system user account to link with this employee profile.</p>
             </div>
           )}
         </div>

@@ -1,7 +1,5 @@
 import {
   LayoutDashboard,
-  Handshake,
-  ShoppingCart,
   Users,
   Shield,
   Building2,
@@ -41,17 +39,6 @@ export const MENU_CONFIG = [
       { id: "my_companies", name: "My Companies", icon: Building2, href: "/companies" },
       { id: "my_users", name: "My Users", icon: Users, href: "/users" },
       { id: "custom_roles", name: "Custom Roles", icon: Shield, href: "/roles" },
-    ],
-  },
-  {
-    id: "crm_workspace",
-    title: "CRM WORKSPACE",
-    type: "parent",
-    excludeUserTypes: ["super_admin", "client_admin"],
-    items: [
-      { id: "leads", name: "Leads", icon: Handshake, href: "/leads" },
-      { id: "customers", name: "Customers", icon: Users, href: "/customers" },
-      { id: "orders", name: "Orders", icon: ShoppingCart, href: "/orders" },
     ],
   },
   {

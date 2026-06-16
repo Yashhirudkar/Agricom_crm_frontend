@@ -88,14 +88,13 @@ export function Header() {
         {/* Left Side: Logo & Workspace Switcher */}
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 cursor-pointer group" onClick={() => router.push("/")}>
-            <div className="relative overflow-hidden rounded-lg transition-transform duration-300 group-hover:scale-102">
+            <div className="relative overflow-hidden rounded-lg transition-transform duration-300 group-hover:scale-102 flex items-center h-10">
               <Image
                 src="/agri_logo.png"
                 alt="Agricom CRM Logo"
                 width={160}
                 height={45}
-                style={{ width: "auto", height: "auto" }}
-                className="object-contain"
+                className="object-contain h-full w-auto"
                 priority
               />
             </div>

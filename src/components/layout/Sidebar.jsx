@@ -14,6 +14,7 @@ import {
   Clock,
   Calendar,
   DollarSign,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -110,36 +111,119 @@ export function Sidebar() {
     return true;
   }).map((section) => {
     // Map backend `subModules` to `items` array used by the UI
-    const items = (section.subModules || []).filter((item) => hasPermission(item.permissionKey)).map(item => ({
+    let items = (section.subModules || []).filter((item) => hasPermission(item.permissionKey)).map(item => ({
       ...item,
       href: item.route,
       icon: iconMap[item.icon] || LayoutDashboard
     }));
+
+    // Inject Dashboard and Profile into MY WORKSPACE
+    if (section.key === 'my_workspace' || section.name === 'MY WORKSPACE' || section.name === 'OVERVIEW') {
+      if (!items.some(i => i.route === '/')) {
+        items.unshift({ id: 'dashboard', name: 'My Dashboard', route: '/', href: '/', icon: LayoutDashboard, permissionKey: null });
+      }
+      if (!items.some(i => i.route === '/profile')) {
+        items.splice(1, 0, { id: 'profile', name: 'Profile', route: '/profile', href: '/profile', icon: iconMap['UserIcon'] || Users, permissionKey: null });
+      }
+    }
+
     return { ...section, type: "parent", title: section.name, items };
   }).filter((section) => {
     return section.items.length > 0;
   });
 
-  // Group HR modules under a single parent, and flatten their sub-modules into a single list
+  // Group HR modules logically under HRMS
   const formattedMenu = [];
-  const hrItems = [];
+  const hrModules = {
+    employees: { id: "employees", title: "EMPLOYEES", items: [] },
+    organization: { id: "organization", title: "ORGANIZATION", items: [] },
+    policies: { id: "policies", title: "POLICIES", items: [] },
+    documents: { id: "documents", title: "DOCUMENTS", items: [] },
+    leaves: { id: "leaves", title: "LEAVE MANAGEMENT", items: [] },
+    others: { id: "others", title: "OTHERS", items: [] }
+  };
 
   filteredMenu.forEach(section => {
     if (section.key?.startsWith('hr_')) {
       if (section.items) {
-        hrItems.push(...section.items);
+        section.items.forEach(item => {
+          const route = item.route || "";
+          if (route.includes("/employees") && !route.includes("org-chart")) {
+            hrModules.employees.items.push(item);
+          } else if (route.includes("/departments") || route.includes("/designations") || route.includes("/branches") || route.includes("org-chart")) {
+            hrModules.organization.items.push(item);
+          } else if (route.includes("/hr-policies") || route.includes("/holidays")) {
+            hrModules.policies.items.push(item);
+          } else if (route.includes("/documents")) {
+            hrModules.documents.items.push(item);
+          } else if (route.includes("/leave-types") || route.includes("/my-leaves") || route.includes("/leave-approvals") || route.includes("/leaves")) {
+            hrModules.leaves.items.push(item);
+          } else {
+            hrModules.others.items.push(item);
+          }
+        });
       }
     } else {
       formattedMenu.push(section);
     }
   });
 
-  if (hrItems.length > 0) {
+  // Ensure standard HR routes are populated if missing, with fallback icons and permission keys
+  const employeeItems = hrModules.employees.items;
+  if (!employeeItems.some(i => i.route === "/employees")) {
+    employeeItems.push({ id: "nav-employees", name: "Employees", route: "/employees", href: "/employees", icon: iconMap["Users"] || Users, permissionKey: "employees:read" });
+  }
+
+  const organizationItems = hrModules.organization.items;
+  if (!organizationItems.some(i => i.route === "/branches")) {
+    organizationItems.push({ id: "nav-branches", name: "Branches", route: "/branches", href: "/branches", icon: iconMap["Building2"] || Building2, permissionKey: "branches:read" });
+  }
+  if (!organizationItems.some(i => i.route === "/departments")) {
+    organizationItems.push({ id: "nav-departments", name: "Departments", route: "/departments", href: "/departments", icon: iconMap["Building2"] || Building2, permissionKey: "departments:read" });
+  }
+  if (!organizationItems.some(i => i.route === "/designations")) {
+    organizationItems.push({ id: "nav-designations", name: "Designations", route: "/designations", href: "/designations", icon: iconMap["Shield"] || Shield, permissionKey: "designations:read" });
+  }
+  if (!organizationItems.some(i => i.route === "/employees/org-chart")) {
+    organizationItems.push({ id: "nav-org-chart", name: "Org Chart", route: "/employees/org-chart", href: "/employees/org-chart", icon: iconMap["Users"] || Users, permissionKey: "employees:read" });
+  }
+
+  const policyItems = hrModules.policies.items;
+  if (!policyItems.some(i => i.route === "/hr-policies")) {
+    policyItems.push({ id: "nav-hr-policies", name: "HR Policies", route: "/hr-policies", href: "/hr-policies", icon: iconMap["Shield"] || Shield, permissionKey: "hrpolicy:read" });
+  }
+  if (!policyItems.some(i => i.route === "/holidays")) {
+    policyItems.push({ id: "nav-holidays", name: "Holidays", route: "/holidays", href: "/holidays", icon: iconMap["Calendar"] || Calendar, permissionKey: "holidays:read" });
+  }
+
+  const leaveItems = hrModules.leaves.items;
+  if (!leaveItems.some(i => i.route === "/leave-types")) {
+    leaveItems.push({ id: "nav-leave-types", name: "Leave Types", route: "/leave-types", href: "/leave-types", icon: iconMap["Calendar"] || Calendar, permissionKey: "leave_types:read" });
+  }
+  if (!leaveItems.some(i => i.route === "/my-leaves")) {
+    leaveItems.push({ id: "nav-my-leaves", name: "My Leaves", route: "/my-leaves", href: "/my-leaves", icon: iconMap["Clock"] || Clock, permissionKey: "leave:create" });
+  }
+  if (!leaveItems.some(i => i.route === "/leave-approvals")) {
+    leaveItems.push({ id: "nav-leave-approvals", name: "Leave Approvals", route: "/leave-approvals", href: "/leave-approvals", icon: iconMap["Check"] || Check, permissionKey: "leave:approve" });
+  }
+  if (!leaveItems.some(i => i.route === "/leaves")) {
+    leaveItems.push({ id: "nav-leaves", name: "Leave Management", route: "/leaves", href: "/leaves", icon: iconMap["Calendar"] || Calendar, permissionKey: "leave:read" });
+  }
+
+  const activeHrModules = [
+    { ...hrModules.employees, items: hrModules.employees.items.filter(item => hasPermission(item.permissionKey)) },
+    { ...hrModules.organization, items: hrModules.organization.items.filter(item => hasPermission(item.permissionKey)) },
+    { ...hrModules.policies, items: hrModules.policies.items.filter(item => hasPermission(item.permissionKey)) },
+    { ...hrModules.documents, items: hrModules.documents.items.filter(item => hasPermission(item.permissionKey)) },
+    { ...hrModules.leaves, items: hrModules.leaves.items.filter(item => hasPermission(item.permissionKey)) }
+  ].filter(m => m.items.length > 0);
+
+  if (activeHrModules.length > 0) {
     formattedMenu.push({
       id: "hr_department",
-      title: "HR DEPARTMENT",
-      type: "parent",
-      items: hrItems
+      title: "HR Management",
+      type: "parent_nested",
+      modules: activeHrModules
     });
   }
 

@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchDepartments, selectDepartmentsData } from "@/store/slices/departmentsSlice";
-import { fetchDesignations, selectDesignationsData } from "@/store/slices/designationsSlice";
-import { createEmployee } from "@/store/slices/employeesSlice";
+import { fetchDepartments, selectDepartmentsData } from "@/store/entities/departmentsSlice";
+import { fetchDesignations, selectDesignationsData } from "@/store/entities/designationsSlice";
+import { createEmployee, fetchEmployees, selectEmployeesData } from "@/store/entities/employeesSlice";
+import { fetchBranches, selectBranchesData } from "@/store/entities/branchesSlice";
+import { fetchUsers, selectUsers } from "@/store/slices/usersSlice";
 import { ChevronLeft, Save, UploadCloud, Shield, Check, AlertCircle } from "lucide-react";
 import axiosClient from "@/lib/axios";
 
@@ -18,6 +20,14 @@ export default function CreateEmployeePage() {
 
   const { data: designationsObj } = useSelector(selectDesignationsData) || { data: [] };
   const designations = designationsObj?.data || designationsObj || [];
+
+  const { data: branchesObj } = useSelector(selectBranchesData) || { data: [] };
+  const branches = branchesObj?.data || branchesObj || [];
+
+  const { data: employeesObj } = useSelector(selectEmployeesData) || { data: [] };
+  const managers = employeesObj?.data || employeesObj || [];
+
+  const users = useSelector(selectUsers) || [];
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = "success") => {
@@ -36,14 +46,17 @@ export default function CreateEmployeePage() {
     dob: "",
     departmentId: "",
     designationId: "",
+    branchId: "",
+    managerId: "",
     employmentType: "Full-time",
     joiningDate: "",
-    status: "Active",
+    status: "ACTIVE",
     emergencyContactName: "",
     emergencyContactNumber: "",
     emergencyContactRelation: "",
     createLogin: false,
     roleId: "",
+    userId: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +71,9 @@ export default function CreateEmployeePage() {
 
         dispatch(fetchDepartments({ limit: 1000 }));
         dispatch(fetchDesignations({ limit: 1000 }));
+        dispatch(fetchBranches({ limit: 1000 }));
+        dispatch(fetchEmployees({ limit: 1000 }));
+        dispatch(fetchUsers());
 
         const [rolesRes] = await Promise.all([
           axiosClient.get("/GetRoles", { headers: { "x-company-id": companyId } }).catch(() => ({ data: [] }))
@@ -102,18 +118,21 @@ export default function CreateEmployeePage() {
     setIsSubmitting(true);
     try {
       // 1. Create Employee
-      const payload = { 
+      const payload = {
         ...form,
         departmentId: form.departmentId ? Number(form.departmentId) : null,
         designationId: form.designationId ? Number(form.designationId) : null,
+        branchId: form.branchId ? Number(form.branchId) : null,
+        managerId: form.managerId ? Number(form.managerId) : null,
+        userId: form.userId ? Number(form.userId) : null,
       };
       if (payload.createLogin && payload.roleId) {
         payload.roleId = Number(payload.roleId);
+        payload.userId = null;
       } else {
         delete payload.roleId;
       }
-      console.log("[Frontend Create] Sending payload to backend:", payload);
-      
+
       const res = await dispatch(createEmployee(payload)).unwrap();
       const employeeId = res.id;
 
@@ -123,7 +142,7 @@ export default function CreateEmployeePage() {
         for (const item of files) {
           const formData = new FormData();
           formData.append("file", item.fileObj);
-          
+
           const uploadRes = await axiosClient.post("/attachments/upload", formData, {
             headers: {
               "Content-Type": "multipart/form-data",
@@ -256,6 +275,20 @@ export default function CreateEmployeePage() {
               </select>
             </div>
             <div>
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Branch</label>
+              <select name="branchId" value={form.branchId} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700">
+                <option value="">-- Select Branch --</option>
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.branchName}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Reporting Manager</label>
+              <select name="managerId" value={form.managerId} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700">
+                <option value="">-- Select Manager (Self/None) --</option>
+                {managers.map((m) => <option key={m.id} value={m.id}>{m.firstName} {m.lastName}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Employment Type</label>
               <select name="employmentType" value={form.employmentType} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700">
                 <option value="Full-time">Full-time</option>
@@ -271,10 +304,14 @@ export default function CreateEmployeePage() {
             <div>
               <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Status</label>
               <select name="status" value={form.status} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700">
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="On Leave">On Leave</option>
-                <option value="Terminated">Terminated</option>
+                <option value="DRAFT">Draft</option>
+                <option value="ONBOARDING">Onboarding</option>
+                <option value="PROBATION">Probation</option>
+                <option value="ACTIVE">Active</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="NOTICE_PERIOD">Notice Period</option>
+                <option value="RESIGNED">Resigned</option>
+                <option value="TERMINATED">Terminated</option>
               </select>
             </div>
           </div>
@@ -286,7 +323,7 @@ export default function CreateEmployeePage() {
             <Shield className="h-4 w-4 text-blue-500" />
             <h2 className="text-sm font-bold text-gray-800">Account Access</h2>
           </div>
-          
+
           <label className="flex items-center gap-3 cursor-pointer p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
             <input type="checkbox" name="createLogin" checked={form.createLogin} onChange={handleChange} className="h-4 w-4 text-[#007aff] rounded border-gray-300" />
             <div>
@@ -310,6 +347,19 @@ export default function CreateEmployeePage() {
               </div>
             </div>
           )}
+
+          {!form.createLogin && (
+            <div className="mt-4 p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Link to Existing User Account (Optional)</label>
+              <select name="userId" value={form.userId} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white">
+                <option value="">-- None / Keep Unlinked --</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                ))}
+              </select>
+              <p className="text-[9px] text-gray-400 mt-1">Select an existing system user account to link with this employee profile.</p>
+            </div>
+          )}
         </div>
 
         {/* Section 5: Documents */}
@@ -318,7 +368,7 @@ export default function CreateEmployeePage() {
             <UploadCloud className="h-4 w-4 text-purple-500" />
             <h2 className="text-sm font-bold text-gray-800">Documents & Profile Photo</h2>
           </div>
-          
+
           <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors">
             <input type="file" multiple id="fileUpload" className="hidden" onChange={handleFileChange} />
             <label htmlFor="fileUpload" className="cursor-pointer flex flex-col items-center gap-2">
@@ -327,7 +377,7 @@ export default function CreateEmployeePage() {
               <span className="text-[10px] text-gray-400">Profile Photo, Aadhaar, PAN, Resume (Max 10MB per file)</span>
             </label>
           </div>
-          
+
           {files.length > 0 && (
             <div className="mt-4 space-y-2">
               <p className="text-xs font-bold text-gray-700">Selected Files:</p>
