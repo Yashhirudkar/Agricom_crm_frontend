@@ -69,7 +69,7 @@ function BranchesContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [form, setForm] = useState({ 
+  const [form, setForm] = useState({
     branchName: "", branchCode: "", address: "", city: "", state: "", country: "India", pincode: "", timezone: "Asia/Kolkata", isHeadOffice: false, isActive: true, managerId: ""
   });
 
@@ -109,7 +109,7 @@ function BranchesContent() {
 
   const openCreate = () => {
     dispatch(clearBranchesError());
-    setForm({ 
+    setForm({
       branchName: "", branchCode: "", address: "", city: "", state: "", country: "India", pincode: "", timezone: "Asia/Kolkata", isHeadOffice: false, isActive: true, managerId: ""
     });
     setEditingBranch(null);
@@ -118,17 +118,17 @@ function BranchesContent() {
 
   const openEdit = (branch) => {
     dispatch(clearBranchesError());
-    setForm({ 
-      branchName: branch.branchName || "", 
-      branchCode: branch.branchCode || "", 
-      address: branch.address || "", 
-      city: branch.city || "", 
-      state: branch.state || "", 
-      country: branch.country || "India", 
-      pincode: branch.pincode || "", 
-      timezone: branch.timezone || "Asia/Kolkata", 
-      isHeadOffice: branch.isHeadOffice || false, 
-      isActive: branch.isActive !== undefined ? branch.isActive : true, 
+    setForm({
+      branchName: branch.branchName || "",
+      branchCode: branch.branchCode || "",
+      address: branch.address || "",
+      city: branch.city || "",
+      state: branch.state || "",
+      country: branch.country || "India",
+      pincode: branch.pincode || "",
+      timezone: branch.timezone || "Asia/Kolkata",
+      isHeadOffice: branch.isHeadOffice || false,
+      isActive: branch.isActive !== undefined ? branch.isActive : true,
       managerId: branch.managerId || ""
     });
     setEditingBranch(branch);
@@ -244,116 +244,116 @@ function BranchesContent() {
           </p>
         </div>
       ) : (
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-gray-50 bg-gray-50/20 flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full max-w-xs">
-            <input
-              type="text"
-              className="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#007aff] text-gray-600 transition-colors"
-              placeholder="Search branches..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
-            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-gray-50 bg-gray-50/20 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full max-w-xs">
+              <input
+                type="text"
+                className="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#007aff] text-gray-600 transition-colors"
+                placeholder="Search branches..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
+            </div>
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Total {total} Branches
+            </div>
           </div>
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-            Total {total} Branches
-          </div>
-        </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/30 text-gray-400 uppercase tracking-widest text-[10px] font-bold">
-                <th className="px-6 py-4">Branch</th>
-                <th className="px-6 py-4">Location</th>
-                <th className="px-6 py-4">Manager</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-xs">
-              {branches.map((branch) => {
-                const isSelected = selectedBranch?.id === branch.id;
-                return (
-                  <tr
-                    key={branch.id}
-                    onClick={() => handleOpenDrawer(branch)}
-                    className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${isSelected ? "bg-blue-50/40" : ""}`}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-gray-800 flex items-center gap-1.5">
-                          {branch.branchName}
-                          {branch.isHeadOffice && <span className="px-1.5 py-0.5 bg-blue-50 text-[#007aff] text-[9px] rounded font-bold uppercase">HO</span>}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/30 text-gray-400 uppercase tracking-widest text-[10px] font-bold">
+                  <th className="px-6 py-4">Branch</th>
+                  <th className="px-6 py-4">Location</th>
+                  <th className="px-6 py-4">Manager</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-xs">
+                {branches.map((branch) => {
+                  const isSelected = selectedBranch?.id === branch.id;
+                  return (
+                    <tr
+                      key={branch.id}
+                      onClick={() => handleOpenDrawer(branch)}
+                      className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${isSelected ? "bg-blue-50/40" : ""}`}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-800 flex items-center gap-1.5">
+                            {branch.branchName}
+                            {branch.isHeadOffice && <span className="px-1.5 py-0.5 bg-blue-50 text-[#007aff] text-[9px] rounded font-bold uppercase">HO</span>}
+                          </span>
+                          <span className="text-[10px] text-gray-400 font-mono mt-0.5">{branch.branchCode}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-gray-500 font-medium max-w-[200px] truncate">
+                        {branch.city}, {branch.state}
+                      </td>
+                      <td className="px-6 py-4 text-gray-500 font-medium">
+                        {branch.manager ? `${branch.manager.firstName} ${branch.manager.lastName}` : <span className="text-gray-400 italic">Unassigned</span>}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${branch.isActive !== false ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                          {branch.isActive !== false ? "Active" : "Inactive"}
                         </span>
-                        <span className="text-[10px] text-gray-400 font-mono mt-0.5">{branch.branchCode}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-500 font-medium max-w-[200px] truncate">
-                      {branch.city}, {branch.state}
-                    </td>
-                    <td className="px-6 py-4">
-                      {branch.manager ? `${branch.manager.firstName} ${branch.manager.lastName}` : <span className="text-gray-400 italic">Unassigned</span>}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${branch.isActive !== false ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
-                        {branch.isActive !== false ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => openEdit(branch)}
-                        className="p-1 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
-                        title="Edit details"
-                      >
-                        <Edit2 className="h-4 w-4 inline" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(branch)}
-                        className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                        title="Delete branch"
-                      >
-                        <Trash2 className="h-4 w-4 inline" />
-                      </button>
+                      </td>
+                      <td className="px-6 py-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => openEdit(branch)}
+                          className="p-1 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
+                          title="Edit details"
+                        >
+                          <Edit2 className="h-4 w-4 inline" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(branch)}
+                          className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                          title="Delete branch"
+                        >
+                          <Trash2 className="h-4 w-4 inline" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {branches.length === 0 && !isLoading && (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center text-gray-400 font-semibold">
+                      No matching branches found.
                     </td>
                   </tr>
-                );
-              })}
-              {branches.length === 0 && !isLoading && (
-                <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-gray-400 font-semibold">
-                    No matching branches found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {totalPages > 1 && (
-          <div className="p-4 border-t border-gray-50 bg-gray-50/20 flex items-center justify-between text-xs font-semibold text-gray-500">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-opacity cursor-pointer flex items-center gap-1"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" /> Previous
-            </button>
-            <span>Page {page} of {totalPages}</span>
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-opacity cursor-pointer flex items-center gap-1"
-            >
-              Next <ChevronRight className="h-3.5 w-3.5" />
-            </button>
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+
+          {totalPages > 1 && (
+            <div className="p-4 border-t border-gray-50 bg-gray-50/20 flex items-center justify-between text-xs font-semibold text-gray-500">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-opacity cursor-pointer flex items-center gap-1"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" /> Previous
+              </button>
+              <span>Page {page} of {totalPages}</span>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-opacity cursor-pointer flex items-center gap-1"
+              >
+                Next <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Drawer */}

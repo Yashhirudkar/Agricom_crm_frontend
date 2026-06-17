@@ -11,6 +11,21 @@ import { fetchUsers, selectUsers } from "@/store/slices/usersSlice";
 import { ChevronLeft, Save, UploadCloud, Shield, Check, AlertCircle } from "lucide-react";
 import axiosClient from "@/lib/axios";
 
+const mapDocTypeToCategory = (type) => {
+  switch (type) {
+    case "AADHAAR":
+    case "PAN":
+      return "IDENTITY";
+    case "RESUME":
+    case "OFFER_LETTER":
+      return "EMPLOYMENT";
+    case "PROFILE_PHOTO":
+    case "OTHER":
+    default:
+      return "OTHER";
+  }
+};
+
 export default function CreateEmployeePage() {
   const router = useRouter();
   const dispatch = useDispatch();
@@ -48,7 +63,7 @@ export default function CreateEmployeePage() {
     designationId: "",
     branchId: "",
     managerId: "",
-    employmentType: "Full-time",
+    employmentType: "FULL_TIME",
     joiningDate: "",
     status: "ACTIVE",
     emergencyContactName: "",
@@ -120,6 +135,8 @@ export default function CreateEmployeePage() {
       // 1. Create Employee
       const payload = {
         ...form,
+        dob: form.dob || null,
+        joiningDate: form.joiningDate || null,
         departmentId: form.departmentId ? Number(form.departmentId) : null,
         designationId: form.designationId ? Number(form.designationId) : null,
         branchId: form.branchId ? Number(form.branchId) : null,
@@ -142,23 +159,15 @@ export default function CreateEmployeePage() {
         for (const item of files) {
           const formData = new FormData();
           formData.append("file", item.fileObj);
+          formData.append("documentCategory", mapDocTypeToCategory(item.documentType));
+          formData.append("documentType", item.documentType);
+          formData.append("documentName", item.fileObj.name);
 
-          const uploadRes = await axiosClient.post("/attachments/upload", formData, {
+          await axiosClient.post(`/employees/${employeeId}/documents`, formData, {
             headers: {
               "Content-Type": "multipart/form-data",
               "x-company-id": companyId,
             },
-          });
-
-          const fileUrl = uploadRes.data.fileUrl;
-          const docType = item.documentType;
-
-          await axiosClient.post(`/employees/${employeeId}/documents`, {
-            documentType: docType,
-            fileName: item.fileObj.name,
-            fileUrl: fileUrl,
-          }, {
-            headers: { "x-company-id": companyId }
           });
         }
       }
@@ -291,10 +300,11 @@ export default function CreateEmployeePage() {
             <div>
               <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Employment Type</label>
               <select name="employmentType" value={form.employmentType} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700">
-                <option value="Full-time">Full-time</option>
-                <option value="Part-time">Part-time</option>
-                <option value="Contract">Contract</option>
-                <option value="Intern">Intern</option>
+                <option value="FULL_TIME">Full-time</option>
+                <option value="PART_TIME">Part-time</option>
+                <option value="CONTRACT">Contract</option>
+                <option value="INTERN">Intern</option>
+                <option value="CONSULTANT">Consultant</option>
               </select>
             </div>
             <div>

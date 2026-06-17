@@ -50,7 +50,7 @@ export default function EditEmployeePage() {
     designationId: "",
     branchId: "",
     managerId: "",
-    employmentType: "Full-time",
+    employmentType: "FULL_TIME",
     joiningDate: "",
     status: "ACTIVE",
     emergencyContactName: "",
@@ -94,13 +94,13 @@ export default function EditEmployeePage() {
           mobile: emp.mobile || "",
           address: emp.address || "",
           gender: emp.gender || "Male",
-          dob: emp.dob || "",
+          dob: emp.dob ? emp.dob.split('T')[0] : "",
           departmentId: emp.departmentId || "",
           designationId: emp.designationId || "",
           branchId: emp.branchId || "",
           managerId: emp.managerId || "",
-          employmentType: emp.employmentType || "Full-time",
-          joiningDate: emp.joiningDate || "",
+          employmentType: emp.employmentType || "FULL_TIME",
+          joiningDate: emp.joiningDate ? emp.joiningDate.split('T')[0] : "",
           status: emp.status || "ACTIVE",
           emergencyContactName: emp.emergencyContactName || "",
           emergencyContactNumber: emp.emergencyContactNumber || "",
@@ -135,6 +135,8 @@ export default function EditEmployeePage() {
     try {
       const payload = { 
         ...form,
+        dob: form.dob || null,
+        joiningDate: form.joiningDate || null,
         departmentId: form.departmentId ? Number(form.departmentId) : null,
         designationId: form.designationId ? Number(form.designationId) : null,
         branchId: form.branchId ? Number(form.branchId) : null,
@@ -287,10 +289,11 @@ export default function EditEmployeePage() {
             <div>
               <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Employment Type</label>
               <select name="employmentType" value={form.employmentType} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700">
-                <option value="Full-time">Full-time</option>
-                <option value="Part-time">Part-time</option>
-                <option value="Contract">Contract</option>
-                <option value="Intern">Intern</option>
+                <option value="FULL_TIME">Full-time</option>
+                <option value="PART_TIME">Part-time</option>
+                <option value="CONTRACT">Contract</option>
+                <option value="INTERN">Intern</option>
+                <option value="CONSULTANT">Consultant</option>
               </select>
             </div>
             <div>

@@ -13,10 +13,11 @@ import {
 import Modal from "@/components/modals/Modal";
 import HasPermission from "@/components/rbac/HasPermission";
 import {
-  Check, AlertCircle, X, CheckCircle2, XCircle, FileText, Calendar, Building2, User as UserIcon, Shield
+  Check, AlertCircle, X, CheckCircle2, XCircle, FileText, Calendar, Building2, User as UserIcon, Shield, Loader2
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import Image from "next/image";
+import { getFriendlyError } from "@/lib/errorMessages";
 
 function LeaveApprovalsContent() {
   const dispatch = useDispatch();
@@ -48,17 +49,19 @@ function LeaveApprovalsContent() {
   const [rejectTarget, setRejectTarget] = useState(null);
   const [rejectRemarks, setRejectRemarks] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingId, setLoadingId] = useState(null);
 
   const handleApprove = async (leaveId) => {
-    setIsSubmitting(true);
+    if (loadingId) return; // prevent double click
+    setLoadingId(leaveId);
     try {
       await dispatch(approveLeave({ id: leaveId, remarks: "Approved by manager" })).unwrap();
       showToast("Leave approved successfully");
       dispatch(fetchLeaveRequests({}));
     } catch (err) {
-      showToast(err || "Failed to approve leave", "error");
+      showToast(getFriendlyError(err), "error");
     } finally {
-      setIsSubmitting(false);
+      setLoadingId(null);
     }
   };
 
@@ -70,12 +73,12 @@ function LeaveApprovalsContent() {
     setIsSubmitting(true);
     try {
       await dispatch(rejectLeave({ id: rejectTarget.id, remarks: rejectRemarks })).unwrap();
-      showToast("Leave rejected");
+      showToast("Leave rejected successfully");
       setRejectTarget(null);
       setRejectRemarks("");
       dispatch(fetchLeaveRequests({}));
     } catch (err) {
-      showToast(err || "Failed to reject leave", "error");
+      showToast(getFriendlyError(err), "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -198,17 +201,20 @@ function LeaveApprovalsContent() {
                   <HasPermission permission="leave:approve">
                     <button
                       onClick={() => setRejectTarget(leave)}
-                      disabled={isSubmitting}
+                      disabled={!!loadingId}
                       className="flex-1 py-2 bg-white border border-red-200 text-red-600 rounded-xl hover:bg-red-50 text-xs font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                     >
                       <X className="h-4 w-4" /> Reject
                     </button>
                     <button
                       onClick={() => handleApprove(leave.id)}
-                      disabled={isSubmitting}
+                      disabled={!!loadingId}
                       className="flex-1 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 text-xs font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm shadow-green-500/20"
                     >
-                      <Check className="h-4 w-4" /> Approve
+                      {loadingId === leave.id
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <Check className="h-4 w-4" />}
+                      {loadingId === leave.id ? "Approving..." : "Approve"}
                     </button>
                   </HasPermission>
                 </div>

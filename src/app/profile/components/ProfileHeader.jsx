@@ -1,5 +1,5 @@
 "use client";
-import { User, Shield, CheckCircle2, AlertCircle } from "lucide-react";
+import { Shield, CheckCircle2, AlertCircle } from "lucide-react";
 import api from "@/lib/axios";
 
 export default function ProfileHeader({ user, employee, completion }) {
@@ -16,61 +16,53 @@ export default function ProfileHeader({ user, employee, completion }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
-      <div className="h-32 bg-gradient-to-r from-slate-900 to-slate-700 w-full relative"></div>
-      
-      <div className="px-8 pb-8 relative">
-        <div className="flex flex-col md:flex-row gap-6 items-start md:items-end -mt-12">
-          
-          <div className="relative group">
-            <div className="h-28 w-28 rounded-2xl bg-white border-4 border-white shadow-md flex items-center justify-center overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-7 animate-in fade-in zoom-in-95 duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-6 justify-between">
+
+        <div className="flex items-center gap-4">
+          <div className="relative shrink-0">
+            <div className="h-16 w-16 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden">
               {user?.avatarUrl ? (
                 <img src={getAvatarUrl(user.avatarUrl)} alt="Avatar" className="h-full w-full object-cover" />
               ) : (
-                <div className="h-full w-full bg-[#007aff]/10 text-[#007aff] flex items-center justify-center text-4xl font-black">
-                  {getInitials(user?.name)}
-                </div>
+                <span className="text-lg font-bold text-[#007aff]">{getInitials(user?.name)}</span>
               )}
             </div>
-            <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-sm border border-slate-100">
+            <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white border border-slate-100">
               {user?.isActive ? (
-                <CheckCircle2 className="h-5 w-5 text-emerald-500 bg-white rounded-full" />
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
               ) : (
-                <AlertCircle className="h-5 w-5 text-rose-500 bg-white rounded-full" />
+                <AlertCircle className="h-4 w-4 text-rose-500" />
               )}
-            </div>
+            </span>
           </div>
 
-          <div className="flex-1 pb-2">
-            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 justify-between w-full">
-              <div>
-                <h1 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-                  {user?.name || "Not Available"}
-                </h1>
-                <p className="text-sm font-semibold text-slate-500 mt-1 flex items-center gap-2">
-                  <Shield className="h-4 w-4" /> 
-                  {employee?.designation?.name || "No Designation"} 
-                  <span className="text-slate-300">•</span> 
-                  {employee?.department?.name || "No Department"}
-                </p>
-              </div>
-
-              <div className="flex flex-col items-end gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-500 uppercase">Profile Completion</span>
-                  <span className="text-sm font-black text-[#007aff]">{completion}%</span>
-                </div>
-                <div className="w-48 h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-[#007aff] rounded-full transition-all duration-1000 ease-out" 
-                    style={{ width: `${completion}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
+          <div>
+            <h1 className="text-xl font-black text-slate-900">
+              {user?.name || "Not Available"}
+            </h1>
+            <p className="text-sm font-semibold text-slate-500 mt-1 flex items-center gap-2">
+              <Shield className="h-4 w-4 text-slate-400" />
+              {employee?.designation?.name || "No Designation"}
+              <span className="text-slate-300">•</span>
+              {employee?.department?.name || "No Department"}
+            </p>
           </div>
-
         </div>
+
+        <div className="flex flex-col gap-1.5 sm:items-end">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Profile Completion</span>
+            <span className="text-sm font-black text-[#007aff]">{completion}%</span>
+          </div>
+          <div className="w-full sm:w-44 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[#007aff] rounded-full transition-all duration-1000 ease-out"
+              style={{ width: `${completion}%` }}
+            ></div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

@@ -140,6 +140,7 @@ export function Sidebar() {
     policies: { id: "policies", title: "POLICIES", items: [] },
     documents: { id: "documents", title: "DOCUMENTS", items: [] },
     leaves: { id: "leaves", title: "LEAVE MANAGEMENT", items: [] },
+    attendance: { id: "attendance", title: "ATTENDANCE", items: [] },
     others: { id: "others", title: "OTHERS", items: [] }
   };
 
@@ -158,6 +159,8 @@ export function Sidebar() {
             hrModules.documents.items.push(item);
           } else if (route.includes("/leave-types") || route.includes("/my-leaves") || route.includes("/leave-approvals") || route.includes("/leaves")) {
             hrModules.leaves.items.push(item);
+          } else if (route.includes("/attendance") || route.includes("/shifts") || route.includes("/corrections") || route.includes("/reports")) {
+            hrModules.attendance.items.push(item);
           } else {
             hrModules.others.items.push(item);
           }
@@ -210,12 +213,30 @@ export function Sidebar() {
     leaveItems.push({ id: "nav-leaves", name: "Leave Management", route: "/leaves", href: "/leaves", icon: iconMap["Calendar"] || Calendar, permissionKey: "leave:read" });
   }
 
+  const attendanceItems = hrModules.attendance.items;
+  if (!attendanceItems.some(i => i.route === "/attendance")) {
+    attendanceItems.push({ id: "nav-attendance-dashboard", name: "Dashboard", route: "/attendance", href: "/attendance", icon: iconMap["LayoutDashboard"] || LayoutDashboard, permissionKey: "attendance:read" });
+  }
+  if (!attendanceItems.some(i => i.route === "/attendance/my-attendance")) {
+    attendanceItems.push({ id: "nav-my-attendance", name: "My Attendance", route: "/attendance/my-attendance", href: "/attendance/my-attendance", icon: iconMap["Clock"] || Clock, permissionKey: "attendance:read" });
+  }
+  if (!attendanceItems.some(i => i.route === "/attendance/shifts")) {
+    attendanceItems.push({ id: "nav-shifts", name: "Shifts", route: "/attendance/shifts", href: "/attendance/shifts", icon: iconMap["Calendar"] || Calendar, permissionKey: "attendance:update" });
+  }
+  if (!attendanceItems.some(i => i.route === "/attendance/corrections")) {
+    attendanceItems.push({ id: "nav-corrections", name: "Corrections", route: "/attendance/corrections", href: "/attendance/corrections", icon: iconMap["Check"] || Check, permissionKey: "attendance:override" });
+  }
+  if (!attendanceItems.some(i => i.route === "/attendance/reports")) {
+    attendanceItems.push({ id: "nav-attendance-reports", name: "Reports", route: "/attendance/reports", href: "/attendance/reports", icon: iconMap["DollarSign"] || DollarSign, permissionKey: "attendance:read" });
+  }
+
   const activeHrModules = [
     { ...hrModules.employees, items: hrModules.employees.items.filter(item => hasPermission(item.permissionKey)) },
     { ...hrModules.organization, items: hrModules.organization.items.filter(item => hasPermission(item.permissionKey)) },
     { ...hrModules.policies, items: hrModules.policies.items.filter(item => hasPermission(item.permissionKey)) },
     { ...hrModules.documents, items: hrModules.documents.items.filter(item => hasPermission(item.permissionKey)) },
-    { ...hrModules.leaves, items: hrModules.leaves.items.filter(item => hasPermission(item.permissionKey)) }
+    { ...hrModules.leaves, items: hrModules.leaves.items.filter(item => hasPermission(item.permissionKey)) },
+    { ...hrModules.attendance, items: hrModules.attendance.items.filter(item => hasPermission(item.permissionKey)) }
   ].filter(m => m.items.length > 0);
 
   if (activeHrModules.length > 0) {

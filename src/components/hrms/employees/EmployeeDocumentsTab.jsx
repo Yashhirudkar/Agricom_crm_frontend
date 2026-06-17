@@ -3,6 +3,21 @@ import { UploadCloud, FileText, Eye, Download, Trash2, CheckCircle, XCircle } fr
 import axiosClient from "@/lib/axios";
 import HasPermission from "@/components/rbac/HasPermission";
 
+const mapDocTypeToCategory = (type) => {
+  switch (type) {
+    case "AADHAAR":
+    case "PAN":
+      return "IDENTITY";
+    case "RESUME":
+    case "OFFER_LETTER":
+      return "EMPLOYMENT";
+    case "PROFILE_PHOTO":
+    case "OTHER":
+    default:
+      return "OTHER";
+  }
+};
+
 export default function EmployeeDocumentsTab({ 
   selectedEmp, 
   selectedCompanyId, 
@@ -39,22 +54,15 @@ export default function EmployeeDocumentsTab({
       for (const item of pendingDocs) {
         const formData = new FormData();
         formData.append("file", item.fileObj);
+        formData.append("documentCategory", mapDocTypeToCategory(item.documentType));
+        formData.append("documentType", item.documentType);
+        formData.append("documentName", item.fileObj.name);
         
-        const uploadRes = await axiosClient.post("/attachments/upload", formData, {
+        await axiosClient.post(`/employees/${selectedEmp.id}/documents`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
             "x-company-id": selectedCompanyId,
           },
-        });
-
-        const fileUrl = uploadRes.data.fileUrl;
-        
-        await axiosClient.post(`/employees/${selectedEmp.id}/documents`, {
-          documentType: item.documentType,
-          fileName: item.fileObj.name,
-          fileUrl: fileUrl,
-        }, {
-          headers: { "x-company-id": selectedCompanyId }
         });
       }
       alert("Documents uploaded successfully");
@@ -91,6 +99,47 @@ export default function EmployeeDocumentsTab({
       loadDocuments(selectedEmp.id);
     } catch(err) {
       alert("Failed to verify document");
+    }
+  };
+
+  const handleViewDocument = async (doc) => {
+    try {
+      const fileUrl = doc.fileUrl.startsWith("http")
+        ? doc.fileUrl
+        : `${(axiosClient.defaults.baseURL || "").replace(/\/api$/, "")}${doc.fileUrl}`;
+      const response = await axiosClient.get(fileUrl, {
+        responseType: "blob",
+        headers: { "x-company-id": selectedCompanyId }
+      });
+      const blob = new Blob([response.data], { type: doc.mimeType || response.headers["content-type"] || "application/octet-stream" });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank");
+    } catch (err) {
+      alert("Failed to view document");
+    }
+  };
+
+  const handleDownloadDocument = async (doc) => {
+    try {
+      const fileUrl = doc.fileUrl.startsWith("http")
+        ? doc.fileUrl
+        : `${(axiosClient.defaults.baseURL || "").replace(/\/api$/, "")}${doc.fileUrl}`;
+      const response = await axiosClient.get(fileUrl, {
+        responseType: "blob",
+        headers: { "x-company-id": selectedCompanyId }
+      });
+      const blob = new Blob([response.data], { type: doc.mimeType || response.headers["content-type"] || "application/octet-stream" });
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = doc.fileName || "document";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      alert("Failed to download document");
     }
   };
 
@@ -164,12 +213,12 @@ export default function EmployeeDocumentsTab({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <a href={`http://localhost:5000${doc.fileUrl}`} target="_blank" rel="noreferrer" className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg cursor-pointer">
+                  <button onClick={() => handleViewDocument(doc)} className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg cursor-pointer">
                     <Eye className="h-4 w-4" />
-                  </a>
-                  <a href={`http://localhost:5000${doc.fileUrl}`} download className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg cursor-pointer">
+                  </button>
+                  <button onClick={() => handleDownloadDocument(doc)} className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg cursor-pointer">
                     <Download className="h-4 w-4" />
-                  </a>
+                  </button>
                   <button onClick={() => handleDeleteDocument(doc.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg cursor-pointer">
                     <Trash2 className="h-4 w-4" />
                   </button>

@@ -16,6 +16,8 @@ import holidaysReducer from "./entities/holidaysSlice";
 import leaveTypesReducer from "./entities/leaveTypesSlice";
 import leaveRequestsReducer from "./entities/leaveRequestsSlice";
 import leaveBalancesReducer from "./entities/leaveBalancesSlice";
+import attendanceReducer from "./entities/attendanceSlice";
+import shiftsReducer from "./entities/shiftsSlice";
 
 import { injectStore } from "../lib/axios";
 
@@ -29,6 +31,8 @@ const entitiesReducer = combineReducers({
   leaveTypes: leaveTypesReducer,
   leaveRequests: leaveRequestsReducer,
   leaveBalances: leaveBalancesReducer,
+  attendance: attendanceReducer,
+  shifts: shiftsReducer,
 });
 
 export const store = configureStore({

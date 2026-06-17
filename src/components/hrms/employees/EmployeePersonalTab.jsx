@@ -9,7 +9,7 @@ export default function EmployeePersonalTab({ empDetails }) {
       <div className="p-4 space-y-3.5 text-xs">
         <div className="flex justify-between"><span className="text-gray-400 font-medium">Email</span><span className="font-bold text-gray-800">{empDetails.email}</span></div>
         <div className="flex justify-between"><span className="text-gray-400 font-medium">Mobile</span><span className="font-bold text-gray-800">{empDetails.mobile || "-"}</span></div>
-        <div className="flex justify-between"><span className="text-gray-400 font-medium">DOB</span><span className="font-bold text-gray-800">{empDetails.dob || "-"}</span></div>
+        <div className="flex justify-between"><span className="text-gray-400 font-medium">DOB</span><span className="font-bold text-gray-800">{empDetails.dob ? empDetails.dob.split('T')[0] : "-"}</span></div>
         <div className="flex justify-between"><span className="text-gray-400 font-medium">Gender</span><span className="font-bold text-gray-800">{empDetails.gender || "-"}</span></div>
         <div className="flex justify-between"><span className="text-gray-400 font-medium">Address</span><span className="font-bold text-gray-800 max-w-[200px] text-right">{empDetails.address || "-"}</span></div>
         <hr className="my-2" />
