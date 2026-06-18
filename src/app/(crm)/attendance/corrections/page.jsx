@@ -15,21 +15,28 @@ export default function CorrectionsPage() {
   const user = useSelector(state => state.auth?.user);
 
   const [remarks, setRemarks] = useState({});
+  
+  console.log("USER =", user);
+  console.log("logged employeeId =", user?.employeeId);
 
   useEffect(() => {
     dispatch(fetchCorrections());
   }, [dispatch]);
 
   const handleApprove = async (id) => {
-    if (confirm("Approve this correction?")) {
-      await dispatch(approveCorrection({ id, data: { remarks: remarks[id] || "" } }));
+    console.log("CLICKED");
+    if (confirm("Approve this regularization request?")) {
+      const result = await dispatch(approveCorrection({ id, data: { remarks: remarks[id] || "" } }));
+      console.log(result);
       dispatch(fetchCorrections());
     }
   };
 
   const handleReject = async (id) => {
-    if (confirm("Reject this correction?")) {
-      await dispatch(rejectCorrection({ id, data: { remarks: remarks[id] || "" } }));
+    console.log("CLICKED");
+    if (confirm("Reject this regularization request?")) {
+      const result = await dispatch(rejectCorrection({ id, data: { remarks: remarks[id] || "" } }));
+      console.log(result);
       dispatch(fetchCorrections());
     }
   };
@@ -46,7 +53,7 @@ export default function CorrectionsPage() {
       <div className="mb-8 border-b border-slate-200 pb-5 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-800 tracking-tight">Attendance Regularization</h1>
-          <p className="text-sm text-slate-500 mt-1.5">Review and manage employee time correction requests</p>
+          <p className="text-sm text-slate-500 mt-1.5">Review and manage employee time regularization requests</p>
         </div>
         <div className="text-sm font-medium text-slate-500 bg-white px-4 py-2 rounded-md border border-slate-200 shadow-sm">
           Pending Requests: <span className="text-blue-600 font-bold ml-1">{pendingCorrections.length}</span>
@@ -69,7 +76,9 @@ export default function CorrectionsPage() {
 
         <div className="divide-y divide-slate-100">
           {pendingCorrections.map(correction => {
-            const isOwnRequest = user && user.employeeId === correction.employeeId;
+            const isOwnRequest = user?.type !== "client_admin" && user?.employeeId === correction.employeeId;
+            console.log("correction.employeeId =", correction.employeeId);
+            console.log("isOwnRequest =", isOwnRequest);
 
             return (
               <div

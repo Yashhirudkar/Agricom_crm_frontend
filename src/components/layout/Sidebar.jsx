@@ -4,17 +4,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  LayoutDashboard,
-  Handshake,
-  ShoppingCart,
-  Users,
-  Shield,
-  Building2,
-  Globe,
-  Clock,
-  Calendar,
-  DollarSign,
-  Check,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -29,19 +18,7 @@ import {
 import { useRouter } from "next/navigation";
 import axiosInstance from "@/lib/axios";
 
-// Map string icon names from DB to Lucide components
-const iconMap = {
-  LayoutDashboard,
-  Handshake,
-  ShoppingCart,
-  Users,
-  Shield,
-  Building2,
-  Globe,
-  Clock,
-  Calendar,
-  DollarSign,
-};
+import { getDynamicIcon, getDynamicIconColor } from "./sidebar-components/icons";
 
 export function Sidebar() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -73,180 +50,26 @@ export function Sidebar() {
   useEffect(() => {
     const fetchSidebar = async () => {
       try {
-        const response = await axiosInstance.get('/system/sidebar');
+        const response = await axiosInstance.get('/auth/my-menu');
         setMenuConfig(response.data || []);
       } catch (error) {
         console.error("Failed to fetch sidebar config", error);
       }
     };
-    // Always add static Overview module at the top
-    const baseConfig = [
-      {
-        id: "overview",
-        name: "OVERVIEW",
-        icon: "LayoutDashboard",
-        type: "parent",
-        subModules: [
-          { id: "dashboard", name: "Dashboard", route: "/", icon: "LayoutDashboard", permissionKey: null }
-        ],
-      }
-    ];
-    setMenuConfig(baseConfig);
     fetchSidebar();
   }, []);
 
-  const hasPermission = (perm) => {
-    if (!perm) return true;
-    if (userType === "super_admin" || userType === "client_admin") return true;
-    if (user?.permissions && Array.isArray(user.permissions)) {
-      return user.permissions.includes(perm);
-    }
-    return false;
-  };
-
-  // Filter config based on role and permissions
-  const filteredMenu = menuConfig.filter((section) => {
-    if (section.isSuperAdminOnly && userType !== "super_admin") return false;
-    if (section.isClientAdminOnly && userType !== "client_admin") return false;
-    return true;
-  }).map((section) => {
-    // Map backend `subModules` to `items` array used by the UI
-    let items = (section.subModules || []).filter((item) => hasPermission(item.permissionKey)).map(item => ({
-      ...item,
-      href: item.route,
-      icon: iconMap[item.icon] || LayoutDashboard
-    }));
-
-    // Inject Dashboard and Profile into MY WORKSPACE
-    if (section.key === 'my_workspace' || section.name === 'MY WORKSPACE' || section.name === 'OVERVIEW') {
-      if (!items.some(i => i.route === '/')) {
-        items.unshift({ id: 'dashboard', name: 'My Dashboard', route: '/', href: '/', icon: LayoutDashboard, permissionKey: null });
-      }
-      if (!items.some(i => i.route === '/profile')) {
-        items.splice(1, 0, { id: 'profile', name: 'Profile', route: '/profile', href: '/profile', icon: iconMap['UserIcon'] || Users, permissionKey: null });
-      }
-    }
-
-    return { ...section, type: "parent", title: section.name, items };
-  }).filter((section) => {
-    return section.items.length > 0;
+  // Format menu to inject dynamic icons, since backend might send string icon names
+  const formattedMenu = menuConfig.map(section => {
+    return {
+      ...section,
+      icon: getDynamicIcon(section.name, section.route, section.icon),
+      items: (section.items || []).map(item => ({
+        ...item,
+        icon: getDynamicIcon(item.name, item.route, item.icon)
+      }))
+    };
   });
-
-  // Group HR modules logically under HRMS
-  const formattedMenu = [];
-  const hrModules = {
-    employees: { id: "employees", title: "EMPLOYEES", items: [] },
-    organization: { id: "organization", title: "ORGANIZATION", items: [] },
-    policies: { id: "policies", title: "POLICIES", items: [] },
-    documents: { id: "documents", title: "DOCUMENTS", items: [] },
-    leaves: { id: "leaves", title: "LEAVE MANAGEMENT", items: [] },
-    attendance: { id: "attendance", title: "ATTENDANCE", items: [] },
-    others: { id: "others", title: "OTHERS", items: [] }
-  };
-
-  filteredMenu.forEach(section => {
-    if (section.key?.startsWith('hr_')) {
-      if (section.items) {
-        section.items.forEach(item => {
-          const route = item.route || "";
-          if (route.includes("/employees") && !route.includes("org-chart")) {
-            hrModules.employees.items.push(item);
-          } else if (route.includes("/departments") || route.includes("/designations") || route.includes("/branches") || route.includes("org-chart")) {
-            hrModules.organization.items.push(item);
-          } else if (route.includes("/hr-policies") || route.includes("/holidays")) {
-            hrModules.policies.items.push(item);
-          } else if (route.includes("/documents")) {
-            hrModules.documents.items.push(item);
-          } else if (route.includes("/leave-types") || route.includes("/my-leaves") || route.includes("/leave-approvals") || route.includes("/leaves")) {
-            hrModules.leaves.items.push(item);
-          } else if (route.includes("/attendance") || route.includes("/shifts") || route.includes("/corrections") || route.includes("/reports")) {
-            hrModules.attendance.items.push(item);
-          } else {
-            hrModules.others.items.push(item);
-          }
-        });
-      }
-    } else {
-      formattedMenu.push(section);
-    }
-  });
-
-  // Ensure standard HR routes are populated if missing, with fallback icons and permission keys
-  const employeeItems = hrModules.employees.items;
-  if (!employeeItems.some(i => i.route === "/employees")) {
-    employeeItems.push({ id: "nav-employees", name: "Employees", route: "/employees", href: "/employees", icon: iconMap["Users"] || Users, permissionKey: "employees:read" });
-  }
-
-  const organizationItems = hrModules.organization.items;
-  if (!organizationItems.some(i => i.route === "/branches")) {
-    organizationItems.push({ id: "nav-branches", name: "Branches", route: "/branches", href: "/branches", icon: iconMap["Building2"] || Building2, permissionKey: "branches:read" });
-  }
-  if (!organizationItems.some(i => i.route === "/departments")) {
-    organizationItems.push({ id: "nav-departments", name: "Departments", route: "/departments", href: "/departments", icon: iconMap["Building2"] || Building2, permissionKey: "departments:read" });
-  }
-  if (!organizationItems.some(i => i.route === "/designations")) {
-    organizationItems.push({ id: "nav-designations", name: "Designations", route: "/designations", href: "/designations", icon: iconMap["Shield"] || Shield, permissionKey: "designations:read" });
-  }
-  if (!organizationItems.some(i => i.route === "/employees/org-chart")) {
-    organizationItems.push({ id: "nav-org-chart", name: "Org Chart", route: "/employees/org-chart", href: "/employees/org-chart", icon: iconMap["Users"] || Users, permissionKey: "employees:read" });
-  }
-
-  const policyItems = hrModules.policies.items;
-  if (!policyItems.some(i => i.route === "/hr-policies")) {
-    policyItems.push({ id: "nav-hr-policies", name: "HR Policies", route: "/hr-policies", href: "/hr-policies", icon: iconMap["Shield"] || Shield, permissionKey: "hrpolicy:read" });
-  }
-  if (!policyItems.some(i => i.route === "/holidays")) {
-    policyItems.push({ id: "nav-holidays", name: "Holidays", route: "/holidays", href: "/holidays", icon: iconMap["Calendar"] || Calendar, permissionKey: "holidays:read" });
-  }
-
-  const leaveItems = hrModules.leaves.items;
-  if (!leaveItems.some(i => i.route === "/leave-types")) {
-    leaveItems.push({ id: "nav-leave-types", name: "Leave Types", route: "/leave-types", href: "/leave-types", icon: iconMap["Calendar"] || Calendar, permissionKey: "leave_types:read" });
-  }
-  if (!leaveItems.some(i => i.route === "/my-leaves")) {
-    leaveItems.push({ id: "nav-my-leaves", name: "My Leaves", route: "/my-leaves", href: "/my-leaves", icon: iconMap["Clock"] || Clock, permissionKey: "leave:create" });
-  }
-  if (!leaveItems.some(i => i.route === "/leave-approvals")) {
-    leaveItems.push({ id: "nav-leave-approvals", name: "Leave Approvals", route: "/leave-approvals", href: "/leave-approvals", icon: iconMap["Check"] || Check, permissionKey: "leave:approve" });
-  }
-  if (!leaveItems.some(i => i.route === "/leaves")) {
-    leaveItems.push({ id: "nav-leaves", name: "Leave Management", route: "/leaves", href: "/leaves", icon: iconMap["Calendar"] || Calendar, permissionKey: "leave:read" });
-  }
-
-  const attendanceItems = hrModules.attendance.items;
-  if (!attendanceItems.some(i => i.route === "/attendance")) {
-    attendanceItems.push({ id: "nav-attendance-dashboard", name: "Dashboard", route: "/attendance", href: "/attendance", icon: iconMap["LayoutDashboard"] || LayoutDashboard, permissionKey: "attendance:read" });
-  }
-  if (!attendanceItems.some(i => i.route === "/attendance/my-attendance")) {
-    attendanceItems.push({ id: "nav-my-attendance", name: "My Attendance", route: "/attendance/my-attendance", href: "/attendance/my-attendance", icon: iconMap["Clock"] || Clock, permissionKey: "attendance:read" });
-  }
-  if (!attendanceItems.some(i => i.route === "/attendance/shifts")) {
-    attendanceItems.push({ id: "nav-shifts", name: "Shifts", route: "/attendance/shifts", href: "/attendance/shifts", icon: iconMap["Calendar"] || Calendar, permissionKey: "attendance:update" });
-  }
-  if (!attendanceItems.some(i => i.route === "/attendance/corrections")) {
-    attendanceItems.push({ id: "nav-corrections", name: "Corrections", route: "/attendance/corrections", href: "/attendance/corrections", icon: iconMap["Check"] || Check, permissionKey: "attendance:override" });
-  }
-  if (!attendanceItems.some(i => i.route === "/attendance/reports")) {
-    attendanceItems.push({ id: "nav-attendance-reports", name: "Reports", route: "/attendance/reports", href: "/attendance/reports", icon: iconMap["DollarSign"] || DollarSign, permissionKey: "attendance:read" });
-  }
-
-  const activeHrModules = [
-    { ...hrModules.employees, items: hrModules.employees.items.filter(item => hasPermission(item.permissionKey)) },
-    { ...hrModules.organization, items: hrModules.organization.items.filter(item => hasPermission(item.permissionKey)) },
-    { ...hrModules.policies, items: hrModules.policies.items.filter(item => hasPermission(item.permissionKey)) },
-    { ...hrModules.documents, items: hrModules.documents.items.filter(item => hasPermission(item.permissionKey)) },
-    { ...hrModules.leaves, items: hrModules.leaves.items.filter(item => hasPermission(item.permissionKey)) },
-    { ...hrModules.attendance, items: hrModules.attendance.items.filter(item => hasPermission(item.permissionKey)) }
-  ].filter(m => m.items.length > 0);
-
-  if (activeHrModules.length > 0) {
-    formattedMenu.push({
-      id: "hr_department",
-      title: "HR Management",
-      type: "parent_nested",
-      modules: activeHrModules
-    });
-  }
 
   // Auto-expand active routes
   useEffect(() => {
@@ -304,27 +127,6 @@ export function Sidebar() {
     return user?.roles?.[0]?.name || "User";
   };
 
-  // ICON COLORS
-  const iconColors = {
-    Dashboard: "text-blue-500",
-    Clients: "text-violet-500",
-    "All Companies": "text-orange-500",
-    "My Companies": "text-orange-500",
-    "All Users": "text-green-500",
-    "My Users": "text-green-500",
-    Roles: "text-rose-500",
-    "Custom Roles": "text-rose-500",
-    Leads: "text-sky-500",
-    Customers: "text-emerald-500",
-    Orders: "text-amber-500",
-    Departments: "text-indigo-500",
-    Designations: "text-teal-500",
-    Employees: "text-cyan-500",
-    "Daily Log": "text-purple-500",
-    "Leave Requests": "text-pink-500",
-    "Holiday Calendar": "text-pink-500",
-    "Salary Details": "text-green-600",
-  };
 
   return (
     <aside
@@ -380,7 +182,7 @@ export function Sidebar() {
                           title={isSidebarCollapsed ? item.name : undefined}
                         >
                           <div className="flex items-center gap-3">
-                            <Icon className={`h-[20px] w-[20px] stroke-[1.5] ${isActive ? "text-[#007aff]" : iconColors[item.name] || "text-gray-500"}`} />
+                            <Icon className={`h-[20px] w-[20px] stroke-[1.5] ${isActive ? "text-[#007aff]" : getDynamicIconColor(item.name, item.href)}`} />
                             {!isSidebarCollapsed && (
                               <span className={`text-[14px] font-medium whitespace-nowrap ${isActive ? "text-[#007aff]" : ""}`}>{item.name}</span>
                             )}
@@ -392,61 +194,23 @@ export function Sidebar() {
                 </ul>
               </div>
             );
-          }
-
-          if (section.type === "parent_nested") {
+          } else if (section.type === "item") {
+            const Icon = section.icon;
+            const isActive = section.href !== "#" && (section.href === "/" ? pathname === "/" : pathname.startsWith(section.href));
             return (
-              <div key={section.id} className={`space-y-2 ${idx !== 0 ? "pt-5 border-t border-gray-100" : ""}`}>
-                {!isSidebarCollapsed ? (
-                  <div className="px-3 py-1.5">
-                    <span className="text-[12px] font-bold text-gray-500 tracking-widest uppercase">
-                      {section.title}
-                    </span>
+              <div key={section.id} className={idx !== 0 ? "pt-5 border-t border-gray-100" : ""}>
+                <Link
+                  href={section.href}
+                  className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"} px-3 py-2.5 rounded-xl transition-colors ${isActive ? "bg-blue-50 text-[#007aff]" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"}`}
+                  title={isSidebarCollapsed ? section.title : undefined}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className={`h-[20px] w-[20px] stroke-[1.5] ${isActive ? "text-[#007aff]" : getDynamicIconColor(section.name, section.href)}`} />
+                    {!isSidebarCollapsed && (
+                      <span className={`text-[14px] font-medium whitespace-nowrap ${isActive ? "text-[#007aff]" : ""}`}>{section.title}</span>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex justify-center mb-2 mt-4">
-                    <span className="w-4 h-px bg-gray-200"></span>
-                  </div>
-                )}
-
-                <div className="space-y-2 mt-2">
-                  {section.modules.map((mod) => {
-                    return (
-                      <div key={mod.id} className="pl-4 border-l border-gray-100 ml-3">
-                        {!isSidebarCollapsed && (
-                          <div className="px-3 py-1.5">
-                            <span className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">
-                              {mod.title}
-                            </span>
-                          </div>
-                        )}
-
-                        <ul className="space-y-1 mt-1">
-                          {mod.items.map((item) => {
-                            const Icon = item.icon;
-                            const isActive = item.href !== "#" && (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href));
-                            return (
-                              <li key={item.id}>
-                                <Link
-                                  href={item.href}
-                                  className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"} px-3 py-2.5 rounded-xl transition-colors ${isActive ? "bg-blue-50 text-[#007aff]" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"}`}
-                                  title={isSidebarCollapsed ? item.name : undefined}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <Icon className={`h-[18px] w-[18px] stroke-[1.5] ${isActive ? "text-[#007aff]" : iconColors[item.name] || "text-gray-500"}`} />
-                                    {!isSidebarCollapsed && (
-                                      <span className={`text-[13px] font-medium whitespace-nowrap ${isActive ? "text-[#007aff]" : ""}`}>{item.name}</span>
-                                    )}
-                                  </div>
-                                </Link>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
-                    );
-                  })}
-                </div>
+                </Link>
               </div>
             );
           }

@@ -162,6 +162,14 @@ export default function MyAttendancePage() {
   const canCheckOut = isWorking;
   const timeObj = calculateLiveTimer(activityLogs);
 
+  // Apple Watch style progress calculation
+  const totalSeconds = Number(timeObj.h) * 3600 + Number(timeObj.m) * 60 + Number(timeObj.s);
+  const maxWorkSeconds = 9 * 60 * 60; // 9 hours
+  const progress = Math.min(totalSeconds / maxWorkSeconds, 1);
+  
+  const dashOffset = 289 - progress * 289;
+  const angle = progress * 360;
+
   // Helper for timeline dots & badges
   const getTimelineStyles = (type) => {
     switch (type) {
@@ -219,12 +227,10 @@ export default function MyAttendancePage() {
                     stroke="#10b981"
                     strokeWidth="3.5"
                     strokeDasharray="289"
-                    strokeDashoffset={isWorking ? "120" : "289"} /* Adjust logic for animation if needed */
+                    strokeDashoffset={isWorking ? dashOffset : 289}
                     strokeLinecap="round"
-                    className="transition-all duration-1000 ease-in-out"
+                    className="transition-all duration-1000 ease-in-out drop-shadow-[0_0_6px_rgba(16,185,129,0.4)]"
                   />
-                  {/* Decorative dot */}
-                  {isWorking && <circle cx="50" cy="4" r="2.5" fill="#10b981" />}
                 </svg>
 
                 {/* Inner Timer Content */}

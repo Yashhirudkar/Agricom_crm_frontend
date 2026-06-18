@@ -13,7 +13,7 @@ import {
   selectRolesError,
   clearRolesError,
 } from "@/store/slices/rolesSlice";
-import { fetchPermissions, selectPermissions } from "@/store/slices/permissionsSlice";
+// Legacy permissions slice removed
 import { selectUserType } from "@/store/slices/authSlice";
 import Drawer from "@/components/drawers/Drawer";
 import Modal from "@/components/modals/Modal";
@@ -40,7 +40,7 @@ function RolesContent() {
   const searchParams = useSearchParams();
 
   const roles = useSelector(selectRoles);
-  const allPermissions = useSelector(selectPermissions);
+  const allPermissions = []; // useSelector(selectPermissions);
   const isLoading = useSelector(selectRolesLoading);
   const error = useSelector(selectRolesError);
   const userType = useSelector(selectUserType);
@@ -82,12 +82,10 @@ function RolesContent() {
 
   useEffect(() => {
     dispatch(fetchRoles());
-    dispatch(fetchPermissions());
-
     const fetchRegistry = async () => {
       setRegistryLoading(true);
       try {
-        const res = await axiosClient.get("/GetPermissionRegistry");
+        const res = await axiosClient.get("/system/matrix/registry");
         setPermissionRegistry(res.data || []);
       } catch (err) {
         console.error("Failed to load permission registry:", err);
@@ -118,9 +116,10 @@ function RolesContent() {
 
     try {
       const res = await axiosClient.get(`/GetRolePermissions?roleId=${roleObj.id}`);
-      const perms = res.data?.permissions || res.data || [];
-      setAssignedPermissions(perms);
-      latestAssignedIdsRef.current = new Set(perms.map((p) => p.id));
+      const roleData = res.data?.roleActionPermissions || res.data || [];
+      // roleActionPermissions objects have resource_action_id
+      setAssignedPermissions(roleData.map((p) => p.resource_action_id));
+      latestAssignedIdsRef.current = new Set(roleData.map((p) => p.resource_action_id));
     } catch (err) {
       console.error("Failed to load role permissions:", err);
       showToast("Failed to load role permissions", "error");
@@ -228,21 +227,11 @@ function RolesContent() {
       .join(' ');
   };
 
-  const groupedRegistry = permissionRegistry.reduce((acc, item) => {
-    const cat = getCategory(item.module);
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(item);
-    return acc;
-  }, {});
+  // The matrix registry is already grouped by module
+  const groupedRegistry = permissionRegistry;
 
-  const assignedIds = new Set(assignedPermissions.map((p) => p.id));
+  const assignedIds = new Set(assignedPermissions);
 
-  const getPermissionId = (resource, action) => {
-    const perm = allPermissions.find(p => p.resource === resource && p.action === action);
-    return perm ? perm.id : null;
-  };
-
-  // Toggle individual permission assignment
   const handlePermissionToggle = async (permissionId, isCurrentlyAssigned) => {
     const currentIds = latestAssignedIdsRef.current;
     let newAssignedIds;
@@ -255,7 +244,7 @@ function RolesContent() {
     
     // Optimistic update of refs and UI
     latestAssignedIdsRef.current = new Set(newAssignedIds);
-    setAssignedPermissions(allPermissions.filter(p => newAssignedIds.includes(p.id)));
+    setAssignedPermissions(newAssignedIds);
 
     try {
       await axiosClient.post("/UpdateRolePermissions", {
@@ -537,7 +526,8 @@ function RolesContent() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 text-xs">
-                        {Object.entries(groupedRegistry).map(([category, modules]) => {
+                        {permissionRegistry.map((modCat) => {
+                          const category = modCat.module_name;
                           const isExpanded = expandedModules[category];
                           return (
                             <React.Fragment key={category}>
@@ -557,36 +547,35 @@ function RolesContent() {
                                   </div>
                                 </td>
                               </tr>
-                              {isExpanded && modules.map((mod) => {
-                                let modulePerms = allPermissions.filter(p => p.resource === mod.resource);
-                                if (modulePerms.length === 0) return null;
+                              {isExpanded && (modCat.resources || []).map((res) => {
+                                if (!res.actions || res.actions.length === 0) return null;
                                 
                                 return (
-                                  <tr key={mod.resource} className="hover:bg-gray-50/30 transition-colors">
+                                  <tr key={res.resource_id} className="hover:bg-gray-50/30 transition-colors">
                                     <td className="px-4 py-3 font-semibold text-gray-600 pl-8 align-top pt-4 border-r border-gray-100">
-                                      {mod.label}
+                                      {formatLabel(res.resource_name)}
                                     </td>
                                     <td className="px-4 py-3">
                                       <div className="flex flex-wrap gap-2 py-1">
-                                        {modulePerms.map((perm) => {
-                                          const isAssigned = assignedIds.has(perm.id);
+                                        {res.actions.map((act) => {
+                                          const isAssigned = assignedIds.has(act.action_id);
                                           return (
                                             <label 
-                                              key={perm.id} 
+                                              key={act.action_id} 
                                               className={`inline-flex items-center gap-2 border px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer transition-colors ${
                                                 isAssigned 
                                                 ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-300' 
                                                 : 'bg-white border-gray-200 text-gray-600 hover:border-blue-400 hover:bg-gray-50'
                                               }`}
-                                              title={perm.description}
+                                              title={act.action_name}
                                             >
                                               <input
                                                 type="checkbox"
                                                 className="w-3.5 h-3.5 text-[#007aff] bg-white border-gray-300 rounded cursor-pointer focus:ring-[#007aff]"
                                                 checked={isAssigned}
-                                                onChange={() => handlePermissionToggle(perm.id, isAssigned)}
+                                                onChange={() => handlePermissionToggle(act.action_id, isAssigned)}
                                               />
-                                              {perm.action.replace(/_/g, ' ').toUpperCase()}
+                                              {act.action_name.replace(/_/g, ' ').toUpperCase()}
                                             </label>
                                           );
                                         })}

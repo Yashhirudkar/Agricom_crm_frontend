@@ -31,6 +31,9 @@ axiosClient.interceptors.request.use(
         const user = state.auth?.user;
         
         // Fallback: if no activeCompanyId in localStorage, try user's own companyId
+        if (!activeCompanyId && user?.lastCompanyId) {
+          activeCompanyId = user.lastCompanyId.toString();
+        }
         if (!activeCompanyId && user?.companyId) {
           activeCompanyId = user.companyId.toString();
         }

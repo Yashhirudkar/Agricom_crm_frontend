@@ -1,7 +1,6 @@
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import authReducer from "./slices/authSlice";
 import rolesReducer from "./slices/rolesSlice";
-import permissionsReducer from "./slices/permissionsSlice";
 import companiesReducer from "./slices/companiesSlice";
 import usersReducer from "./slices/usersSlice";
 import clientsReducer from "./slices/clientsSlice";
@@ -39,7 +38,6 @@ export const store = configureStore({
   reducer: {
     auth: authReducer,
     roles: rolesReducer,
-    permissions: permissionsReducer,
     companies: companiesReducer,
     users: usersReducer,
     clients: clientsReducer,

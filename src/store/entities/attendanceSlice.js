@@ -130,6 +130,84 @@ const attendanceSlice = createSlice({
     },
     clearAttendanceSuccessMessage(state) {
       state.successMessage = null;
+    },
+    handleSocketBatchUpdate(state, action) {
+      const updates = action.payload;
+      if (!Array.isArray(updates)) return;
+
+      updates.forEach(payload => {
+        const { employeeId, date, attendanceState, attendanceStatus, checkInTime, checkOutTime } = payload;
+
+        // 1. Update myAttendance
+        const myIdx = state.myAttendance.findIndex(r => r.employeeId === employeeId && r.date === date);
+        if (myIdx >= 0) {
+          const currentRecord = state.myAttendance[myIdx];
+          state.myAttendance[myIdx] = {
+            ...currentRecord,
+            checkInTime: checkInTime !== undefined ? checkInTime : currentRecord.checkInTime,
+            checkOutTime: checkOutTime !== undefined ? checkOutTime : currentRecord.checkOutTime,
+            attendanceState: attendanceState !== undefined ? attendanceState : currentRecord.attendanceState,
+            attendanceStatus: attendanceStatus !== undefined ? attendanceStatus : currentRecord.attendanceStatus,
+          };
+          
+          if (!state.myAttendance[myIdx].logs) state.myAttendance[myIdx].logs = [];
+          
+          if (payload.action === 'checked_in') {
+            const hasLog = state.myAttendance[myIdx].logs.some(l => l.actionType === 'CHECK_IN' && l.timestamp === payload.timestamp);
+            if (!hasLog) {
+              state.myAttendance[myIdx].logs.push({
+                actionType: 'CHECK_IN',
+                timestamp: payload.timestamp || new Date().toISOString(),
+                metadata: { verificationMethod: 'WEB' }
+              });
+            }
+          } else if (payload.action === 'checked_out') {
+            const hasLog = state.myAttendance[myIdx].logs.some(l => l.actionType === 'CHECK_OUT' && l.timestamp === payload.timestamp);
+            if (!hasLog) {
+              state.myAttendance[myIdx].logs.push({
+                actionType: 'CHECK_OUT',
+                timestamp: payload.timestamp || new Date().toISOString(),
+                metadata: { verificationMethod: 'WEB' }
+              });
+            }
+          }
+        }
+
+        // 2. Update companyAttendance
+        const compIdx = state.companyAttendance.findIndex(r => r.employeeId === employeeId && r.date === date);
+        if (compIdx >= 0) {
+          const currentRecord = state.companyAttendance[compIdx];
+          state.companyAttendance[compIdx] = {
+            ...currentRecord,
+            checkInTime: checkInTime !== undefined ? checkInTime : currentRecord.checkInTime,
+            checkOutTime: checkOutTime !== undefined ? checkOutTime : currentRecord.checkOutTime,
+            attendanceState: attendanceState !== undefined ? attendanceState : currentRecord.attendanceState,
+            attendanceStatus: attendanceStatus !== undefined ? attendanceStatus : currentRecord.attendanceStatus,
+          };
+        }
+
+        // 3. Update monthlyReport
+        if (Array.isArray(state.monthlyReport)) {
+          state.monthlyReport.forEach(report => {
+            if (report.employeeId === employeeId) {
+              const dayIdx = report.days?.findIndex(d => d.date === date);
+              if (dayIdx >= 0) {
+                const dayRecord = report.days[dayIdx];
+                report.days[dayIdx] = {
+                  ...dayRecord,
+                  checkIn: checkInTime !== undefined ? checkInTime : dayRecord.checkIn,
+                  checkOut: checkOutTime !== undefined ? checkOutTime : dayRecord.checkOut,
+                  status: attendanceStatus !== undefined ? attendanceStatus : dayRecord.status,
+                  attendanceState: attendanceState !== undefined ? attendanceState : dayRecord.attendanceState,
+                  workHours: (checkInTime && checkOutTime) 
+                    ? parseFloat(((new Date(checkOutTime) - new Date(checkInTime) - 60 * 60 * 1000) / (1000 * 60 * 60)).toFixed(2))
+                    : dayRecord.workHours
+                };
+              }
+            }
+          });
+        }
+      });
     }
   },
   extraReducers: (builder) => {
@@ -206,7 +284,7 @@ const attendanceSlice = createSlice({
   },
 });
 
-export const { clearAttendanceError, clearAttendanceSuccessMessage } = attendanceSlice.actions;
+export const { clearAttendanceError, clearAttendanceSuccessMessage, handleSocketBatchUpdate } = attendanceSlice.actions;
 
 export const selectMyAttendance = (state) => state.entities.attendance.myAttendance;
 export const selectCompanyAttendance = (state) => state.entities.attendance.companyAttendance;

@@ -32,6 +32,7 @@ import {
   ChevronRight,
   TrendingUp,
   Search,
+  ShieldAlert,
 } from "lucide-react";
 
 function ClientsContent() {
@@ -338,6 +339,13 @@ function ClientsContent() {
                       className="px-6 py-4 text-right space-x-2"
                       onClick={(e) => e.stopPropagation()} // Stop drawer from opening when clicking action icons
                     >
+                      <button
+                        onClick={() => router.push(`/clients/${client.id}/access`)}
+                        className="p-1 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                        title="Access Config"
+                      >
+                        <ShieldAlert className="h-4 w-4 inline" />
+                      </button>
                       <button
                         onClick={() => openModal(client)}
                         className="p-1 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
