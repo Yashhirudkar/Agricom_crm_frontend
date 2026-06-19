@@ -52,15 +52,8 @@ export const connectSocket = (companyId) => {
     autoConnect: true,
   });
 
-  const events = [
-    "attendance-checkin",
-    "attendance-checkout",
-  ];
-
-  events.forEach(event => {
-    socket.on(event, (payload) => {
-      triggerListeners(event, payload);
-    });
+  socket.onAny((event, payload) => {
+    triggerListeners(event, payload);
   });
 
   socket.on("connect", () => {

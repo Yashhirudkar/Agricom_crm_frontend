@@ -43,15 +43,23 @@ export default function AppShellClient({ children }) {
     const socket = connectSocket(parseInt(activeCompanyId, 10));
     if (!socket) return;
 
+    // Custom socket wrapper does not expose onAny, removed debug log.
+
     const events = [
       "attendance-checkin",
       "attendance-checkout",
+      "attendance-update",
+      "attendance-batch-update",
     ];
 
     events.forEach(event => {
       socket.off(event);
       socket.on(event, (payload) => {
-        dispatch(handleSocketBatchUpdate([payload]));
+        if (event === "attendance-batch-update") {
+          dispatch(handleSocketBatchUpdate(payload));
+        } else {
+          dispatch(handleSocketBatchUpdate([payload]));
+        }
       });
     });
 
