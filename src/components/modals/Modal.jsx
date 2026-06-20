@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 
-export default function Modal({ isOpen, onClose, title, children }) {
+export default function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-md" }) {
   // Close on Escape key
   useEffect(() => {
     const handler = (e) => { if (e.key === "Escape") onClose(); };
@@ -21,7 +21,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
         onClick={onClose}
       />
       {/* Panel */}
-      <div className="relative z-10 bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 animate-in fade-in zoom-in-95 duration-150">
+      <div className={`relative z-10 bg-white rounded-2xl shadow-xl w-full ${maxWidth} mx-4 animate-in fade-in zoom-in-95 duration-150`}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-[15px] font-bold text-gray-900">{title}</h2>

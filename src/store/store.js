@@ -17,6 +17,12 @@ import leaveRequestsReducer from "./entities/leaveRequestsSlice";
 import leaveBalancesReducer from "./entities/leaveBalancesSlice";
 import attendanceReducer from "./entities/attendanceSlice";
 import shiftsReducer from "./entities/shiftsSlice";
+import categoriesReducer from "./entities/categoriesSlice";
+import countriesReducer from "./entities/countrySlice";
+import hscodesReducer from "./entities/hscodeSlice";
+import partnerRolesReducer from "./entities/partnerRoleSlice";
+import productsReducer from "./entities/productSlice";
+import partnersReducer from "./entities/partnerSlice";
 
 import { injectStore } from "../lib/axios";
 
@@ -32,6 +38,12 @@ const entitiesReducer = combineReducers({
   leaveBalances: leaveBalancesReducer,
   attendance: attendanceReducer,
   shifts: shiftsReducer,
+  categories: categoriesReducer,
+  countries: countriesReducer,
+  hscodes: hscodesReducer,
+  partnerRoles: partnerRolesReducer,
+  products: productsReducer,
+  partners: partnersReducer,
 });
 
 export const store = configureStore({
