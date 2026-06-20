@@ -8,6 +8,8 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  restoreProduct,
+  permanentDeleteProduct,
   selectProducts,
   selectProductsLoading,
   selectProductsError,
@@ -23,6 +25,7 @@ import { Plus, Package, Check, AlertCircle } from "lucide-react";
 import ProductsTable from "@/components/masters/products/ProductsTable";
 import ProductsFilters from "@/components/masters/products/ProductsFilters";
 import ProductModal from "@/components/masters/products/ProductModal";
+import PermanentDeleteModal from "@/components/common/PermanentDeleteModal";
 
 function ProductsContent() {
   const dispatch = useDispatch();
@@ -42,6 +45,8 @@ function ProductsContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [restoreTarget, setRestoreTarget] = useState(null);
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -68,13 +73,14 @@ function ProductsContent() {
   const [form, setForm] = useState(initialFormState);
 
   const [search, setSearch] = useState("");
+  const [isActiveFilter, setIsActiveFilter] = useState("true");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
   // Load products list
   useEffect(() => {
-    dispatch(fetchProducts({ page: currentPage, limit: itemsPerPage, search }));
-  }, [dispatch, currentPage, search]);
+    dispatch(fetchProducts({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+  }, [dispatch, currentPage, search, isActiveFilter]);
 
   // Load dropdown dependencies once
   useEffect(() => {
@@ -124,6 +130,8 @@ function ProductsContent() {
   const closeModals = () => {
     setIsModalOpen(false);
     setDeleteTarget(null);
+    setRestoreTarget(null);
+    setPermanentDeleteTarget(null);
     dispatch(clearProductsError());
   };
 
@@ -146,10 +154,12 @@ function ProductsContent() {
         await dispatch(updateProduct(payload)).unwrap();
         showToast("Product updated successfully");
       } else {
-        await dispatch(createProduct(payload)).unwrap();
+        const createPayload = { ...payload };
+        delete createPayload.id;
+        await dispatch(createProduct(createPayload)).unwrap();
         showToast("Product created successfully");
         if (currentPage !== 1) setCurrentPage(1);
-        else dispatch(fetchProducts({ page: 1, limit: itemsPerPage, search }));
+        else dispatch(fetchProducts({ page: 1, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
       closeModals();
     } catch (err) {
@@ -162,18 +172,52 @@ function ProductsContent() {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await dispatch(deleteProduct(deleteTarget.id)).unwrap();
-      showToast("Product deleted successfully");
+      await dispatch(deleteProduct({ id: deleteTarget.id })).unwrap();
+      showToast("Product deactivated successfully");
       
       if (products.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {
-        dispatch(fetchProducts({ page: currentPage, limit: itemsPerPage, search }));
+        dispatch(fetchProducts({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
       
       closeModals();
     } catch (err) {
-      showToast(err || "Failed to delete product", "error");
+      showToast(err || "Failed to deactivate product", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setIsDeleting(true);
+    try {
+      await dispatch(restoreProduct(restoreTarget.id)).unwrap();
+      showToast("Product restored successfully");
+      dispatch(fetchProducts({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      closeModals();
+    } catch (err) {
+      showToast(err || "Failed to restore product", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handlePermanentDelete = async (reason) => {
+    setIsDeleting(true);
+    try {
+      await dispatch(permanentDeleteProduct({ id: permanentDeleteTarget.id, reason })).unwrap();
+      showToast("Product permanently deleted");
+      
+      if (products.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        dispatch(fetchProducts({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      }
+      
+      closeModals();
+    } catch (err) {
+      showToast(err || "Failed to permanently delete product", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -226,6 +270,8 @@ function ProductsContent() {
         <ProductsFilters
           search={search}
           setSearch={setSearch}
+          isActiveFilter={isActiveFilter}
+          setIsActiveFilter={setIsActiveFilter}
           setCurrentPage={setCurrentPage}
           totalCount={totalCount}
         />
@@ -234,6 +280,8 @@ function ProductsContent() {
           products={products}
           openEditModal={openEditModal}
           setDeleteTarget={setDeleteTarget}
+          setRestoreTarget={setRestoreTarget}
+          setPermanentDeleteTarget={setPermanentDeleteTarget}
         />
 
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
@@ -258,8 +306,26 @@ function ProductsContent() {
         onClose={closeModals}
         onConfirm={handleDelete}
         isLoading={isDeleting}
-        title="Delete Product"
-        message={`Are you sure you want to delete the product "${deleteTarget?.name}"? This action cannot be undone.`}
+        title="Deactivate Product"
+        message={`Are you sure you want to deactivate the product "${deleteTarget?.name}"? It will be hidden from normal operations.`}
+      />
+
+      <ConfirmModal
+        isOpen={restoreTarget !== null}
+        onClose={closeModals}
+        onConfirm={handleRestore}
+        isLoading={isDeleting}
+        title="Restore Product"
+        message={`Are you sure you want to restore the product "${restoreTarget?.name}"? It will become active again.`}
+      />
+
+      <PermanentDeleteModal
+        isOpen={permanentDeleteTarget !== null}
+        onClose={closeModals}
+        onConfirm={handlePermanentDelete}
+        isDeleting={isDeleting}
+        title="Permanently Delete Product"
+        message={`Warning: You are about to permanently delete "${permanentDeleteTarget?.name}". This action cannot be undone and will remove all associated data.`}
       />
     </div>
   );

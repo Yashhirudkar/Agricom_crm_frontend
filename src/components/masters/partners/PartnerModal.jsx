@@ -25,7 +25,7 @@ export default function PartnerModal({
     control,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm({
     defaultValues: {
       entityName: "",
@@ -95,6 +95,23 @@ export default function PartnerModal({
           contacts: [],
         });
       }
+    } else {
+      reset({
+        entityName: "",
+        partnerRoleId: "",
+        countryId: "",
+        address: "",
+        city: "",
+        website: "",
+        contactEmail: "",
+        taxId: "",
+        panNo: "",
+        innNo: "",
+        financialStatus: "",
+        isActive: true,
+        productIds: [],
+        contacts: [],
+      });
     }
   }, [isOpen, isEditMode, editData, reset]);
 
@@ -126,6 +143,28 @@ export default function PartnerModal({
     onSubmit(payload);
   };
 
+  const onFormInvalid = (errors) => {
+    if (errors.entityName || errors.partnerRoleId || errors.countryId) {
+      setActiveTab("general");
+    } else if (errors.contactEmail || errors.taxId || errors.panNo || errors.innNo || errors.financialStatus) {
+      setActiveTab("financial");
+    } else if (errors.productIds) {
+      setActiveTab("products");
+    } else if (errors.contacts) {
+      setActiveTab("contacts");
+    }
+  };
+
+  const handleCloseAttempt = () => {
+    if (isDirty) {
+      if (window.confirm("You have unsaved changes. Are you sure?")) {
+        onClose();
+      }
+    } else {
+      onClose();
+    }
+  };
+
   // Convert products array to react-select options format
   const productOptions = products.map(p => ({ value: p.id, label: p.name }));
 
@@ -137,8 +176,8 @@ export default function PartnerModal({
   ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEditMode ? "Edit Partner" : "New Partner"} maxWidth="max-w-4xl">
-      <form onSubmit={handleSubmit(onFormSubmit)} className="flex flex-col h-[75vh] max-h-[700px]">
+    <Modal isOpen={isOpen} onClose={handleCloseAttempt} title={isEditMode ? "Edit Partner" : "New Partner"} maxWidth="max-w-4xl">
+      <form onSubmit={handleSubmit(onFormSubmit, onFormInvalid)} className="flex flex-col h-[75vh] max-h-[700px]">
         
         {/* Tabs Header */}
         <div className="flex border-b border-gray-200 mb-5 overflow-x-auto shrink-0">
@@ -509,7 +548,7 @@ export default function PartnerModal({
             {error && <p className="text-red-500 text-xs font-semibold self-center mr-2">{error}</p>}
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleCloseAttempt}
               className="px-5 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl text-xs font-bold cursor-pointer transition-colors"
             >
               Cancel

@@ -28,12 +28,34 @@ export const updateCountry = createAsyncThunk("countries/update", async ({ id, .
   }
 });
 
-export const deleteCountry = createAsyncThunk("countries/delete", async (id, { rejectWithValue }) => {
+export const deleteCountry = createAsyncThunk("countries/delete", async (arg, { rejectWithValue }) => {
   try {
-    await axiosClient.delete(`/masters/countries/${id}`);
+    const id = typeof arg === "object" ? arg.id : arg;
+    const reason = typeof arg === "object" ? arg.reason : undefined;
+    await axiosClient.delete(`/masters/countries/${id}`, { params: { reason } });
     return id;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to delete country");
+  }
+});
+
+export const restoreCountry = createAsyncThunk("countries/restore", async (id, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.patch(`/masters/countries/${id}/restore`);
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to restore country");
+  }
+});
+
+export const permanentDeleteCountry = createAsyncThunk("countries/permanentDelete", async (arg, { rejectWithValue }) => {
+  try {
+    const id = typeof arg === "object" ? arg.id : arg;
+    const reason = typeof arg === "object" ? arg.reason : undefined;
+    await axiosClient.delete(`/masters/countries/${id}/permanent`, { params: { reason } });
+    return id;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to permanently delete country");
   }
 });
 
@@ -54,12 +76,12 @@ const countriesSlice = createSlice({
     builder
       .addCase(fetchCountries.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchCountries.fulfilled, (state, action) => { 
-        state.isLoading = false; 
-        state.list = action.payload.data || []; 
-        state.totalCount = action.payload.total || 0;
-        state.totalPages = action.payload.totalPages || 1;
-        state.currentPage = action.payload.page || 1;
-      })
+      state.isLoading = false; 
+      state.list = action.payload.data || []; 
+      state.totalCount = action.payload.total || 0;
+      state.totalPages = action.payload.totalPages || 1;
+      state.currentPage = action.payload.page || 1;
+    })
       .addCase(fetchCountries.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
 
       .addCase(createCountry.fulfilled, (state, action) => { state.list.unshift(action.payload); state.totalCount += 1; })
@@ -75,7 +97,19 @@ const countriesSlice = createSlice({
         state.list = state.list.filter((c) => c.id !== action.payload);
         state.totalCount -= 1;
       })
-      .addCase(deleteCountry.rejected, (state, action) => { state.error = action.payload; });
+      .addCase(deleteCountry.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(restoreCountry.fulfilled, (state, action) => {
+        const idx = state.list.findIndex((c) => c.id === action.payload.id);
+        if (idx !== -1) state.list[idx] = action.payload;
+      })
+      .addCase(restoreCountry.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(permanentDeleteCountry.fulfilled, (state, action) => {
+        state.list = state.list.filter((c) => c.id !== action.payload);
+        state.totalCount -= 1;
+      })
+      .addCase(permanentDeleteCountry.rejected, (state, action) => { state.error = action.payload; });
   },
 });
 

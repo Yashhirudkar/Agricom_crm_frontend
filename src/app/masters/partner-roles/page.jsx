@@ -7,6 +7,8 @@ import {
   createPartnerRole,
   updatePartnerRole,
   deletePartnerRole,
+  restorePartnerRole,
+  permanentDeletePartnerRole,
   selectPartnerRoles,
   selectPartnerRolesLoading,
   selectPartnerRolesError,
@@ -22,6 +24,7 @@ import { Plus, UserCog, Check, AlertCircle } from "lucide-react";
 import PartnerRolesTable from "@/components/masters/partner-roles/PartnerRolesTable";
 import PartnerRolesFilters from "@/components/masters/partner-roles/PartnerRolesFilters";
 import PartnerRoleModal from "@/components/masters/partner-roles/PartnerRoleModal";
+import PermanentDeleteModal from "@/components/common/PermanentDeleteModal";
 
 function PartnerRolesContent() {
   const dispatch = useDispatch();
@@ -41,6 +44,8 @@ function PartnerRolesContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [restoreTarget, setRestoreTarget] = useState(null);
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -48,12 +53,13 @@ function PartnerRolesContent() {
   const [form, setForm] = useState(initialFormState);
 
   const [search, setSearch] = useState("");
+  const [isActiveFilter, setIsActiveFilter] = useState("true");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
   useEffect(() => {
-    dispatch(fetchPartnerRoles({ page: currentPage, limit: itemsPerPage, search }));
-  }, [dispatch, currentPage, search]);
+    dispatch(fetchPartnerRoles({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+  }, [dispatch, currentPage, search, isActiveFilter]);
 
   const openCreateModal = () => {
     setForm(initialFormState);
@@ -75,6 +81,8 @@ function PartnerRolesContent() {
   const closeModals = () => {
     setIsModalOpen(false);
     setDeleteTarget(null);
+    setRestoreTarget(null);
+    setPermanentDeleteTarget(null);
     dispatch(clearPartnerRolesError());
   };
 
@@ -89,7 +97,7 @@ function PartnerRolesContent() {
         await dispatch(createPartnerRole({ name: form.name, description: form.description })).unwrap();
         showToast("Partner Role created successfully");
         if (currentPage !== 1) setCurrentPage(1);
-        else dispatch(fetchPartnerRoles({ page: 1, limit: itemsPerPage, search }));
+        else dispatch(fetchPartnerRoles({ page: 1, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
       closeModals();
     } catch (err) {
@@ -102,18 +110,52 @@ function PartnerRolesContent() {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await dispatch(deletePartnerRole(deleteTarget.id)).unwrap();
-      showToast("Partner Role deleted successfully");
+      await dispatch(deletePartnerRole({ id: deleteTarget.id })).unwrap();
+      showToast("Partner Role deactivated successfully");
       
       if (partnerRoles.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {
-        dispatch(fetchPartnerRoles({ page: currentPage, limit: itemsPerPage, search }));
+        dispatch(fetchPartnerRoles({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
       
       closeModals();
     } catch (err) {
-      showToast(err || "Failed to delete partner role", "error");
+      showToast(err || "Failed to deactivate partner role", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setIsDeleting(true);
+    try {
+      await dispatch(restorePartnerRole(restoreTarget.id)).unwrap();
+      showToast("Partner Role restored successfully");
+      dispatch(fetchPartnerRoles({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      closeModals();
+    } catch (err) {
+      showToast(err || "Failed to restore partner role", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handlePermanentDelete = async (reason) => {
+    setIsDeleting(true);
+    try {
+      await dispatch(permanentDeletePartnerRole({ id: permanentDeleteTarget.id, reason })).unwrap();
+      showToast("Partner Role permanently deleted");
+      
+      if (partnerRoles.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        dispatch(fetchPartnerRoles({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      }
+      
+      closeModals();
+    } catch (err) {
+      showToast(err || "Failed to permanently delete partner role", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -166,6 +208,8 @@ function PartnerRolesContent() {
         <PartnerRolesFilters
           search={search}
           setSearch={setSearch}
+          isActiveFilter={isActiveFilter}
+          setIsActiveFilter={setIsActiveFilter}
           setCurrentPage={setCurrentPage}
           totalCount={totalCount}
         />
@@ -174,6 +218,8 @@ function PartnerRolesContent() {
           partnerRoles={partnerRoles}
           openEditModal={openEditModal}
           setDeleteTarget={setDeleteTarget}
+          setRestoreTarget={setRestoreTarget}
+          setPermanentDeleteTarget={setPermanentDeleteTarget}
         />
 
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
@@ -195,8 +241,26 @@ function PartnerRolesContent() {
         onClose={closeModals}
         onConfirm={handleDelete}
         isLoading={isDeleting}
-        title="Delete Partner Role"
-        message={`Are you sure you want to delete the role "${deleteTarget?.name}"? This action cannot be undone.`}
+        title="Deactivate Partner Role"
+        message={`Are you sure you want to deactivate the role "${deleteTarget?.name}"? It will be hidden from normal operations.`}
+      />
+
+      <ConfirmModal
+        isOpen={restoreTarget !== null}
+        onClose={closeModals}
+        onConfirm={handleRestore}
+        isLoading={isDeleting}
+        title="Restore Partner Role"
+        message={`Are you sure you want to restore the role "${restoreTarget?.name}"? It will become active again.`}
+      />
+
+      <PermanentDeleteModal
+        isOpen={permanentDeleteTarget !== null}
+        onClose={closeModals}
+        onConfirm={handlePermanentDelete}
+        isDeleting={isDeleting}
+        title="Permanently Delete Partner Role"
+        message={`Warning: You are about to permanently delete "${permanentDeleteTarget?.name}". This action cannot be undone and will remove all associated data.`}
       />
     </div>
   );

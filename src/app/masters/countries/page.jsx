@@ -7,6 +7,8 @@ import {
   createCountry,
   updateCountry,
   deleteCountry,
+  restoreCountry,
+  permanentDeleteCountry,
   selectCountries,
   selectCountriesLoading,
   selectCountriesError,
@@ -22,6 +24,7 @@ import { Plus, Globe, Check, AlertCircle } from "lucide-react";
 import CountriesTable from "@/components/masters/countries/CountriesTable";
 import CountriesFilters from "@/components/masters/countries/CountriesFilters";
 import CountryModal from "@/components/masters/countries/CountryModal";
+import PermanentDeleteModal from "@/components/common/PermanentDeleteModal";
 
 function CountriesContent() {
   const dispatch = useDispatch();
@@ -41,6 +44,8 @@ function CountriesContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [restoreTarget, setRestoreTarget] = useState(null);
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -48,12 +53,13 @@ function CountriesContent() {
   const [form, setForm] = useState(initialFormState);
 
   const [search, setSearch] = useState("");
+  const [isActiveFilter, setIsActiveFilter] = useState("true");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
   useEffect(() => {
-    dispatch(fetchCountries({ page: currentPage, limit: itemsPerPage, search }));
-  }, [dispatch, currentPage, search]);
+    dispatch(fetchCountries({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+  }, [dispatch, currentPage, search, isActiveFilter]);
 
   const openCreateModal = () => {
     setForm(initialFormState);
@@ -79,6 +85,8 @@ function CountriesContent() {
   const closeModals = () => {
     setIsModalOpen(false);
     setDeleteTarget(null);
+    setRestoreTarget(null);
+    setPermanentDeleteTarget(null);
     dispatch(clearCountriesError());
   };
 
@@ -100,7 +108,7 @@ function CountriesContent() {
         })).unwrap();
         showToast("Country created successfully");
         if (currentPage !== 1) setCurrentPage(1);
-        else dispatch(fetchCountries({ page: 1, limit: itemsPerPage, search }));
+        else dispatch(fetchCountries({ page: 1, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
       closeModals();
     } catch (err) {
@@ -113,18 +121,52 @@ function CountriesContent() {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await dispatch(deleteCountry(deleteTarget.id)).unwrap();
-      showToast("Country deleted successfully");
+      await dispatch(deleteCountry({ id: deleteTarget.id })).unwrap();
+      showToast("Country deactivated successfully");
       
       if (countries.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {
-        dispatch(fetchCountries({ page: currentPage, limit: itemsPerPage, search }));
+        dispatch(fetchCountries({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
       
       closeModals();
     } catch (err) {
-      showToast(err || "Failed to delete country", "error");
+      showToast(err || "Failed to deactivate country", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setIsDeleting(true);
+    try {
+      await dispatch(restoreCountry(restoreTarget.id)).unwrap();
+      showToast("Country restored successfully");
+      dispatch(fetchCountries({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      closeModals();
+    } catch (err) {
+      showToast(err || "Failed to restore country", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handlePermanentDelete = async (reason) => {
+    setIsDeleting(true);
+    try {
+      await dispatch(permanentDeleteCountry({ id: permanentDeleteTarget.id, reason })).unwrap();
+      showToast("Country permanently deleted");
+      
+      if (countries.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        dispatch(fetchCountries({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      }
+      
+      closeModals();
+    } catch (err) {
+      showToast(err || "Failed to permanently delete country", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -177,6 +219,8 @@ function CountriesContent() {
         <CountriesFilters
           search={search}
           setSearch={setSearch}
+          isActiveFilter={isActiveFilter}
+          setIsActiveFilter={setIsActiveFilter}
           setCurrentPage={setCurrentPage}
           totalCount={totalCount}
         />
@@ -185,6 +229,8 @@ function CountriesContent() {
           countries={countries}
           openEditModal={openEditModal}
           setDeleteTarget={setDeleteTarget}
+          setRestoreTarget={setRestoreTarget}
+          setPermanentDeleteTarget={setPermanentDeleteTarget}
         />
 
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
@@ -206,8 +252,26 @@ function CountriesContent() {
         onClose={closeModals}
         onConfirm={handleDelete}
         isLoading={isDeleting}
-        title="Delete Country"
-        message={`Are you sure you want to delete the country "${deleteTarget?.name}"? This action cannot be undone.`}
+        title="Deactivate Country"
+        message={`Are you sure you want to deactivate the country "${deleteTarget?.name}"? It will be hidden from normal operations.`}
+      />
+
+      <ConfirmModal
+        isOpen={restoreTarget !== null}
+        onClose={closeModals}
+        onConfirm={handleRestore}
+        isLoading={isDeleting}
+        title="Restore Country"
+        message={`Are you sure you want to restore the country "${restoreTarget?.name}"? It will become active again.`}
+      />
+
+      <PermanentDeleteModal
+        isOpen={permanentDeleteTarget !== null}
+        onClose={closeModals}
+        onConfirm={handlePermanentDelete}
+        isDeleting={isDeleting}
+        title="Permanently Delete Country"
+        message={`Warning: You are about to permanently delete "${permanentDeleteTarget?.name}". This action cannot be undone and will remove all associated data.`}
       />
     </div>
   );

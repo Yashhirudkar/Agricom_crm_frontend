@@ -1,8 +1,8 @@
 import React from "react";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Trash2, RefreshCcw, ShieldAlert, Ban } from "lucide-react";
 import HasPermission from "@/components/rbac/HasPermission";
 
-export default function CountriesTable({ countries, openEditModal, setDeleteTarget }) {
+export default function CountriesTable({ countries, openEditModal, setDeleteTarget, setRestoreTarget, setPermanentDeleteTarget }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
@@ -38,35 +38,60 @@ export default function CountriesTable({ countries, openEditModal, setDeleteTarg
                   {country.isActive ? (
                     <span className="px-2 py-0.5 bg-green-50 text-green-600 border border-green-100 rounded text-[10px] font-bold">Active</span>
                   ) : (
-                    <span className="px-2 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded text-[10px] font-bold">Inactive</span>
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 border border-gray-200 rounded text-[10px] font-bold">Inactive</span>
                   )}
                 </td>
                 <td className="px-6 py-4 text-right space-x-2">
-                  <HasPermission permission="country:update">
-                    <button
-                      onClick={() => openEditModal(country)}
-                      className="p-1 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
-                      title="Edit"
-                    >
-                      <Edit2 className="h-4 w-4 inline" />
-                    </button>
-                  </HasPermission>
-                  <HasPermission permission="country:delete">
-                    <button
-                      onClick={() => setDeleteTarget(country)}
-                      className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4 inline" />
-                    </button>
-                  </HasPermission>
+                  {country.isActive ? (
+                    <>
+                      <HasPermission permission="country:update">
+                        <button
+                          onClick={() => openEditModal(country)}
+                          className="p-1 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
+                          title="Edit"
+                        >
+                          <Edit2 className="h-4 w-4 inline" />
+                        </button>
+                      </HasPermission>
+                      <HasPermission permission="country:delete">
+                        <button
+                          onClick={() => setDeleteTarget(country)}
+                          className="p-1 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-colors cursor-pointer"
+                          title="Deactivate"
+                        >
+                          <Ban className="h-4 w-4 inline" />
+                        </button>
+                      </HasPermission>
+                    </>
+                  ) : (
+                    <>
+                      <HasPermission permission="country:update">
+                        <button
+                          onClick={() => setRestoreTarget(country)}
+                          className="p-1 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors cursor-pointer"
+                          title="Restore"
+                        >
+                          <RefreshCcw className="h-4 w-4 inline" />
+                        </button>
+                      </HasPermission>
+                      <HasPermission permission="country:force_delete">
+                        <button
+                          onClick={() => setPermanentDeleteTarget(country)}
+                          className="p-1 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                          title="Permanent Delete"
+                        >
+                          <ShieldAlert className="h-4 w-4 inline" />
+                        </button>
+                      </HasPermission>
+                    </>
+                  )}
                 </td>
               </tr>
             ))
           ) : (
             <tr>
               <td colSpan="6" className="px-6 py-12 text-center text-gray-400 font-semibold">
-                No countries found. Click "Create Country" to add one.
+                No countries found.
               </td>
             </tr>
           )}

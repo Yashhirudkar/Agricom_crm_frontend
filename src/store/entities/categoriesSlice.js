@@ -29,12 +29,34 @@ export const updateCategory = createAsyncThunk("categories/update", async ({ id,
   }
 });
 
-export const deleteCategory = createAsyncThunk("categories/delete", async (id, { rejectWithValue }) => {
+export const deleteCategory = createAsyncThunk("categories/delete", async (arg, { rejectWithValue }) => {
   try {
-    await axiosClient.delete(`/masters/categories/${id}`);
+    const id = typeof arg === "object" ? arg.id : arg;
+    const reason = typeof arg === "object" ? arg.reason : undefined;
+    await axiosClient.delete(`/masters/categories/${id}`, { params: { reason } });
     return id;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to delete category");
+  }
+});
+
+export const restoreCategory = createAsyncThunk("categories/restore", async (id, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.patch(`/masters/categories/${id}/restore`);
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to restore category");
+  }
+});
+
+export const permanentDeleteCategory = createAsyncThunk("categories/permanentDelete", async (arg, { rejectWithValue }) => {
+  try {
+    const id = typeof arg === "object" ? arg.id : arg;
+    const reason = typeof arg === "object" ? arg.reason : undefined;
+    await axiosClient.delete(`/masters/categories/${id}/permanent`, { params: { reason } });
+    return id;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to permanently delete category");
   }
 });
 
@@ -76,7 +98,19 @@ const categoriesSlice = createSlice({
         state.list = state.list.filter((c) => c.id !== action.payload);
         state.totalCount -= 1;
       })
-      .addCase(deleteCategory.rejected, (state, action) => { state.error = action.payload; });
+      .addCase(deleteCategory.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(restoreCategory.fulfilled, (state, action) => {
+        const idx = state.list.findIndex((c) => c.id === action.payload.id);
+        if (idx !== -1) state.list[idx] = action.payload;
+      })
+      .addCase(restoreCategory.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(permanentDeleteCategory.fulfilled, (state, action) => {
+        state.list = state.list.filter((c) => c.id !== action.payload);
+        state.totalCount -= 1;
+      })
+      .addCase(permanentDeleteCategory.rejected, (state, action) => { state.error = action.payload; });
   },
 });
 

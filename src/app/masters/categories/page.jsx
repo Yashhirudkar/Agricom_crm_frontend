@@ -7,6 +7,8 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  restoreCategory,
+  permanentDeleteCategory,
   selectCategories,
   selectCategoriesLoading,
   selectCategoriesError,
@@ -22,6 +24,7 @@ import { Plus, Tags, Check, AlertCircle } from "lucide-react";
 import CategoriesTable from "@/components/masters/categories/CategoriesTable";
 import CategoriesFilters from "@/components/masters/categories/CategoriesFilters";
 import CategoryModal from "@/components/masters/categories/CategoryModal";
+import PermanentDeleteModal from "@/components/common/PermanentDeleteModal";
 
 function CategoriesContent() {
   const dispatch = useDispatch();
@@ -42,6 +45,8 @@ function CategoriesContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [restoreTarget, setRestoreTarget] = useState(null);
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -50,12 +55,13 @@ function CategoriesContent() {
 
   // Query states
   const [search, setSearch] = useState("");
+  const [isActiveFilter, setIsActiveFilter] = useState("true");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
   useEffect(() => {
-    dispatch(fetchCategories({ page: currentPage, limit: itemsPerPage, search }));
-  }, [dispatch, currentPage, search]);
+    dispatch(fetchCategories({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+  }, [dispatch, currentPage, search, isActiveFilter]);
 
   const openCreateModal = () => {
     setForm(initialFormState);
@@ -77,6 +83,8 @@ function CategoriesContent() {
   const closeModals = () => {
     setIsModalOpen(false);
     setDeleteTarget(null);
+    setRestoreTarget(null);
+    setPermanentDeleteTarget(null);
     dispatch(clearCategoriesError());
   };
 
@@ -102,20 +110,52 @@ function CategoriesContent() {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await dispatch(deleteCategory(deleteTarget.id)).unwrap();
-      showToast("Category deleted successfully");
+      await dispatch(deleteCategory({ id: deleteTarget.id })).unwrap();
+      showToast("Category deactivated successfully");
       
-      // If we deleted the last item on the current page, and we are not on page 1, go back a page
       if (categories.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {
-        // Otherwise, refetch the current page to get the correct items and pagination from server
-        dispatch(fetchCategories({ page: currentPage, limit: itemsPerPage, search }));
+        dispatch(fetchCategories({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
       
       closeModals();
     } catch (err) {
-      showToast(err || "Failed to delete category", "error");
+      showToast(err || "Failed to deactivate category", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setIsDeleting(true);
+    try {
+      await dispatch(restoreCategory(restoreTarget.id)).unwrap();
+      showToast("Category restored successfully");
+      dispatch(fetchCategories({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      closeModals();
+    } catch (err) {
+      showToast(err || "Failed to restore category", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handlePermanentDelete = async (reason) => {
+    setIsDeleting(true);
+    try {
+      await dispatch(permanentDeleteCategory({ id: permanentDeleteTarget.id, reason })).unwrap();
+      showToast("Category permanently deleted");
+      
+      if (categories.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        dispatch(fetchCategories({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      }
+      
+      closeModals();
+    } catch (err) {
+      showToast(err || "Failed to permanently delete category", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -169,6 +209,8 @@ function CategoriesContent() {
         <CategoriesFilters
           search={search}
           setSearch={setSearch}
+          isActiveFilter={isActiveFilter}
+          setIsActiveFilter={setIsActiveFilter}
           setCurrentPage={setCurrentPage}
           totalCount={totalCount}
         />
@@ -177,6 +219,8 @@ function CategoriesContent() {
           categories={categories}
           openEditModal={openEditModal}
           setDeleteTarget={setDeleteTarget}
+          setRestoreTarget={setRestoreTarget}
+          setPermanentDeleteTarget={setPermanentDeleteTarget}
         />
 
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
@@ -198,8 +242,26 @@ function CategoriesContent() {
         onClose={closeModals}
         onConfirm={handleDelete}
         isLoading={isDeleting}
-        title="Delete Category"
-        message={`Are you sure you want to delete the category "${deleteTarget?.name}"? This action cannot be undone.`}
+        title="Deactivate Category"
+        message={`Are you sure you want to deactivate the category "${deleteTarget?.name}"? It will be hidden from normal operations.`}
+      />
+
+      <ConfirmModal
+        isOpen={restoreTarget !== null}
+        onClose={closeModals}
+        onConfirm={handleRestore}
+        isLoading={isDeleting}
+        title="Restore Category"
+        message={`Are you sure you want to restore the category "${restoreTarget?.name}"? It will become active again.`}
+      />
+
+      <PermanentDeleteModal
+        isOpen={permanentDeleteTarget !== null}
+        onClose={closeModals}
+        onConfirm={handlePermanentDelete}
+        isDeleting={isDeleting}
+        title="Permanently Delete Category"
+        message={`Warning: You are about to permanently delete "${permanentDeleteTarget?.name}". This action cannot be undone and will remove all associated data.`}
       />
     </div>
   );

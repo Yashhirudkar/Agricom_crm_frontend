@@ -28,12 +28,34 @@ export const updatePartner = createAsyncThunk("partners/update", async ({ id, ..
   }
 });
 
-export const deletePartner = createAsyncThunk("partners/delete", async (id, { rejectWithValue }) => {
+export const deletePartner = createAsyncThunk("partners/delete", async (arg, { rejectWithValue }) => {
   try {
-    await axiosClient.delete(`/masters/partners/${id}`);
+    const id = typeof arg === "object" ? arg.id : arg;
+    const reason = typeof arg === "object" ? arg.reason : undefined;
+    await axiosClient.delete(`/masters/partners/${id}`, { params: { reason } });
     return id;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to delete partner");
+  }
+});
+
+export const restorePartner = createAsyncThunk("partners/restore", async (id, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.patch(`/masters/partners/${id}/restore`);
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to restore partner");
+  }
+});
+
+export const permanentDeletePartner = createAsyncThunk("partners/permanentDelete", async (arg, { rejectWithValue }) => {
+  try {
+    const id = typeof arg === "object" ? arg.id : arg;
+    const reason = typeof arg === "object" ? arg.reason : undefined;
+    await axiosClient.delete(`/masters/partners/${id}/permanent`, { params: { reason } });
+    return id;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to permanently delete partner");
   }
 });
 
@@ -54,12 +76,12 @@ const partnerSlice = createSlice({
     builder
       .addCase(fetchPartners.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchPartners.fulfilled, (state, action) => { 
-        state.isLoading = false; 
-        state.list = action.payload.data || []; 
-        state.totalCount = action.payload.total || 0;
-        state.totalPages = action.payload.totalPages || 1;
-        state.currentPage = action.payload.page || 1;
-      })
+      state.isLoading = false; 
+      state.list = action.payload.data || []; 
+      state.totalCount = action.payload.total || 0;
+      state.totalPages = action.payload.totalPages || 1;
+      state.currentPage = action.payload.page || 1;
+    })
       .addCase(fetchPartners.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
 
       .addCase(createPartner.fulfilled, (state, action) => { state.list.unshift(action.payload); state.totalCount += 1; })
@@ -75,7 +97,19 @@ const partnerSlice = createSlice({
         state.list = state.list.filter((c) => c.id !== action.payload);
         state.totalCount -= 1;
       })
-      .addCase(deletePartner.rejected, (state, action) => { state.error = action.payload; });
+      .addCase(deletePartner.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(restorePartner.fulfilled, (state, action) => {
+        const idx = state.list.findIndex((c) => c.id === action.payload.id);
+        if (idx !== -1) state.list[idx] = action.payload;
+      })
+      .addCase(restorePartner.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(permanentDeletePartner.fulfilled, (state, action) => {
+        state.list = state.list.filter((c) => c.id !== action.payload);
+        state.totalCount -= 1;
+      })
+      .addCase(permanentDeletePartner.rejected, (state, action) => { state.error = action.payload; });
   },
 });
 

@@ -28,12 +28,34 @@ export const updatePartnerRole = createAsyncThunk("partnerRoles/update", async (
   }
 });
 
-export const deletePartnerRole = createAsyncThunk("partnerRoles/delete", async (id, { rejectWithValue }) => {
+export const deletePartnerRole = createAsyncThunk("partnerRoles/delete", async (arg, { rejectWithValue }) => {
   try {
-    await axiosClient.delete(`/masters/partner-roles/${id}`);
+    const id = typeof arg === "object" ? arg.id : arg;
+    const reason = typeof arg === "object" ? arg.reason : undefined;
+    await axiosClient.delete(`/masters/partner-roles/${id}`, { params: { reason } });
     return id;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to delete partner role");
+  }
+});
+
+export const restorePartnerRole = createAsyncThunk("partnerRoles/restore", async (id, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.patch(`/masters/partner-roles/${id}/restore`);
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to restore partner role");
+  }
+});
+
+export const permanentDeletePartnerRole = createAsyncThunk("partnerRoles/permanentDelete", async (arg, { rejectWithValue }) => {
+  try {
+    const id = typeof arg === "object" ? arg.id : arg;
+    const reason = typeof arg === "object" ? arg.reason : undefined;
+    await axiosClient.delete(`/masters/partner-roles/${id}/permanent`, { params: { reason } });
+    return id;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to permanently delete partner role");
   }
 });
 
@@ -66,16 +88,28 @@ const partnerRoleSlice = createSlice({
       .addCase(createPartnerRole.rejected, (state, action) => { state.error = action.payload; })
 
       .addCase(updatePartnerRole.fulfilled, (state, action) => {
-        const idx = state.list.findIndex((c) => c.id === action.payload.id);
+        const idx = state.list.findIndex((r) => r.id === action.payload.id);
         if (idx !== -1) state.list[idx] = action.payload;
       })
       .addCase(updatePartnerRole.rejected, (state, action) => { state.error = action.payload; })
 
       .addCase(deletePartnerRole.fulfilled, (state, action) => {
-        state.list = state.list.filter((c) => c.id !== action.payload);
+        state.list = state.list.filter((r) => r.id !== action.payload);
         state.totalCount -= 1;
       })
-      .addCase(deletePartnerRole.rejected, (state, action) => { state.error = action.payload; });
+      .addCase(deletePartnerRole.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(restorePartnerRole.fulfilled, (state, action) => {
+        const idx = state.list.findIndex((r) => r.id === action.payload.id);
+        if (idx !== -1) state.list[idx] = action.payload;
+      })
+      .addCase(restorePartnerRole.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(permanentDeletePartnerRole.fulfilled, (state, action) => {
+        state.list = state.list.filter((r) => r.id !== action.payload);
+        state.totalCount -= 1;
+      })
+      .addCase(permanentDeletePartnerRole.rejected, (state, action) => { state.error = action.payload; });
   },
 });
 

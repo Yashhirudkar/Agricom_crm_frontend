@@ -1,5 +1,10 @@
-import React from "react";
+import React, { useMemo } from "react";
 import Modal from "@/components/modals/Modal";
+import CountrySelect from "@/components/common/CountrySelect";
+import countries from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+
+countries.registerLocale(enLocale);
 
 export default function CountryModal({
   isOpen,
@@ -11,6 +16,14 @@ export default function CountryModal({
   error,
   isEditMode,
 }) {
+  // Determine dynamically if the selected country name is a standard i18n country
+  const isStandardCountry = useMemo(() => {
+    if (!form.name) return false;
+    return Object.values(countries.getNames("en")).some(
+      (n) => n.toLowerCase() === form.name.toLowerCase()
+    );
+  }, [form.name]);
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEditMode ? "Edit Country" : "New Country"}>
       <form onSubmit={onSubmit} className="space-y-4">
@@ -18,13 +31,16 @@ export default function CountryModal({
           <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
             Country Name
           </label>
-          <input
-            type="text"
-            required
+          <CountrySelect
             value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700"
-            placeholder="e.g. India"
+            onChange={(countryData) =>
+              setForm({
+                ...form,
+                name: countryData.name,
+                iso2Code: countryData.iso2Code,
+                iso3Code: countryData.iso3Code,
+              })
+            }
           />
         </div>
 
@@ -39,7 +55,12 @@ export default function CountryModal({
               maxLength={2}
               value={form.iso2Code}
               onChange={(e) => setForm({ ...form, iso2Code: e.target.value.toUpperCase() })}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 uppercase"
+              readOnly={isStandardCountry}
+              className={`w-full border rounded-xl px-3 py-2 text-xs outline-none uppercase transition-colors ${
+                isStandardCountry
+                  ? "bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed font-medium"
+                  : "border-gray-200 text-gray-700 focus:ring-1 focus:ring-[#007aff]"
+              }`}
               placeholder="IN"
             />
           </div>
@@ -53,7 +74,12 @@ export default function CountryModal({
               maxLength={3}
               value={form.iso3Code}
               onChange={(e) => setForm({ ...form, iso3Code: e.target.value.toUpperCase() })}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 uppercase"
+              readOnly={isStandardCountry}
+              className={`w-full border rounded-xl px-3 py-2 text-xs outline-none uppercase transition-colors ${
+                isStandardCountry
+                  ? "bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed font-medium"
+                  : "border-gray-200 text-gray-700 focus:ring-1 focus:ring-[#007aff]"
+              }`}
               placeholder="IND"
             />
           </div>

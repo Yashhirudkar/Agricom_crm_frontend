@@ -28,12 +28,34 @@ export const updateProduct = createAsyncThunk("products/update", async ({ id, ..
   }
 });
 
-export const deleteProduct = createAsyncThunk("products/delete", async (id, { rejectWithValue }) => {
+export const deleteProduct = createAsyncThunk("products/delete", async (arg, { rejectWithValue }) => {
   try {
-    await axiosClient.delete(`/masters/products/${id}`);
+    const id = typeof arg === "object" ? arg.id : arg;
+    const reason = typeof arg === "object" ? arg.reason : undefined;
+    await axiosClient.delete(`/masters/products/${id}`, { params: { reason } });
     return id;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to delete product");
+  }
+});
+
+export const restoreProduct = createAsyncThunk("products/restore", async (id, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.patch(`/masters/products/${id}/restore`);
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to restore product");
+  }
+});
+
+export const permanentDeleteProduct = createAsyncThunk("products/permanentDelete", async (arg, { rejectWithValue }) => {
+  try {
+    const id = typeof arg === "object" ? arg.id : arg;
+    const reason = typeof arg === "object" ? arg.reason : undefined;
+    await axiosClient.delete(`/masters/products/${id}/permanent`, { params: { reason } });
+    return id;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to permanently delete product");
   }
 });
 
@@ -54,12 +76,12 @@ const productSlice = createSlice({
     builder
       .addCase(fetchProducts.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchProducts.fulfilled, (state, action) => { 
-        state.isLoading = false; 
-        state.list = action.payload.data || []; 
-        state.totalCount = action.payload.total || 0;
-        state.totalPages = action.payload.totalPages || 1;
-        state.currentPage = action.payload.page || 1;
-      })
+      state.isLoading = false; 
+      state.list = action.payload.data || []; 
+      state.totalCount = action.payload.total || 0;
+      state.totalPages = action.payload.totalPages || 1;
+      state.currentPage = action.payload.page || 1;
+    })
       .addCase(fetchProducts.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
 
       .addCase(createProduct.fulfilled, (state, action) => { state.list.unshift(action.payload); state.totalCount += 1; })
@@ -75,7 +97,19 @@ const productSlice = createSlice({
         state.list = state.list.filter((c) => c.id !== action.payload);
         state.totalCount -= 1;
       })
-      .addCase(deleteProduct.rejected, (state, action) => { state.error = action.payload; });
+      .addCase(deleteProduct.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(restoreProduct.fulfilled, (state, action) => {
+        const idx = state.list.findIndex((c) => c.id === action.payload.id);
+        if (idx !== -1) state.list[idx] = action.payload;
+      })
+      .addCase(restoreProduct.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(permanentDeleteProduct.fulfilled, (state, action) => {
+        state.list = state.list.filter((c) => c.id !== action.payload);
+        state.totalCount -= 1;
+      })
+      .addCase(permanentDeleteProduct.rejected, (state, action) => { state.error = action.payload; });
   },
 });
 

@@ -8,6 +8,8 @@ import {
   createPartner,
   updatePartner,
   deletePartner,
+  restorePartner,
+  permanentDeletePartner,
   selectPartners,
   selectPartnersLoading,
   selectPartnersError,
@@ -23,6 +25,7 @@ import { Plus, Users, Check, AlertCircle } from "lucide-react";
 import PartnersTable from "@/components/masters/partners/PartnersTable";
 import PartnersFilters from "@/components/masters/partners/PartnersFilters";
 import PartnerModal from "@/components/masters/partners/PartnerModal";
+import PermanentDeleteModal from "@/components/common/PermanentDeleteModal";
 
 function PartnersContent() {
   const dispatch = useDispatch();
@@ -43,6 +46,8 @@ function PartnersContent() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editData, setEditData] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [restoreTarget, setRestoreTarget] = useState(null);
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -52,13 +57,14 @@ function PartnersContent() {
   const [products, setProducts] = useState([]);
 
   const [search, setSearch] = useState("");
+  const [isActiveFilter, setIsActiveFilter] = useState("true");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
   // Load partners list
   useEffect(() => {
-    dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search }));
-  }, [dispatch, currentPage, search]);
+    dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+  }, [dispatch, currentPage, search, isActiveFilter]);
 
   // Load dropdown dependencies once securely respecting max 100 limit
   useEffect(() => {
@@ -94,6 +100,8 @@ function PartnersContent() {
   const closeModals = () => {
     setIsModalOpen(false);
     setDeleteTarget(null);
+    setRestoreTarget(null);
+    setPermanentDeleteTarget(null);
     dispatch(clearPartnersError());
   };
 
@@ -105,10 +113,12 @@ function PartnersContent() {
         await dispatch(updatePartner({ id: editData.id, ...payload })).unwrap();
         showToast("Partner updated successfully");
       } else {
-        await dispatch(createPartner(payload)).unwrap();
+        const createPayload = { ...payload };
+        delete createPayload.id;
+        await dispatch(createPartner(createPayload)).unwrap();
         showToast("Partner created successfully");
         if (currentPage !== 1) setCurrentPage(1);
-        else dispatch(fetchPartners({ page: 1, limit: itemsPerPage, search }));
+        else dispatch(fetchPartners({ page: 1, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
       closeModals();
     } catch (err) {
@@ -121,18 +131,52 @@ function PartnersContent() {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await dispatch(deletePartner(deleteTarget.id)).unwrap();
-      showToast("Partner deleted successfully");
+      await dispatch(deletePartner({ id: deleteTarget.id })).unwrap();
+      showToast("Partner deactivated successfully");
       
       if (partners.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {
-        dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search }));
+        dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
       
       closeModals();
     } catch (err) {
-      showToast(err || "Failed to delete partner", "error");
+      showToast(err || "Failed to deactivate partner", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setIsDeleting(true);
+    try {
+      await dispatch(restorePartner(restoreTarget.id)).unwrap();
+      showToast("Partner restored successfully");
+      dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      closeModals();
+    } catch (err) {
+      showToast(err || "Failed to restore partner", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handlePermanentDelete = async (reason) => {
+    setIsDeleting(true);
+    try {
+      await dispatch(permanentDeletePartner({ id: permanentDeleteTarget.id, reason })).unwrap();
+      showToast("Partner permanently deleted");
+      
+      if (partners.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      }
+      
+      closeModals();
+    } catch (err) {
+      showToast(err || "Failed to permanently delete partner", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -185,6 +229,8 @@ function PartnersContent() {
         <PartnersFilters
           search={search}
           setSearch={setSearch}
+          isActiveFilter={isActiveFilter}
+          setIsActiveFilter={setIsActiveFilter}
           setCurrentPage={setCurrentPage}
           totalCount={totalCount}
         />
@@ -193,6 +239,8 @@ function PartnersContent() {
           partners={partners}
           openEditModal={openEditModal}
           setDeleteTarget={setDeleteTarget}
+          setRestoreTarget={setRestoreTarget}
+          setPermanentDeleteTarget={setPermanentDeleteTarget}
         />
 
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
@@ -218,8 +266,26 @@ function PartnersContent() {
         onClose={closeModals}
         onConfirm={handleDelete}
         isLoading={isDeleting}
-        title="Delete Partner"
-        message={`Are you sure you want to delete the partner "${deleteTarget?.entityName}"? This will deactivate all associated contacts and product mappings.`}
+        title="Deactivate Partner"
+        message={`Are you sure you want to deactivate the partner "${deleteTarget?.entityName}"? This will deactivate all associated contacts and product mappings.`}
+      />
+
+      <ConfirmModal
+        isOpen={restoreTarget !== null}
+        onClose={closeModals}
+        onConfirm={handleRestore}
+        isLoading={isDeleting}
+        title="Restore Partner"
+        message={`Are you sure you want to restore the partner "${restoreTarget?.entityName}"? It will become active again.`}
+      />
+
+      <PermanentDeleteModal
+        isOpen={permanentDeleteTarget !== null}
+        onClose={closeModals}
+        onConfirm={handlePermanentDelete}
+        isDeleting={isDeleting}
+        title="Permanently Delete Partner"
+        message={`Warning: You are about to permanently delete "${permanentDeleteTarget?.entityName}". This action cannot be undone and will remove all associated data.`}
       />
     </div>
   );

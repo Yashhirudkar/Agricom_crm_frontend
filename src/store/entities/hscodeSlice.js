@@ -28,12 +28,34 @@ export const updateHSCode = createAsyncThunk("hscodes/update", async ({ id, ...d
   }
 });
 
-export const deleteHSCode = createAsyncThunk("hscodes/delete", async (id, { rejectWithValue }) => {
+export const deleteHSCode = createAsyncThunk("hscodes/delete", async (arg, { rejectWithValue }) => {
   try {
-    await axiosClient.delete(`/masters/hs-codes/${id}`);
+    const id = typeof arg === "object" ? arg.id : arg;
+    const reason = typeof arg === "object" ? arg.reason : undefined;
+    await axiosClient.delete(`/masters/hs-codes/${id}`, { params: { reason } });
     return id;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to delete HS Code");
+  }
+});
+
+export const restoreHSCode = createAsyncThunk("hscodes/restore", async (id, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.patch(`/masters/hs-codes/${id}/restore`);
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to restore HS Code");
+  }
+});
+
+export const permanentDeleteHSCode = createAsyncThunk("hscodes/permanentDelete", async (arg, { rejectWithValue }) => {
+  try {
+    const id = typeof arg === "object" ? arg.id : arg;
+    const reason = typeof arg === "object" ? arg.reason : undefined;
+    await axiosClient.delete(`/masters/hs-codes/${id}/permanent`, { params: { reason } });
+    return id;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to permanently delete HS Code");
   }
 });
 
@@ -54,12 +76,12 @@ const hscodeSlice = createSlice({
     builder
       .addCase(fetchHSCodes.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchHSCodes.fulfilled, (state, action) => { 
-        state.isLoading = false; 
-        state.list = action.payload.data || []; 
-        state.totalCount = action.payload.total || 0;
-        state.totalPages = action.payload.totalPages || 1;
-        state.currentPage = action.payload.page || 1;
-      })
+      state.isLoading = false; 
+      state.list = action.payload.data || []; 
+      state.totalCount = action.payload.total || 0;
+      state.totalPages = action.payload.totalPages || 1;
+      state.currentPage = action.payload.page || 1;
+    })
       .addCase(fetchHSCodes.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
 
       .addCase(createHSCode.fulfilled, (state, action) => { state.list.unshift(action.payload); state.totalCount += 1; })
@@ -75,7 +97,19 @@ const hscodeSlice = createSlice({
         state.list = state.list.filter((c) => c.id !== action.payload);
         state.totalCount -= 1;
       })
-      .addCase(deleteHSCode.rejected, (state, action) => { state.error = action.payload; });
+      .addCase(deleteHSCode.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(restoreHSCode.fulfilled, (state, action) => {
+        const idx = state.list.findIndex((c) => c.id === action.payload.id);
+        if (idx !== -1) state.list[idx] = action.payload;
+      })
+      .addCase(restoreHSCode.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(permanentDeleteHSCode.fulfilled, (state, action) => {
+        state.list = state.list.filter((c) => c.id !== action.payload);
+        state.totalCount -= 1;
+      })
+      .addCase(permanentDeleteHSCode.rejected, (state, action) => { state.error = action.payload; });
   },
 });
 

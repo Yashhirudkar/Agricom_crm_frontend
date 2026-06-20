@@ -7,6 +7,8 @@ import {
   createHSCode,
   updateHSCode,
   deleteHSCode,
+  restoreHSCode,
+  permanentDeleteHSCode,
   selectHSCodes,
   selectHSCodesLoading,
   selectHSCodesError,
@@ -22,6 +24,7 @@ import { Plus, Barcode, Check, AlertCircle } from "lucide-react";
 import HSCodesTable from "@/components/masters/hs-codes/HSCodesTable";
 import HSCodesFilters from "@/components/masters/hs-codes/HSCodesFilters";
 import HSCodeModal from "@/components/masters/hs-codes/HSCodeModal";
+import PermanentDeleteModal from "@/components/common/PermanentDeleteModal";
 
 function HSCodesContent() {
   const dispatch = useDispatch();
@@ -41,6 +44,8 @@ function HSCodesContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [restoreTarget, setRestoreTarget] = useState(null);
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -48,12 +53,13 @@ function HSCodesContent() {
   const [form, setForm] = useState(initialFormState);
 
   const [search, setSearch] = useState("");
+  const [isActiveFilter, setIsActiveFilter] = useState("true");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
   useEffect(() => {
-    dispatch(fetchHSCodes({ page: currentPage, limit: itemsPerPage, search }));
-  }, [dispatch, currentPage, search]);
+    dispatch(fetchHSCodes({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+  }, [dispatch, currentPage, search, isActiveFilter]);
 
   const openCreateModal = () => {
     setForm(initialFormState);
@@ -77,6 +83,8 @@ function HSCodesContent() {
   const closeModals = () => {
     setIsModalOpen(false);
     setDeleteTarget(null);
+    setRestoreTarget(null);
+    setPermanentDeleteTarget(null);
     dispatch(clearHSCodesError());
   };
 
@@ -96,7 +104,7 @@ function HSCodesContent() {
         })).unwrap();
         showToast("HS Code created successfully");
         if (currentPage !== 1) setCurrentPage(1);
-        else dispatch(fetchHSCodes({ page: 1, limit: itemsPerPage, search }));
+        else dispatch(fetchHSCodes({ page: 1, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
       closeModals();
     } catch (err) {
@@ -109,18 +117,52 @@ function HSCodesContent() {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await dispatch(deleteHSCode(deleteTarget.id)).unwrap();
-      showToast("HS Code deleted successfully");
+      await dispatch(deleteHSCode({ id: deleteTarget.id })).unwrap();
+      showToast("HS Code deactivated successfully");
       
       if (hscodes.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {
-        dispatch(fetchHSCodes({ page: currentPage, limit: itemsPerPage, search }));
+        dispatch(fetchHSCodes({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
       
       closeModals();
     } catch (err) {
-      showToast(err || "Failed to delete HS Code", "error");
+      showToast(err || "Failed to deactivate HS Code", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setIsDeleting(true);
+    try {
+      await dispatch(restoreHSCode(restoreTarget.id)).unwrap();
+      showToast("HS Code restored successfully");
+      dispatch(fetchHSCodes({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      closeModals();
+    } catch (err) {
+      showToast(err || "Failed to restore HS Code", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handlePermanentDelete = async (reason) => {
+    setIsDeleting(true);
+    try {
+      await dispatch(permanentDeleteHSCode({ id: permanentDeleteTarget.id, reason })).unwrap();
+      showToast("HS Code permanently deleted");
+      
+      if (hscodes.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        dispatch(fetchHSCodes({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      }
+      
+      closeModals();
+    } catch (err) {
+      showToast(err || "Failed to permanently delete HS Code", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -173,6 +215,8 @@ function HSCodesContent() {
         <HSCodesFilters
           search={search}
           setSearch={setSearch}
+          isActiveFilter={isActiveFilter}
+          setIsActiveFilter={setIsActiveFilter}
           setCurrentPage={setCurrentPage}
           totalCount={totalCount}
         />
@@ -181,6 +225,8 @@ function HSCodesContent() {
           hscodes={hscodes}
           openEditModal={openEditModal}
           setDeleteTarget={setDeleteTarget}
+          setRestoreTarget={setRestoreTarget}
+          setPermanentDeleteTarget={setPermanentDeleteTarget}
         />
 
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
@@ -202,8 +248,26 @@ function HSCodesContent() {
         onClose={closeModals}
         onConfirm={handleDelete}
         isLoading={isDeleting}
-        title="Delete HS Code"
-        message={`Are you sure you want to delete the HS Code "${deleteTarget?.code}"? This action cannot be undone.`}
+        title="Deactivate HS Code"
+        message={`Are you sure you want to deactivate the HS Code "${deleteTarget?.code}"? It will be hidden from normal operations.`}
+      />
+
+      <ConfirmModal
+        isOpen={restoreTarget !== null}
+        onClose={closeModals}
+        onConfirm={handleRestore}
+        isLoading={isDeleting}
+        title="Restore HS Code"
+        message={`Are you sure you want to restore the HS Code "${restoreTarget?.code}"? It will become active again.`}
+      />
+
+      <PermanentDeleteModal
+        isOpen={permanentDeleteTarget !== null}
+        onClose={closeModals}
+        onConfirm={handlePermanentDelete}
+        isDeleting={isDeleting}
+        title="Permanently Delete HS Code"
+        message={`Warning: You are about to permanently delete "${permanentDeleteTarget?.code}". This action cannot be undone and will remove all associated data.`}
       />
     </div>
   );
