@@ -326,7 +326,7 @@ function EmployeesContent() {
                         <HasPermission permission="employees:update">
                           <button
                             onClick={() => router.push(`/employees/${emp.id}/edit`)}
-                            className="p-1 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-[#007aff] hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
                             title="Edit details"
                           >
                             <Edit2 className="h-4 w-4 inline" />
@@ -335,7 +335,7 @@ function EmployeesContent() {
                         <HasPermission permission="employees:delete">
                           <button
                             onClick={() => setDeleteTarget(emp)}
-                            className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                             title="Delete employee"
                           >
                             <Trash2 className="h-4 w-4 inline" />

@@ -104,9 +104,7 @@ export default function EmployeeDocumentsTab({
 
   const handleViewDocument = async (doc) => {
     try {
-      const fileUrl = doc.fileUrl.startsWith("http")
-        ? doc.fileUrl
-        : `${(axiosClient.defaults.baseURL || "").replace(/\/api$/, "")}${doc.fileUrl}`;
+      const fileUrl = doc.fileUrl;
       const response = await axiosClient.get(fileUrl, {
         responseType: "blob",
         headers: { "x-company-id": selectedCompanyId }
@@ -121,9 +119,7 @@ export default function EmployeeDocumentsTab({
 
   const handleDownloadDocument = async (doc) => {
     try {
-      const fileUrl = doc.fileUrl.startsWith("http")
-        ? doc.fileUrl
-        : `${(axiosClient.defaults.baseURL || "").replace(/\/api$/, "")}${doc.fileUrl}`;
+      const fileUrl = doc.fileUrl;
       const response = await axiosClient.get(fileUrl, {
         responseType: "blob",
         headers: { "x-company-id": selectedCompanyId }

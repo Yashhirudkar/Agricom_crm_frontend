@@ -6,7 +6,27 @@ import { selectUserPermissions, selectUserType } from "@/store/slices/authSlice"
  */
 export function usePermissions() {
   const permissions = useSelector(selectUserPermissions);
-  const userType = useSelector(selectUserType);
+  const user = useSelector((state) => state.auth.user);
+  const userType = user?.type;
+  
+  const checkIsAdmin = () => {
+    // 1. Check global userType
+    if (userType) {
+      const type = String(userType).toLowerCase().trim();
+      if (type === "super_admin" || type === "client_admin" || type === "admin") return true;
+    }
+    
+    // 2. Check workspace-level roles
+    if (user?.workspaces && Array.isArray(user.workspaces)) {
+      return user.workspaces.some(ws => {
+        if (!ws.role || !ws.role.name) return false;
+        const roleName = String(ws.role.name).toLowerCase().trim();
+        return roleName === "client admin" || roleName === "admin" || roleName === "super admin";
+      });
+    }
+
+    return false;
+  };
 
   /**
    * Check if the user has a specific permission (e.g., 'employees:create')
@@ -15,11 +35,9 @@ export function usePermissions() {
    */
   const hasPermission = (requiredPermission) => {
     if (!requiredPermission) return true;
-    
-    // Admins bypass all permission checks
-    if (userType === "super_admin" || userType === "client_admin") return true;
+    if (checkIsAdmin()) return true;
 
-    return permissions.includes(requiredPermission.toLowerCase());
+    return permissions?.includes(requiredPermission.toLowerCase());
   };
 
   /**
@@ -27,8 +45,8 @@ export function usePermissions() {
    */
   const hasAnyPermission = (requiredPermissions = []) => {
     if (requiredPermissions.length === 0) return true;
-    if (userType === "super_admin" || userType === "client_admin") return true;
-    return requiredPermissions.some(p => permissions.includes(p.toLowerCase()));
+    if (checkIsAdmin()) return true;
+    return requiredPermissions.some(p => permissions?.includes(p.toLowerCase()));
   };
 
   /**
@@ -36,8 +54,8 @@ export function usePermissions() {
    */
   const hasAllPermissions = (requiredPermissions = []) => {
     if (requiredPermissions.length === 0) return true;
-    if (userType === "super_admin" || userType === "client_admin") return true;
-    return requiredPermissions.every(p => permissions.includes(p.toLowerCase()));
+    if (checkIsAdmin()) return true;
+    return requiredPermissions.every(p => permissions?.includes(p.toLowerCase()));
   };
 
   return {
