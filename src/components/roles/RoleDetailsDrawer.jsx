@@ -100,13 +100,14 @@ export default function RoleDetailsDrawer({
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-xs">
                       {permissionRegistry.map((modCat) => {
+                        const moduleKey = modCat.module_id;
                         const category = modCat.module_name;
-                        const isExpanded = expandedModules[category];
+                        const isExpanded = expandedModules[moduleKey];
                         return (
-                          <React.Fragment key={category}>
+                          <React.Fragment key={moduleKey}>
                             <tr
                               className="bg-gray-50/80 cursor-pointer hover:bg-gray-100 transition-colors"
-                              onClick={() => toggleModuleAccordion(category)}
+                              onClick={() => toggleModuleAccordion(moduleKey)}
                             >
                               <td
                                 colSpan="2"
@@ -129,7 +130,7 @@ export default function RoleDetailsDrawer({
 
                                 return (
                                   <tr
-                                    key={res.resource_id}
+                                    key={`${moduleKey}-${res.resource_id}`}
                                     className="hover:bg-gray-50/30 transition-colors"
                                   >
                                     <td className="px-4 py-3 font-semibold text-gray-600 pl-8 align-top pt-4 border-r border-gray-100">

@@ -4,6 +4,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -50,7 +51,7 @@ export function Sidebar() {
   useEffect(() => {
     const fetchSidebar = async () => {
       try {
-        const response = await axiosInstance.get('/auth/my-menu');
+        const response = await axiosInstance.get(`/auth/my-menu?t=${Date.now()}`);
         setMenuConfig(response.data || []);
       } catch (error) {
         console.error("Failed to fetch sidebar config", error);
@@ -85,6 +86,14 @@ export function Sidebar() {
         });
       } else if (section.type === "parent_collapsible") {
         const hasActiveItem = section.items.some(
+          (item) => item.href !== "#" && (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href))
+        );
+        if (hasActiveItem) {
+          parentToExpand = section.id;
+        }
+      } else if (section.type === "parent" && section.isCollapsible) {
+        // Dynamic collapsible folders from backend
+        const hasActiveItem = (section.items || []).some(
           (item) => item.href !== "#" && (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href))
         );
         if (hasActiveItem) {
@@ -153,6 +162,97 @@ export function Sidebar() {
       <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 space-y-6">
         {formattedMenu.map((section, idx) => {
           if (section.type === "parent") {
+            // ── COLLAPSIBLE FOLDER ──────────────────────────────────────
+            if (section.isCollapsible) {
+              const isExpanded = !!expandedParents[section.id];
+              const hasActiveChild = (section.items || []).some(
+                (item) => item.href !== "#" && (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href))
+              );
+              return (
+                <div key={section.id} className={idx !== 0 ? "pt-5 border-t border-gray-100" : ""}>
+                  {/* Clickable folder header */}
+                  <button
+                    onClick={() => toggleParent(section.id)}
+                    className={`w-full flex items-center ${
+                      isSidebarCollapsed ? "justify-center" : "justify-between"
+                    } px-3 py-2 rounded-xl transition-colors ${
+                      hasActiveChild
+                        ? "text-[#007aff]"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                    }`}
+                    title={isSidebarCollapsed ? section.title : undefined}
+                  >
+                    <div className="flex items-center gap-2">
+                      {section.icon && !isSidebarCollapsed && (
+                        <SidebarDynamicIcon
+                          iconName={section.icon}
+                          className="h-[16px] w-[16px] stroke-[1.5] flex-shrink-0"
+                          style={section.iconColor ? { color: section.iconColor } : {}}
+                        />
+                      )}
+                      {!isSidebarCollapsed && (
+                        <span className="text-[12px] font-bold tracking-widest uppercase">
+                          {section.title}
+                        </span>
+                      )}
+                      {isSidebarCollapsed && section.icon && (
+                        <SidebarDynamicIcon
+                          iconName={section.icon}
+                          className="h-[18px] w-[18px] stroke-[1.5]"
+                          style={section.iconColor ? { color: section.iconColor } : {}}
+                        />
+                      )}
+                    </div>
+                    {!isSidebarCollapsed && (
+                      isExpanded
+                        ? <ChevronDown className="h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200" />
+                        : <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200" />
+                    )}
+                  </button>
+
+                  {/* Children — only visible when expanded */}
+                  <div
+                    className={`overflow-hidden transition-all duration-200 ${
+                      isExpanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+                    }`}
+                  >
+                    <ul className="space-y-1 mt-1">
+                      {(section.items || []).map((item) => {
+                        const isActive = item.href !== "#" && (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href));
+                        return (
+                          <li key={item.id}>
+                            <Link
+                              href={item.href}
+                              className={`flex items-center ${
+                                isSidebarCollapsed ? "justify-center" : "justify-between"
+                              } px-3 py-2.5 rounded-xl transition-colors ${
+                                isActive ? "bg-blue-50 text-[#007aff]" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                              }`}
+                              title={isSidebarCollapsed ? item.name : undefined}
+                            >
+                              <div className="flex items-center gap-3">
+                                <SidebarDynamicIcon
+                                  iconName={item.icon}
+                                  className={`h-[20px] w-[20px] stroke-[1.5] ${isActive ? "text-[#007aff]" : ""}`}
+                                  style={!isActive && (item.final_color || item.iconColor || item.icon_color) ? { color: item.final_color || item.iconColor || item.icon_color } : {}}
+                                />
+                                {!isSidebarCollapsed && (
+                                  <span className={`text-[14px] font-medium whitespace-nowrap ${isActive ? "text-[#007aff]" : ""}`}>
+                                    {item.name}
+                                  </span>
+                                )}
+                              </div>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                </div>
+              );
+            }
+
+            // ── STANDARD FOLDER (always-visible children) ───────────────
             return (
               <div key={section.id} className={idx !== 0 ? "pt-5 border-t border-gray-100" : ""}>
                 {!isSidebarCollapsed ? (
@@ -175,10 +275,10 @@ export function Sidebar() {
                           title={isSidebarCollapsed ? item.name : undefined}
                         >
                           <div className="flex items-center gap-3">
-                            <SidebarDynamicIcon 
-                              iconName={item.icon} 
-                              className={`h-[20px] w-[20px] stroke-[1.5] ${isActive ? "text-[#007aff]" : ""}`} 
-                              style={!isActive && (item.final_color || item.iconColor || item.icon_color) ? { color: item.final_color || item.iconColor || item.icon_color } : {}} 
+                            <SidebarDynamicIcon
+                              iconName={item.icon}
+                              className={`h-[20px] w-[20px] stroke-[1.5] ${isActive ? "text-[#007aff]" : ""}`}
+                              style={!isActive && (item.final_color || item.iconColor || item.icon_color) ? { color: item.final_color || item.iconColor || item.icon_color } : {}}
                             />
                             {!isSidebarCollapsed && (
                               <span className={`text-[14px] font-medium whitespace-nowrap ${isActive ? "text-[#007aff]" : ""}`}>{item.name}</span>

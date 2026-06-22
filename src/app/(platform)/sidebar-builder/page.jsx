@@ -32,7 +32,7 @@ export default function SidebarBuilderPage() {
   const fetchTree = async () => {
     setLoading(true);
     try {
-      const res = await axiosInstance.get("/system/sidebar/tree");
+      const res = await axiosInstance.get(`/system/sidebar/tree?t=${Date.now()}`);
       setTree(res.data);
     } catch (err) {
       showToast("Failed to load sidebar tree", "error");
@@ -164,6 +164,20 @@ export default function SidebarBuilderPage() {
     }
   };
 
+  const handleToggleCollapsible = async (folder) => {
+    const newValue = !folder.is_collapsible;
+    try {
+      await axiosInstance.patch(`/system/sidebar/folder/${folder.id}`, {
+        is_collapsible: newValue,
+      });
+      showToast(`Folder is now ${newValue ? "collapsible" : "standard"}`);
+      fetchTree();
+      window.dispatchEvent(new Event("sidebar-updated"));
+    } catch (err) {
+      showToast("Failed to update folder mode", "error");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
@@ -216,13 +230,37 @@ export default function SidebarBuilderPage() {
                             <Folder className="h-4 w-4" style={folder.icon_color ? { color: folder.icon_color } : { color: "#007aff" }} />
                             <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">{folder.name}</span>
                           </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             <button
                               className="p-1 text-gray-400 hover:text-indigo-500 transition-colors"
                               title="Folder color configuration"
                             >
                               <Palette className="h-4 w-4" />
                             </button>
+
+                            {/* Collapsible Toggle — segmented mechanical switch */}
+                            <button
+                              onClick={() => handleToggleCollapsible(folder)}
+                              title={folder.is_collapsible ? "Collapsible ON — click to disable" : "Collapsible OFF — click to enable"}
+                              className={`
+                                inline-flex items-center justify-center
+                                px-2.5 py-0.5
+                                rounded-md
+                                border
+                                text-[10px] font-bold tracking-widest uppercase
+                                select-none cursor-pointer
+                                transition-all duration-150
+                                active:scale-95
+                                focus:outline-none
+                                ${folder.is_collapsible
+                                  ? "bg-[#007aff] border-[#0062cc] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_2px_4px_rgba(0,122,255,0.35)]"
+                                  : "bg-gray-100 border-gray-300 text-gray-400 shadow-[inset_0_2px_3px_rgba(0,0,0,0.08)] hover:bg-gray-200 hover:text-gray-500"
+                                }
+                              `}
+                            >
+                              {folder.is_collapsible ? "ON" : "OFF"}
+                            </button>
+
                             <button
                               onClick={() => openEditFolder(folder)}
                               className="p-1 text-gray-400 hover:text-[#007aff] transition-colors"
