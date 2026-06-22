@@ -18,7 +18,7 @@ import {
 import { useRouter } from "next/navigation";
 import axiosInstance from "@/lib/axios";
 
-import { getDynamicIcon, getDynamicIconColor } from "./sidebar-components/icons";
+import { SidebarDynamicIcon } from "./sidebar-components/SidebarDynamicIcon";
 
 export function Sidebar() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -57,19 +57,13 @@ export function Sidebar() {
       }
     };
     fetchSidebar();
+
+    window.addEventListener("sidebar-updated", fetchSidebar);
+    return () => window.removeEventListener("sidebar-updated", fetchSidebar);
   }, []);
 
-  // Format menu to inject dynamic icons, since backend might send string icon names
-  const formattedMenu = menuConfig.map(section => {
-    return {
-      ...section,
-      icon: getDynamicIcon(section.name, section.route, section.icon),
-      items: (section.items || []).map(item => ({
-        ...item,
-        icon: getDynamicIcon(item.name, item.route, item.icon)
-      }))
-    };
-  });
+  // We use SidebarDynamicIcon inside JSX, so we don't need to pre-map components.
+  const formattedMenu = menuConfig;
 
   // Auto-expand active routes
   useEffect(() => {
@@ -172,7 +166,6 @@ export function Sidebar() {
                 )}
                 <ul className="space-y-1">
                   {section.items.map((item) => {
-                    const Icon = item.icon;
                     const isActive = item.href !== "#" && (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href));
                     return (
                       <li key={item.id}>
@@ -182,7 +175,11 @@ export function Sidebar() {
                           title={isSidebarCollapsed ? item.name : undefined}
                         >
                           <div className="flex items-center gap-3">
-                            <Icon className={`h-[20px] w-[20px] stroke-[1.5] ${isActive ? "text-[#007aff]" : getDynamicIconColor(item.name, item.href)}`} />
+                            <SidebarDynamicIcon 
+                              iconName={item.icon} 
+                              className={`h-[20px] w-[20px] stroke-[1.5] ${isActive ? "text-[#007aff]" : ""}`} 
+                              style={!isActive && (item.final_color || item.iconColor || item.icon_color) ? { color: item.final_color || item.iconColor || item.icon_color } : {}} 
+                            />
                             {!isSidebarCollapsed && (
                               <span className={`text-[14px] font-medium whitespace-nowrap ${isActive ? "text-[#007aff]" : ""}`}>{item.name}</span>
                             )}
@@ -195,7 +192,6 @@ export function Sidebar() {
               </div>
             );
           } else if (section.type === "item") {
-            const Icon = section.icon;
             const isActive = section.href !== "#" && (section.href === "/" ? pathname === "/" : pathname.startsWith(section.href));
             return (
               <div key={section.id} className={idx !== 0 ? "pt-5 border-t border-gray-100" : ""}>
@@ -205,7 +201,11 @@ export function Sidebar() {
                   title={isSidebarCollapsed ? section.title : undefined}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`h-[20px] w-[20px] stroke-[1.5] ${isActive ? "text-[#007aff]" : getDynamicIconColor(section.name, section.href)}`} />
+                    <SidebarDynamicIcon 
+                      iconName={section.icon} 
+                      className={`h-[20px] w-[20px] stroke-[1.5] ${isActive ? "text-[#007aff]" : ""}`} 
+                      style={!isActive && (section.final_color || section.iconColor || section.icon_color) ? { color: section.final_color || section.iconColor || section.icon_color } : {}} 
+                    />
                     {!isSidebarCollapsed && (
                       <span className={`text-[14px] font-medium whitespace-nowrap ${isActive ? "text-[#007aff]" : ""}`}>{section.title}</span>
                     )}

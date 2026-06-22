@@ -5,8 +5,10 @@ import axiosInstance from "@/lib/axios";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import Modal from "@/components/modals/Modal";
 import ConfirmModal from "@/components/modals/ConfirmModal";
-import { Plus, Edit2, Trash2, Folder, Layout, Check, AlertCircle, GripVertical } from "lucide-react";
+import { Plus, Edit2, Trash2, Folder, Layout, Check, AlertCircle, GripVertical, Palette } from "lucide-react";
 import { getDynamicIcon } from "@/components/layout/sidebar-components/icons";
+import EditSidebarFolderModal from "./components/EditSidebarFolderModal";
+import EditSidebarItemModal from "./components/EditSidebarItemModal";
 
 export default function SidebarBuilderPage() {
   const [tree, setTree] = useState([]);
@@ -21,9 +23,6 @@ export default function SidebarBuilderPage() {
   // Form State
   const [editingFolder, setEditingFolder] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
-
-  const [folderForm, setFolderForm] = useState({ name: "", icon_name: "" });
-  const [itemForm, setItemForm] = useState({ name: "", route: "", folder_id: "", permission_link: "", icon_name: "" });
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -62,6 +61,7 @@ export default function SidebarBuilderPage() {
         const updates = newTree.map((f, i) => ({ id: f.id, type: "FOLDER", sort_order: i + 1 }));
         await axiosInstance.patch("/system/sidebar/reorder", { updates });
         showToast("Folders reordered");
+        window.dispatchEvent(new Event("sidebar-updated"));
       } else if (type === "item") {
         const sourceFolderId = parseInt(source.droppableId.split("-")[1], 10);
         const destFolderId = parseInt(destination.droppableId.split("-")[1], 10);
@@ -82,6 +82,7 @@ export default function SidebarBuilderPage() {
         const updates = dFolder.items.map((it, i) => ({ id: it.id, type: "ITEM", sort_order: i + 1 }));
         await axiosInstance.patch("/system/sidebar/reorder", { updates });
         showToast("Items reordered");
+        window.dispatchEvent(new Event("sidebar-updated"));
       }
     } catch (err) {
       showToast("Reorder failed, reverting.", "error");
@@ -90,70 +91,58 @@ export default function SidebarBuilderPage() {
   };
 
   const openCreateFolder = () => {
-    setFolderForm({ name: "", icon_name: "" });
     setEditingFolder(null);
     setIsFolderModalOpen(true);
   };
 
   const openEditFolder = (folder) => {
-    setFolderForm({ name: folder.name, icon_name: folder.icon_name || "" });
     setEditingFolder(folder);
     setIsFolderModalOpen(true);
   };
 
   const openCreateItem = () => {
-    setItemForm({ name: "", route: "", folder_id: tree[0]?.id || "", permission_link: "", icon_name: "" });
     setEditingItem(null);
     setIsItemModalOpen(true);
   };
 
   const openEditItem = (item) => {
-    setItemForm({
-      name: item.name,
-      route: item.route || "",
-      folder_id: item.folder_id || "",
-      permission_link: item.permission_link || "",
-      icon_name: item.icon_name || ""
-    });
     setEditingItem(item);
     setIsItemModalOpen(true);
   };
 
-  const handleSaveFolder = async (e) => {
-    e.preventDefault();
+  const handleSaveFolder = async (data) => {
     try {
       if (editingFolder) {
-        await axiosInstance.patch(`/system/sidebar/folder/${editingFolder.id}`, folderForm);
+        await axiosInstance.patch(`/system/sidebar/folder/${editingFolder.id}`, data);
         showToast("Folder updated");
       } else {
-        await axiosInstance.post("/system/sidebar/folder", folderForm);
+        await axiosInstance.post("/system/sidebar/folder", data);
         showToast("Folder created");
       }
       setIsFolderModalOpen(false);
       fetchTree();
+      window.dispatchEvent(new Event("sidebar-updated"));
     } catch (err) {
       showToast("Failed to save folder", "error");
     }
   };
 
-  const handleSaveItem = async (e) => {
-    e.preventDefault();
+  const handleSaveItem = async (data) => {
     try {
+      const payload = {
+        ...data,
+        folder_id: data.folder_id ? parseInt(data.folder_id, 10) : null,
+      };
       if (editingItem) {
-        await axiosInstance.patch(`/system/sidebar/item/${editingItem.id}`, {
-          ...itemForm,
-          folder_id: itemForm.folder_id ? parseInt(itemForm.folder_id, 10) : null,
-        });
+        await axiosInstance.patch(`/system/sidebar/item/${editingItem.id}`, payload);
         showToast("Item updated");
       } else {
-        await axiosInstance.post("/system/sidebar/item", {
-          ...itemForm,
-          folder_id: itemForm.folder_id ? parseInt(itemForm.folder_id, 10) : null,
-        });
+        await axiosInstance.post("/system/sidebar/item", payload);
         showToast("Item created");
       }
       setIsItemModalOpen(false);
       fetchTree();
+      window.dispatchEvent(new Event("sidebar-updated"));
     } catch (err) {
       showToast("Failed to save item", "error");
     }
@@ -169,6 +158,7 @@ export default function SidebarBuilderPage() {
       showToast(`${deleteTarget.type} deleted`);
       setDeleteTarget(null);
       fetchTree();
+      window.dispatchEvent(new Event("sidebar-updated"));
     } catch (err) {
       showToast("Failed to delete", "error");
     }
@@ -223,10 +213,16 @@ export default function SidebarBuilderPage() {
                             <div {...prov.dragHandleProps} className="p-1 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600">
                               <GripVertical className="h-4 w-4" />
                             </div>
-                            <Folder className="h-4 w-4 text-[#007aff]" />
+                            <Folder className="h-4 w-4" style={folder.icon_color ? { color: folder.icon_color } : { color: "#007aff" }} />
                             <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">{folder.name}</span>
                           </div>
                           <div className="flex items-center gap-1">
+                            <button
+                              className="p-1 text-gray-400 hover:text-indigo-500 transition-colors"
+                              title="Folder color configuration"
+                            >
+                              <Palette className="h-4 w-4" />
+                            </button>
                             <button
                               onClick={() => openEditFolder(folder)}
                               className="p-1 text-gray-400 hover:text-[#007aff] transition-colors"
@@ -249,6 +245,8 @@ export default function SidebarBuilderPage() {
                             <div {...dropProv.droppableProps} ref={dropProv.innerRef} className={`p-2 min-h-[40px] space-y-2 ${snap.isDraggingOver ? 'bg-blue-50/50' : ''}`}>
                               {folder.items.map((item, itemIndex) => {
                                 const ItemIcon = getDynamicIcon(item.name, item.route, item.icon_name);
+                                const isInheriting = item.use_folder_color !== false;
+                                const activeColor = isInheriting ? (folder.icon_color || "#6b7280") : (item.icon_color || "#6b7280");
                                 return (
                                   <Draggable key={`item-${item.id}`} draggableId={`item-${item.id}`} index={itemIndex}>
                                     {(dragProv) => (
@@ -257,8 +255,13 @@ export default function SidebarBuilderPage() {
                                           <div {...dragProv.dragHandleProps} className="p-1 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600">
                                             <GripVertical className="h-4 w-4" />
                                           </div>
-                                          <ItemIcon className="h-4 w-4 text-gray-500" />
-                                          <span className="text-sm font-semibold text-gray-700">{item.name}</span>
+                                          <ItemIcon className="h-4 w-4" style={{ color: activeColor }} />
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-sm font-semibold text-gray-700">{item.name}</span>
+                                            {!isInheriting && (
+                                              <span className="text-[10px] bg-gray-100 text-gray-500 border border-gray-200 px-1.5 py-0.5 rounded font-medium">Custom</span>
+                                            )}
+                                          </div>
                                           <span className="text-xs text-gray-400 font-mono ml-4 bg-gray-50 px-2 py-0.5 rounded">{item.route}</span>
                                           {item.permission_link && (
                                             <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-100 font-bold ml-2">
@@ -303,86 +306,21 @@ export default function SidebarBuilderPage() {
       </div>
 
       {/* Folder Modal */}
-      <Modal isOpen={isFolderModalOpen} onClose={() => setIsFolderModalOpen(false)} title={editingFolder ? "Edit Folder" : "Create Folder"}>
-        <form onSubmit={handleSaveFolder} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Folder Name</label>
-            <input
-              required
-              type="text"
-              value={folderForm.name}
-              onChange={e => setFolderForm({ ...folderForm, name: e.target.value })}
-              className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-[#007aff]"
-              placeholder="e.g. CRM Management"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Icon Name (Optional)</label>
-            <input
-              type="text"
-              value={folderForm.icon_name}
-              onChange={e => setFolderForm({ ...folderForm, icon_name: e.target.value })}
-              className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-[#007aff]"
-              placeholder="e.g. Users, Building, Shield"
-            />
-          </div>
-          <button type="submit" className="w-full py-2 bg-[#007aff] text-white rounded-xl text-xs font-bold mt-4 cursor-pointer hover:bg-blue-600 transition-colors">
-            {editingFolder ? "Update Folder" : "Create Folder"}
-          </button>
-        </form>
-      </Modal>
+      <EditSidebarFolderModal
+        isOpen={isFolderModalOpen}
+        onClose={() => setIsFolderModalOpen(false)}
+        onSave={handleSaveFolder}
+        folder={editingFolder}
+      />
 
       {/* Item Modal */}
-      <Modal isOpen={isItemModalOpen} onClose={() => setIsItemModalOpen(false)} title={editingItem ? "Edit Item" : "Create Item"}>
-        <form onSubmit={handleSaveItem} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Item Name</label>
-            <input
-              required
-              type="text"
-              value={itemForm.name}
-              onChange={e => setItemForm({ ...itemForm, name: e.target.value })}
-              className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-[#007aff]"
-              placeholder="e.g. Employee List"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Route</label>
-            <input
-              required
-              type="text"
-              value={itemForm.route}
-              onChange={e => setItemForm({ ...itemForm, route: e.target.value })}
-              className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-[#007aff]"
-              placeholder="e.g. /employees"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Permission Link (Optional)</label>
-            <input
-              type="text"
-              value={itemForm.permission_link}
-              onChange={e => setItemForm({ ...itemForm, permission_link: e.target.value })}
-              className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-[#007aff]"
-              placeholder="e.g. employees:read"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Parent Folder</label>
-            <select
-              value={itemForm.folder_id}
-              onChange={e => setItemForm({ ...itemForm, folder_id: e.target.value })}
-              className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-[#007aff]"
-            >
-              <option value="">No Folder (Root)</option>
-              {tree.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </select>
-          </div>
-          <button type="submit" className="w-full py-2 bg-[#007aff] text-white rounded-xl text-xs font-bold mt-4 cursor-pointer hover:bg-blue-600 transition-colors">
-            {editingItem ? "Update Item" : "Create Item"}
-          </button>
-        </form>
-      </Modal>
+      <EditSidebarItemModal
+        isOpen={isItemModalOpen}
+        onClose={() => setIsItemModalOpen(false)}
+        onSave={handleSaveItem}
+        item={editingItem}
+        tree={tree}
+      />
 
       <ConfirmModal
         isOpen={!!deleteTarget}
