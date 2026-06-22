@@ -1,8 +1,15 @@
 import React from "react";
-import { Edit2, Trash2, RefreshCcw, ShieldAlert, Ban } from "lucide-react";
+import { Edit2, Trash2, RefreshCcw, ShieldAlert, Ban, Eye } from "lucide-react";
 import HasPermission from "@/components/rbac/HasPermission";
 
-export default function PartnersTable({ partners, openEditModal, setDeleteTarget, setRestoreTarget, setPermanentDeleteTarget }) {
+export default function PartnersTable({
+  partners,
+  openViewDrawer,
+  openEditModal,
+  setDeleteTarget,
+  setRestoreTarget,
+  setPermanentDeleteTarget,
+}) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
@@ -19,10 +26,18 @@ export default function PartnersTable({ partners, openEditModal, setDeleteTarget
         <tbody className="divide-y divide-gray-100 text-xs">
           {partners.length > 0 ? (
             partners.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50/70 transition-colors">
+              <tr
+                key={item.id}
+                onClick={() => openViewDrawer(item)}
+                className="hover:bg-gray-50/75 transition-colors cursor-pointer group/row"
+              >
                 <td className="px-6 py-4">
-                  <div className="font-bold text-gray-800">{item.entityName}</div>
-                  <div className="text-[11px] text-[#007aff] font-medium mt-0.5">{item.partnerRole?.name || "-"}</div>
+                  <div className="font-bold text-gray-800 group-hover/row:text-[#007aff] transition-colors">
+                    {item.entityName}
+                  </div>
+                  <div className="text-[11px] text-[#007aff] font-medium mt-0.5">
+                    {item.partnerRole?.name || "-"}
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-gray-600">
                   <div className="truncate max-w-[200px]">{item.contactEmail || "-"}</div>
@@ -31,7 +46,7 @@ export default function PartnersTable({ partners, openEditModal, setDeleteTarget
                 <td className="px-6 py-4 text-gray-600">
                   {item.country?.name || "-"}
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-2">
                     <span className="px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded text-[10px] font-bold">
                       {item.contacts?.length || 0} Contacts
@@ -43,12 +58,24 @@ export default function PartnersTable({ partners, openEditModal, setDeleteTarget
                 </td>
                 <td className="px-6 py-4">
                   {item.isActive ? (
-                    <span className="px-2 py-0.5 bg-green-50 text-green-600 border border-green-100 rounded text-[10px] font-bold">Active</span>
+                    <span className="px-2 py-0.5 bg-green-50 text-green-600 border border-green-100 rounded text-[10px] font-bold">
+                      Active
+                    </span>
                   ) : (
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 border border-gray-200 rounded text-[10px] font-bold">Inactive</span>
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 border border-gray-200 rounded text-[10px] font-bold">
+                      Inactive
+                    </span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-right space-x-2">
+                <td className="px-6 py-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => openViewDrawer(item)}
+                    className="p-1 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
+                    title="View Details"
+                  >
+                    <Eye className="h-4 w-4 inline" />
+                  </button>
+
                   {item.isActive ? (
                     <>
                       <HasPermission permission="partner:update">
@@ -107,3 +134,4 @@ export default function PartnersTable({ partners, openEditModal, setDeleteTarget
     </div>
   );
 }
+

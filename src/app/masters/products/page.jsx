@@ -24,7 +24,7 @@ import { Plus, Package, Check, AlertCircle } from "lucide-react";
 
 import ProductsTable from "@/components/masters/products/ProductsTable";
 import ProductsFilters from "@/components/masters/products/ProductsFilters";
-import ProductModal from "@/components/masters/products/ProductModal";
+import ProductDrawer from "@/components/masters/products/ProductDrawer";
 import PermanentDeleteModal from "@/components/common/PermanentDeleteModal";
 
 function ProductsContent() {
@@ -103,7 +103,7 @@ function ProductsContent() {
 
   const openCreateModal = () => {
     setForm(initialFormState);
-    setIsEditMode(false);
+    setIsEditMode(true);
     setIsModalOpen(true);
   };
 
@@ -124,6 +124,26 @@ function ProductsContent() {
       isActive: item.isActive,
     });
     setIsEditMode(true);
+    setIsModalOpen(true);
+  };
+
+  const openViewDrawer = (item) => {
+    setForm({
+      id: item.id,
+      name: item.name,
+      categoryId: item.categoryId || "",
+      countryId: item.countryId || "",
+      hsCodeId: item.hsCodeId || "",
+      qualitySubType: item.qualitySubType || "",
+      specification: item.specification || "",
+      qty20ftContainer: item.qty20ftContainer ?? null,
+      qty40ftContainer: item.qty40ftContainer ?? null,
+      qty40hcContainer: item.qty40hcContainer ?? null,
+      truckCapacity: item.truckCapacity ?? null,
+      wagonCapacity: item.wagonCapacity ?? null,
+      isActive: item.isActive,
+    });
+    setIsEditMode(false);
     setIsModalOpen(true);
   };
 
@@ -150,7 +170,7 @@ function ProductsContent() {
     if (payload.wagonCapacity === null) delete payload.wagonCapacity;
 
     try {
-      if (isEditMode) {
+      if (payload.id) {
         await dispatch(updateProduct(payload)).unwrap();
         showToast("Product updated successfully");
       } else {
@@ -278,6 +298,7 @@ function ProductsContent() {
 
         <ProductsTable
           products={products}
+          openViewDrawer={openViewDrawer}
           openEditModal={openEditModal}
           setDeleteTarget={setDeleteTarget}
           setRestoreTarget={setRestoreTarget}
@@ -287,7 +308,7 @@ function ProductsContent() {
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
       </div>
 
-      <ProductModal
+      <ProductDrawer
         isOpen={isModalOpen}
         onClose={closeModals}
         onSubmit={handleModalSubmit}

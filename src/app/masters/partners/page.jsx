@@ -24,7 +24,7 @@ import { Plus, Users, Check, AlertCircle } from "lucide-react";
 
 import PartnersTable from "@/components/masters/partners/PartnersTable";
 import PartnersFilters from "@/components/masters/partners/PartnersFilters";
-import PartnerModal from "@/components/masters/partners/PartnerModal";
+import PartnerDrawer from "@/components/masters/partners/PartnerDrawer";
 import PermanentDeleteModal from "@/components/common/PermanentDeleteModal";
 
 function PartnersContent() {
@@ -87,13 +87,19 @@ function PartnersContent() {
 
   const openCreateModal = () => {
     setEditData(null);
-    setIsEditMode(false);
+    setIsEditMode(true);
     setIsModalOpen(true);
   };
 
   const openEditModal = (item) => {
     setEditData(item);
     setIsEditMode(true);
+    setIsModalOpen(true);
+  };
+
+  const openViewDrawer = (item) => {
+    setEditData(item);
+    setIsEditMode(false);
     setIsModalOpen(true);
   };
 
@@ -109,7 +115,7 @@ function PartnersContent() {
     setIsSaving(true);
     
     try {
-      if (isEditMode) {
+      if (editData) {
         await dispatch(updatePartner({ id: editData.id, ...payload })).unwrap();
         showToast("Partner updated successfully");
       } else {
@@ -237,6 +243,7 @@ function PartnersContent() {
 
         <PartnersTable
           partners={partners}
+          openViewDrawer={openViewDrawer}
           openEditModal={openEditModal}
           setDeleteTarget={setDeleteTarget}
           setRestoreTarget={setRestoreTarget}
@@ -246,7 +253,7 @@ function PartnersContent() {
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
       </div>
 
-      <PartnerModal
+      <PartnerDrawer
         isOpen={isModalOpen}
         onClose={closeModals}
         onSubmit={handleModalSubmit}
@@ -254,9 +261,7 @@ function PartnersContent() {
         isSaving={isSaving}
         error={error}
         isEditMode={isEditMode}
-        categories={[]} 
         countries={countries}
-        hscodes={[]} 
         partnerRoles={partnerRoles}
         products={products}
       />
