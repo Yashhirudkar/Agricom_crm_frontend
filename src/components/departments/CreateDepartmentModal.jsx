@@ -1,6 +1,8 @@
 import React from "react";
 import Modal from "@/components/modals/Modal";
 
+import useSystemOptions from "@/hooks/useSystemOptions";
+
 export default function CreateDepartmentModal({
   isCreateOpen,
   closeModals,
@@ -12,6 +14,8 @@ export default function CreateDepartmentModal({
   isSaving,
   error,
 }) {
+  const { options } = useSystemOptions();
+
   return (
     <Modal
       isOpen={isCreateOpen}
@@ -61,8 +65,9 @@ export default function CreateDepartmentModal({
             onChange={(e) => setForm({ ...form, status: e.target.value })}
             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
           >
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
+            {options?.common?.statuses?.map(s => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
           </select>
         </div>
         <div>

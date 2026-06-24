@@ -4,32 +4,18 @@ import { useEffect, useState } from "react";
 import axiosClient from "@/lib/axios";
 import { Tree, TreeNode } from "react-organizational-chart";
 import { Users, Search, RefreshCw } from "lucide-react";
+import SearchableSelect from "@/components/common/SearchableSelect";
 
 export default function OrgChartPage() {
   const [chartData, setChartData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState("full"); // full, my-team, chain
   const [selectedEmpId, setSelectedEmpId] = useState("");
-  const [employeesList, setEmployeesList] = useState([]);
-
-  useEffect(() => {
-    fetchEmployeesList();
-  }, []);
+  const [selectedEmp, setSelectedEmp] = useState(null);
 
   useEffect(() => {
     fetchChartData();
   }, [viewMode, selectedEmpId]);
-
-  const fetchEmployeesList = async () => {
-    try {
-      const companyId = localStorage.getItem("activeCompanyId");
-      if (!companyId) return;
-      const res = await axiosClient.get("/employees?limit=1000", { headers: { "x-company-id": companyId } });
-      setEmployeesList(res.data.data || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const fetchChartData = async () => {
     try {
@@ -44,10 +30,10 @@ export default function OrgChartPage() {
       if (viewMode === "my-team") {
          // Assuming the current user's employeeId isn't easily available, let's just use full for now
          // Or if they select a user, we can show their team
-         if (selectedEmpId) url = `/employees/${selectedEmpId}/all-subordinates`;
+         if (selectedEmp) url = `/employees/${selectedEmp.value}/all-subordinates`;
          else url = "/employees/org-chart/full";
       }
-      else if (viewMode === "chain" && selectedEmpId) url = `/employees/${selectedEmpId}/reporting-chain`;
+      else if (viewMode === "chain" && selectedEmp) url = `/employees/${selectedEmp.value}/reporting-chain`;
 
       // The chain returns an array from bottom to top. We need to convert it into a tree.
       // But let's assume the endpoint handles standard tree response for full & my-team.
@@ -136,16 +122,17 @@ export default function OrgChartPage() {
           </select>
           
           {(viewMode === "chain" || viewMode === "my-team") && (
-            <select 
-              value={selectedEmpId}
-              onChange={(e) => setSelectedEmpId(e.target.value)}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
-            >
-              <option value="">-- Select Employee --</option>
-              {employeesList.map(emp => (
-                <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>
-              ))}
-            </select>
+            <div className="w-[200px]">
+              <SearchableSelect
+                endpoint="/employees/options"
+                value={selectedEmp}
+                onChange={(val) => {
+                  setSelectedEmp(val);
+                  setSelectedEmpId(val ? val.value : "");
+                }}
+                placeholder="Search Employee..."
+              />
+            </div>
           )}
 
           <button onClick={fetchChartData} className="p-2 border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-[#007aff] transition-colors">

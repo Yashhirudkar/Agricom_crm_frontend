@@ -25,7 +25,7 @@ export default function HolidaysPage() {
 
   const fetchHolidays = async () => {
     try {
-      const res = await getHolidays({ limit: 1000 });
+      const res = await getHolidays({ page: 1, limit: 100 });
       setHolidays(res.data || []);
     } catch (error) {
       console.error("Error fetching holidays:", error);

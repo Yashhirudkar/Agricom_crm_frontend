@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import axiosClient from "@/lib/axios";
+import useDebounce from "@/hooks/useDebounce";
 import {
   fetchUsers,
   deleteUser,
@@ -58,6 +59,7 @@ export function useUsersPage() {
 
   // Table filters & sorting
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
   const [statusFilter, setStatusFilter] = useState("all");
   const [companyFilter, setCompanyFilter] = useState("all");
   const [sortField, setSortField] = useState("name");
@@ -66,20 +68,31 @@ export function useUsersPage() {
   const itemsPerPage = 8;
 
   useEffect(() => {
-    dispatch(fetchUsers());
     dispatch(fetchCompanies());
     axiosClient
       .get("/GetRoles")
-      .then((res) => setAvailableRoles(res.data || []))
+      .then((res) => setAvailableRoles(res.data?.data || res.data || []))
       .catch((err) => console.error("Failed to load roles:", err));
   }, [dispatch]);
+
+  useEffect(() => {
+    const params = { page: currentPage, limit: itemsPerPage };
+    if (debouncedSearch) params.search = debouncedSearch;
+    if (statusFilter && statusFilter !== "all") params.status = statusFilter;
+    if (companyFilter && companyFilter !== "all") params.companyId = companyFilter;
+    dispatch(fetchUsers(params));
+  }, [dispatch, debouncedSearch, statusFilter, companyFilter, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, statusFilter, companyFilter]);
 
   useEffect(() => {
     if (inviteOpen) {
       if (userType === "super_admin") {
         axiosClient
           .get("/clients/GetClients")
-          .then((res) => setInviteClients(res.data || []))
+          .then((res) => setInviteClients(res.data?.data || res.data || []))
           .catch((err) => console.error("Failed to fetch clients for invitation:", err));
         setInviteCompanies([]);
         setInviteRoles([]);
@@ -101,7 +114,7 @@ export function useUsersPage() {
     setInviteCompanies(clientCompanies);
     try {
       const res = await axiosClient.get(`/GetRoles?clientId=${clientId}`);
-      setInviteRoles(res.data || []);
+      setInviteRoles(res.data?.data || res.data || []);
     } catch (err) {
       showToast("Failed to fetch roles for selected client", "error");
     }
@@ -284,20 +297,7 @@ export function useUsersPage() {
       setSelectedUserIds((prev) => prev.filter((id) => id !== deleteTarget.id));
       setDeleteTarget(null);
 
-      const filteredUsers = users.filter((u) => {
-        const matchesSearch =
-          u.name?.toLowerCase().includes(search.toLowerCase()) ||
-          u.email?.toLowerCase().includes(search.toLowerCase());
-        const matchesStatus =
-          statusFilter === "all" ? true : u.status?.toLowerCase() === statusFilter.toLowerCase();
-        const matchesCompany =
-          companyFilter === "all"
-            ? true
-            : u.userCompanies?.some((uc) => uc.companyId.toString() === companyFilter);
-        return matchesSearch && matchesStatus && matchesCompany;
-      });
-
-      const newTotal = filteredUsers.length - 1;
+      const newTotal = users.length;
       const newTotalPages = Math.ceil(newTotal / itemsPerPage) || 1;
       if (currentPage > newTotalPages) {
         setCurrentPage(newTotalPages);

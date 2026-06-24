@@ -1,9 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosClient from "@/lib/axios";
 
-export const fetchCompanies = createAsyncThunk("companies/fetchAll", async (_, { rejectWithValue }) => {
+export const fetchCompanies = createAsyncThunk("companies/fetchAll", async (params = {}, { rejectWithValue }) => {
   try {
-    const res = await axiosClient.get("/GetCompanies");
+    const res = await axiosClient.get("/GetCompanies", { params });
     return res.data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to fetch companies");
@@ -41,6 +41,10 @@ const companiesSlice = createSlice({
   name: "companies",
   initialState: {
     list: [],
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 1,
     isLoading: false,
     error: null,
   },
@@ -50,7 +54,18 @@ const companiesSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchCompanies.pending, (state) => { state.isLoading = true; state.error = null; })
-      .addCase(fetchCompanies.fulfilled, (state, action) => { state.isLoading = false; state.list = action.payload; })
+      .addCase(fetchCompanies.fulfilled, (state, action) => {
+        state.isLoading = false;
+        if (action.payload && typeof action.payload === 'object' && !Array.isArray(action.payload)) {
+          state.list = action.payload.data || [];
+          state.total = action.payload.total || 0;
+          state.page = action.payload.page || 1;
+          state.limit = action.payload.limit || 10;
+          state.totalPages = action.payload.totalPages || 1;
+        } else {
+          state.list = action.payload || [];
+        }
+      })
       .addCase(fetchCompanies.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
 
       .addCase(createCompany.fulfilled, (state, action) => { state.list.unshift(action.payload); })
@@ -72,6 +87,12 @@ const companiesSlice = createSlice({
 export const { clearCompaniesError } = companiesSlice.actions;
 
 export const selectCompanies = (state) => state.companies.list;
+export const selectCompaniesMetadata = (state) => ({
+  total: state.companies.total,
+  page: state.companies.page,
+  limit: state.companies.limit,
+  totalPages: state.companies.totalPages,
+});
 export const selectCompaniesLoading = (state) => state.companies.isLoading;
 export const selectCompaniesError = (state) => state.companies.error;
 

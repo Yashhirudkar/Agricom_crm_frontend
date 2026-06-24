@@ -90,37 +90,9 @@ function UsersContent() {
     }
   }, [searchParams, users]);
 
-  const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.name?.toLowerCase().includes(search.toLowerCase()) ||
-      u.email?.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" ? true : u.status?.toLowerCase() === statusFilter.toLowerCase();
-    const matchesCompany =
-      companyFilter === "all"
-        ? true
-        : u.userCompanies?.some((uc) => uc.companyId.toString() === companyFilter);
-    return matchesSearch && matchesStatus && matchesCompany;
-  });
-
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
-    let valA = a[sortField] || "";
-    let valB = b[sortField] || "";
-    if (typeof valA === "string") {
-      return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    }
-    return sortOrder === "asc" ? valA - valB : valB - valA;
-  });
-
-  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage) || 1;
-  const paginatedUsers = sortedUsers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedUserIds(paginatedUsers.map((u) => u.id));
+      setSelectedUserIds(users.map((u) => u.id));
     } else {
       setSelectedUserIds([]);
     }
@@ -193,11 +165,11 @@ function UsersContent() {
           setCompanyFilter={setCompanyFilter}
           setCurrentPage={setCurrentPage}
           companies={companies}
-          filteredCount={filteredUsers.length}
+          filteredCount={users.length}
         />
 
         <UsersTable
-          paginatedUsers={paginatedUsers}
+          paginatedUsers={users}
           selectedUserIds={selectedUserIds}
           selectedUser={selectedUser}
           sortField={sortField}
@@ -209,7 +181,7 @@ function UsersContent() {
           setDeleteTarget={setDeleteTarget}
         />
 
-        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        <Pagination currentPage={currentPage} totalPages={meta?.totalPages || 1} onPageChange={setCurrentPage} />
       </div>
 
       <FloatingActionBar

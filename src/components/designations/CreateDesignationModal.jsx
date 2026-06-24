@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Modal from "@/components/modals/Modal";
+import SearchableSelect from "@/components/common/SearchableSelect";
+import axiosClient from "@/lib/axios";
 
 export default function CreateDesignationModal({
   isCreateOpen,
@@ -8,11 +10,26 @@ export default function CreateDesignationModal({
   editingDesig,
   form,
   setForm,
-  departments,
-  designations,
   isSaving,
   error,
 }) {
+  const [selectedDept, setSelectedDept] = useState(null);
+  const [selectedParent, setSelectedParent] = useState(null);
+
+  useEffect(() => {
+    if (isCreateOpen) {
+      if (editingDesig?.department) {
+        setSelectedDept({ value: editingDesig.department.id, label: editingDesig.department.name });
+      } else {
+        setSelectedDept(null);
+      }
+      if (editingDesig?.parentDesignation) {
+        setSelectedParent({ value: editingDesig.parentDesignation.id, label: editingDesig.parentDesignation.name });
+      } else {
+        setSelectedParent(null);
+      }
+    }
+  }, [isCreateOpen, editingDesig]);
   return (
     <Modal
       isOpen={isCreateOpen}
@@ -37,41 +54,29 @@ export default function CreateDesignationModal({
           <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
             Department
           </label>
-          <select
-            required
-            value={form.departmentId}
-            onChange={(e) => setForm({ ...form, departmentId: e.target.value })}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
-          >
-            <option value="" disabled>
-              Select Department
-            </option>
-            {departments.map((dept) => (
-              <option key={dept.id} value={dept.id}>
-                {dept.name}
-              </option>
-            ))}
-          </select>
+          <SearchableSelect
+            endpoint="/departments/options"
+            value={selectedDept}
+            onChange={(val) => {
+              setSelectedDept(val);
+              setForm({ ...form, departmentId: val ? val.value : "" });
+            }}
+            placeholder="Search Department..."
+          />
         </div>
         <div>
           <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
             Parent Designation
           </label>
-          <select
-            value={form.parentId}
-            onChange={(e) => setForm({ ...form, parentId: e.target.value })}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
-          >
-            <option value="">-- None (Root) --</option>
-            {designations.map(
-              (d) =>
-                d.id !== editingDesig?.id && (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                )
-            )}
-          </select>
+          <SearchableSelect
+            endpoint="/designations/options"
+            value={selectedParent}
+            onChange={(val) => {
+              setSelectedParent(val);
+              setForm({ ...form, parentId: val ? val.value : "" });
+            }}
+            placeholder="Search Parent Designation (Optional)..."
+          />
         </div>
         <div className="flex gap-4">
           <div className="flex-1">

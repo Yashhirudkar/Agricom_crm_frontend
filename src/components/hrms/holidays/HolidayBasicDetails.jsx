@@ -1,6 +1,9 @@
 import React from "react";
+import useSystemOptions from "@/hooks/useSystemOptions";
 
 export default function HolidayBasicDetails({ formData, handleChange, mode }) {
+  const { options } = useSystemOptions();
+
   return (
     <>
       <div>
@@ -41,11 +44,9 @@ export default function HolidayBasicDetails({ formData, handleChange, mode }) {
           required
           className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="PUBLIC">Public Holiday</option>
-          <option value="COMPANY">Company Holiday</option>
-          <option value="SHUTDOWN">Office Shutdown</option>
-          <option value="FESTIVAL">Festival Holiday</option>
-          <option value="REGIONAL">Regional Holiday</option>
+          {options?.hrms?.holidayTypes?.map(h => (
+            <option key={h.value} value={h.value}>{h.label}</option>
+          ))}
         </select>
       </div>
 

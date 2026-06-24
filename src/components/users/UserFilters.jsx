@@ -1,5 +1,6 @@
 import React from "react";
 import { Search } from "lucide-react";
+import useSystemOptions from "@/hooks/useSystemOptions";
 
 export default function UserFilters({
   search,
@@ -12,6 +13,8 @@ export default function UserFilters({
   companies,
   filteredCount,
 }) {
+  const { options } = useSystemOptions();
+
   return (
     <div className="p-4 border-b border-gray-50 bg-gray-50/20 flex flex-wrap gap-4 items-center justify-between">
       <div className="flex flex-wrap gap-3 items-center">
@@ -40,10 +43,9 @@ export default function UserFilters({
           className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs outline-none focus:border-[#007aff]"
         >
           <option value="all">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="suspended">Suspended</option>
-          <option value="invited">Invited</option>
+          {options?.users?.statuses?.map(s => (
+            <option key={s.value} value={s.value.toLowerCase()}>{s.label}</option>
+          ))}
         </select>
 
         {/* Company Scope Selector */}

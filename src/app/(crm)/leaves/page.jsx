@@ -10,14 +10,14 @@ import {
   selectLeaveRequestsLoading
 } from "@/store/entities/leaveRequestsSlice";
 import { fetchLeaveTypes, selectLeaveTypesData } from "@/store/entities/leaveTypesSlice";
-import { fetchBranches, selectBranchesData } from "@/store/entities/branchesSlice";
-import { fetchDepartments, selectDepartmentsData } from "@/store/entities/departmentsSlice";
-import { fetchEmployees, selectEmployeesData } from "@/store/entities/employeesSlice";
+
 import HasPermission from "@/components/rbac/HasPermission";
 import {
   Check, AlertCircle, Filter, X, Download, Clock, XCircle, Search, CalendarDays, User as UserIcon
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import SearchableSelect from "@/components/common/SearchableSelect";
+import axiosClient from "@/lib/axios";
 
 function AdminLeavesContent() {
   const dispatch = useDispatch();
@@ -28,9 +28,6 @@ function AdminLeavesContent() {
   const isLoading = useSelector(selectLeaveRequestsLoading);
 
   const { data: leaveTypes } = useSelector(selectLeaveTypesData) || { data: [] };
-  const { data: branches } = useSelector(selectBranchesData) || { data: [] };
-  const { data: departments } = useSelector(selectDepartmentsData) || { data: [] };
-  const { data: employees } = useSelector(selectEmployeesData) || { data: [] };
 
   const [selectedCompanyId, setSelectedCompanyId] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,6 +46,9 @@ function AdminLeavesContent() {
   });
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedEmp, setSelectedEmp] = useState(null);
+  const [selectedBranch, setSelectedBranch] = useState(null);
+  const [selectedDept, setSelectedDept] = useState(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -66,9 +66,6 @@ function AdminLeavesContent() {
   useEffect(() => {
     if (selectedCompanyId) {
       dispatch(fetchLeaveTypes({}));
-      dispatch(fetchBranches({ limit: 100 }));
-      dispatch(fetchDepartments({ limit: 100 }));
-      dispatch(fetchEmployees({ limit: 500 }));
       loadLeaves();
     }
   }, [dispatch, selectedCompanyId, currentPage]);
@@ -101,6 +98,9 @@ function AdminLeavesContent() {
       toDate: "",
       month: ""
     });
+    setSelectedEmp(null);
+    setSelectedBranch(null);
+    setSelectedDept(null);
     setCurrentPage(1);
     setTimeout(() => {
       dispatch(fetchLeaveRequests({ page: 1, limit: itemsPerPage }));
@@ -181,30 +181,39 @@ function AdminLeavesContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Employee</label>
-                  <select name="employeeId" value={filters.employeeId} onChange={handleFilterChange} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#007aff] text-gray-700">
-                    <option value="">All Employees</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.employeeCode})</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    endpoint="/employees/options"
+                    value={selectedEmp}
+                    onChange={(val) => {
+                      setSelectedEmp(val);
+                      setFilters({ ...filters, employeeId: val ? val.value : "" });
+                    }}
+                    placeholder="All Employees"
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Branch</label>
-                  <select name="branchId" value={filters.branchId} onChange={handleFilterChange} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#007aff] text-gray-700">
-                    <option value="">All Branches</option>
-                    {branches.map(b => (
-                      <option key={b.id} value={b.id}>{b.branchName}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    endpoint="/branches/options"
+                    value={selectedBranch}
+                    onChange={(val) => {
+                      setSelectedBranch(val);
+                      setFilters({ ...filters, branchId: val ? val.value : "" });
+                    }}
+                    placeholder="All Branches"
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Department</label>
-                  <select name="departmentId" value={filters.departmentId} onChange={handleFilterChange} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#007aff] text-gray-700">
-                    <option value="">All Departments</option>
-                    {departments.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    endpoint="/departments/options"
+                    value={selectedDept}
+                    onChange={(val) => {
+                      setSelectedDept(val);
+                      setFilters({ ...filters, departmentId: val ? val.value : "" });
+                    }}
+                    placeholder="All Departments"
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</label>

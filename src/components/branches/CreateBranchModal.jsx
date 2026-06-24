@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Modal from "@/components/modals/Modal";
+import SearchableSelect from "@/components/common/SearchableSelect";
+import axiosClient from "@/lib/axios";
 
 export default function CreateBranchModal({
   isCreateOpen,
@@ -7,11 +9,20 @@ export default function CreateBranchModal({
   editingBranch,
   handleSave,
   form,
-  setForm,
-  employees,
   isSaving,
   error,
 }) {
+  const [selectedManager, setSelectedManager] = useState(null);
+
+  useEffect(() => {
+    if (isCreateOpen) {
+      if (editingBranch?.manager) {
+        setSelectedManager({ value: editingBranch.manager.id, label: `${editingBranch.manager.firstName} ${editingBranch.manager.lastName}` });
+      } else {
+        setSelectedManager(null);
+      }
+    }
+  }, [isCreateOpen, editingBranch]);
   return (
     <Modal
       isOpen={isCreateOpen}
@@ -128,18 +139,15 @@ export default function CreateBranchModal({
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
               Manager
             </label>
-            <select
-              value={form.managerId}
-              onChange={(e) => setForm({ ...form, managerId: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
-            >
-              <option value="">-- Unassigned --</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.firstName} {emp.lastName}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              endpoint="/employees/options"
+              value={selectedManager}
+              onChange={(val) => {
+                setSelectedManager(val);
+                setForm({ ...form, managerId: val ? val.value : "" });
+              }}
+              placeholder="Search Manager (Optional)..."
+            />
           </div>
         </div>
 

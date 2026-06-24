@@ -1,9 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosClient from "@/lib/axios";
 
-export const fetchUsers = createAsyncThunk("users/fetchAll", async (_, { rejectWithValue }) => {
+export const fetchUsers = createAsyncThunk("users/fetchAll", async (params, { rejectWithValue }) => {
   try {
-    const res = await axiosClient.get("/GetUsers");
+    const res = await axiosClient.get("/GetUsers", { params });
     return res.data; // { users: [], meta: { maxUsers, currentUsers, canAddMore, ... } | null }
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to fetch users");

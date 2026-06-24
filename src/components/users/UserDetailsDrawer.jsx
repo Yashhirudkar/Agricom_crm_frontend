@@ -1,6 +1,7 @@
 import React from "react";
 import Drawer from "@/components/drawers/Drawer";
 import { Info, Shield, History, Building2, PlusCircle } from "lucide-react";
+import useSystemOptions from "@/hooks/useSystemOptions";
 
 export default function UserDetailsDrawer({
   drawerOpen,
@@ -16,6 +17,8 @@ export default function UserDetailsDrawer({
   setAssignWorkspaceOpen,
   handleRemoveWorkspace,
 }) {
+  const { options } = useSystemOptions();
+
   return (
     <Drawer
       isOpen={drawerOpen}
@@ -90,12 +93,11 @@ export default function UserDetailsDrawer({
                   onChange={(e) => toggleUserStatusDrawer(e.target.value)}
                   className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-xl text-xs outline-none focus:border-[#007aff] font-bold"
                 >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Suspended">Suspended</option>
-                  <option value="Invited" disabled>
-                    Invited
-                  </option>
+                  {options?.users?.statuses?.map(s => (
+                    <option key={s.value} value={s.value} disabled={s.value === 'Invited'}>
+                      {s.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

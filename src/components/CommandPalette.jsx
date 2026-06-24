@@ -80,11 +80,8 @@ export default function CommandPalette() {
         let clientsPromise = Promise.resolve([]);
         if (userType === "super_admin") {
           clientsPromise = axiosClient
-            .get("/clients/GetClients")
-            .then((res) => {
-              const list = Array.isArray(res.data) ? res.data : [];
-              return list.filter((c) => c.name.toLowerCase().includes(searchQuery));
-            })
+            .get(`/clients/GetClients?search=${encodeURIComponent(query)}&limit=5`)
+            .then((res) => res.data?.data || [])
             .catch(() => []);
         }
 

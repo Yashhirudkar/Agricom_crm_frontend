@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axiosInstance from "@/lib/axios";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import Modal from "@/components/modals/Modal";
@@ -9,10 +9,12 @@ import { Plus, Edit2, Trash2, Folder, Layout, Check, AlertCircle, GripVertical, 
 import { getDynamicIcon } from "@/components/layout/sidebar-components/icons";
 import EditSidebarFolderModal from "./components/EditSidebarFolderModal";
 import EditSidebarItemModal from "./components/EditSidebarItemModal";
+import SidebarBuilderSkeleton from "./components/SidebarSkeleton";
 
 export default function SidebarBuilderPage() {
   const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState(null);
 
   // Modals
@@ -29,8 +31,15 @@ export default function SidebarBuilderPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const isFirstLoad = useRef(true);
+
   const fetchTree = async () => {
-    setLoading(true);
+    // On first load (empty tree): show skeleton. On re-fetches: keep stale tree visible.
+    if (isFirstLoad.current) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
     try {
       const res = await axiosInstance.get(`/system/sidebar/tree?t=${Date.now()}`);
       setTree(res.data);
@@ -38,6 +47,8 @@ export default function SidebarBuilderPage() {
       showToast("Failed to load sidebar tree", "error");
     } finally {
       setLoading(false);
+      setRefreshing(false);
+      isFirstLoad.current = false;
     }
   };
 
@@ -178,13 +189,9 @@ export default function SidebarBuilderPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <div className="h-8 w-8 rounded-full border-2 border-[#007aff] border-t-transparent animate-spin mb-3" />
-        <p className="text-xs font-semibold text-gray-400">Loading Sidebar Config...</p>
-      </div>
-    );
+  // First-load skeleton only — never blank the screen on re-fetches
+  if (loading && tree.length === 0) {
+    return <SidebarBuilderSkeleton />;
   }
 
   return (
@@ -213,7 +220,17 @@ export default function SidebarBuilderPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+      <div className="relative bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        {/* Hairline progress bar — visible only during silent background refresh */}
+        <div className={`absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl overflow-hidden transition-opacity duration-300 ${refreshing ? "opacity-100" : "opacity-0"}`}>
+          <div className="h-full bg-[#007aff] animate-[slide-in_0.6s_ease-out_forwards]" style={{ animation: refreshing ? "slideIn 0.6s ease-out forwards" : "none" }} />
+        </div>
+        <style>{`
+          @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to   { transform: translateX(0); }
+          }
+        `}</style>
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="root-folders" type="folder">
             {(provided) => (

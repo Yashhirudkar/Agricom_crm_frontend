@@ -3,9 +3,9 @@ import axiosClient from "@/lib/axios";
 
 // ─── Async Thunks ─────────────────────────────────────────────────────────────
 
-export const fetchRoles = createAsyncThunk("roles/fetchAll", async (_, { rejectWithValue }) => {
+export const fetchRoles = createAsyncThunk("roles/fetchAll", async (params, { rejectWithValue }) => {
   try {
-    const res = await axiosClient.get("/GetRoles");
+    const res = await axiosClient.get("/GetRoles", { params });
     return res.data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to fetch roles");
@@ -54,6 +54,7 @@ const rolesSlice = createSlice({
   name: "roles",
   initialState: {
     list: [],
+    meta: null,
     isLoading: false,
     error: null,
   },
@@ -63,7 +64,16 @@ const rolesSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchRoles.pending, (state) => { state.isLoading = true; state.error = null; })
-      .addCase(fetchRoles.fulfilled, (state, action) => { state.isLoading = false; state.list = action.payload; })
+      .addCase(fetchRoles.fulfilled, (state, action) => {
+        state.isLoading = false;
+        if (action.payload && action.payload.data !== undefined) {
+          state.list = action.payload.data;
+          state.meta = action.payload.meta;
+        } else {
+          state.list = action.payload || [];
+          state.meta = null;
+        }
+      })
       .addCase(fetchRoles.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
 
       .addCase(createRole.fulfilled, (state, action) => { state.list.unshift(action.payload); })
@@ -85,6 +95,7 @@ const rolesSlice = createSlice({
 export const { clearRolesError } = rolesSlice.actions;
 
 export const selectRoles = (state) => state.roles.list;
+export const selectRolesMeta = (state) => state.roles.meta;
 export const selectRolesLoading = (state) => state.roles.isLoading;
 export const selectRolesError = (state) => state.roles.error;
 

@@ -20,6 +20,7 @@ import { Plus, Calendar, Check, AlertCircle, Building2 } from "lucide-react";
 
 import LeaveTypesTable from "@/components/leave-types/LeaveTypesTable";
 import CreateLeaveTypeModal from "@/components/leave-types/CreateLeaveTypeModal";
+import Pagination from "@/components/common/Pagination";
 
 function LeaveTypesContent() {
   const dispatch = useDispatch();
@@ -27,9 +28,12 @@ function LeaveTypesContent() {
   const userType = useSelector(selectUserType);
   const allCompanies = useSelector(selectCompanies) || [];
 
-  const { data: leaveTypes } = useSelector(selectLeaveTypesData) || { data: [] };
+  const { data: leaveTypes, totalPages } = useSelector(selectLeaveTypesData) || { data: [], totalPages: 1 };
   const isLoading = useSelector(selectLeaveTypesLoading);
   const error = useSelector(selectLeaveTypesError);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = "success") => {
@@ -54,9 +58,9 @@ function LeaveTypesContent() {
 
   useEffect(() => {
     if (selectedCompanyId) {
-      dispatch(fetchLeaveTypes({}));
+      dispatch(fetchLeaveTypes({ page: currentPage, limit: itemsPerPage }));
     }
-  }, [dispatch, selectedCompanyId]);
+  }, [dispatch, selectedCompanyId, currentPage]);
 
   useEffect(() => {
     if (error) {
@@ -68,6 +72,7 @@ function LeaveTypesContent() {
   const handleCompanyChange = (e) => {
     const val = e.target.value;
     setSelectedCompanyId(val);
+    setCurrentPage(1);
     if (val) {
       localStorage.setItem("activeCompanyId", val);
     } else {
@@ -163,7 +168,7 @@ function LeaveTypesContent() {
         showToast("Leave Type created successfully");
       }
       setIsModalOpen(false);
-      dispatch(fetchLeaveTypes({}));
+      dispatch(fetchLeaveTypes({ page: currentPage, limit: itemsPerPage }));
     } catch (err) {
       // Error handled by useEffect
     } finally {
@@ -177,7 +182,11 @@ function LeaveTypesContent() {
       await dispatch(deleteLeaveType(deleteTarget.id)).unwrap();
       showToast("Leave Type deleted successfully");
       setDeleteTarget(null);
-      dispatch(fetchLeaveTypes({}));
+      if (leaveTypes.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        dispatch(fetchLeaveTypes({ page: currentPage, limit: itemsPerPage }));
+      }
     } catch (err) {
       // Error handled by useEffect
     } finally {
@@ -255,6 +264,7 @@ function LeaveTypesContent() {
             openEditModal={openEditModal}
             setDeleteTarget={setDeleteTarget}
           />
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
       )}
 

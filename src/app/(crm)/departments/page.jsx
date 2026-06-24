@@ -23,6 +23,7 @@ import DepartmentsTable from "@/components/departments/DepartmentsTable";
 import DepartmentsTree from "@/components/departments/DepartmentsTree";
 import CreateDepartmentModal from "@/components/departments/CreateDepartmentModal";
 import DepartmentDetailsDrawer from "@/components/departments/DepartmentDetailsDrawer";
+import useDebounce from "@/hooks/useDebounce";
 
 function DepartmentsContent() {
   const dispatch = useDispatch();
@@ -73,6 +74,7 @@ function DepartmentsContent() {
 
   // Query states
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [viewMode, setViewMode] = useState("list"); // list, tree
@@ -106,9 +108,9 @@ function DepartmentsContent() {
 
   useEffect(() => {
     if (selectedCompanyId) {
-      dispatch(fetchDepartments({ page: currentPage, limit: itemsPerPage, search }));
+      dispatch(fetchDepartments({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
     }
-  }, [dispatch, currentPage, search, selectedCompanyId]);
+  }, [dispatch, currentPage, debouncedSearch, selectedCompanyId]);
 
   const handleCompanyChange = (e) => {
     const val = e.target.value;
@@ -181,7 +183,7 @@ function DepartmentsContent() {
         await dispatch(createDepartment(payload)).unwrap();
         showToast("Department created successfully");
       }
-      dispatch(fetchDepartments({ page: currentPage, limit: itemsPerPage, search }));
+      dispatch(fetchDepartments({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
       if (viewMode === "tree") fetchDepartmentTree();
       closeModals();
     } catch (err) {
@@ -206,7 +208,7 @@ function DepartmentsContent() {
       if (currentPage > newTotalPages) {
         setCurrentPage(newTotalPages);
       } else {
-        dispatch(fetchDepartments({ page: currentPage, limit: itemsPerPage, search }));
+        dispatch(fetchDepartments({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
       }
 
       closeModals();

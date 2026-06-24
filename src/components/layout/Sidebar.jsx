@@ -146,15 +146,38 @@ export function Sidebar() {
         )}
       </button>
 
-      <div className={`h-16 flex items-center ${isSidebarCollapsed ? "justify-center px-0" : "px-6"} border-b border-gray-100`}>
-        <div className="w-8 h-8 rounded flex items-center justify-center text-white flex-shrink-0">
-          <Image src="/maple-leaf.png" alt="Logo" width={20} height={20} className="h-5 w-5 object-contain" />
+      <div className={`h-[72px] flex items-center ${isSidebarCollapsed ? "justify-center px-0" : "px-5"} border-b border-gray-100`}>
+        <div className="relative flex items-center justify-center flex-shrink-0">
+          {user?.company?.logoUrl ? (
+            <>
+              <img
+                src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${user.company.logoUrl}`}
+                alt="Logo"
+                className="h-9 w-9 rounded-xl object-cover border border-gray-200 shadow-xs"
+                onError={(e) => {
+                  e.target.style.display = "none";
+                  e.target.nextElementSibling.style.display = "flex";
+                }}
+              />
+              <div className="hidden h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white font-bold items-center justify-center text-sm shadow-sm border border-blue-600">
+                {user?.company?.name ? user.company.name.charAt(0).toUpperCase() : "A"}
+              </div>
+            </>
+          ) : (
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white font-bold flex items-center justify-center text-sm shadow-sm border border-blue-600">
+              {user?.company?.name ? user.company.name.charAt(0).toUpperCase() : "A"}
+            </div>
+          )}
         </div>
 
         {!isSidebarCollapsed && (
-          <div className="ml-3 overflow-hidden whitespace-nowrap pb-2">
-            <h1 className="text-gray-900 font-bold text-[16px] leading-tight">Agricom</h1>
-            <p className="text-[10px] text-gray-500 font-bold tracking-wider">CRM SYSTEM</p>
+          <div className="ml-3 overflow-hidden flex flex-col justify-center">
+            <h1 className="text-gray-900 font-bold text-[15px] leading-tight truncate max-w-[150px]">
+              {user?.company?.name || "Agricom"}
+            </h1>
+            <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mt-0.5">
+              {user?.company?.name && user.company.name !== "Agricom" ? "Workspace" : "CRM SYSTEM"}
+            </p>
           </div>
         )}
       </div>

@@ -22,6 +22,7 @@ import ClientFilters from "@/components/clients/ClientFilters";
 import ClientsTable from "@/components/clients/ClientsTable";
 import CreateClientModal from "@/components/clients/CreateClientModal";
 import ClientDetailsDrawer from "@/components/clients/ClientDetailsDrawer";
+import useDebounce from "@/hooks/useDebounce";
 
 function ClientsContent() {
   const dispatch = useDispatch();
@@ -71,13 +72,21 @@ function ClientsContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
+  const debouncedSearch = useDebounce(search, 500);
+
   useEffect(() => {
     if (userType !== "super_admin") {
       router.push("/");
       return;
     }
-    dispatch(fetchClients());
-  }, [dispatch, userType, router]);
+    const params = { page: currentPage, limit: itemsPerPage };
+    if (debouncedSearch) params.search = debouncedSearch;
+    dispatch(fetchClients(params));
+  }, [dispatch, userType, router, debouncedSearch, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
   // Handle URL query parameters to open drawer automatically
   useEffect(() => {
@@ -180,7 +189,7 @@ function ClientsContent() {
         }
         
         // Bug Fix: Fix pagination boundary when deleting
-        const newTotal = filteredClients.length - 1;
+        const newTotal = clients.length - 1;
         const newTotalPages = Math.ceil(newTotal / itemsPerPage) || 1;
         if (currentPage > newTotalPages) {
           setCurrentPage(newTotalPages);
@@ -203,26 +212,11 @@ function ClientsContent() {
     }
   };
 
-  const filteredClients = clients.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const sortedClients = [...filteredClients].sort((a, b) => {
-    let valA = a[sortField];
-    let valB = b[sortField];
-    if (typeof valA === "string") {
-      return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    }
-    return sortOrder === "asc" ? valA - valB : valB - valA;
-  });
-
-  const totalPages = Math.ceil(sortedClients.length / itemsPerPage) || 1;
-  const paginatedClients = sortedClients.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // No local sorting/pagination, handled by backend
+  // In a real scenario, sort parameters would be passed to backend too
+  const paginatedClients = clients;
+  const meta = useSelector((state) => state.clients.meta);
+  const totalPages = meta?.totalPages || 1;
 
   if (isLoading) {
     return (
@@ -270,7 +264,7 @@ function ClientsContent() {
           search={search}
           setSearch={setSearch}
           setCurrentPage={setCurrentPage}
-          filteredCount={filteredClients.length}
+          filteredCount={clients.length}
           totalCount={clients.length}
         />
 

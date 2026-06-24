@@ -43,6 +43,7 @@ import EmployeeEmploymentTab from "@/components/hrms/employees/EmployeeEmploymen
 import EmployeeAccessTab from "@/components/hrms/employees/EmployeeAccessTab";
 import EmployeeLifecycleTab from "@/components/hrms/employees/EmployeeLifecycleTab";
 import EmployeeDocumentsTab from "@/components/hrms/employees/EmployeeDocumentsTab";
+import useDebounce from "@/hooks/useDebounce";
 
 function EmployeesContent() {
   const dispatch = useDispatch();
@@ -86,6 +87,7 @@ function EmployeesContent() {
 
   // Query states
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -97,9 +99,9 @@ function EmployeesContent() {
 
   useEffect(() => {
     if (selectedCompanyId) {
-      dispatch(fetchEmployees({ page: currentPage, limit: itemsPerPage, search }));
+      dispatch(fetchEmployees({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
     }
-  }, [dispatch, currentPage, search, selectedCompanyId]);
+  }, [dispatch, currentPage, debouncedSearch, selectedCompanyId]);
 
   const handleCompanyChange = (e) => {
     const val = e.target.value;
@@ -405,7 +407,7 @@ function EmployeesContent() {
               empDetails={empDetails} 
               onRefresh={() => {
                 loadFullEmployeeDetails(selectedEmp.id);
-                dispatch(fetchEmployees({ page: currentPage, limit: itemsPerPage, search }));
+                dispatch(fetchEmployees({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
               }} 
             />
           )}

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import Drawer from "@/components/common/Drawer";
 import HasPermission from "@/components/rbac/HasPermission";
+import useSystemOptions from "@/hooks/useSystemOptions";
 
 export default function PartnerDrawer({
   isOpen,
@@ -34,6 +35,7 @@ export default function PartnerDrawer({
 }) {
   const [isEditMode, setIsEditMode] = useState(initialEditMode);
   const [activeTab, setActiveTab] = useState("overview");
+  const { options } = useSystemOptions();
 
   const {
     register,
@@ -763,11 +765,9 @@ export default function PartnerDrawer({
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-xs focus:outline-none focus:ring-0 text-gray-700 bg-white"
                       >
                         <option value="">Select Status...</option>
-                        <option value="Excellent">Excellent</option>
-                        <option value="Good">Good</option>
-                        <option value="Average">Average</option>
-                        <option value="Poor">Poor</option>
-                        <option value="Blacklisted">Blacklisted</option>
+                        {options?.masters?.financialStatuses?.map(s => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
                       </select>
                     </div>
                   </div>

@@ -14,7 +14,6 @@ import {
   selectDesignationsError,
   clearDesignationsError,
 } from "@/store/entities/designationsSlice";
-import { fetchDepartments, selectDepartmentsData } from "@/store/entities/departmentsSlice";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import { Plus, Shield, Check, AlertCircle } from "lucide-react";
 
@@ -24,6 +23,7 @@ import DesignationsTable from "@/components/designations/DesignationsTable";
 import DesignationsTree from "@/components/designations/DesignationsTree";
 import CreateDesignationModal from "@/components/designations/CreateDesignationModal";
 import DesignationDetailsDrawer from "@/components/designations/DesignationDetailsDrawer";
+import useDebounce from "@/hooks/useDebounce";
 
 function DesignationsContent() {
   const dispatch = useDispatch();
@@ -34,8 +34,6 @@ function DesignationsContent() {
   const { data: designations, total, page, totalPages } = useSelector(
     selectDesignationsData
   ) || { data: [], total: 0, page: 1, totalPages: 0 };
-  const { data: departmentsObj } = useSelector(selectDepartmentsData) || { data: [] };
-  const departments = departmentsObj?.data || departmentsObj || [];
 
   const isLoading = useSelector(selectDesignationsLoading);
   const error = useSelector(selectDesignationsError);
@@ -80,6 +78,7 @@ function DesignationsContent() {
 
   // Query states
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [viewMode, setViewMode] = useState("list"); // list, tree
@@ -113,10 +112,9 @@ function DesignationsContent() {
 
   useEffect(() => {
     if (selectedCompanyId) {
-      dispatch(fetchDesignations({ page: currentPage, limit: itemsPerPage, search }));
-      dispatch(fetchDepartments({ limit: 1000 }));
+      dispatch(fetchDesignations({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
     }
-  }, [dispatch, currentPage, search, selectedCompanyId]);
+  }, [dispatch, currentPage, debouncedSearch, selectedCompanyId]);
 
   const handleCompanyChange = (e) => {
     const val = e.target.value;
@@ -199,7 +197,7 @@ function DesignationsContent() {
         await dispatch(createDesignation(payload)).unwrap();
         showToast("Designation created successfully");
       }
-      dispatch(fetchDesignations({ page: currentPage, limit: itemsPerPage, search }));
+      dispatch(fetchDesignations({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
       if (viewMode === "tree") fetchDesignationTree();
       closeModals();
     } catch (err) {
@@ -225,7 +223,7 @@ function DesignationsContent() {
       if (currentPage > newTotalPages) {
         setCurrentPage(newTotalPages);
       } else {
-        dispatch(fetchDesignations({ page: currentPage, limit: itemsPerPage, search }));
+        dispatch(fetchDesignations({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
       }
 
       closeModals();
@@ -356,8 +354,6 @@ function DesignationsContent() {
         editingDesig={editingDesig}
         form={form}
         setForm={setForm}
-        departments={departments}
-        designations={designations}
         isSaving={isSaving}
         error={error}
       />

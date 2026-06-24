@@ -1,9 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosClient from "@/lib/axios";
 
-export const fetchClients = createAsyncThunk("clients/fetchAll", async (_, { rejectWithValue }) => {
+export const fetchClients = createAsyncThunk("clients/fetchAll", async (params, { rejectWithValue }) => {
   try {
-    const res = await axiosClient.get("/clients/GetClients");
+    const res = await axiosClient.get("/clients/GetClients", { params });
     return res.data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to fetch clients");
@@ -41,6 +41,7 @@ const clientsSlice = createSlice({
   name: "clients",
   initialState: {
     list: [],
+    meta: null,
     isLoading: false,
     error: null,
   },
@@ -52,7 +53,13 @@ const clientsSlice = createSlice({
       .addCase(fetchClients.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchClients.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.list = action.payload;
+        if (action.payload && action.payload.data !== undefined) {
+          state.list = action.payload.data;
+          state.meta = action.payload.meta;
+        } else {
+          state.list = action.payload || [];
+          state.meta = null;
+        }
       })
       .addCase(fetchClients.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
 
@@ -74,6 +81,7 @@ const clientsSlice = createSlice({
 
 export const { clearClientsError } = clientsSlice.actions;
 export const selectClients = (state) => state.clients.list;
+export const selectClientsMeta = (state) => state.clients.meta;
 export const selectClientsLoading = (state) => state.clients.isLoading;
 export const selectClientsError = (state) => state.clients.error;
 

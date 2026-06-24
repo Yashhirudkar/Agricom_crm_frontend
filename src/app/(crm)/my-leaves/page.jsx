@@ -22,6 +22,7 @@ import MyLeavesListTable from "@/components/my-leaves/MyLeavesListTable";
 import MyLeavesCalendarView from "@/components/my-leaves/MyLeavesCalendarView";
 import ApplyLeaveModal from "@/components/my-leaves/ApplyLeaveModal";
 import CancelLeaveModal from "@/components/my-leaves/CancelLeaveModal";
+import Pagination from "@/components/common/Pagination";
 
 function MyLeavesContent() {
   const dispatch = useDispatch();
@@ -30,7 +31,7 @@ function MyLeavesContent() {
   const balances = useSelector(selectLeaveBalancesData) || [];
   const balancesError = useSelector(selectLeaveBalancesError);
   const { data: leaveTypes } = useSelector(selectLeaveTypesData) || { data: [] };
-  const { data: myLeaves } = useSelector(selectLeaveRequestsData) || { data: [] };
+  const { data: myLeaves, totalPages } = useSelector(selectLeaveRequestsData) || { data: [], totalPages: 1 };
   const isLoading = useSelector(selectLeaveRequestsLoading);
   const requestsError = useSelector(selectLeaveRequestsError);
 
@@ -43,6 +44,8 @@ function MyLeavesContent() {
   const [activeTab, setActiveTab] = useState("PENDING");
   const [viewMode, setViewMode] = useState("list"); // 'list' or 'calendar'
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   const isEmployee = user?.employeeId || user?.employee;
 
@@ -54,11 +57,25 @@ function MyLeavesContent() {
     if (user) {
       if (isEmployee) {
         dispatch(fetchLeaveBalances({ employeeId: user.employeeId || user.employee?.id || "me", year: new Date().getFullYear() }));
-        dispatch(fetchMyLeaves({}));
       }
       dispatch(fetchLeaveTypes({}));
     }
   }, [dispatch, user, isEmployee]);
+
+  useEffect(() => {
+    if (user && isEmployee) {
+      if (viewMode === "list") {
+        dispatch(fetchMyLeaves({ page: currentPage, limit: itemsPerPage, status: activeTab }));
+      } else {
+        // Fetch all for the current month in calendar view (could be optimized)
+        dispatch(fetchMyLeaves({ limit: 100 }));
+      }
+    }
+  }, [dispatch, user, isEmployee, currentPage, activeTab, viewMode]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, viewMode]);
 
   // Apply Leave Modal
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
@@ -142,7 +159,9 @@ function MyLeavesContent() {
     CANCELLED: { label: "Cancelled", className: "bg-gray-50 text-gray-500 border border-gray-100", icon: AlertCircle }
   };
 
-  const filteredLeaves = myLeaves.filter(l => l.status === activeTab);
+  // In list view, myLeaves is already filtered by backend
+  // In calendar view, myLeaves has all statuses
+  const filteredLeaves = viewMode === "list" ? myLeaves : myLeaves.filter(l => l.status === activeTab);
 
   // Calendar Helpers
   const daysInMonth = eachDayOfInterval({
@@ -242,12 +261,15 @@ function MyLeavesContent() {
         </div>
 
         {viewMode === "list" ? (
-          <MyLeavesListTable
-            filteredLeaves={filteredLeaves}
-            activeTab={activeTab}
-            statusConfig={statusConfig}
-            setCancelTarget={setCancelTarget}
-          />
+          <>
+            <MyLeavesListTable
+              filteredLeaves={filteredLeaves}
+              activeTab={activeTab}
+              statusConfig={statusConfig}
+              setCancelTarget={setCancelTarget}
+            />
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+          </>
         ) : (
           <MyLeavesCalendarView
             currentMonthDate={currentMonthDate}

@@ -12,24 +12,51 @@ import {
   selectCompaniesLoading,
   selectCompaniesError,
   clearCompaniesError,
+  selectCompaniesMetadata,
 } from "@/store/slices/companiesSlice";
-import { fetchClients, selectClients } from "@/store/slices/clientsSlice";
-import { selectUserType } from "@/store/slices/authSlice";
+import { selectClients, fetchClients } from "@/store/slices/clientsSlice";
+import { selectUserType, fetchCurrentUser } from "@/store/slices/authSlice";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import axiosClient from "@/lib/axios";
 import { Plus, Building2, Check, AlertCircle } from "lucide-react";
-
 import Pagination from "@/components/common/Pagination";
 import CompanyFilters from "@/components/companies/CompanyFilters";
 import CompaniesTable from "@/components/companies/CompaniesTable";
 import CreateCompanyModal from "@/components/companies/CreateCompanyModal";
 import CompanyDetailsDrawer from "@/components/companies/CompanyDetailsDrawer";
+import useSystemOptions from "@/hooks/useSystemOptions";
+
+const defaultFormState = {
+  name: "",
+  legalName: "",
+  companyCode: "",
+  clientId: "",
+  companyType: "",
+  industryType: "",
+  description: "",
+  registrationNumber: "",
+  taxNumber: "",
+  employeeCount: "",
+  companySize: "",
+  establishedYear: "",
+  logoUrl: "",
+  faviconUrl: "",
+  email: "",
+  phone: "",
+  website: "",
+  address: "",
+  city: "",
+  state: "",
+  country: "",
+  pincode: "",
+};
 
 function CompaniesContent() {
   const dispatch = useDispatch();
   const searchParams = useSearchParams();
 
   const companies = useSelector(selectCompanies);
+  const metadata = useSelector(selectCompaniesMetadata);
   const clients = useSelector(selectClients);
   const isLoading = useSelector(selectCompaniesLoading);
   const error = useSelector(selectCompaniesError);
@@ -53,11 +80,15 @@ function CompaniesContent() {
 
   // Modals states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [form, setForm] = useState({ name: "", clientId: "" });
+  const [form, setForm] = useState(defaultFormState);
+  const [editCompanyId, setEditCompanyId] = useState(null);
+  
+  const { options } = useSystemOptions();
 
   // Settings tab form states inside drawer
   const [settingsName, setSettingsName] = useState("");
@@ -65,13 +96,36 @@ function CompaniesContent() {
 
   // Query states
   const [search, setSearch] = useState("");
-  const [sortField, setSortField] = useState("name");
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [companyTypeFilter, setCompanyTypeFilter] = useState("ALL");
+  const [industryTypeFilter, setIndustryTypeFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sortField, setSortField] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   useEffect(() => {
-    dispatch(fetchCompanies());
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  useEffect(() => {
+    dispatch(fetchCompanies({
+      page: currentPage,
+      limit: itemsPerPage,
+      search: debouncedSearch,
+      companyType: companyTypeFilter,
+      industryType: industryTypeFilter,
+      status: statusFilter,
+      sortField,
+      sortOrder,
+    }));
+  }, [dispatch, currentPage, itemsPerPage, debouncedSearch, companyTypeFilter, industryTypeFilter, statusFilter, sortField, sortOrder]);
+
+  useEffect(() => {
     if (userType === "super_admin") {
       dispatch(fetchClients());
     }
@@ -117,13 +171,47 @@ function CompaniesContent() {
   };
 
   const openCreate = () => {
-    setForm({ name: "", clientId: "" });
+    setForm(defaultFormState);
+    setIsEditMode(false);
+    setEditCompanyId(null);
+    setIsCreateOpen(true);
+  };
+
+  const openEdit = (company) => {
+    setForm({
+      name: company.name || "",
+      legalName: company.legalName || "",
+      companyCode: company.companyCode || "",
+      clientId: company.clientId || "",
+      companyType: company.companyType || "",
+      industryType: company.industryType || "",
+      description: company.description || "",
+      registrationNumber: company.registrationNumber || "",
+      taxNumber: company.taxNumber || "",
+      employeeCount: company.employeeCount || "",
+      companySize: company.companySize || "",
+      establishedYear: company.establishedYear || "",
+      logoUrl: company.logoUrl || "",
+      faviconUrl: company.faviconUrl || "",
+      email: company.email || "",
+      phone: company.phone || "",
+      website: company.website || "",
+      address: company.address || "",
+      city: company.city || "",
+      state: company.state || "",
+      country: company.country || "",
+      pincode: company.pincode || "",
+    });
+    setIsEditMode(true);
+    setEditCompanyId(company.id);
     setIsCreateOpen(true);
   };
 
   const closeModals = () => {
     setIsCreateOpen(false);
     setDeleteTarget(null);
+    setEditCompanyId(null);
+    setIsEditMode(false);
     dispatch(clearCompaniesError());
   };
 
@@ -131,15 +219,52 @@ function CompaniesContent() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const payload = { name: form.name };
+      const payload = { ...form };
+      
       if (userType === "super_admin" && form.clientId) {
         payload.clientId = Number(form.clientId);
       }
-      await dispatch(createCompany(payload)).unwrap();
-      showToast("Company created successfully");
+
+      // Convert number fields safely
+      if (payload.employeeCount) payload.employeeCount = Number(payload.employeeCount);
+      else delete payload.employeeCount;
+
+      if (payload.establishedYear) payload.establishedYear = Number(payload.establishedYear);
+      else delete payload.establishedYear;
+
+      // Clean empty string fields
+      Object.keys(payload).forEach(key => {
+        if (payload[key] === "") delete payload[key];
+      });
+
+      if (payload.companyCode) {
+        payload.companyCode = payload.companyCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      }
+
+      if (isEditMode) {
+        // Backend UpdateCompanyDto doesn't accept clientId
+        delete payload.clientId;
+        const res = await dispatch(updateCompany({ id: editCompanyId, ...payload })).unwrap();
+        showToast("Enterprise Company updated successfully");
+        if (selectedCompany?.id === res.id) {
+            setSelectedCompany(res);
+            setSettingsName(res.name);
+        }
+      } else {
+        await dispatch(createCompany(payload)).unwrap();
+        showToast("Enterprise Company created successfully");
+        setCurrentPage(1);
+        dispatch(fetchCompanies({
+          page: 1, limit: itemsPerPage, search: debouncedSearch,
+          companyType: companyTypeFilter, industryType: industryTypeFilter, status: statusFilter,
+          sortField, sortOrder
+        }));
+      }
+      // Refetch profile to update sidebar branding
+      dispatch(fetchCurrentUser());
       closeModals();
     } catch (err) {
-      showToast(err || "Failed to create company", "error");
+      showToast(err || `Failed to ${isEditMode ? "update" : "create"} company`, "error");
     } finally {
       setIsSaving(false);
     }
@@ -167,20 +292,14 @@ function CompaniesContent() {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await dispatch(deleteCompany(deleteTarget.id)).unwrap();
-      showToast("Company workspace deleted successfully");
-      if (selectedCompany?.id === deleteTarget.id) {
-        setDrawerOpen(false);
-      }
-      
-      // Bug Fix: Fix pagination boundary when deleting
-      const newTotal = filteredCompanies.length - 1;
-      const newTotalPages = Math.ceil(newTotal / itemsPerPage) || 1;
-      if (currentPage > newTotalPages) {
-        setCurrentPage(newTotalPages);
-      }
-      
-      closeModals();
+      await dispatch(deleteCompany(deleteTarget)).unwrap();
+      showToast("Enterprise Company deleted securely");
+      setDeleteTarget(null);
+      dispatch(fetchCompanies({
+        page: currentPage, limit: itemsPerPage, search: debouncedSearch,
+        companyType: companyTypeFilter, industryType: industryTypeFilter, status: statusFilter,
+        sortField, sortOrder
+      }));
     } catch (err) {
       showToast(err || "Failed to delete company", "error");
     } finally {
@@ -211,32 +330,33 @@ function CompaniesContent() {
     }
   };
 
-  const filteredCompanies = companies.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.id.toString().includes(search)
-  );
-
-  const sortedCompanies = [...filteredCompanies].sort((a, b) => {
-    let valA = a[sortField];
-    let valB = b[sortField];
-    if (typeof valA === "string") {
-      return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    }
-    return sortOrder === "asc" ? valA - valB : valB - valA;
-  });
-
-  const totalPages = Math.ceil(sortedCompanies.length / itemsPerPage) || 1;
-  const paginatedCompanies = sortedCompanies.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
   if (isLoading && companies.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <div className="h-8 w-8 rounded-full border-2 border-[#007aff] border-t-transparent animate-spin mb-3" />
-        <p className="text-xs font-semibold text-gray-400">Loading workspaces...</p>
+      <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6 animate-pulse">
+        <div className="flex justify-between items-center mb-8">
+          <div className="h-8 w-64 bg-gray-200 rounded-xl" />
+          <div className="h-10 w-40 bg-gray-200 rounded-xl" />
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-gray-100 flex gap-4">
+            <div className="h-10 w-1/3 bg-gray-100 rounded-xl" />
+            <div className="h-10 w-1/4 bg-gray-100 rounded-xl" />
+            <div className="h-10 w-1/4 bg-gray-100 rounded-xl" />
+          </div>
+          <div className="divide-y divide-gray-100">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="p-4 flex gap-6 items-center">
+                <div className="h-10 w-10 bg-gray-200 rounded-xl shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 w-1/4 bg-gray-200 rounded" />
+                  <div className="h-3 w-1/3 bg-gray-100 rounded" />
+                </div>
+                <div className="h-6 w-24 bg-gray-200 rounded-full" />
+                <div className="h-8 w-8 bg-gray-200 rounded-lg shrink-0" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -259,11 +379,11 @@ function CompaniesContent() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
             <Building2 className="h-6 w-6 text-[#007aff]" />
-            Company Workspaces
+            Enterprise Companies
           </h1>
           <p className="text-xs text-gray-400 font-medium mt-1">
             {userType === "super_admin"
-              ? "Global repository of company spaces."
+              ? "Global repository of all enterprise companies."
               : "Isolated company workspaces assigned to your tenant organization."}
           </p>
         </div>
@@ -272,22 +392,36 @@ function CompaniesContent() {
             onClick={openCreate}
             className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors self-start sm:self-auto"
           >
-            <Plus className="h-4 w-4" /> Create Company Workspace
+            <Plus className="h-4 w-4" /> Create Company
           </button>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-        <CompanyFilters
-          search={search}
-          setSearch={setSearch}
-          setCurrentPage={setCurrentPage}
-          filteredCount={filteredCompanies.length}
-          totalCount={companies.length}
-        />
+      {/* Filters */}
+      <CompanyFilters
+        search={search}
+        setSearch={setSearch}
+        companyTypeFilter={companyTypeFilter}
+        setCompanyTypeFilter={setCompanyTypeFilter}
+        industryTypeFilter={industryTypeFilter}
+        setIndustryTypeFilter={setIndustryTypeFilter}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        setCurrentPage={setCurrentPage}
+        filteredCount={companies.length}
+        totalCount={metadata.total}
+        options={options}
+      />
 
+      {/* Main Table Area */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden relative min-h-[400px]">
+        {isLoading && companies.length > 0 && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
+            <div className="h-8 w-8 border-4 border-[#007aff]/30 border-t-[#007aff] rounded-full animate-spin"></div>
+          </div>
+        )}
         <CompaniesTable
-          paginatedCompanies={paginatedCompanies}
+          paginatedCompanies={companies}
           selectedCompany={selectedCompany}
           sortField={sortField}
           sortOrder={sortOrder}
@@ -296,10 +430,15 @@ function CompaniesContent() {
           toggleActiveInline={toggleActiveInline}
           setDeleteTarget={setDeleteTarget}
           userType={userType}
+          openEdit={openEdit}
         />
-
-        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={metadata.totalPages}
+        onPageChange={setCurrentPage}
+      />
 
       <CompanyDetailsDrawer
         drawerOpen={drawerOpen}
@@ -320,15 +459,17 @@ function CompaniesContent() {
       />
 
       <CreateCompanyModal
-        isCreateOpen={isCreateOpen}
+        isOpen={isCreateOpen}
         closeModals={closeModals}
-        handleCreateSubmit={handleCreateSubmit}
+        handleSubmit={handleCreateSubmit}
         form={form}
         setForm={setForm}
         isSaving={isSaving}
         userType={userType}
         clients={clients}
         error={error}
+        options={options}
+        isEditMode={isEditMode}
       />
 
       <ConfirmModal

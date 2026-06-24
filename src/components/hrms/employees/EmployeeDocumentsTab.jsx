@@ -2,6 +2,7 @@ import { useState } from "react";
 import { UploadCloud, FileText, Eye, Download, Trash2, CheckCircle, XCircle } from "lucide-react";
 import axiosClient from "@/lib/axios";
 import HasPermission from "@/components/rbac/HasPermission";
+import useSystemOptions from "@/hooks/useSystemOptions";
 
 const mapDocTypeToCategory = (type) => {
   switch (type) {
@@ -24,6 +25,7 @@ export default function EmployeeDocumentsTab({
   empDocuments, 
   loadDocuments 
 }) {
+  const { options } = useSystemOptions();
   const [pendingDocs, setPendingDocs] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -167,12 +169,9 @@ export default function EmployeeDocumentsTab({
               </div>
               <div className="flex items-center gap-2">
                 <select value={doc.documentType} onChange={(e) => handlePendingDocTypeChange(i, e.target.value)} className="border border-gray-200 rounded text-[10px] px-1 py-1 outline-none focus:border-[#007aff] bg-gray-50 text-gray-600">
-                  <option value="PROFILE_PHOTO">Profile Photo</option>
-                  <option value="AADHAAR">Aadhaar</option>
-                  <option value="PAN">PAN</option>
-                  <option value="RESUME">Resume</option>
-                  <option value="OFFER_LETTER">Offer Letter</option>
-                  <option value="OTHER">Other</option>
+                  {options?.hrms?.documentTypes?.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
                 </select>
                 <button type="button" onClick={() => handleRemovePendingDoc(i)} className="text-red-500 hover:bg-red-50 p-1 rounded font-bold">X</button>
               </div>

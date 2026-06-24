@@ -14,7 +14,7 @@ import {
   selectBranchesError,
   clearBranchesError,
 } from "@/store/entities/branchesSlice";
-import { fetchEmployees, selectEmployeesData } from "@/store/entities/employeesSlice";
+
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import { Plus, MapPin, Check, AlertCircle, Building2 } from "lucide-react";
 
@@ -23,6 +23,7 @@ import BranchesFilters from "@/components/branches/BranchesFilters";
 import BranchesTable from "@/components/branches/BranchesTable";
 import BranchDetailsDrawer from "@/components/branches/BranchDetailsDrawer";
 import CreateBranchModal from "@/components/branches/CreateBranchModal";
+import useDebounce from "@/hooks/useDebounce";
 
 function BranchesContent() {
   const dispatch = useDispatch();
@@ -33,7 +34,7 @@ function BranchesContent() {
   const { data: branches, total, page, totalPages } = useSelector(
     selectBranchesData
   ) || { data: [], total: 0, page: 1, totalPages: 0 };
-  const { data: employees } = useSelector(selectEmployeesData) || { data: [] };
+
 
   const isLoading = useSelector(selectBranchesLoading);
   const error = useSelector(selectBranchesError);
@@ -78,6 +79,7 @@ function BranchesContent() {
   });
 
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -89,10 +91,9 @@ function BranchesContent() {
 
   useEffect(() => {
     if (selectedCompanyId) {
-      dispatch(fetchBranches({ page: currentPage, limit: itemsPerPage, search }));
-      dispatch(fetchEmployees({ limit: 1000 }));
+      dispatch(fetchBranches({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
     }
-  }, [dispatch, currentPage, search, selectedCompanyId]);
+  }, [dispatch, currentPage, debouncedSearch, selectedCompanyId]);
 
   const handleCompanyChange = (e) => {
     const val = e.target.value;
@@ -173,7 +174,7 @@ function BranchesContent() {
         await dispatch(createBranch(payload)).unwrap();
         showToast("Branch created successfully");
       }
-      dispatch(fetchBranches({ page: currentPage, limit: itemsPerPage, search }));
+      dispatch(fetchBranches({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
       closeModals();
     } catch (err) {
       showToast(err || "Save failed", "error");
@@ -196,7 +197,7 @@ function BranchesContent() {
       if (currentPage > newTotalPages) {
         setCurrentPage(newTotalPages);
       } else {
-        dispatch(fetchBranches({ page: currentPage, limit: itemsPerPage, search }));
+        dispatch(fetchBranches({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
       }
 
       closeModals();
@@ -319,7 +320,6 @@ function BranchesContent() {
         handleSave={handleSave}
         form={form}
         setForm={setForm}
-        employees={employees}
         isSaving={isSaving}
         error={error}
       />

@@ -1,6 +1,6 @@
 import React from "react";
 import Drawer from "@/components/drawers/Drawer";
-import { Info, Shield, History } from "lucide-react";
+import { Info, Shield, History, MapPin, Building2, Briefcase, Hash, Phone, Mail, Globe, Users, Target } from "lucide-react";
 
 export default function CompanyDetailsDrawer({
   drawerOpen,
@@ -42,43 +42,178 @@ export default function CompanyDetailsDrawer({
       ]}
     >
       {loadingDetails ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-2">
-          <div className="h-6 w-6 border-2 border-[#007aff] border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs text-gray-400 font-semibold">Loading details...</span>
+        <div className="space-y-6 animate-pulse p-4">
+          <div className="flex gap-4">
+            <div className="h-16 w-16 bg-gray-200 rounded-xl" />
+            <div className="h-16 w-16 bg-gray-200 rounded-xl" />
+          </div>
+          <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/4" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="h-8 bg-gray-200 rounded w-3/4" />
+              <div className="h-8 bg-gray-200 rounded w-2/4" />
+              <div className="h-8 bg-gray-200 rounded w-full" />
+              <div className="h-8 bg-gray-200 rounded w-1/2" />
+            </div>
+          </div>
+          <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/3" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="h-8 bg-gray-200 rounded w-2/3" />
+              <div className="h-8 bg-gray-200 rounded w-full" />
+            </div>
+          </div>
         </div>
       ) : (
         <div className="space-y-6">
           {/* OVERVIEW TAB */}
           {activeTab === "overview" && (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-2xs overflow-hidden">
-              <div className="p-4 border-b border-gray-50 bg-gray-50/20 text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                <Info className="h-4 w-4 text-gray-400" />
-                Workspace Scoping Details
+            <div className="space-y-4">
+              
+              {/* BRANDING PREVIEW (If exists) */}
+              {(selectedCompany?.logoUrl || selectedCompany?.faviconUrl) && (
+                <div className="bg-white rounded-xl border border-gray-100 shadow-xs p-4 flex gap-6">
+                  {selectedCompany?.logoUrl && (
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Logo</span>
+                      <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${selectedCompany.logoUrl}`} alt="Logo" className="h-16 w-16 object-contain rounded-lg border border-gray-200" onError={(e) => e.target.style.display = 'none'} />
+                    </div>
+                  )}
+                  {selectedCompany?.faviconUrl && (
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Favicon</span>
+                      <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${selectedCompany.faviconUrl}`} alt="Favicon" className="h-8 w-8 object-contain rounded-lg border border-gray-200" onError={(e) => e.target.style.display = 'none'} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* BASIC INFO */}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
+                <div className="p-3.5 border-b border-gray-50 bg-gray-50/20 text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Info className="h-3.5 w-3.5" />
+                  Basic Information
+                </div>
+                <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Company Name</span>
+                    <span className={`font-bold ${selectedCompany?.name ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.name || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Legal Name</span>
+                    <span className={`font-bold ${selectedCompany?.legalName ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.legalName || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Company Code</span>
+                    <span className={`font-bold ${selectedCompany?.companyCode ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.companyCode || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Tenant Subdomain / ID</span>
+                    <span className="font-bold text-gray-800">Client #{selectedCompany?.clientId}</span>
+                  </div>
+                </div>
               </div>
-              <div className="p-4 space-y-3.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-gray-400 font-medium">Workspace ID</span>
-                  <span className="font-bold text-gray-800">#{selectedCompany?.id}</span>
+
+              {/* BUSINESS INFO */}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
+                <div className="p-3.5 border-b border-gray-50 bg-gray-50/20 text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Briefcase className="h-3.5 w-3.5" />
+                  Business Details
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400 font-medium">Workspace Name</span>
-                  <span className="font-bold text-gray-800">{selectedCompany?.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400 font-medium">Parent Tenant Owner</span>
-                  <span className="font-bold text-gray-800">Client #{selectedCompany?.clientId}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400 font-medium">Active Status</span>
-                  <span
-                    className={`font-bold ${
-                      selectedCompany?.isActive ? "text-green-600" : "text-gray-400"
-                    }`}
-                  >
-                    {selectedCompany?.isActive ? "Active / Enabled" : "Disabled / Locked"}
-                  </span>
+                <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Company Type</span>
+                    <span className={`font-bold ${selectedCompany?.companyType ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.companyType || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Industry Type</span>
+                    <span className={`font-bold ${selectedCompany?.industryType ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.industryType || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Registration Number</span>
+                    <span className={`font-bold ${selectedCompany?.registrationNumber ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.registrationNumber || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Tax Number</span>
+                    <span className={`font-bold ${selectedCompany?.taxNumber ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.taxNumber || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Employee Count</span>
+                    <span className={`font-bold ${selectedCompany?.employeeCount ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.employeeCount || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Company Size</span>
+                    <span className={`font-bold ${selectedCompany?.companySize ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.companySize || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Established Year</span>
+                    <span className={`font-bold ${selectedCompany?.establishedYear ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.establishedYear || "Not Set"}</span>
+                  </div>
+                  <div className="md:col-span-2">
+                    <span className="block text-gray-400 font-medium mb-1">Description</span>
+                    <p className={`whitespace-pre-wrap ${selectedCompany?.description ? 'text-gray-800' : 'text-gray-400 italic font-bold'}`}>{selectedCompany?.description || "Not Set"}</p>
+                  </div>
                 </div>
               </div>
+
+              {/* CONTACT INFO */}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
+                <div className="p-3.5 border-b border-gray-50 bg-gray-50/20 text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5" />
+                  Contact Information
+                </div>
+                <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1 flex items-center gap-1"><Mail className="h-3 w-3"/> Email</span>
+                    <span className={`font-bold ${selectedCompany?.email ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.email || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1 flex items-center gap-1"><Phone className="h-3 w-3"/> Phone</span>
+                    <span className={`font-bold ${selectedCompany?.phone ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.phone || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1 flex items-center gap-1"><Globe className="h-3 w-3"/> Website</span>
+                    {selectedCompany?.website ? (
+                      <a href={selectedCompany.website} target="_blank" rel="noreferrer" className="font-bold text-[#007aff] hover:underline">
+                        {selectedCompany.website}
+                      </a>
+                    ) : (
+                      <span className="font-bold text-gray-400 italic">Not Set</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ADDRESS INFO */}
+              <div className="bg-white rounded-xl border border-gray-100 shadow-xs overflow-hidden">
+                <div className="p-3.5 border-b border-gray-50 bg-gray-50/20 text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" />
+                  Address Information
+                </div>
+                <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="md:col-span-2">
+                    <span className="block text-gray-400 font-medium mb-1">Street Address</span>
+                    <span className={`font-bold ${selectedCompany?.address ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.address || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">City</span>
+                    <span className={`font-bold ${selectedCompany?.city ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.city || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">State / Province</span>
+                    <span className={`font-bold ${selectedCompany?.state ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.state || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Country</span>
+                    <span className={`font-bold ${selectedCompany?.country ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.country || "Not Set"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-gray-400 font-medium mb-1">Pincode / ZIP</span>
+                    <span className={`font-bold ${selectedCompany?.pincode ? 'text-gray-800' : 'text-gray-400 italic'}`}>{selectedCompany?.pincode || "Not Set"}</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
 

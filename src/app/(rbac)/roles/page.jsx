@@ -12,6 +12,7 @@ import {
   selectRolesLoading,
   selectRolesError,
   clearRolesError,
+  selectRolesMeta,
 } from "@/store/slices/rolesSlice";
 import { selectUserType } from "@/store/slices/authSlice";
 import ConfirmModal from "@/components/modals/ConfirmModal";
@@ -23,12 +24,14 @@ import RoleFilters from "@/components/roles/RoleFilters";
 import RolesTable from "@/components/roles/RolesTable";
 import CreateRoleModal from "@/components/roles/CreateRoleModal";
 import RoleDetailsDrawer from "@/components/roles/RoleDetailsDrawer";
+import useDebounce from "@/hooks/useDebounce";
 
 function RolesContent() {
   const dispatch = useDispatch();
   const searchParams = useSearchParams();
 
   const roles = useSelector(selectRoles);
+  const meta = useSelector(selectRolesMeta);
   const isLoading = useSelector(selectRolesLoading);
   const error = useSelector(selectRolesError);
 
@@ -67,8 +70,9 @@ function RolesContent() {
   const [permissionRegistry, setPermissionRegistry] = useState([]);
   const [registryLoading, setRegistryLoading] = useState(false);
 
+  const debouncedSearch = useDebounce(search, 500);
+
   useEffect(() => {
-    dispatch(fetchRoles());
     const fetchRegistry = async () => {
       setRegistryLoading(true);
       try {
@@ -81,7 +85,17 @@ function RolesContent() {
       }
     };
     fetchRegistry();
-  }, [dispatch]);
+  }, []);
+
+  useEffect(() => {
+    const params = { page: currentPage, limit: itemsPerPage };
+    if (debouncedSearch) params.search = debouncedSearch;
+    dispatch(fetchRoles(params));
+  }, [dispatch, debouncedSearch, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
   // Handle query parameter (for automatic drawer opening from Command Palette)
   useEffect(() => {
@@ -192,7 +206,7 @@ function RolesContent() {
       }
       
       // Bug Fix: Fix pagination boundary when deleting
-      const newTotal = filteredRoles.length - 1;
+      const newTotal = roles.length - 1;
       const newTotalPages = Math.ceil(newTotal / itemsPerPage) || 1;
       if (currentPage > newTotalPages) {
         setCurrentPage(newTotalPages);
@@ -249,18 +263,8 @@ function RolesContent() {
     }));
   };
 
-  // Sorting/filtering roles list
-  const filteredRoles = roles.filter(
-    (r) =>
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.description?.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const totalPages = Math.ceil(filteredRoles.length / itemsPerPage) || 1;
-  const paginatedRoles = filteredRoles.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const totalPages = meta?.totalPages || 1;
+  const paginatedRoles = roles;
 
   if ((isLoading && roles.length === 0) || registryLoading) {
     return (
@@ -308,7 +312,7 @@ function RolesContent() {
           search={search}
           setSearch={setSearch}
           setCurrentPage={setCurrentPage}
-          filteredCount={filteredRoles.length}
+          filteredCount={roles.length}
           totalCount={roles.length}
         />
 
