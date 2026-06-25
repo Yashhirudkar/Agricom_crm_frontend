@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Bell, Check, LogOut, ChevronDown, Building2, Search } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { logoutUser, selectUser, fetchCurrentUser } from "@/store/slices/authSlice";
@@ -11,18 +11,19 @@ import axiosClient from "@/lib/axios";
 export function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   const dispatch = useDispatch();
   const router = useRouter();
   const user = useSelector(selectUser);
 
+  // Notifications disabled — backend /v1/notifications not yet live
+  const notifications = [];
+  const unreadCount = 0;
+
   const handleLogout = async () => {
     await dispatch(logoutUser());
     router.replace("/login");
   };
-
 
   // Switch Workspace
   const handleSwitchWorkspace = async (companyId) => {
@@ -37,43 +38,10 @@ export function Header() {
     }
   };
 
-  // Fetch Notifications
-  const getNotificationsList = async () => {
-    try {
-      const res = await axiosClient.get("/notifications");
-      const list = res.data || [];
-      setNotifications(list);
-      setUnreadCount(list.filter((n) => !n.isRead).length);
-    } catch (err) {
-      console.error("Failed to fetch notifications:", err);
-    }
-  };
+  const handleMarkAsRead = async (_id) => {};
 
-  const handleMarkAsRead = async (id) => {
-    try {
-      await axiosClient.post("/notifications/read", { id });
-      getNotificationsList();
-    } catch (err) {
-      console.error("Failed to mark read:", err);
-    }
-  };
+  const handleMarkAllRead = async () => {};
 
-  const handleMarkAllRead = async () => {
-    try {
-      await axiosClient.post("/notifications/read-all");
-      getNotificationsList();
-    } catch (err) {
-      console.error("Failed to mark all read:", err);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      getNotificationsList();
-      const interval = setInterval(getNotificationsList, 20000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
 
   // Determine active workspace
   const workspaces = user?.workspaces || [];

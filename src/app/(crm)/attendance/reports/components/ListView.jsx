@@ -16,7 +16,6 @@ export default function ListView({ daysInView, records }) {
     return records.find((r) => r.date === dateStr);
   };
 
-  console.log("2. React rerender tick. now:", now);
 
   return (
     <div className="flex flex-col bg-white -mx-4 -my-4 sm:m-0 sm:border sm:border-gray-100 sm:rounded-2xl sm:overflow-hidden">
@@ -26,10 +25,6 @@ export default function ListView({ daysInView, records }) {
         const dayNum = String(dateObj.getDate()).padStart(2, "0");
         const isToday = new Date().toDateString() === dateObj.toDateString();
 
-        if (isToday) {
-          console.log(`1. Today's Record:`, record);
-          console.log(`   record.attendanceState === "WORKING"?`, record?.attendanceState === "WORKING");
-        }
 
         const checkInTime = formatDisplayTime(record?.checkIn);
         let checkOutTime = formatDisplayTime(record?.checkOut);
@@ -37,7 +32,6 @@ export default function ListView({ daysInView, records }) {
 
         if (!record?.checkOut && isToday && record?.attendanceState === "WORKING") {
           checkOutTime = formatDisplayTime(now, true);
-          console.log("4. Live checkOutTime updated:", checkOutTime);
           const checkInMs = new Date(record.checkIn).getTime();
           workHrs = Math.max(0, (now.getTime() - checkInMs) / (1000 * 60 * 60));
         }
@@ -128,9 +122,6 @@ export default function ListView({ daysInView, records }) {
                       if (!record.checkOut && isToday) endPercent = calculateTimePercent(now, shiftStart, shiftEnd);
                       const barWidth = Math.max(endPercent - startPercent, 0);
 
-                      if (isToday) {
-                        console.log(`3. calculateTimePercent logs for today:`, { startPercent, endPercent, barWidth });
-                      }
 
                       return (
                         <div

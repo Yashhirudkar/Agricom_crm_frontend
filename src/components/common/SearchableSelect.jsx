@@ -1,7 +1,6 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import AsyncSelect from 'react-select/async';
 import axios from 'axios';
-import { toast } from 'react-hot-toast';
 
 /**
  * Reusable Async Select component for lazy loading dropdown options from the backend.
@@ -43,7 +42,6 @@ const SearchableSelect = ({
       return [];
     } catch (error) {
       console.error(`Error loading options from ${endpoint}:`, error);
-      toast.error('Failed to load options');
       return [];
     }
   }, [endpoint, additionalParams]);

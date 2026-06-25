@@ -23,6 +23,7 @@ import hscodesReducer from "./entities/hscodeSlice";
 import partnerRolesReducer from "./entities/partnerRoleSlice";
 import productsReducer from "./entities/productSlice";
 import partnersReducer from "./entities/partnerSlice";
+import tasksReducer from "./entities/taskSlice";
 
 import { injectStore } from "../lib/axios";
 
@@ -44,6 +45,7 @@ const entitiesReducer = combineReducers({
   partnerRoles: partnerRolesReducer,
   products: productsReducer,
   partners: partnersReducer,
+  tasks: tasksReducer,
 });
 
 export const store = configureStore({

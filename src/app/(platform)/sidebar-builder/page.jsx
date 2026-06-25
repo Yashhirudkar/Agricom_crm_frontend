@@ -248,50 +248,54 @@ export default function SidebarBuilderPage() {
                             <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">{folder.name}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <button
-                              className="p-1 text-gray-400 hover:text-indigo-500 transition-colors"
-                              title="Folder color configuration"
-                            >
-                              <Palette className="h-4 w-4" />
-                            </button>
+                            {folder.id !== 0 && (
+                              <>
+                                <button
+                                  className="p-1 text-gray-400 hover:text-indigo-500 transition-colors"
+                                  title="Folder color configuration"
+                                >
+                                  <Palette className="h-4 w-4" />
+                                </button>
 
-                            {/* Collapsible Toggle — segmented mechanical switch */}
-                            <button
-                              onClick={() => handleToggleCollapsible(folder)}
-                              title={folder.is_collapsible ? "Collapsible ON — click to disable" : "Collapsible OFF — click to enable"}
-                              className={`
-                                inline-flex items-center justify-center
-                                px-2.5 py-0.5
-                                rounded-md
-                                border
-                                text-[10px] font-bold tracking-widest uppercase
-                                select-none cursor-pointer
-                                transition-all duration-150
-                                active:scale-95
-                                focus:outline-none
-                                ${folder.is_collapsible
-                                  ? "bg-[#007aff] border-[#0062cc] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_2px_4px_rgba(0,122,255,0.35)]"
-                                  : "bg-gray-100 border-gray-300 text-gray-400 shadow-[inset_0_2px_3px_rgba(0,0,0,0.08)] hover:bg-gray-200 hover:text-gray-500"
-                                }
-                              `}
-                            >
-                              {folder.is_collapsible ? "ON" : "OFF"}
-                            </button>
+                                {/* Collapsible Toggle — segmented mechanical switch */}
+                                <button
+                                  onClick={() => handleToggleCollapsible(folder)}
+                                  title={folder.is_collapsible ? "Collapsible ON — click to disable" : "Collapsible OFF — click to enable"}
+                                  className={`
+                                    inline-flex items-center justify-center
+                                    px-2.5 py-0.5
+                                    rounded-md
+                                    border
+                                    text-[10px] font-bold tracking-widest uppercase
+                                    select-none cursor-pointer
+                                    transition-all duration-150
+                                    active:scale-95
+                                    focus:outline-none
+                                    ${folder.is_collapsible
+                                      ? "bg-[#007aff] border-[#0062cc] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_2px_4px_rgba(0,122,255,0.35)]"
+                                      : "bg-gray-100 border-gray-300 text-gray-400 shadow-[inset_0_2px_3px_rgba(0,0,0,0.08)] hover:bg-gray-200 hover:text-gray-500"
+                                    }
+                                  `}
+                                >
+                                  {folder.is_collapsible ? "ON" : "OFF"}
+                                </button>
 
-                            <button
-                              onClick={() => openEditFolder(folder)}
-                              className="p-1 text-gray-400 hover:text-[#007aff] transition-colors"
-                              title="Rename folder"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteTarget({ type: "FOLDER", id: folder.id, name: folder.name })}
-                              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                              title="Delete folder"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                                <button
+                                  onClick={() => openEditFolder(folder)}
+                                  className="p-1 text-gray-400 hover:text-[#007aff] transition-colors"
+                                  title="Rename folder"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => setDeleteTarget({ type: "FOLDER", id: folder.id, name: folder.name })}
+                                  className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                  title="Delete folder"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 

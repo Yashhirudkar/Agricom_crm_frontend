@@ -61,7 +61,7 @@ export default function CompaniesTable({
                         src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${company.logoUrl}`} 
                         alt="Logo" 
                         className="h-9 w-9 rounded-lg object-cover border border-gray-100 shadow-xs" 
-                        onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/36?text=" + (company.name?.charAt(0).toUpperCase() || 'C') }} 
+                        onError={(e) => { e.target.onerror = null; e.target.src = "https://ui-avatars.com/api/?background=random&color=fff&name=" + (company.name?.charAt(0).toUpperCase() || 'C') }} 
                       />
                     ) : (
                       <div className="h-9 w-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm border border-blue-100 shadow-xs">

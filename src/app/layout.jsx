@@ -1,8 +1,10 @@
 import { Roboto, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ReduxProvider } from "../components/ReduxProvider";
+import { QueryProvider } from "../components/QueryProvider";
 import { AuthGuard } from "../components/AuthGuard";
 import AppShellClient from "../components/layout/AppShell";
+import { Toaster } from "sonner";
 
 const roboto = Roboto({
   variable: "--font-roboto",
@@ -32,11 +34,14 @@ export default function RootLayout({ children }) {
       className={`${roboto.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-full flex flex-col text-gray-900 font-sans overflow-hidden bg-[#f8f9fc]">
-        <ReduxProvider>
-          <AuthGuard>
-            <AppShellClient>{children}</AppShellClient>
-          </AuthGuard>
-        </ReduxProvider>
+        <QueryProvider>
+          <ReduxProvider>
+            <AuthGuard>
+              <AppShellClient>{children}</AppShellClient>
+            </AuthGuard>
+          </ReduxProvider>
+        </QueryProvider>
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

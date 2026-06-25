@@ -142,7 +142,6 @@ const attendanceSlice = createSlice({
       state.successMessage = null;
     },
     handleSocketBatchUpdate(state, action) {
-      console.log("REDUCER HIT", action.payload);
       const updates = action.payload;
       if (!Array.isArray(updates)) return;
 

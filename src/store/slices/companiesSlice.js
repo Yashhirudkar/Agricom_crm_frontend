@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
 import axiosClient from "@/lib/axios";
 
 export const fetchCompanies = createAsyncThunk("companies/fetchAll", async (params = {}, { rejectWithValue }) => {
@@ -87,12 +87,13 @@ const companiesSlice = createSlice({
 export const { clearCompaniesError } = companiesSlice.actions;
 
 export const selectCompanies = (state) => state.companies.list;
-export const selectCompaniesMetadata = (state) => ({
-  total: state.companies.total,
-  page: state.companies.page,
-  limit: state.companies.limit,
-  totalPages: state.companies.totalPages,
-});
+export const selectCompaniesMetadata = createSelector(
+  (state) => state.companies.total,
+  (state) => state.companies.page,
+  (state) => state.companies.limit,
+  (state) => state.companies.totalPages,
+  (total, page, limit, totalPages) => ({ total, page, limit, totalPages })
+);
 export const selectCompaniesLoading = (state) => state.companies.isLoading;
 export const selectCompaniesError = (state) => state.companies.error;
 

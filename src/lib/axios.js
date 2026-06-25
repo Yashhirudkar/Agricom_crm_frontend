@@ -13,6 +13,20 @@ const axiosClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  paramsSerializer: {
+    serialize: function (params) {
+      const searchParams = new URLSearchParams();
+      for (const key of Object.keys(params)) {
+        const val = params[key];
+        if (Array.isArray(val)) {
+          val.forEach(v => searchParams.append(key, v));
+        } else if (val !== undefined && val !== null) {
+          searchParams.append(key, val);
+        }
+      }
+      return searchParams.toString();
+    }
+  }
 });
 
 // Request interceptor — attach Bearer token and activeCompanyId
@@ -64,17 +78,32 @@ axiosClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+import { toast } from "sonner";
+
 // Response interceptor — on 401, clear session and redirect to /login
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error("[Axios Error]", error.config?.url, error.response?.status, error.response?.data);
-    if (error.response?.status === 401) {
-      if (typeof window !== "undefined") {
+    
+    if (typeof window !== "undefined") {
+      if (error.response?.status === 401) {
         sessionStorage.removeItem("accessToken");
         window.location.href = "/login";
+        return Promise.reject(error);
+      }
+
+      // Extract error message from standard backend DTO or fallback
+      const message = error.response?.data?.message || error.response?.data?.error || "An unexpected error occurred.";
+      
+      // Don't toast 404s globally if they are expected (optional), but for enterprise usually we toast 4xx and 5xx
+      if (error.response?.status >= 400 && error.response?.status !== 404) {
+        toast.error(message);
+      } else if (error.message === "Network Error") {
+        toast.error("Network connection lost. Please check your internet connection.");
       }
     }
+    
     return Promise.reject(error);
   }
 );
