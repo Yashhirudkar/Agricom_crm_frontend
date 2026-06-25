@@ -53,5 +53,21 @@ export const TaskAPI = {
   getStatusTransitions: async () => {
     const { data } = await axiosClient.get("/v1/tasks/status-transitions");
     return data.data;
-  }
+  },
+
+  // Subtasks
+  getSubtasks: async (taskId) => {
+    const { data } = await axiosClient.get(`/v1/tasks/${taskId}/subtasks`);
+    return data.data || [];
+  },
+
+  createSubtask: async (taskId, payload) => {
+    const { data } = await axiosClient.post(`/v1/tasks/${taskId}/subtasks`, payload);
+    return data.data;
+  },
+
+  deleteSubtask: async (taskId, subtaskId) => {
+    const { data } = await axiosClient.delete(`/v1/tasks/${taskId}/subtasks/${subtaskId}`);
+    return data;
+  },
 };

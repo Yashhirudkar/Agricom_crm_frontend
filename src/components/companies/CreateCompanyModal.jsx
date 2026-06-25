@@ -208,8 +208,8 @@ export default function CreateCompanyModal({
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-gray-50/50 hover:bg-white transition-colors"
                     >
                       <option value="">Select Type</option>
-                      {options?.companyTypes?.map((type) => (
-                        <option key={type} value={type}>{type}</option>
+                      {options?.companies?.types?.map((t) => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
                   </div>
@@ -222,7 +222,7 @@ export default function CreateCompanyModal({
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-gray-50/50 hover:bg-white transition-colors"
                     >
                       <option value="">Select Industry</option>
-                      {options?.industryTypes?.map((ind) => (
+                      {options?.companies?.industryTypes?.map((ind) => (
                         <option key={ind} value={ind}>{ind}</option>
                       ))}
                     </select>
@@ -270,7 +270,7 @@ export default function CreateCompanyModal({
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-gray-50/50 hover:bg-white transition-colors"
                     >
                       <option value="">Select Size</option>
-                      {options?.companySizes?.map((size) => (
+                      {options?.companies?.companySizes?.map((size) => (
                         <option key={size} value={size}>{size} employees</option>
                       ))}
                     </select>

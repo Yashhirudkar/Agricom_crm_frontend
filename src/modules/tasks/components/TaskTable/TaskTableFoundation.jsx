@@ -21,6 +21,7 @@ export function TaskTableFoundation({
   columnVisibility,
   onColumnVisibilityChange,
   onRowClick,
+  renderSubRows, // NEW: (row) => ReactNode — rendered as a block after the parent row
 }) {
   const tableContainerRef = useRef(null);
 
@@ -50,7 +51,7 @@ export function TaskTableFoundation({
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 40, // Reduced to 40px for Zoho's dense data layout
+    estimateSize: () => 40,
     overscan: 15,
   });
 

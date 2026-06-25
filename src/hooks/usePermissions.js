@@ -1,5 +1,62 @@
+import { useMemo } from "react";
 import { useSelector } from "react-redux";
 import { selectUserPermissions, selectUserType } from "@/store/slices/authSlice";
+
+const normalizePermission = (permKey) => {
+  if (!permKey) return "";
+  let perm = permKey.toLowerCase().trim();
+  let [resource, action] = perm.split(':');
+
+  if (resource === 'tasks') {
+    resource = 'task';
+  }
+
+  if (action === 'view') {
+    action = 'read';
+  }
+
+  if (action === 'edit') {
+    action = 'update';
+  }
+
+  if (resource === 'manager' && action === 'approve_leave') {
+    resource = 'leave';
+    action = 'approve';
+  }
+
+  if (resource === 'employees') {
+    if (['upload_document', 'upload'].includes(action)) {
+      resource = 'employee_documents';
+      action = 'upload';
+    } else if (['view_document', 'read_document'].includes(action)) {
+      resource = 'employee_documents';
+      action = 'read';
+    } else if (['verify_document', 'verify'].includes(action)) {
+      resource = 'employee_documents';
+      action = 'verify';
+    } else if (['download_document', 'download'].includes(action)) {
+      resource = 'employee_documents';
+      action = 'download';
+    } else if (['delete_document'].includes(action)) {
+      resource = 'employee_documents';
+      action = 'delete';
+    } else if (
+      [
+        'assign_manager',
+        'change_manager',
+        'view_team',
+        'view_hierarchy',
+      ].includes(action)
+    ) {
+      resource = 'employee_hierarchy';
+    } else if (['manage_lifecycle', 'manage'].includes(action)) {
+      resource = 'employee_lifecycle';
+      action = 'manage';
+    }
+  }
+
+  return `${resource}:${action}`;
+};
 
 /**
  * A custom hook to check if the current user has specific permissions.
@@ -8,6 +65,10 @@ export function usePermissions() {
   const permissions = useSelector(selectUserPermissions);
   const user = useSelector((state) => state.auth.user);
   const userType = user?.type;
+
+  const normalizedUserPermissions = useMemo(() => {
+    return permissions?.map(p => normalizePermission(p)) || [];
+  }, [permissions]);
   
   const checkIsAdmin = () => {
     // 1. Check global userType
@@ -37,7 +98,7 @@ export function usePermissions() {
     if (!requiredPermission) return true;
     if (checkIsAdmin()) return true;
 
-    return permissions?.includes(requiredPermission.toLowerCase());
+    return normalizedUserPermissions.includes(normalizePermission(requiredPermission));
   };
 
   /**
@@ -46,7 +107,7 @@ export function usePermissions() {
   const hasAnyPermission = (requiredPermissions = []) => {
     if (requiredPermissions.length === 0) return true;
     if (checkIsAdmin()) return true;
-    return requiredPermissions.some(p => permissions?.includes(p.toLowerCase()));
+    return requiredPermissions.some(p => normalizedUserPermissions.includes(normalizePermission(p)));
   };
 
   /**
@@ -55,7 +116,7 @@ export function usePermissions() {
   const hasAllPermissions = (requiredPermissions = []) => {
     if (requiredPermissions.length === 0) return true;
     if (checkIsAdmin()) return true;
-    return requiredPermissions.every(p => permissions?.includes(p.toLowerCase()));
+    return requiredPermissions.every(p => normalizedUserPermissions.includes(normalizePermission(p)));
   };
 
   return {

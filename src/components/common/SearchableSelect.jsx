@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import AsyncSelect from 'react-select/async';
-import axios from 'axios';
+import axiosClient from '@/lib/axios';
 
 /**
  * Reusable Async Select component for lazy loading dropdown options from the backend.
@@ -26,14 +26,13 @@ const SearchableSelect = ({
 }) => {
   const loadOptions = useCallback(async (inputValue) => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}${endpoint}`, {
+      const response = await axiosClient.get(endpoint, {
         params: {
           search: inputValue,
           limit: 20, // Enough for dropdown
           page: 1,
           ...additionalParams,
         },
-        withCredentials: true,
       });
 
       if (response.data && response.data.data) {

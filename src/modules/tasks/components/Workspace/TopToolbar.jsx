@@ -28,6 +28,8 @@ import {
 } from "../../mutations/tasks.mutation";
 import ViewsDropdown from "./ViewsDropdown";
 
+import { usePermissions } from "@/hooks/usePermissions";
+
 export default function TopToolbar({ userType, allCompanies, selectedCompanyId, handleCompanyChange }) {
   const router = useRouter();
   const { 
@@ -39,6 +41,9 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
     setActiveView,
     openCreateTaskDrawer
   } = useTaskStore();
+
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission("task:create");
 
   const [searchInput, setSearchInput] = useState(filters.search || "");
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -96,8 +101,14 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
           </div>
 
           <button 
-            onClick={openCreateTaskDrawer}
-            className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 shadow-sm transition-colors cursor-pointer shrink-0"
+            onClick={() => canCreate && openCreateTaskDrawer()}
+            disabled={!canCreate}
+            className={`flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-sm font-medium rounded-lg shadow-sm transition-colors shrink-0 ${
+              canCreate 
+                ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer" 
+                : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+            }`}
+            title={canCreate ? "Create Task" : "Insufficient permissions to create tasks"}
           >
             <Plus className="w-4 h-4" />
             <span className="hidden md:inline">Create Task</span>

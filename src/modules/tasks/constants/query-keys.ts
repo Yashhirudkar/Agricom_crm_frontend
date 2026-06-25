@@ -22,6 +22,9 @@ export const TASK_QUERY_KEYS = {
   // Dependencies
   dependencies: (taskId: number) => [...TASK_QUERY_KEYS.detail(taskId), 'dependencies'] as const,
 
+  // Subtasks
+  subtasks: (taskId: number) => [...TASK_QUERY_KEYS.detail(taskId), 'subtasks'] as const,
+
   // Time Logs
   timeLogs: (taskId: number) => [...TASK_QUERY_KEYS.detail(taskId), 'time-logs'] as const,
 

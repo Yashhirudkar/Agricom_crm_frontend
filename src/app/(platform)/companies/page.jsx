@@ -158,7 +158,7 @@ function CompaniesContent() {
       ]);
 
       setCompanyUsers(usersRes.data?.users || []);
-      setCompanyRoles(Array.isArray(rolesRes.data) ? rolesRes.data : []);
+      setCompanyRoles(rolesRes.data?.data || (Array.isArray(rolesRes.data) ? rolesRes.data : []));
 
       const logs = Array.isArray(logsRes.data) ? logsRes.data : [];
       setCompanyLogs(logs.filter((l) => l.entityId === company.id));

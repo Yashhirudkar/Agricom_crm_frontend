@@ -13,6 +13,8 @@ export const useTaskStore = create((set) => ({
   selectedTaskId: null,
   isTaskDrawerOpen: false, // Right side preview drawer
   isCreateTaskDrawerOpen: false, // Right side create task drawer
+  createDrawerMode: 'create', // 'create' | 'edit'
+  createDrawerTaskId: null, // task ID when in edit mode
   isFilterDrawerOpen: false, // Right side advanced filters
   selectedRowIds: {}, // Row selection mapping { [taskId]: boolean }
 
@@ -50,11 +52,15 @@ export const useTaskStore = create((set) => ({
     selectedTaskId: null, 
     isTaskDrawerOpen: false 
   }),
-  openCreateTaskDrawer: () => set({ 
-    isCreateTaskDrawerOpen: true 
+  openCreateTaskDrawer: (taskId = null) => set({ 
+    isCreateTaskDrawerOpen: true,
+    createDrawerMode: taskId ? 'edit' : 'create',
+    createDrawerTaskId: taskId
   }),
   closeCreateTaskDrawer: () => set({ 
-    isCreateTaskDrawerOpen: false 
+    isCreateTaskDrawerOpen: false,
+    createDrawerMode: 'create',
+    createDrawerTaskId: null
   }),
   toggleFilterDrawer: () => set((state) => ({ 
     isFilterDrawerOpen: !state.isFilterDrawerOpen 

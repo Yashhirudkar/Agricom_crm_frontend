@@ -295,3 +295,38 @@ export const useBulkChangeTaskStatusMutation = () => {
     },
   });
 };
+
+// ── Subtask Mutations ────────────────────────────────────────────────────────
+
+export const useCreateSubtaskMutation = (parentTaskId) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload) => TaskAPI.createSubtask(parentTaskId, payload),
+    onSuccess: () => {
+      toast.success("Subtask created successfully");
+      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.subtasks(parentTaskId) });
+      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
+    },
+    onError: (err) => {
+      const message = err?.response?.data?.message || "Failed to create subtask";
+      toast.error(message);
+    },
+  });
+};
+
+export const useDeleteSubtaskMutation = (parentTaskId) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (subtaskId) => TaskAPI.deleteSubtask(parentTaskId, subtaskId),
+    onSuccess: () => {
+      toast.success("Subtask deleted");
+      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.subtasks(parentTaskId) });
+      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
+    },
+    onError: () => {
+      toast.error("Failed to delete subtask");
+    },
+  });
+};

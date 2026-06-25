@@ -70,7 +70,7 @@ export default function EditEmployeePage() {
           axiosClient.get(`/employees/${empId}`, { headers: { "x-company-id": companyId } })
         ]);
 
-        setRoles(rolesRes.data || []);
+        setRoles(rolesRes.data?.data || (Array.isArray(rolesRes.data) ? rolesRes.data : []));
         
         const emp = empRes.data;
         setForm({

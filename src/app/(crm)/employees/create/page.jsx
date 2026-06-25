@@ -81,7 +81,7 @@ export default function CreateEmployeePage() {
           axiosClient.get("/GetRoles", { headers: { "x-company-id": companyId } }).catch(() => ({ data: [] }))
         ]);
 
-        setRoles(rolesRes.data || []);
+        setRoles(rolesRes.data?.data || (Array.isArray(rolesRes.data) ? rolesRes.data : []));
       } catch (err) {
         console.error("Failed to load form data", err);
       }

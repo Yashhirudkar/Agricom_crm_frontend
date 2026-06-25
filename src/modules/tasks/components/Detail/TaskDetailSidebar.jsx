@@ -7,6 +7,12 @@ import {
   TagIcon
 } from '@heroicons/react/24/outline';
 
+const priorityStyles = {
+  low: "text-green-500",
+  medium: "text-yellow-500",
+  high: "text-red-500"
+};
+
 export default function TaskDetailSidebar({ task }) {
   return (
     <div className="space-y-8">
@@ -24,12 +30,14 @@ export default function TaskDetailSidebar({ task }) {
         
         <div>
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Priority</label>
-          <div className="flex items-center">
-            <FlagIcon className="w-4 h-4 mr-2 text-red-500" />
-            <span className="text-sm font-medium text-gray-900 dark:text-white">
-              {task.priority?.name || 'Normal'}
+          {task.priority ? (
+            <span className="flex items-center gap-1 text-sm font-medium">
+              <span className={`${priorityStyles[task.priority.name?.toLowerCase()] || 'text-gray-400'} font-bold shrink-0`}>!</span>
+              <span className="text-gray-800 dark:text-white">{task.priority.name}</span>
             </span>
-          </div>
+          ) : (
+            <span className="text-sm text-gray-400">Not set</span>
+          )}
         </div>
       </section>
 

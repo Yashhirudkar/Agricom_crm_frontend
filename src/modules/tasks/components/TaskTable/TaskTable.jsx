@@ -2,13 +2,14 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useTaskStore } from "../../store/taskStore";
 import { useTasksQuery, useTaskStatusesQuery, useTaskPrioritiesQuery } from "../../queries/tasks.query";
 import { TaskTableFoundation } from "./TaskTableFoundation";
-import { Archive, CheckCircle2 } from "lucide-react";
+import { Archive, CheckCircle2, ChevronDown, ChevronRight, Pencil } from "lucide-react";
 import { useChangeTaskStatusMutation, useArchiveTaskMutation, useUpdateTaskMutation } from "../../mutations/tasks.mutation";
 import { useQuery } from '@tanstack/react-query';
 import axiosClient from "../../../../lib/axios";
 import { useSelector } from 'react-redux';
 import Select from 'react-select';
 import { createPortal } from 'react-dom';
+import { usePermissions } from "@/hooks/usePermissions";
 
 // ---------------------------------------------------------------------------
 // Design tokens / helpers
@@ -58,7 +59,7 @@ function ColHeader({ children, icon: Icon }) {
 // Inline Editable Cell Components
 // ---------------------------------------------------------------------------
 
-function EditableTextCell({ value, onSave }) {
+function EditableTextCell({ value, onSave, disabled }) {
   const [isEditing, setIsEditing] = useState(false);
   const [val, setVal] = useState(value || "");
 
@@ -79,7 +80,7 @@ function EditableTextCell({ value, onSave }) {
     }
   };
 
-  if (isEditing) {
+  if (isEditing && !disabled) {
     return (
       <input
         autoFocus
@@ -95,8 +96,12 @@ function EditableTextCell({ value, onSave }) {
 
   return (
     <div
-      onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-      className="w-full min-h-[24px] text-[13px] text-gray-800 hover:text-blue-600 cursor-pointer truncate flex items-center px-2 -mx-2 hover:bg-gray-50 rounded"
+      onClick={(e) => { 
+        if (disabled) return;
+        e.stopPropagation(); 
+        setIsEditing(true); 
+      }}
+      className={`w-full min-h-[24px] text-[13px] text-gray-800 truncate flex items-center px-2 -mx-2 hover:bg-gray-50 rounded ${disabled ? "cursor-not-allowed opacity-90" : "hover:text-blue-600 cursor-pointer"}`}
       title={value}
     >
       {value || "-"}
@@ -104,7 +109,7 @@ function EditableTextCell({ value, onSave }) {
   );
 }
 
-function EditableNumberCell({ value, onSave }) {
+function EditableNumberCell({ value, onSave, disabled }) {
   const [isEditing, setIsEditing] = useState(false);
   const [val, setVal] = useState(value || "");
 
@@ -125,7 +130,7 @@ function EditableNumberCell({ value, onSave }) {
     }
   };
 
-  if (isEditing) {
+  if (isEditing && !disabled) {
     return (
       <input
         type="number"
@@ -142,15 +147,19 @@ function EditableNumberCell({ value, onSave }) {
 
   return (
     <div
-      onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-      className="w-full min-h-[24px] text-[13px] text-gray-800 hover:text-blue-600 cursor-pointer truncate flex items-center px-2 -mx-2 hover:bg-gray-50 rounded"
+      onClick={(e) => { 
+        if (disabled) return;
+        e.stopPropagation(); 
+        setIsEditing(true); 
+      }}
+      className={`w-full min-h-[24px] text-[13px] text-gray-800 truncate flex items-center px-2 -mx-2 hover:bg-gray-50 rounded ${disabled ? "cursor-not-allowed opacity-90" : "hover:text-blue-600 cursor-pointer"}`}
     >
       {value ? `${value}m` : "-"}
     </div>
   );
 }
 
-function EditableDateCell({ value, onSave }) {
+function EditableDateCell({ value, onSave, disabled }) {
   const [isEditing, setIsEditing] = useState(false);
 
   // Format YYYY-MM-DD for the input type="date"
@@ -168,7 +177,7 @@ function EditableDateCell({ value, onSave }) {
     }
   };
 
-  if (isEditing) {
+  if (isEditing && !disabled) {
     return (
       <input
         type="date"
@@ -184,8 +193,12 @@ function EditableDateCell({ value, onSave }) {
 
   return (
     <div
-      onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-      className="w-full min-h-[24px] text-[13px] text-gray-700 cursor-pointer truncate flex items-center gap-1 px-2 -mx-2 hover:bg-gray-50 rounded"
+      onClick={(e) => { 
+        if (disabled) return;
+        e.stopPropagation(); 
+        setIsEditing(true); 
+      }}
+      className={`w-full min-h-[24px] text-[13px] text-gray-700 truncate flex items-center gap-1 px-2 -mx-2 hover:bg-gray-50 rounded ${disabled ? "cursor-not-allowed opacity-90" : "cursor-pointer"}`}
     >
       {value ? (
         <>
@@ -199,25 +212,32 @@ function EditableDateCell({ value, onSave }) {
   );
 }
 
-function EditableSelectCell({ value, options, onSave, renderValue, isOwner, isMulti }) {
+const priorityStyles = {
+  low: "text-green-500",
+  medium: "text-yellow-500",
+  high: "text-red-500"
+};
+
+function EditableSelectCell({ value, options, onSave, renderValue, isOwner, isMulti, isPriority, disabled }) {
   const [isEditing, setIsEditing] = useState(false);
   const [rect, setRect] = useState(null);
   const wrapperRef = useRef(null);
 
   const startEdit = (e) => {
     e.stopPropagation();
+    if (disabled) return;
     if (wrapperRef.current) {
       setRect(wrapperRef.current.getBoundingClientRect());
     }
     setIsEditing(true);
   };
 
-  if (isEditing) {
-    if (isOwner || isMulti) {
-      // Searchable react-select for Owner or Assignees using portal to escape overflow-hidden
+  if (isEditing && !disabled) {
+    if (isOwner || isMulti || isPriority) {
+      // Searchable react-select using portal to escape overflow-hidden
       const editor = (
-        <div 
-          onClick={e => e.stopPropagation()} 
+        <div
+          onClick={e => e.stopPropagation()}
           onBlur={() => setTimeout(() => setIsEditing(false), 150)}
           style={{
             position: 'fixed',
@@ -233,7 +253,7 @@ function EditableSelectCell({ value, options, onSave, renderValue, isOwner, isMu
             isMulti={isMulti}
             options={options}
             value={
-              isMulti 
+              isMulti
                 ? options.filter(o => (value || []).includes(o.value))
                 : options.find(o => o.value === value) || null
             }
@@ -249,12 +269,22 @@ function EditableSelectCell({ value, options, onSave, renderValue, isOwner, isMu
             onMenuClose={() => setIsEditing(false)}
             menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
             menuPosition="fixed"
+            formatOptionLabel={isPriority ? ({ label }) => {
+              const priorityKey = label.toLowerCase();
+              const priorityColor = priorityStyles[priorityKey] || "text-gray-400";
+              return (
+                <span className="flex items-center gap-1.5 text-gray-800">
+                  <span className={`${priorityColor} font-bold shrink-0`}>!</span>
+                  <span>{label}</span>
+                </span>
+              );
+            } : undefined}
             styles={{
-              control: base => ({ 
-                ...base, 
-                minHeight: '28px', 
-                fontSize: '12px', 
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' 
+              control: base => ({
+                ...base,
+                minHeight: '28px',
+                fontSize: '12px',
+                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
               }),
               menu: base => ({ ...base, zIndex: 9999 }),
               menuPortal: base => ({ ...base, zIndex: 9999 }),
@@ -296,12 +326,14 @@ function EditableSelectCell({ value, options, onSave, renderValue, isOwner, isMu
     <div
       ref={wrapperRef}
       onClick={startEdit}
-      className="w-full min-h-[24px] cursor-pointer flex items-center px-2 -mx-2 hover:bg-gray-50 rounded"
+      className={`w-full min-h-[24px] flex items-center px-2 -mx-2 hover:bg-gray-50 rounded ${disabled ? "cursor-not-allowed opacity-90" : "cursor-pointer"}`}
     >
       {renderValue(value)}
     </div>
   );
 }
+
+// Subtasks are now rendered inline inside the main table data payload.
 
 // ---------------------------------------------------------------------------
 // Main Task Table Component
@@ -314,8 +346,24 @@ export default function TaskTable() {
     selectedRowIds,
     setSelectedRowIds,
     setSelectedTask,
+    openCreateTaskDrawer,
     preset,
   } = useTaskStore();
+
+  const { hasPermission } = usePermissions();
+  const canUpdate = hasPermission("task:update");
+
+  // Expanded subtask rows tracked by parent task id
+  const [expandedTaskIds, setExpandedTaskIds] = useState(new Set());
+
+  const toggleExpand = (taskId, e) => {
+    e.stopPropagation();
+    setExpandedTaskIds(prev => {
+      const next = new Set(prev);
+      next.has(taskId) ? next.delete(taskId) : next.add(taskId);
+      return next;
+    });
+  };
 
   const user = useSelector(state => state.auth.user);
   const isSuperAdmin = user?.type === 'SUPER_ADMIN';
@@ -351,7 +399,26 @@ export default function TaskTable() {
     limit: pagination.limit,
   });
 
-  const data = response?.data || [];
+  // Extract raw data from API response
+  const rawData = response?.data || [];
+
+  // Group subtasks under parents, honoring the expanded Task IDs state
+  const data = useMemo(() => {
+    const result = [];
+    const parents = rawData.filter(task => !task.parentTaskId);
+    const subtasks = rawData.filter(task => task.parentTaskId);
+
+    parents.forEach(parent => {
+      result.push(parent);
+      if (expandedTaskIds.has(parent.id)) {
+        const children = subtasks.filter(sub => sub.parentTaskId === parent.id);
+        result.push(...children);
+      }
+    });
+
+    return result;
+  }, [rawData, expandedTaskIds]);
+
   const meta = response?.meta || { totalCount: 0 };
 
   const [columnVisibility, setColumnVisibility] = useState({});
@@ -417,12 +484,45 @@ export default function TaskTable() {
         accessorKey: "title",
         header: () => <ColHeader>Task Name</ColHeader>,
         size: 350,
-        cell: ({ row }) => (
-          <EditableTextCell
-            value={row.original.title}
-            onSave={(val) => handleUpdate(row.original.id, row.original.version, { title: val })}
-          />
-        ),
+        cell: ({ row }) => {
+          const isSubtask = !!row.original.parentTaskId;
+          const hasSubtasks = rawData.some(t => t.parentTaskId === row.original.id);
+          const isExpanded = expandedTaskIds.has(row.original.id);
+
+          return (
+            <div className="flex items-center gap-1.5 w-full overflow-hidden">
+              {/* Indentation for subtasks */}
+              {isSubtask && (
+                <div className="flex items-center justify-end w-5 shrink-0 pl-1">
+                  <span className="text-gray-400 text-[14px]">↳</span>
+                </div>
+              )}
+
+              {/* Expand/Collapse Chevron for parents with subtasks */}
+              {!isSubtask && hasSubtasks && (
+                <button
+                  onClick={(e) => toggleExpand(row.original.id, e)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+                >
+                  {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
+              )}
+
+              {/* Spacer for parents without subtasks to align text */}
+              {!isSubtask && !hasSubtasks && (
+                <div className="w-4 h-4 shrink-0" />
+              )}
+
+              <div className="flex-1 min-w-0">
+                <EditableTextCell
+                  value={row.original.title}
+                  disabled={!canUpdate}
+                  onSave={(val) => handleUpdate(row.original.id, row.original.version, { title: val })}
+                />
+              </div>
+            </div>
+          );
+        },
       },
       {
         accessorKey: "ownerId",
@@ -434,6 +534,7 @@ export default function TaskTable() {
               isOwner
               value={row.original.ownerId}
               options={employeeOptions}
+              disabled={!canUpdate}
               onSave={(val) => handleUpdate(row.original.id, row.original.version, { ownerId: val })}
               renderValue={() => {
                 const ownerName = row.original.owner?.name || "Unassigned";
@@ -463,6 +564,7 @@ export default function TaskTable() {
               isMulti
               value={assignees.map(a => a.userId || a.user?.id)}
               options={employeeOptions}
+              disabled={!canUpdate}
               onSave={(val) => handleUpdate(row.original.id, row.original.version, { assigneeIds: val })}
               renderValue={() => {
                 if (assignees.length === 0) return <span className="text-gray-400 text-[13px]">Unassigned</span>;
@@ -472,9 +574,9 @@ export default function TaskTable() {
                       const user = assignee.user || assignee; // Fallback just in case
                       const { bg, text } = getAvatarColor(user?.name || "");
                       return (
-                        <div 
-                          key={user?.id || idx} 
-                          className={`w-6 h-6 rounded-full border border-white ${bg} flex items-center justify-center text-[9px] font-medium ${text}`} 
+                        <div
+                          key={user?.id || idx}
+                          className={`w-6 h-6 rounded-full border border-white ${bg} flex items-center justify-center text-[9px] font-medium ${text}`}
                           title={user?.name || "Unknown"}
                         >
                           {getInitials(user?.name || "")}
@@ -502,6 +604,7 @@ export default function TaskTable() {
             <EditableSelectCell
               value={row.original.statusId}
               options={statuses.map(s => ({ value: s.id, label: s.name }))}
+              disabled={!canUpdate}
               onSave={(val) => changeStatusMutation.mutate({ id: row.original.id, payload: { statusId: val, version: row.original.version || 0 } })}
               renderValue={() => {
                 const statusName = row.original.status?.name || "Open";
@@ -526,6 +629,7 @@ export default function TaskTable() {
         cell: ({ row }) => (
           <EditableDateCell
             value={row.original.startDate}
+            disabled={!canUpdate}
             onSave={(val) => handleUpdate(row.original.id, row.original.version, { startDate: val })}
           />
         ),
@@ -537,6 +641,7 @@ export default function TaskTable() {
         cell: ({ row }) => (
           <EditableDateCell
             value={row.original.dueDate}
+            disabled={!canUpdate}
             onSave={(val) => handleUpdate(row.original.id, row.original.version, { dueDate: val })}
           />
         ),
@@ -548,6 +653,7 @@ export default function TaskTable() {
         cell: ({ row }) => (
           <EditableNumberCell
             value={row.original.estimatedMinutes}
+            disabled={!canUpdate}
             onSave={(val) => handleUpdate(row.original.id, row.original.version, { estimatedMinutes: val })}
           />
         ),
@@ -559,18 +665,21 @@ export default function TaskTable() {
         cell: ({ row }) => {
           return (
             <EditableSelectCell
+              isPriority
               value={row.original.priorityId}
               options={priorities.map(p => ({ value: p.id, label: p.name }))}
+              disabled={!canUpdate}
               onSave={(val) => handleUpdate(row.original.id, row.original.version, { priorityId: val })}
               renderValue={() => {
                 const priorityName = row.original.priority?.name || "None";
-                const color = row.original.priority?.color || "#9ca3af";
                 if (!row.original.priorityId) return <span className="text-gray-400 text-[13px]">-</span>;
+                const priorityKey = priorityName.toLowerCase();
+                const priorityColor = priorityStyles[priorityKey] || "text-gray-400";
                 return (
-                  <div className="flex items-center gap-1.5 text-[13px] text-gray-700 w-full truncate" title={priorityName}>
-                    <span className="font-bold shrink-0" style={{ color }}>!</span>
-                    <span className="truncate">{priorityName}</span>
-                  </div>
+                  <span className="flex items-center gap-1 text-[13px] w-full truncate" title={priorityName}>
+                    <span className={`${priorityColor} font-bold shrink-0`}>!</span>
+                    <span className="text-gray-800 truncate">{priorityName}</span>
+                  </span>
                 );
               }}
             />
@@ -579,12 +688,32 @@ export default function TaskTable() {
       },
       {
         id: "actions",
-        size: 60,
-        header: () => null,
-        cell: () => null,
+        size: 80,
+        header: () => <ColHeader>Updates</ColHeader>,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1 justify-center pr-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (canUpdate) {
+                  openCreateTaskDrawer(row.original.id);
+                }
+              }}
+              disabled={!canUpdate}
+              className={`p-1 rounded bg-gray-50 border border-gray-100 shadow-sm transition-colors ${
+                canUpdate 
+                  ? "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer" 
+                  : "text-gray-350 cursor-not-allowed opacity-50"
+              }`}
+              title={canUpdate ? "Edit Task" : "Insufficient permissions to edit tasks"}
+            >
+              <Pencil className="w-3 h-3" />
+            </button>
+          </div>
+        ),
       },
     ],
-    [setSelectedTask, selectedRowIds, statuses, priorities, employeeOptions, changeStatusMutation, updateTaskMutation]
+    [setSelectedTask, selectedRowIds, statuses, priorities, employeeOptions, changeStatusMutation, updateTaskMutation, expandedTaskIds, rawData, canUpdate]
   );
 
   const handlePaginationChange = (updater) => {
@@ -605,7 +734,9 @@ export default function TaskTable() {
         onRowSelectionChange={setSelectedRowIds}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={handleColumnVisibilityChange}
-        onRowClick={() => { }} // Disabled preview drawer
+        onRowClick={(row) => {
+          setSelectedTask(row.original.id);
+        }}
       />
     </div>
   );
