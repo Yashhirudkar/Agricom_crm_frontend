@@ -5,7 +5,7 @@ import { useTaskStatusesQuery, useTaskPrioritiesQuery } from "../../queries/task
 
 export default function FilterDrawer() {
   const { isFilterDrawerOpen, closeFilterDrawer, filters, setFilters, clearFilters } = useTaskStore();
-  
+
   const { data: statusesData } = useTaskStatusesQuery();
   const { data: prioritiesData } = useTaskPrioritiesQuery();
   const statuses = statusesData || [];
@@ -19,19 +19,19 @@ export default function FilterDrawer() {
   };
 
   return (
-    <Drawer 
-      isOpen={isFilterDrawerOpen} 
-      onClose={closeFilterDrawer} 
+    <Drawer
+      isOpen={isFilterDrawerOpen}
+      onClose={closeFilterDrawer}
       title="Advanced Filters"
       widthClass="w-full sm:w-[400px]"
     >
       <div className="p-6 flex-1 overflow-y-auto">
         <form id="filter-form" onSubmit={handleApply} className="space-y-6">
-          
+
           {/* Status Filter */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-            <select 
+            <select
               className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"
               value={filters.statusIds[0] || ""}
               onChange={(e) => setFilters({ statusIds: e.target.value ? [parseInt(e.target.value)] : [] })}
@@ -45,10 +45,10 @@ export default function FilterDrawer() {
             </select>
           </div>
 
-          {/* Priority Filter */}
+          {/* Priority Filte r */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Priority</label>
-            <select 
+            <select
               className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"
               value={filters.priorityIds[0] || ""}
               onChange={(e) => setFilters({ priorityIds: e.target.value ? [parseInt(e.target.value)] : [] })}
@@ -66,7 +66,7 @@ export default function FilterDrawer() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Due After</label>
-              <input 
+              <input
                 type="date"
                 className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"
                 value={filters.dueDateStart || ""}
@@ -75,7 +75,7 @@ export default function FilterDrawer() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Due Before</label>
-              <input 
+              <input
                 type="date"
                 className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"
                 value={filters.dueDateEnd || ""}
@@ -87,8 +87,8 @@ export default function FilterDrawer() {
           {/* Toggles */}
           <div className="space-y-3 pt-4 border-t border-gray-100">
             <label className="flex items-center gap-3 cursor-pointer">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                 checked={filters.isCompleted}
                 onChange={(e) => setFilters({ isCompleted: e.target.checked })}
@@ -96,8 +96,8 @@ export default function FilterDrawer() {
               <span className="text-sm font-medium text-gray-700">Show Completed Tasks</span>
             </label>
             <label className="flex items-center gap-3 cursor-pointer">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                 checked={filters.isArchived}
                 onChange={(e) => setFilters({ isArchived: e.target.checked })}
@@ -109,7 +109,7 @@ export default function FilterDrawer() {
       </div>
 
       <div className="p-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between shrink-0">
-        <button 
+        <button
           onClick={() => {
             clearFilters();
             closeFilterDrawer();
@@ -118,7 +118,7 @@ export default function FilterDrawer() {
         >
           Clear All
         </button>
-        <button 
+        <button
           type="submit"
           form="filter-form"
           className="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
