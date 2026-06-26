@@ -20,6 +20,9 @@ import {
 import Drawer from "@/components/common/Drawer";
 import HasPermission from "@/components/rbac/HasPermission";
 import useSystemOptions from "@/hooks/useSystemOptions";
+import axiosClient from "@/lib/axios";
+import { toast } from "sonner";
+import DynamicFieldRenderer from "@/components/common/DynamicFieldRenderer";
 
 export default function PartnerDrawer({
   isOpen,
@@ -37,11 +40,20 @@ export default function PartnerDrawer({
   const [activeTab, setActiveTab] = useState("overview");
   const { options } = useSystemOptions();
 
+  const [dynamicSchema, setDynamicSchema] = useState(null);
+  const [dynamicConfigId, setDynamicConfigId] = useState(null);
+  const [dynamicConfigName, setDynamicConfigName] = useState("");
+  const [dynamicValues, setDynamicValues] = useState({});
+  const [loadingDynamic, setLoadingDynamic] = useState(false);
+  const [isSavingAdditional, setIsSavingAdditional] = useState(false);
+  const [previousRoleId, setPreviousRoleId] = useState("");
+
   const {
     register,
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isDirty },
   } = useForm({
     defaultValues: {
@@ -74,6 +86,83 @@ export default function PartnerDrawer({
       setActiveTab(initialEditMode ? "general" : "overview");
     }
   }, [isOpen, initialEditMode]);
+
+  // Load dynamic schema and values for existing partner
+  useEffect(() => {
+    if (isOpen) {
+      if (editData) {
+        setPreviousRoleId(editData.partnerRoleId || "");
+        const loadAdditionalInfo = async () => {
+          setLoadingDynamic(true);
+          try {
+            const res = await axiosClient.get(`/masters/partners/${editData.id}/additional-info`);
+            if (res.data && res.data.hasConfig) {
+              setDynamicSchema(res.data.schemaJson);
+              setDynamicConfigId(res.data.configId);
+              setDynamicConfigName(res.data.configName || "");
+              setDynamicValues(res.data.values || {});
+            } else {
+              setDynamicSchema(null);
+              setDynamicConfigId(null);
+              setDynamicConfigName("");
+              setDynamicValues({});
+            }
+          } catch (err) {
+            console.error("Failed to load additional info", err);
+          } finally {
+            setLoadingDynamic(false);
+          }
+        };
+        loadAdditionalInfo();
+      } else {
+        setPreviousRoleId("");
+        setDynamicSchema(null);
+        setDynamicConfigId(null);
+        setDynamicConfigName("");
+        setDynamicValues({});
+      }
+    }
+  }, [isOpen, editData]);
+
+  const handleRoleChange = async (e) => {
+    const newRoleId = e.target.value;
+    const hasValues = Object.values(dynamicValues).some(
+      (v) => v !== "" && v !== null && !(Array.isArray(v) && v.length === 0)
+    );
+
+    if (dynamicSchema && hasValues) {
+      const confirmChange = window.confirm(
+        "Changing Partner Role will reset Additional Information fields. Continue?"
+      );
+      if (!confirmChange) {
+        // Revert form select input back to original value
+        setValue("partnerRoleId", previousRoleId);
+        return;
+      }
+    }
+
+    setPreviousRoleId(newRoleId);
+    setDynamicSchema(null);
+    setDynamicConfigId(null);
+    setDynamicConfigName("");
+    setDynamicValues({});
+
+    if (newRoleId) {
+      setLoadingDynamic(true);
+      try {
+        const res = await axiosClient.get(`/masters/partner-roles/${newRoleId}/dynamic-config`);
+        if (res.data && res.data.hasConfig && res.data.config) {
+          setDynamicSchema(res.data.config.schemaJson);
+          setDynamicConfigId(res.data.config.id);
+          setDynamicConfigName(res.data.config.configName || "");
+        }
+      } catch (err) {
+        console.error("Failed to load role dynamic config", err);
+      } finally {
+        setLoadingDynamic(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -191,6 +280,9 @@ export default function PartnerDrawer({
 
   const primaryContact = editData?.contacts?.find((c) => c.isPrimary);
 
+  const hasDynamicFields =
+    dynamicSchema && Array.isArray(dynamicSchema.fields) && dynamicSchema.fields.length > 0;
+
   // Tabs define depending on edit mode or view mode
   const tabs = isEditMode
     ? [
@@ -198,6 +290,7 @@ export default function PartnerDrawer({
         { id: "financial", label: "Financial Details" },
         { id: "contacts", label: "Contacts" },
         { id: "products", label: "Products" },
+        ...(editData && hasDynamicFields ? [{ id: "additional", label: "Additional Information" }] : []),
       ]
     : [
         { id: "overview", label: "Overview" },
@@ -205,6 +298,7 @@ export default function PartnerDrawer({
         { id: "financial", label: "Financial Details" },
         { id: "contacts", label: "Contacts" },
         { id: "products", label: "Products" },
+        ...(editData && hasDynamicFields ? [{ id: "additional", label: "Additional Information" }] : []),
       ];
 
   const currentCountry = countries.find(
@@ -611,6 +705,27 @@ export default function PartnerDrawer({
                   )}
                 </div>
               )}
+
+              {/* Additional Information Tab (View Mode) */}
+              {activeTab === "additional" && (
+                <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6 shadow-xs animate-in fade-in duration-200">
+                  <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 border-b border-gray-100 pb-2">
+                    Additional Information
+                  </h3>
+                  {loadingDynamic ? (
+                    <div className="flex justify-center py-6">
+                      <div className="h-5 w-5 rounded-full border-2 border-[#007aff] border-t-transparent animate-spin" />
+                    </div>
+                  ) : (
+                    <DynamicFieldRenderer
+                      schema={dynamicSchema}
+                      values={dynamicValues}
+                      onChange={setDynamicValues}
+                      isReadOnly={true}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -641,7 +756,10 @@ export default function PartnerDrawer({
                         Partner Role <span className="text-red-500">*</span>
                       </label>
                       <select
-                        {...register("partnerRoleId", { required: "Partner Role is required" })}
+                        {...register("partnerRoleId", {
+                          required: "Partner Role is required",
+                          onChange: (e) => handleRoleChange(e),
+                        })}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-xs focus:outline-none focus:ring-0 text-gray-700 bg-gray-50/30"
                       >
                         <option value="">Select Role...</option>
@@ -980,6 +1098,59 @@ export default function PartnerDrawer({
                       restricts their available products in transactions.
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* TAB: Additional Information (Edit Mode) */}
+              {activeTab === "additional" && (
+                <div className="bg-white border border-gray-100 rounded-2xl p-6 space-y-6 shadow-xs animate-in fade-in duration-200">
+                  <h3 className="text-xs font-bold text-[#007aff] uppercase tracking-wider mb-2 border-b border-gray-100 pb-2">
+                    Additional Information
+                  </h3>
+                  {loadingDynamic ? (
+                    <div className="flex justify-center py-6">
+                      <div className="h-5 w-5 rounded-full border-2 border-[#007aff] border-t-transparent animate-spin" />
+                    </div>
+                  ) : (
+                    <>
+                      <DynamicFieldRenderer
+                        schema={dynamicSchema}
+                        values={dynamicValues}
+                        onChange={setDynamicValues}
+                        isReadOnly={false}
+                      />
+                      
+                      {/* Separate Save Flow Button */}
+                      <div className="flex justify-end pt-4 border-t border-gray-100">
+                        <button
+                          type="button"
+                          disabled={isSavingAdditional}
+                          onClick={async () => {
+                            if (!editData) return;
+                            setIsSavingAdditional(true);
+                            try {
+                              await axiosClient.put(`/masters/partners/${editData.id}/additional-info`, {
+                                configId: dynamicConfigId,
+                                valuesJson: dynamicValues,
+                              });
+                              toast.success("Additional information updated successfully.");
+                            } catch (err) {
+                              toast.error(err.response?.data?.message || "Failed to save additional information.");
+                              console.error(err);
+                            } finally {
+                              setIsSavingAdditional(false);
+                            }
+                          }}
+                          className="px-4 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          {isSavingAdditional && (
+                            <span className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          )}
+                          Save Additional Information
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

@@ -1,8 +1,12 @@
 import React from "react";
-import { Edit2, Trash2, RefreshCcw, ShieldAlert, Ban } from "lucide-react";
+import { Edit2, Trash2, RefreshCcw, ShieldAlert, Ban, Sliders } from "lucide-react";
 import HasPermission from "@/components/rbac/HasPermission";
+import { usePermissions } from "@/hooks/usePermissions";
+import Link from "next/link";
 
 export default function PartnerRolesTable({ partnerRoles, openEditModal, setDeleteTarget, setRestoreTarget, setPermanentDeleteTarget }) {
+  const { hasPermission } = usePermissions();
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
@@ -34,7 +38,18 @@ export default function PartnerRolesTable({ partnerRoles, openEditModal, setDele
                 <td className="px-6 py-4 text-right space-x-2">
                   {role.isActive ? (
                     <>
+                      {hasPermission("partner_dynamic_schema:view") && (
+                        <Link
+                          href={`/masters/partner-roles/${role.id}/dynamic-schema`}
+                          className="px-2.5 py-1 text-[11px] font-bold text-purple-650 hover:text-purple-750 bg-purple-50 hover:bg-purple-100/70 border border-purple-150 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1 inline-block align-middle"
+                          title="Configure Fields"
+                        >
+                          <Sliders className="h-3.5 w-3.5 inline" />
+                          Configure Fields
+                        </Link>
+                      )}
                       <HasPermission permission="partnerrole:update">
+
                         <button
                           onClick={() => openEditModal(role)}
                           className="p-1 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"

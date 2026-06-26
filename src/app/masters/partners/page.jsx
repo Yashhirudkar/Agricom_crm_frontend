@@ -17,10 +17,12 @@ import {
   selectPartnersTotalPages,
   clearPartnersError,
 } from "@/store/entities/partnerSlice";
+import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
+import { selectUserType } from "@/store/slices/authSlice";
 import HasPermission from "@/components/rbac/HasPermission";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import Pagination from "@/components/common/Pagination";
-import { Plus, Users, Check, AlertCircle } from "lucide-react";
+import { Plus, Users, Check, AlertCircle, Building2 } from "lucide-react";
 
 import PartnersTable from "@/components/masters/partners/PartnersTable";
 import PartnersFilters from "@/components/masters/partners/PartnersFilters";
@@ -35,6 +37,10 @@ function PartnersContent() {
   const error = useSelector(selectPartnersError);
   const totalCount = useSelector(selectPartnersTotalCount);
   const totalPages = useSelector(selectPartnersTotalPages);
+
+  const userType = useSelector(selectUserType);
+  const allCompanies = useSelector(selectCompanies) || [];
+  const [selectedCompanyId, setSelectedCompanyId] = useState("");
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = "success") => {
@@ -61,13 +67,29 @@ function PartnersContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("activeCompanyId");
+      if (stored) setSelectedCompanyId(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userType === "super_admin") {
+      dispatch(fetchCompanies());
+    }
+  }, [dispatch, userType]);
+
   // Load partners list
   useEffect(() => {
-    dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
-  }, [dispatch, currentPage, search, isActiveFilter]);
+    if (selectedCompanyId) {
+      dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+    }
+  }, [dispatch, currentPage, search, isActiveFilter, selectedCompanyId]);
 
   // Load dropdown dependencies once securely respecting max 100 limit
   useEffect(() => {
+    if (!selectedCompanyId) return;
     const fetchDependencies = async () => {
       try {
         const [rolesRes, conRes, prodRes] = await Promise.all([
@@ -83,7 +105,18 @@ function PartnersContent() {
       }
     };
     fetchDependencies();
-  }, []);
+  }, [selectedCompanyId]);
+
+  const handleCompanyChange = (e) => {
+    const val = e.target.value;
+    setSelectedCompanyId(val);
+    if (val) {
+      localStorage.setItem("activeCompanyId", val);
+    } else {
+      localStorage.removeItem("activeCompanyId");
+    }
+    setCurrentPage(1);
+  };
 
   const openCreateModal = () => {
     setEditData(null);
@@ -221,37 +254,65 @@ function PartnersContent() {
           </p>
         </div>
         
-        <HasPermission permission="partner:create">
-          <button
-            onClick={openCreateModal}
-            className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors self-start sm:self-auto"
-          >
-            <Plus className="h-4 w-4" /> Add Partner
-          </button>
-        </HasPermission>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          {userType === "super_admin" && (
+            <select
+              value={selectedCompanyId}
+              onChange={handleCompanyChange}
+              className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
+            >
+              <option value="">-- Select Company Context --</option>
+              {allCompanies.map((c, idx) => (
+                <option key={`company-${c.id || idx}-${idx}`} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <HasPermission permission="partner:create">
+            <button
+              onClick={openCreateModal}
+              disabled={!selectedCompanyId}
+              className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors self-start sm:self-auto"
+            >
+              <Plus className="h-4 w-4" /> Add Partner
+            </button>
+          </HasPermission>
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-        <PartnersFilters
-          search={search}
-          setSearch={setSearch}
-          isActiveFilter={isActiveFilter}
-          setIsActiveFilter={setIsActiveFilter}
-          setCurrentPage={setCurrentPage}
-          totalCount={totalCount}
-        />
+      {!selectedCompanyId ? (
+        <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-12 text-center shadow-xs">
+          <Building2 className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+          <h2 className="text-sm font-bold text-gray-700 mb-1">Company Context Required</h2>
+          <p className="text-xs text-gray-500">
+            Please select a company to continue.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+          <PartnersFilters
+            search={search}
+            setSearch={setSearch}
+            isActiveFilter={isActiveFilter}
+            setIsActiveFilter={setIsActiveFilter}
+            setCurrentPage={setCurrentPage}
+            totalCount={totalCount}
+          />
 
-        <PartnersTable
-          partners={partners}
-          openViewDrawer={openViewDrawer}
-          openEditModal={openEditModal}
-          setDeleteTarget={setDeleteTarget}
-          setRestoreTarget={setRestoreTarget}
-          setPermanentDeleteTarget={setPermanentDeleteTarget}
-        />
+          <PartnersTable
+            partners={partners}
+            openViewDrawer={openViewDrawer}
+            openEditModal={openEditModal}
+            setDeleteTarget={setDeleteTarget}
+            setRestoreTarget={setRestoreTarget}
+            setPermanentDeleteTarget={setPermanentDeleteTarget}
+          />
 
-        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-      </div>
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        </div>
+      )}
 
       <PartnerDrawer
         isOpen={isModalOpen}
