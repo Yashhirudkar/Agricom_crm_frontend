@@ -38,9 +38,9 @@ export function Header() {
     }
   };
 
-  const handleMarkAsRead = async (_id) => {};
+  const handleMarkAsRead = async (_id) => { };
 
-  const handleMarkAllRead = async () => {};
+  const handleMarkAllRead = async () => { };
 
 
   // Determine active workspace
@@ -241,9 +241,16 @@ export function Header() {
           <div className="h-5 w-px bg-gray-200" />
 
           {/* User Profile */}
-          <div className="flex items-center gap-2.5 px-1.5 py-1 rounded-xl">
-            <div className="bg-gradient-to-tr from-blue-500 to-indigo-400 h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-xs">
-              {user?.name ? user.name.slice(0, 2).toUpperCase() : user?.email ? user.email.slice(0, 2).toUpperCase() : "??"}
+          <div
+            className="flex items-center gap-2.5 px-1.5 py-1 rounded-xl  hover:bg-gray-50 transition-all"
+          >
+            <div
+              onClick={() => router.push("/profile")}
+              className="bg-gradient-to-tr from-blue-500 to-indigo-400 h-8 w-8 rounded-full cursor-pointer flex items-center justify-center text-white text-xs font-bold shadow-xs"
+            >
+              {(user?.name?.trim()?.slice(0, 2) ||
+                user?.email?.trim()?.slice(0, 2) ||
+                "??").toUpperCase()}
             </div>
             <div className="hidden sm:flex flex-col text-left">
               <span className="text-xs font-bold text-gray-800 leading-tight max-w-[130px] truncate">

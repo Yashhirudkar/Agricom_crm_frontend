@@ -7,6 +7,7 @@ export default function Drawer({
   title,
   children,
   widthClass = "w-full sm:w-[500px] md:w-[700px]",
+  hideHeader = false,
 }) {
   const [show, setShow] = useState(false);
   const [render, setRender] = useState(false);
@@ -50,15 +51,17 @@ export default function Drawer({
           }`}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-            <h2 className="text-lg font-bold text-gray-900 tracking-tight">{title}</h2>
-            <button
-              onClick={onClose}
-              className="p-2 -mr-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+          {!hideHeader && (
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-lg font-bold text-gray-900 tracking-tight">{title}</h2>
+              <button
+                onClick={onClose}
+                className="p-2 -mr-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          )}
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto flex flex-col h-full bg-white relative">

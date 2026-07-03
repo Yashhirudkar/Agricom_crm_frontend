@@ -50,7 +50,10 @@ export default function ProductsTable({
                 </td>
                 <td className="px-6 py-4 text-gray-600 max-w-[200px]">
                   <div className="truncate" title={item.qualitySubType || ""}>
-                    <span className="font-semibold">Type:</span> {item.qualitySubType || "-"}
+                    <span className="font-semibold">Type:</span>{" "}
+                    {item.qualitySubType
+                      ? item.qualitySubType.replace(/\b\w/g, char => char.toUpperCase())
+                      : "-"}
                   </div>
                   <div className="truncate" title={item.specification || ""}>
                     <span className="font-semibold">Spec:</span> {item.specification || "-"}

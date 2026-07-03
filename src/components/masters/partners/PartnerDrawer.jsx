@@ -134,10 +134,10 @@ export default function PartnerDrawer({
       (c) => String(c.id) === String(watchedCountryId)
     );
     if (!selectedCountry?.iso2Code) return [];
-    
+
     // Get cities from country-state-city package
     const cities = City.getCitiesOfCountry(selectedCountry.iso2Code) || [];
-    
+
     // Map to react-select options format
     return cities.map(city => ({
       value: city.name,
@@ -254,13 +254,13 @@ export default function PartnerDrawer({
           productIds: editData.products ? editData.products.map((p) => p.id) : [],
           contacts: editData.contacts
             ? editData.contacts.map((c) => ({
-                name: c.name,
-                designation: c.designation || "",
-                phone: c.phone || "",
-                email: c.email || "",
-                communicationType: c.communicationType || "",
-                isPrimary: c.isPrimary || false,
-              }))
+              name: c.name,
+              designation: c.designation || "",
+              phone: c.phone || "",
+              email: c.email || "",
+              communicationType: c.communicationType || "",
+              isPrimary: c.isPrimary || false,
+            }))
             : [],
         });
       } else {
@@ -357,20 +357,20 @@ export default function PartnerDrawer({
   // Tabs define depending on edit mode or view mode
   const tabs = isEditMode
     ? [
-        { id: "general", label: "General Information" },
-        { id: "financial", label: "Financial Details" },
-        { id: "contacts", label: "Contacts" },
-        { id: "products", label: "Products" },
-        ...(editData && hasDynamicFields ? [{ id: "additional", label: "Additional Information" }] : []),
-      ]
+      { id: "general", label: "General Information" },
+      { id: "financial", label: "Financial Details" },
+      { id: "contacts", label: "Contacts" },
+      { id: "products", label: "Products" },
+      ...(editData && hasDynamicFields ? [{ id: "additional", label: "Additional Information" }] : []),
+    ]
     : [
-        { id: "overview", label: "Overview" },
-        { id: "general", label: "General Information" },
-        { id: "financial", label: "Financial Details" },
-        { id: "contacts", label: "Contacts" },
-        { id: "products", label: "Products" },
-        ...(editData && hasDynamicFields ? [{ id: "additional", label: "Additional Information" }] : []),
-      ];
+      { id: "overview", label: "Overview" },
+      { id: "general", label: "General Information" },
+      { id: "financial", label: "Financial Details" },
+      { id: "contacts", label: "Contacts" },
+      { id: "products", label: "Products" },
+      ...(editData && hasDynamicFields ? [{ id: "additional", label: "Additional Information" }] : []),
+    ];
 
   const currentCountry = countries.find(
     (c) => c.id === parseInt(editData?.countryId || editData?.country?.id, 10)
@@ -400,11 +400,10 @@ export default function PartnerDrawer({
                     {currentRole?.name || "Business Partner"}
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      editData.isActive
-                        ? "bg-green-50 text-green-700 border border-green-200"
-                        : "bg-gray-100 text-gray-600 border border-gray-200"
-                    }`}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${editData.isActive
+                      ? "bg-green-50 text-green-700 border border-green-200"
+                      : "bg-gray-100 text-gray-600 border border-gray-200"
+                      }`}
                   >
                     {editData.isActive ? "Active" : "Inactive"}
                   </span>
@@ -440,11 +439,10 @@ export default function PartnerDrawer({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-3.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors border-b-2 -mb-[1px] ${
-                  activeTab === tab.id
-                    ? "border-[#007aff] text-[#007aff]"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
+                className={`py-3.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors border-b-2 -mb-[1px] ${activeTab === tab.id
+                  ? "border-[#007aff] text-[#007aff]"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
               >
                 {tab.label}
               </button>
@@ -717,13 +715,13 @@ export default function PartnerDrawer({
               {activeTab === "contacts" && (
                 <div className="space-y-4 animate-in fade-in duration-200">
                   {(!editData.contacts || editData.contacts.length === 0) ? (
-                    <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 shadow-xs">
+                    <div className="text-center py-12 bg-white rounded-2xl  border-dashed border-gray-300 shadow-xs">
                       <p className="text-xs font-semibold text-gray-400">No representative contacts mapped.</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {editData.contacts.map((c, index) => (
-                        <div key={index} className="bg-white border border-gray-150 p-4 rounded-xl shadow-xs relative">
+                        <div key={index} className="bg-white border border-dashed border-gray-300 p-4 rounded-xl shadow-md relative">
                           {c.isPrimary && (
                             <span className="absolute top-4 right-4 bg-blue-50 border border-blue-200 text-[#007aff] text-[9px] font-bold px-2 py-0.5 rounded">
                               Primary
@@ -731,7 +729,7 @@ export default function PartnerDrawer({
                           )}
                           <div className="font-bold text-gray-800 text-xs">{c.name}</div>
                           {c.designation && <div className="text-[10px] text-gray-400 font-semibold mt-0.5">{c.designation}</div>}
-                          
+
                           <div className="mt-3 space-y-1.5">
                             {c.email && (
                               <div className="text-[11px] flex items-center gap-1.5 text-gray-600">
@@ -760,8 +758,8 @@ export default function PartnerDrawer({
 
               {/* Products List Tab */}
               {activeTab === "products" && (
-                <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs animate-in fade-in duration-200">
-                  <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">
+                <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-4 shadow-xs animate-in fade-in duration-200">
+                  <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-4 border-b border-dashed border-gray-300 pb-2">
                     Authorized Products ({editData.products?.length || 0})
                   </h3>
                   {(!editData.products || editData.products.length === 0) ? (
@@ -769,7 +767,7 @@ export default function PartnerDrawer({
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {editData.products.map((p) => (
-                        <span key={p.id} className="px-3 py-1 bg-slate-50 border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold shadow-xs">
+                        <span key={p.id} className="px-3 py-1 bg-slate-50 border border-blue-300 text-gray-700 rounded-lg text-xs font-semibold shadow-lg">
                           {p.name}
                         </span>
                       ))}
@@ -1187,8 +1185,8 @@ export default function PartnerDrawer({
                                 backgroundColor: state.isSelected
                                   ? "#007aff"
                                   : state.isFocused
-                                  ? "#f0f7ff"
-                                  : "white",
+                                    ? "#f0f7ff"
+                                    : "white",
                                 color: state.isSelected ? "white" : "#374151",
                                 fontSize: "12px",
                               }),
@@ -1243,7 +1241,7 @@ export default function PartnerDrawer({
                         onChange={setDynamicValues}
                         isReadOnly={false}
                       />
-                      
+
                       {/* Separate Save Flow Button */}
                       <div className="flex justify-end pt-4 border-t border-gray-100">
                         <button

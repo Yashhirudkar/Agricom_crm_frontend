@@ -127,11 +127,11 @@ export default function MatrixBuilderPage() {
         <form onSubmit={handleSaveModule} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Module Name</label>
-            <input required type="text" value={moduleForm.name} onChange={e => setModuleForm({ ...moduleForm, name: e.target.value })} className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-[#007aff]" placeholder="e.g. Attendance" />
+            <input required type="text" value={moduleForm.name} onChange={e => setModuleForm({ ...moduleForm, name: e.target.value })} className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#007aff]" placeholder="e.g. Attendance" />
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sort Order</label>
-            <input type="number" value={moduleForm.sort_order} onChange={e => setModuleForm({ ...moduleForm, sort_order: e.target.value })} className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-[#007aff]" />
+            <input type="number" value={moduleForm.sort_order} onChange={e => setModuleForm({ ...moduleForm, sort_order: e.target.value })} className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#007aff]" />
           </div>
           <button type="submit" className="w-full py-2 bg-[#007aff] text-white rounded-xl text-xs font-bold mt-4">Save</button>
         </form>
@@ -141,15 +141,15 @@ export default function MatrixBuilderPage() {
         <form onSubmit={handleSaveResource} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Resource Name (Key)</label>
-            <input required type="text" value={resourceForm.name} onChange={e => setResourceForm({ ...resourceForm, name: e.target.value })} className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500" placeholder="e.g. attendance_dashboard" />
+            <input required type="text" value={resourceForm.name} onChange={e => setResourceForm({ ...resourceForm, name: e.target.value })} className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500" placeholder="e.g. attendance_dashboard" />
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Display Name</label>
-            <input type="text" value={resourceForm.display_name} onChange={e => setResourceForm({ ...resourceForm, display_name: e.target.value })} className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500" placeholder="e.g. Attendance Dashboard" />
+            <input type="text" value={resourceForm.display_name} onChange={e => setResourceForm({ ...resourceForm, display_name: e.target.value })} className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500" placeholder="e.g. Attendance Dashboard" />
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Module ID</label>
-            <input required type="number" value={resourceForm.module_id} onChange={e => setResourceForm({ ...resourceForm, module_id: e.target.value })} className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500" placeholder="e.g. 1" />
+            <input required type="number" value={resourceForm.module_id} onChange={e => setResourceForm({ ...resourceForm, module_id: e.target.value })} className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-500" placeholder="e.g. 1" />
           </div>
           <button type="submit" className="w-full py-2 bg-indigo-500 text-white rounded-xl text-xs font-bold mt-4">Save</button>
         </form>
@@ -159,11 +159,11 @@ export default function MatrixBuilderPage() {
         <form onSubmit={handleSaveAction} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Action Name (Key)</label>
-            <input required type="text" value={actionForm.name} onChange={e => setActionForm({ ...actionForm, name: e.target.value })} className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-emerald-500" placeholder="e.g. override" />
+            <input required type="text" value={actionForm.name} onChange={e => setActionForm({ ...actionForm, name: e.target.value })} className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm outline-none focus:border-emerald-500" placeholder="e.g. override" />
           </div>
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Resource ID</label>
-            <input required type="number" value={actionForm.resource_id} onChange={e => setActionForm({ ...actionForm, resource_id: e.target.value })} className="w-full border rounded-xl px-3 py-2 text-sm outline-none focus:border-emerald-500" placeholder="e.g. 5" />
+            <input required type="number" value={actionForm.resource_id} onChange={e => setActionForm({ ...actionForm, resource_id: e.target.value })} className="w-full border border-dashed border-gray-300 rounded-xl px-3 py-2 text-sm outline-none focus:border-emerald-500" placeholder="e.g. 5" />
           </div>
           <button type="submit" className="w-full py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold mt-4">Save</button>
         </form>

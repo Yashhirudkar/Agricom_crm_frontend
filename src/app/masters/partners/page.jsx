@@ -27,6 +27,7 @@ import { Plus, Users, Check, AlertCircle, Building2 } from "lucide-react";
 import PartnersTable from "@/components/masters/partners/PartnersTable";
 import PartnersFilters from "@/components/masters/partners/PartnersFilters";
 import PartnerDrawer from "@/components/masters/partners/PartnerDrawer";
+import PartnerFollowUpDrawer from "@/components/masters/partners/PartnerFollowUpDrawer";
 import PermanentDeleteModal from "@/components/common/PermanentDeleteModal";
 
 function PartnersContent() {
@@ -56,6 +57,9 @@ function PartnersContent() {
   const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [isFollowUpDrawerOpen, setIsFollowUpDrawerOpen] = useState(false);
+  const [followUpPartner, setFollowUpPartner] = useState(null);
 
   // External dependencies for dropdowns
   const [partnerRoles, setPartnerRoles] = useState([]);
@@ -136,6 +140,11 @@ function PartnersContent() {
     setIsModalOpen(true);
   };
 
+  const openFollowUpDrawer = (item) => {
+    setFollowUpPartner(item);
+    setIsFollowUpDrawerOpen(true);
+  };
+
   const closeModals = () => {
     setIsModalOpen(false);
     setDeleteTarget(null);
@@ -144,9 +153,14 @@ function PartnersContent() {
     dispatch(clearPartnersError());
   };
 
+  const closeFollowUpDrawer = () => {
+    setIsFollowUpDrawerOpen(false);
+    setFollowUpPartner(null);
+  };
+
   const handleModalSubmit = async (payload) => {
     setIsSaving(true);
-    
+
     try {
       if (editData) {
         await dispatch(updatePartner({ id: editData.id, ...payload })).unwrap();
@@ -172,13 +186,13 @@ function PartnersContent() {
     try {
       await dispatch(deletePartner({ id: deleteTarget.id })).unwrap();
       showToast("Partner deactivated successfully");
-      
+
       if (partners.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {
         dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
-      
+
       closeModals();
     } catch (err) {
       showToast(err || "Failed to deactivate partner", "error");
@@ -206,13 +220,13 @@ function PartnersContent() {
     try {
       await dispatch(permanentDeletePartner({ id: permanentDeleteTarget.id, reason })).unwrap();
       showToast("Partner permanently deleted");
-      
+
       if (partners.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
       } else {
         dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
-      
+
       closeModals();
     } catch (err) {
       showToast(err || "Failed to permanently delete partner", "error");
@@ -234,9 +248,8 @@ function PartnersContent() {
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6">
       {toast && (
         <div
-          className={`fixed top-5 right-5 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
-            toast.type === "error" ? "bg-red-500" : "bg-green-500"
-          }`}
+          className={`fixed top-5 right-5 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === "error" ? "bg-red-500" : "bg-green-500"
+            }`}
         >
           {toast.type === "error" ? <AlertCircle className="h-4 w-4" /> : <Check className="h-4 w-4" />}
           {toast.msg}
@@ -253,7 +266,7 @@ function PartnersContent() {
             Manage buyers, suppliers, logistics providers and their associated contacts.
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3 self-start sm:self-auto">
           {userType === "super_admin" && (
             <select
@@ -305,6 +318,7 @@ function PartnersContent() {
             partners={partners}
             openViewDrawer={openViewDrawer}
             openEditModal={openEditModal}
+            openFollowUpDrawer={openFollowUpDrawer}
             setDeleteTarget={setDeleteTarget}
             setRestoreTarget={setRestoreTarget}
             setPermanentDeleteTarget={setPermanentDeleteTarget}
@@ -325,6 +339,16 @@ function PartnersContent() {
         countries={countries}
         partnerRoles={partnerRoles}
         products={products}
+      />
+
+      <PartnerFollowUpDrawer
+        isOpen={isFollowUpDrawerOpen}
+        onClose={closeFollowUpDrawer}
+        partner={followUpPartner}
+        onSaveSuccess={() => {
+          // Re-fetch partners to update follow-up badges
+          dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+        }}
       />
 
       <ConfirmModal

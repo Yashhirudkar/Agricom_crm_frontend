@@ -15,7 +15,7 @@ import { useUsersPage } from "@/hooks/useUsersPage";
 
 function UsersContent() {
   const searchParams = useSearchParams();
-  
+
   const {
     users,
     meta,
@@ -102,9 +102,8 @@ function UsersContent() {
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6">
       {toast && (
         <div
-          className={`fixed top-5 right-5 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
-            toast.type === "error" ? "bg-red-500" : "bg-green-500"
-          }`}
+          className={`fixed top-5 right-5 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === "error" ? "bg-red-500" : "bg-green-500"
+            }`}
         >
           {toast.type === "error" ? <AlertCircle className="h-4 w-4" /> : <Check className="h-4 w-4" />}
           {toast.msg}
@@ -132,7 +131,7 @@ function UsersContent() {
 
       {/* Meta User Quota Limit Alert */}
       {meta && (
-        <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-between">
+        <div className="p-4 bg-blue-50/50 rounded-2xl border border-dashed border-blue-100 flex items-center justify-between">
           <div className="space-y-1">
             <h3 className="text-xs font-bold text-blue-900">Tenant User Slot Meter</h3>
             <p className="text-[10px] text-blue-600 font-medium">
@@ -145,9 +144,8 @@ function UsersContent() {
             </span>
             <div className="w-36 h-2 bg-blue-100/70 rounded-full mt-2 overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  meta.currentUsers >= meta.maxUsers ? "bg-red-500" : "bg-blue-500"
-                }`}
+                className={`h-full rounded-full transition-all duration-500 ${meta.currentUsers >= meta.maxUsers ? "bg-red-500" : "bg-blue-500"
+                  }`}
                 style={{ width: `${Math.min((meta.currentUsers / meta.maxUsers) * 100, 100)}%` }}
               />
             </div>

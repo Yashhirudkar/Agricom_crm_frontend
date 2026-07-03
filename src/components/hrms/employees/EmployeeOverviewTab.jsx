@@ -11,6 +11,10 @@ export default function EmployeeOverviewTab({ empDetails }) {
       </div>
       <div className="p-4 space-y-3.5 text-xs">
         <div className="flex justify-between">
+          <span className="text-gray-400 font-medium">Employee ID</span>
+          <span className="font-bold text-gray-800">{empDetails.employeeCode || empDetails.employeeId || "-"}</span>
+        </div>
+        <div className="flex justify-between">
           <span className="text-gray-400 font-medium">Department</span>
           <span className="font-bold text-gray-800">{empDetails.department?.name || "-"}</span>
         </div>
@@ -20,7 +24,7 @@ export default function EmployeeOverviewTab({ empDetails }) {
         </div>
         <div className="flex justify-between">
           <span className="text-gray-400 font-medium">Branch</span>
-          <span className="font-bold text-gray-800">{empDetails.branch?.name || "-"}</span>
+          <span className="font-bold text-gray-800">{empDetails.branch?.branchName || "-"}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-400 font-medium">Reporting Manager</span>
@@ -30,13 +34,12 @@ export default function EmployeeOverviewTab({ empDetails }) {
         </div>
         <div className="flex justify-between">
           <span className="text-gray-400 font-medium">Status</span>
-          <span className={`font-bold ${
-            ['ACTIVE', 'CONFIRMED', 'PROBATION', 'ONBOARDING'].includes(empDetails.status)
-              ? 'text-green-600'
-              : ['RESIGNED', 'TERMINATED'].includes(empDetails.status)
-                ? 'text-rose-600'
-                : 'text-amber-600'
-          }`}>
+          <span className={`font-bold ${['ACTIVE', 'CONFIRMED', 'PROBATION', 'ONBOARDING'].includes(empDetails.status)
+            ? 'text-green-600'
+            : ['RESIGNED', 'TERMINATED'].includes(empDetails.status)
+              ? 'text-rose-600'
+              : 'text-amber-600'
+            }`}>
             {(() => {
               const statusLabels = {
                 DRAFT: "Draft",

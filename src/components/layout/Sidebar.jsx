@@ -196,13 +196,11 @@ export function Sidebar() {
                   {/* Clickable folder header */}
                   <button
                     onClick={() => toggleParent(section.id)}
-                    className={`w-full flex items-center ${
-                      isSidebarCollapsed ? "justify-center" : "justify-between"
-                    } px-3 py-2 rounded-xl transition-colors ${
-                      hasActiveChild
+                    className={`w-full flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"
+                      } px-3 py-2 rounded-xl transition-colors ${hasActiveChild
                         ? "text-[#007aff]"
                         : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                    }`}
+                      }`}
                     title={isSidebarCollapsed ? section.title : undefined}
                   >
                     <div className="flex items-center gap-2">
@@ -235,9 +233,8 @@ export function Sidebar() {
 
                   {/* Children — only visible when expanded */}
                   <div
-                    className={`overflow-hidden transition-all duration-200 ${
-                      isExpanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
-                    }`}
+                    className={`overflow-hidden transition-all duration-200 ${isExpanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+                      }`}
                   >
                     <ul className="space-y-1 mt-1">
                       {(section.items || []).map((item) => {
@@ -246,11 +243,9 @@ export function Sidebar() {
                           <li key={item.id}>
                             <Link
                               href={item.href}
-                              className={`flex items-center ${
-                                isSidebarCollapsed ? "justify-center" : "justify-between"
-                              } px-3 py-2.5 rounded-xl transition-colors ${
-                                isActive ? "bg-blue-50 text-[#007aff]" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                              }`}
+                              className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"
+                                } px-3 py-2.5 rounded-xl transition-colors ${isActive ? "bg-blue-50 text-[#007aff]" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                                }`}
                               title={isSidebarCollapsed ? item.name : undefined}
                             >
                               <div className="flex items-center gap-3">
@@ -324,10 +319,10 @@ export function Sidebar() {
                   title={isSidebarCollapsed ? section.title : undefined}
                 >
                   <div className="flex items-center gap-3">
-                    <SidebarDynamicIcon 
-                      iconName={section.icon} 
-                      className={`h-[20px] w-[20px] stroke-[1.5] ${isActive ? "text-[#007aff]" : ""}`} 
-                      style={!isActive && (section.final_color || section.iconColor || section.icon_color) ? { color: section.final_color || section.iconColor || section.icon_color } : {}} 
+                    <SidebarDynamicIcon
+                      iconName={section.icon}
+                      className={`h-[20px] w-[20px] stroke-[1.5] ${isActive ? "text-[#007aff]" : ""}`}
+                      style={!isActive && (section.final_color || section.iconColor || section.icon_color) ? { color: section.final_color || section.iconColor || section.icon_color } : {}}
                     />
                     {!isSidebarCollapsed && (
                       <span className={`text-[14px] font-medium whitespace-nowrap ${isActive ? "text-[#007aff]" : ""}`}>{section.title}</span>
@@ -345,7 +340,10 @@ export function Sidebar() {
       <div className="p-4 border-t border-gray-100 mt-auto">
         <div className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"} px-2 py-2 rounded-xl`}>
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-[#007aff] flex items-center justify-center text-white font-bold text-[13px] flex-shrink-0">
+            <div
+              onClick={() => router.push("/profile")}
+              className="h-9 w-9 rounded-full bg-[#007aff] flex items-center justify-center text-white font-bold text-[13px] flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+            >
               {initials}
             </div>
 
