@@ -102,7 +102,7 @@ const isWeeklyOffHelper = (h) => {
   const t = h.title.toLowerCase().trim();
 
   const weekdays = [
-    "sunday", "sinday",
+    "sunday", "sunday",
     "saturday", "saturaday",
     "monday", "tuesday", "wednesday", "thursday", "friday"
   ];
@@ -112,7 +112,7 @@ const isWeeklyOffHelper = (h) => {
   const isOff = words.includes("off") || words.includes("offday") || t.includes("weekly off") || t.includes("weekly-off");
 
   const hasWeekday = words.some(w => [
-    "sun", "sunday", "sinday",
+    "sun", "sunday", "sunday",
     "sat", "satday", "saturday", "saturaday",
     "mon", "monday", "tue", "tuesday", "wed", "wednesday", "thu", "thursday", "fri", "friday"
   ].includes(w));
@@ -144,7 +144,7 @@ export default function UpcomingHolidaysWidget() {
   }, []);
 
   return (
-    <div className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm h-full flex flex-col hover:shadow-md transition-shadow duration-300">
+    <div className="bg-white p-5 rounded-2xl  border border-gray-100 shadow-sm h-full flex flex-col hover:shadow-md transition-shadow duration-300">
       <div className="flex items-center justify-between mb-5 border-b border-gray-100 pb-3">
         <h3 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
           <Calendar size={18} className="text-blue-600" />

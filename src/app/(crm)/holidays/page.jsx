@@ -41,7 +41,7 @@ export default function HolidaysPage() {
     }
   };
 
-  const isSuperOrClientAdmin = 
+  const isSuperOrClientAdmin =
     user?.type === "super_admin" ||
     user?.type === "client_admin" ||
     user?.roles?.some(r => r.name === "Super Admin" || r.name === "Client Admin");
@@ -142,15 +142,15 @@ export default function HolidaysPage() {
         </div>
       ) : (
 
-      /* Main Grid Layout */
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3 bg-white p-5 md:p-6 rounded-2xl border border-gray-150 shadow-sm flex flex-col">
-          <HolidayCalendar holidays={holidays} onHolidayClick={handleEdit} />
+        /* Main Grid Layout */
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-3 bg-white p-5 md:p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
+            <HolidayCalendar holidays={holidays} onHolidayClick={handleEdit} />
+          </div>
+          <div className="lg:col-span-1">
+            <UpcomingHolidaysWidget />
+          </div>
         </div>
-        <div className="lg:col-span-1">
-          <UpcomingHolidaysWidget />
-        </div>
-      </div>
       )}
 
       <HolidayDrawer

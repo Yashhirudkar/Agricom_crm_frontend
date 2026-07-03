@@ -57,7 +57,8 @@ export default function ClientAccessConfigPage() {
           axiosInstance.get("/system/matrix/registry"),
         ]);
 
-        const currentClient = clientsRes.data.find(c => c.id.toString() === clientId);
+        const clientsList = Array.isArray(clientsRes.data) ? clientsRes.data : (clientsRes.data?.data || []);
+        const currentClient = clientsList.find(c => c.id.toString() === clientId);
         if (currentClient) {
           setClient(currentClient);
           setSelectedFolderIds(new Set((currentClient.folderAccess || []).map(f => f.folder_id)));

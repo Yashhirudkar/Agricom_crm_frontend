@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import React, { useState, useEffect, useMemo } from "react";
+import { useForm, useFieldArray, Controller, useWatch } from "react-hook-form";
 import Select from "react-select";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Plus,
   Trash2,
@@ -23,6 +24,55 @@ import useSystemOptions from "@/hooks/useSystemOptions";
 import axiosClient from "@/lib/axios";
 import { toast } from "sonner";
 import DynamicFieldRenderer from "@/components/common/DynamicFieldRenderer";
+import { City } from "country-state-city";
+
+// Custom virtualized MenuList for react-select to handle large options (e.g. cities) smoothly
+const VirtualMenuList = (props) => {
+  const { children, maxHeight } = props;
+  const parentRef = React.useRef(null);
+  const childrenArray = React.Children.toArray(children);
+
+  const rowVirtualizer = useVirtualizer({
+    count: childrenArray.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 35,
+    overscan: 5,
+  });
+
+  return (
+    <div
+      ref={parentRef}
+      style={{
+        maxHeight: maxHeight || 300,
+        overflow: "auto",
+      }}
+    >
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => (
+          <div
+            key={virtualRow.index}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: `${virtualRow.size}px`,
+              transform: `translateY(${virtualRow.start}px)`,
+            }}
+          >
+            {childrenArray[virtualRow.index]}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export default function PartnerDrawer({
   isOpen,
@@ -73,6 +123,27 @@ export default function PartnerDrawer({
       contacts: [],
     },
   });
+
+  // Watch countryId to drive city dropdown
+  const watchedCountryId = useWatch({ control, name: "countryId" });
+
+  // Derive available cities from selected country
+  const availableCities = useMemo(() => {
+    if (!watchedCountryId || !countries?.length) return [];
+    const selectedCountry = countries.find(
+      (c) => String(c.id) === String(watchedCountryId)
+    );
+    if (!selectedCountry?.iso2Code) return [];
+    
+    // Get cities from country-state-city package
+    const cities = City.getCitiesOfCountry(selectedCountry.iso2Code) || [];
+    
+    // Map to react-select options format
+    return cities.map(city => ({
+      value: city.name,
+      label: city.name
+    }));
+  }, [watchedCountryId, countries]);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -556,7 +627,7 @@ export default function PartnerDrawer({
                         {editData.city || "-"}
                       </div>
                     </div>
-                    <div className="md:col-span-2">
+                    <div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                         Full Address
                       </div>
@@ -564,6 +635,7 @@ export default function PartnerDrawer({
                         {editData.address || "-"}
                       </div>
                     </div>
+
                     <div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                         Website
@@ -796,7 +868,7 @@ export default function PartnerDrawer({
                         </p>
                       )}
                     </div>
-                    <div className="md:col-span-2">
+                    <div>
                       <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                         Address
                       </label>
@@ -806,14 +878,66 @@ export default function PartnerDrawer({
                         placeholder="Full street address..."
                       />
                     </div>
+
                     <div>
                       <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                         City
                       </label>
-                      <input
-                        {...register("city", { maxLength: 100 })}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-xs focus:outline-none focus:ring-0 text-gray-700 bg-gray-50/30"
-                        placeholder="City name"
+                      <Controller
+                        name="city"
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            {...field}
+                            options={availableCities}
+                            isDisabled={!watchedCountryId || availableCities.length === 0}
+                            placeholder={
+                              !watchedCountryId
+                                ? "Select Country first..."
+                                : "Search City..."
+                            }
+                            isClearable
+                            components={{ MenuList: VirtualMenuList }}
+                            className="react-select-container text-xs"
+                            classNamePrefix="react-select"
+                            value={
+                              field.value
+                                ? { value: field.value, label: field.value }
+                                : null
+                            }
+                            onChange={(option) => field.onChange(option ? option.value : "")}
+                            styles={{
+                              control: (base) => ({
+                                ...base,
+                                backgroundColor: "rgba(249, 250, 251, 0.3)",
+                                borderColor: "#e5e7eb",
+                                borderRadius: "0.5rem",
+                                minHeight: "38px",
+                                padding: "0",
+                                boxShadow: "none",
+                                "&:hover": { borderColor: "#d1d5db" }
+                              }),
+                              menu: (base) => ({
+                                ...base,
+                                zIndex: 50,
+                              }),
+                              option: (base) => ({
+                                ...base,
+                                fontSize: "12px",
+                              }),
+                              singleValue: (base) => ({
+                                ...base,
+                                fontSize: "12px",
+                                color: "#374151"
+                              }),
+                              placeholder: (base) => ({
+                                ...base,
+                                fontSize: "12px",
+                                color: "#9ca3af"
+                              })
+                            }}
+                          />
+                        )}
                       />
                     </div>
                     <div>
