@@ -30,8 +30,24 @@ export default function PartnerFollowUpDrawer({
   const [timelineSearch, setTimelineSearch] = useState("");
   const [editingId, setEditingId] = useState(null);
 
-  // Ref for auto-scrolling to the latest message
-  const chatEndRef = useRef(null);
+  // Ref for the chat scroll container
+  const chatContainerRef = useRef(null);
+  // Track whether the user is near the bottom (for background refresh behavior)
+  const isNearBottomRef = useRef(true);
+  // Set to true when the current user explicitly sends a message
+  const isSendingRef = useRef(false);
+
+  const scrollToBottom = (smooth = true) => {
+    const el = chatContainerRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "instant" });
+  };
+
+  const handleScroll = () => {
+    const el = chatContainerRef.current;
+    if (!el) return;
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+  };
 
   const {
     register,
@@ -56,6 +72,7 @@ export default function PartnerFollowUpDrawer({
   useEffect(() => {
     if (isOpen && partner) {
       setEditingId(null);
+      isNearBottomRef.current = true;
       reset({
         followupDate: new Date().toISOString().split("T")[0],
         communicationType: "Call",
@@ -65,25 +82,32 @@ export default function PartnerFollowUpDrawer({
         status: "Pending",
         priority: "Medium",
       });
-      fetchFollowUps();
+      fetchFollowUps(true);
     }
   }, [isOpen, partner, reset]);
 
   useEffect(() => {
-    // Scroll to bottom whenever followUps change (new message sent/loaded)
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // isSendingRef = user just sent → always scroll to bottom (fires after DOM paint)
+    // isNearBottomRef = user was already near bottom → keep them there
+    if (isSendingRef.current || isNearBottomRef.current) {
+      scrollToBottom();
+      isSendingRef.current = false;
+    }
   }, [followUps]);
 
-  const fetchFollowUps = async () => {
+  const fetchFollowUps = async (showLoading = true) => {
     if (!partner) return;
-    setIsLoading(true);
+    if (showLoading) setIsLoading(true);
     try {
       const res = await axiosClient.get(`/masters/partners/${partner.id}/follow-ups`);
-      setFollowUps(res.data);
+      const sorted = [...res.data].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      setFollowUps(sorted);
     } catch (err) {
       console.error("Failed to fetch follow ups", err);
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
@@ -137,7 +161,9 @@ export default function PartnerFollowUpDrawer({
         nextFollowupDate: "",
       });
 
-      await fetchFollowUps();
+      // Mark as sending so the useEffect fires scroll AFTER the new message is in the DOM
+      isSendingRef.current = true;
+      await fetchFollowUps(false);
       if (onSaveSuccess) onSaveSuccess();
     } catch (err) {
       console.error("Failed to save follow up", err);
@@ -224,7 +250,12 @@ export default function PartnerFollowUpDrawer({
         )}
 
         {/* --- CHAT BODY (MESSAGES) --- */}
-        <div className="flex-1 overflow-y-auto p-5 scroll-smooth custom-scrollbar" style={{ backgroundImage: 'radial-gradient(#d1d5db 1px, transparent 0)', backgroundSize: '20px 20px' }}>
+        <div 
+          ref={chatContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto p-5 scroll-smooth custom-scrollbar" 
+          style={{ backgroundImage: 'radial-gradient(#d1d5db 1px, transparent 0)', backgroundSize: '20px 20px' }}
+        >
 
           {isLoading ? (
             <div className="flex justify-center items-center h-full">
@@ -309,8 +340,7 @@ export default function PartnerFollowUpDrawer({
 
                 </div>
               ))}
-              {/* Invisible div to snap scroll to bottom */}
-              <div ref={chatEndRef} />
+              {/* No chatEndRef needed — we scroll the container directly */}
             </div>
           )}
         </div>

@@ -8,9 +8,13 @@ import {
   Layers,
   FileText,
   Boxes,
+  Package2,
+  Loader2,
 } from "lucide-react";
 import Drawer from "@/components/common/Drawer";
 import HasPermission from "@/components/rbac/HasPermission";
+import PackagingSelector from "@/components/masters/products/PackagingSelector";
+import axiosClient from "@/lib/axios";
 
 export default function ProductDrawer({
   isOpen,
@@ -28,6 +32,13 @@ export default function ProductDrawer({
   const [isEditMode, setIsEditMode] = useState(initialEditMode);
   const [activeTab, setActiveTab] = useState("overview");
 
+  // Packaging state
+  const [allSpecs, setAllSpecs] = useState([]);
+  const [selectedPackagingIds, setSelectedPackagingIds] = useState([]);
+  const [packagingLoading, setPackagingLoading] = useState(false);
+  const [packagingSaving, setPackagingSaving] = useState(false);
+  const [packagingError, setPackagingError] = useState("");
+
   // Sync edit mode state when drawer opens or mode changes from parent
   useEffect(() => {
     setIsEditMode(initialEditMode);
@@ -36,9 +47,55 @@ export default function ProductDrawer({
     }
   }, [isOpen, initialEditMode]);
 
+  // Load all available bag specifications whenever drawer opens
+  useEffect(() => {
+    if (!isOpen) return;
+    axiosClient
+      .get("/masters/bag-specifications", { params: { isActive: true, limit: 200 } })
+      .then((res) => setAllSpecs(res.data?.data || []))
+      .catch(() => setAllSpecs([]));
+  }, [isOpen]);
+
+  // Load assigned packaging for this product
+  useEffect(() => {
+    if (!isOpen || !form.id) {
+      setSelectedPackagingIds([]);
+      return;
+    }
+    setPackagingLoading(true);
+    axiosClient
+      .get(`/masters/products/${form.id}/packaging`)
+      .then((res) => {
+        const ids = (res.data || []).map((s) => s.id);
+        setSelectedPackagingIds(ids);
+      })
+      .catch(() => setSelectedPackagingIds([]))
+      .finally(() => setPackagingLoading(false));
+  }, [isOpen, form.id]);
+
   const handleDecimalChange = (field, val) => {
-    // If empty, set to null. Otherwise parse float to maintain valid DTO contract.
     setForm({ ...form, [field]: val === "" ? null : parseFloat(val) });
+  };
+
+  // Save packaging assignment separately then call main onSubmit
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    // First save the packaging assignments if we have a product id
+    if (form.id && selectedPackagingIds !== null) {
+      setPackagingSaving(true);
+      setPackagingError("");
+      try {
+        await axiosClient.put(`/masters/products/${form.id}/packaging`, {
+          bagSpecificationIds: selectedPackagingIds,
+        });
+      } catch (err) {
+        setPackagingError("Packaging save failed. Product info saved.");
+      } finally {
+        setPackagingSaving(false);
+      }
+    }
+    // Then save the product core fields
+    onSubmit(e);
   };
 
   const currentCategory = categories.find((c) => c.id === parseInt(form.categoryId, 10));
@@ -49,11 +106,13 @@ export default function ProductDrawer({
     ? [
         { id: "general", label: "General Information" },
         { id: "logistics", label: "Logistics Capacities" },
+        { id: "packaging", label: "Packaging Options" },
       ]
     : [
         { id: "overview", label: "Overview" },
         { id: "general", label: "General Information" },
         { id: "logistics", label: "Logistics Capacities" },
+        { id: "packaging", label: "Packaging Options" },
       ];
 
   return (
@@ -123,13 +182,18 @@ export default function ProductDrawer({
                 }`}
               >
                 {tab.label}
+                {tab.id === "packaging" && selectedPackagingIds.length > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-[#007aff] text-white text-[9px] font-bold">
+                    {selectedPackagingIds.length}
+                  </span>
+                )}
               </button>
             ))}
           </div>
         </div>
 
         {/* Scrollable Main Area */}
-        <form onSubmit={onSubmit} className="flex-1 overflow-y-auto p-6 flex flex-col">
+        <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-6 flex flex-col">
           {/* VIEW MODE CONTAINER */}
           {!isEditMode && form.id && (
             <div className="flex-1 space-y-6">
@@ -217,7 +281,7 @@ export default function ProductDrawer({
                 </div>
               )}
 
-              {/* General Information Tab */}
+              {/* General Information Tab — View */}
               {activeTab === "general" && (
                 <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6 shadow-xs animate-in fade-in duration-200">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -249,7 +313,7 @@ export default function ProductDrawer({
                 </div>
               )}
 
-              {/* Logistics Capacities Tab */}
+              {/* Logistics Capacities Tab — View */}
               {activeTab === "logistics" && (
                 <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-6 shadow-xs animate-in fade-in duration-200">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -274,6 +338,29 @@ export default function ProductDrawer({
                       <div className="text-sm font-mono font-bold text-gray-800 mt-1">{form.wagonCapacity ?? "-"} MT</div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Packaging Options Tab — View */}
+              {activeTab === "packaging" && (
+                <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs animate-in fade-in duration-200">
+                  <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider border-b border-gray-100 pb-3 mb-4 flex items-center gap-2">
+                    <Package2 className="h-4 w-4 text-[#007aff]" />
+                    Assigned Packaging Options
+                  </h3>
+                  {packagingLoading ? (
+                    <div className="flex items-center gap-2 py-8 justify-center">
+                      <Loader2 className="h-5 w-5 text-[#007aff] animate-spin" />
+                      <span className="text-xs text-gray-400">Loading packaging...</span>
+                    </div>
+                  ) : (
+                    <PackagingSelector
+                      allSpecs={allSpecs}
+                      selectedIds={selectedPackagingIds}
+                      onChange={setSelectedPackagingIds}
+                      isEditMode={false}
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -307,16 +394,12 @@ export default function ProductDrawer({
                       <select
                         required
                         value={form.categoryId}
-                        onChange={(e) =>
-                          setForm({ ...form, categoryId: parseInt(e.target.value, 10) || "" })
-                        }
+                        onChange={(e) => setForm({ ...form, categoryId: parseInt(e.target.value, 10) || "" })}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 text-gray-700 bg-white shadow-sm transition-all"
                       >
                         <option value="">Select...</option>
                         {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
                         ))}
                       </select>
                     </div>
@@ -327,16 +410,12 @@ export default function ProductDrawer({
                       <select
                         required
                         value={form.countryId}
-                        onChange={(e) =>
-                          setForm({ ...form, countryId: parseInt(e.target.value, 10) || "" })
-                        }
+                        onChange={(e) => setForm({ ...form, countryId: parseInt(e.target.value, 10) || "" })}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 text-gray-700 bg-white shadow-sm transition-all"
                       >
                         <option value="">Select...</option>
                         {countries.map((con) => (
-                          <option key={con.id} value={con.id}>
-                            {con.name}
-                          </option>
+                          <option key={con.id} value={con.id}>{con.name}</option>
                         ))}
                       </select>
                     </div>
@@ -350,16 +429,12 @@ export default function ProductDrawer({
                       <select
                         required
                         value={form.hsCodeId}
-                        onChange={(e) =>
-                          setForm({ ...form, hsCodeId: parseInt(e.target.value, 10) || "" })
-                        }
+                        onChange={(e) => setForm({ ...form, hsCodeId: parseInt(e.target.value, 10) || "" })}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 text-gray-700 bg-white shadow-sm transition-all"
                       >
                         <option value="">Select...</option>
                         {hscodes.map((hs) => (
-                          <option key={hs.id} value={hs.id}>
-                            {hs.code}
-                          </option>
+                          <option key={hs.id} value={hs.id}>{hs.code}</option>
                         ))}
                       </select>
                     </div>
@@ -397,18 +472,14 @@ export default function ProductDrawer({
               {activeTab === "logistics" && (
                 <div className="bg-white border border-gray-100 rounded-2xl p-6 space-y-4 shadow-xs animate-in fade-in duration-200">
                   <p className="text-[11px] font-bold text-gray-700 mb-4 uppercase tracking-wider flex items-center gap-2 border-b border-gray-200 pb-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#007aff]"></span>
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#007aff]" />
                     Logistics Base Capacities (Optional)
                   </p>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-                        20ft Cont.
-                      </label>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">20ft Cont.</label>
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="number" step="0.01" min="0"
                         value={form.qty20ftContainer ?? ""}
                         onChange={(e) => handleDecimalChange("qty20ftContainer", e.target.value)}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 text-gray-700 font-mono shadow-sm bg-white"
@@ -416,13 +487,9 @@ export default function ProductDrawer({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-                        40ft Cont.
-                      </label>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">40ft Cont.</label>
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="number" step="0.01" min="0"
                         value={form.qty40ftContainer ?? ""}
                         onChange={(e) => handleDecimalChange("qty40ftContainer", e.target.value)}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 text-gray-700 font-mono shadow-sm bg-white"
@@ -430,13 +497,9 @@ export default function ProductDrawer({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-                        40HC Cont.
-                      </label>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">40HC Cont.</label>
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="number" step="0.01" min="0"
                         value={form.qty40hcContainer ?? ""}
                         onChange={(e) => handleDecimalChange("qty40hcContainer", e.target.value)}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 text-gray-700 font-mono shadow-sm bg-white"
@@ -444,13 +507,9 @@ export default function ProductDrawer({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-                        Truck Cap.
-                      </label>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Truck Cap.</label>
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="number" step="0.01" min="0"
                         value={form.truckCapacity ?? ""}
                         onChange={(e) => handleDecimalChange("truckCapacity", e.target.value)}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 text-gray-700 font-mono shadow-sm bg-white"
@@ -458,13 +517,9 @@ export default function ProductDrawer({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-                        Wagon Cap.
-                      </label>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Wagon Cap.</label>
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="number" step="0.01" min="0"
                         value={form.wagonCapacity ?? ""}
                         onChange={(e) => handleDecimalChange("wagonCapacity", e.target.value)}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 text-gray-700 font-mono shadow-sm bg-white"
@@ -472,6 +527,40 @@ export default function ProductDrawer({
                       />
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* TAB: Packaging Options */}
+              {activeTab === "packaging" && (
+                <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-xs animate-in fade-in duration-200">
+                  <div className="border-b border-gray-100 pb-3 mb-4 flex items-center justify-between">
+                    <h3 className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                      <Package2 className="h-4 w-4 text-[#007aff]" />
+                      Packaging Options
+                    </h3>
+                    {!form.id && (
+                      <span className="text-[10px] text-amber-500 font-semibold bg-amber-50 px-2 py-1 rounded-lg">
+                        Save product first to assign packaging
+                      </span>
+                    )}
+                  </div>
+
+                  {packagingLoading ? (
+                    <div className="flex items-center gap-2 py-8 justify-center">
+                      <Loader2 className="h-5 w-5 text-[#007aff] animate-spin" />
+                      <span className="text-xs text-gray-400">Loading packaging options...</span>
+                    </div>
+                  ) : (
+                    <PackagingSelector
+                      allSpecs={allSpecs}
+                      selectedIds={selectedPackagingIds}
+                      onChange={setSelectedPackagingIds}
+                      isEditMode={!!form.id}
+                    />
+                  )}
+                  {packagingError && (
+                    <p className="text-amber-600 text-xs font-semibold mt-3">{packagingError}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -515,10 +604,10 @@ export default function ProductDrawer({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSaving}
+                  disabled={isSaving || packagingSaving}
                   className="px-5 py-2.5 bg-[#007aff] hover:bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors shadow-md shadow-blue-500/20"
                 >
-                  {isSaving && (
+                  {(isSaving || packagingSaving) && (
                     <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   )}
                   {form.id ? "Save Changes" : "Create Product"}

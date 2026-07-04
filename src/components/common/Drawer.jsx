@@ -64,7 +64,7 @@ export default function Drawer({
           )}
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto flex flex-col h-full bg-white relative">
+          <div className="flex-1 flex flex-col min-h-0 bg-white relative">
             {children}
           </div>
         </div>

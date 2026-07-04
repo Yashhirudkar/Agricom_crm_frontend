@@ -56,7 +56,7 @@ export default function Drawer({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <X className="h-5 w-5" />
             </button>
@@ -71,11 +71,10 @@ export default function Drawer({
                   <button
                     key={tab.id}
                     onClick={() => onTabChange?.(tab.id)}
-                    className={`pb-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
-                      isActive
+                    className={`pb-3 px-4 text-xs font-semibold uppercase tracking-wider border-b-2 transition-all cursor-pointer ${isActive
                         ? "border-[#007aff] text-[#007aff]"
                         : "border-transparent text-gray-400 hover:text-gray-700"
-                    }`}
+                      }`}
                   >
                     {tab.label}
                   </button>

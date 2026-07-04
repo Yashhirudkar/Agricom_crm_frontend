@@ -1,6 +1,46 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Edit2, Trash2, RefreshCcw, ShieldAlert, Ban, Eye } from "lucide-react";
 import HasPermission from "@/components/rbac/HasPermission";
+import {
+  fetchProductPackaging,
+  selectProductPackaging,
+} from "@/store/entities/bagSpecsSlice";
+
+// Mini component to lazily load and show packaging badges per product
+function PackagingBadges({ productId }) {
+  const dispatch = useDispatch();
+  const specs = useSelector(selectProductPackaging(productId));
+
+  useEffect(() => {
+    if (productId) {
+      dispatch(fetchProductPackaging(productId));
+    }
+  }, [dispatch, productId]);
+
+  if (!specs || specs.length === 0) {
+    return <span className="text-gray-300 text-[10px]">—</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1 max-w-[220px]">
+      {specs.slice(0, 3).map((spec) => (
+        <span
+          key={spec.id}
+          className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 text-[9px] font-bold whitespace-nowrap"
+        >
+          {spec.bagType?.name?.split(" ").pop()}
+          {spec.packingType?.name ? ` ${spec.packingType.name}` : ""}
+        </span>
+      ))}
+      {specs.length > 3 && (
+        <span className="text-[9px] text-gray-400 font-semibold self-center">
+          +{specs.length - 3}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function ProductsTable({
   products,
@@ -19,7 +59,7 @@ export default function ProductsTable({
             <th className="px-6 py-4">Category</th>
             <th className="px-6 py-4">Origin / HS Code</th>
             <th className="px-6 py-4">SubType / Spec</th>
-            <th className="px-6 py-4">Logistics Base</th>
+            <th className="px-6 py-4">Packaging</th>
             <th className="px-6 py-4">Status</th>
             <th className="px-6 py-4 text-right">Actions</th>
           </tr>
@@ -52,17 +92,15 @@ export default function ProductsTable({
                   <div className="truncate" title={item.qualitySubType || ""}>
                     <span className="font-semibold">Type:</span>{" "}
                     {item.qualitySubType
-                      ? item.qualitySubType.replace(/\b\w/g, char => char.toUpperCase())
+                      ? item.qualitySubType.replace(/\b\w/g, (char) => char.toUpperCase())
                       : "-"}
                   </div>
                   <div className="truncate" title={item.specification || ""}>
                     <span className="font-semibold">Spec:</span> {item.specification || "-"}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-gray-600 font-mono text-[10px]">
-                  <div>20ft: {item.qty20ftContainer ?? "-"}</div>
-                  <div>40ft: {item.qty40ftContainer ?? "-"}</div>
-                  <div>40HC: {item.qty40hcContainer ?? "-"}</div>
+                <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                  <PackagingBadges productId={item.id} />
                 </td>
                 <td className="px-6 py-4">
                   {item.isActive ? (
