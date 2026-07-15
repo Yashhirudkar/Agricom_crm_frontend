@@ -62,15 +62,15 @@ export default function ViewsDropdown() {
     <div className="relative" ref={dropdownRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors text-gray-700"
+        className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors text-gray-700 whitespace-nowrap shrink-0 cursor-pointer"
       >
-        <ActiveIcon className={`w-4 h-4 ${activePresetItem?.color || "text-gray-500"}`} />
-        <span className="hidden sm:inline">{activePresetItem?.label || "Select View"}</span>
-        <ChevronDown className="w-4 h-4 text-gray-400" />
+        <ActiveIcon className={`w-4 h-4 ${activePresetItem?.color || "text-gray-500"} shrink-0`} />
+        <span className="hidden sm:inline whitespace-nowrap">{activePresetItem?.label || "Select View"}</span>
+        <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-1 left-0 w-64 bg-white border border-gray-100 shadow-xl rounded-xl py-2 z-50 max-h-96 overflow-y-auto custom-scrollbar">
+        <div className="absolute top-full mt-1 right-0 md:right-auto md:left-0 w-64 bg-white border border-gray-100 shadow-xl rounded-xl py-2 z-50 max-h-96 overflow-y-auto custom-scrollbar">
           <div className="px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Views</div>
           
           <div className="space-y-0.5">

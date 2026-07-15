@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Bell, Check, LogOut, ChevronDown, Building2, Search } from "lucide-react";
+import { Bell, Check, LogOut, ChevronDown, Building2, Search, Menu } from "lucide-react";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
@@ -54,7 +54,18 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-gray-200/50 bg-white backdrop-blur-xl transition-all duration-300">
       <div className="w-full px-4 h-16 flex items-center justify-between">
         {/* Left Side: Logo & Workspace Switcher */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 md:gap-6">
+          {/* Mobile Sidebar Hamburger Toggle */}
+          <button
+            onClick={() => {
+              window.dispatchEvent(new Event("toggle-sidebar"));
+            }}
+            className="block md:hidden p-1 text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-xl transition-all cursor-pointer mr-[-4px]"
+            title="Toggle Sidebar"
+          >
+            <Menu className="h-5.5 w-5.5" />
+          </button>
+
           <div className="flex items-center gap-2 cursor-pointer group" onClick={() => router.push("/")}>
             <div className="relative overflow-hidden rounded-lg transition-transform duration-300 group-hover:scale-102 flex items-center h-10">
               <Image

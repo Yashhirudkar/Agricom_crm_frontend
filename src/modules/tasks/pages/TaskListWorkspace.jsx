@@ -73,7 +73,7 @@ export default function TaskListWorkspace() {
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
           
           {/* Table Area (Flex-1, manages its own virtual scroll) */}
-          <div className="flex-1 overflow-hidden p-4 bg-[#f8f9fc]">
+          <div className="flex-1 overflow-hidden p-2 sm:p-4 bg-[#f8f9fc]">
             <TaskTable />
           </div>
           

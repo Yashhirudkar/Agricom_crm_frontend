@@ -1,9 +1,10 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Save, Loader2, AlertCircle } from "lucide-react";
 import { useSalesMasters } from "../hooks/useSalesContracts";
 import { salesContractApi } from "../services/salesContractApi";
+import { enquiryApi } from "@/modules/enquiries/services/enquiryApi";
 import HeaderSection from "../components/HeaderSection";
 import PartySection from "../components/PartySection";
 import CommercialSection from "../components/CommercialSection";
@@ -70,6 +71,8 @@ function validate(form) {
 
 export default function ContractFormPage({ editId, viewId }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const enquiryId = searchParams ? searchParams.get("enquiryId") : null;
   const { masters, loading: mastersLoading } = useSalesMasters();
   const [form, setForm] = useState(defaultForm());
   const [errors, setErrors] = useState({});
@@ -143,6 +146,76 @@ export default function ContractFormPage({ editId, viewId }) {
     };
     load();
   }, [contractId]);
+
+  useEffect(() => {
+    if (!enquiryId || isEdit || isView || mastersLoading) return;
+    const loadEnquiry = async () => {
+      setLoadingContract(true);
+      try {
+        const res = await enquiryApi.getOne(enquiryId);
+        const eq = res.data;
+        if (!eq) return;
+
+        let activeFyId = "";
+        if (masters.financialYears && masters.financialYears.length > 0) {
+          activeFyId = masters.financialYears[0].id;
+        }
+
+        const matchedShipmentType = masters?.shipmentTypes?.find(
+          s => s.name?.toLowerCase() === eq.shipmentType?.toLowerCase()
+        );
+        const shipmentTypeId = matchedShipmentType ? matchedShipmentType.id : "";
+
+        setForm({
+          financialYearId: activeFyId,
+          contractNumber: "",
+          contractDate: new Date().toISOString().split("T")[0],
+          contractType: "Export",
+          buyerId: eq.partnerId || "",
+          sellerId: null,
+          brokerId: null,
+          currencyCode: "USD",
+          shipmentTypeId: shipmentTypeId,
+          paymentTermId: "",
+          originCountryId: eq.originCountryId || "",
+          destinationCountryId: "",
+          portOfLoading: "",
+          portOfDischarge: eq.podPort || "",
+          remarks: `Created from Enquiry ${eq.enquiryNo || ""}`,
+          numShipments: eq.shipmentDate ? 1 : 3,
+          items: [{
+            productId: eq.productId || "",
+            bagTypeId: "",
+            packingTypeId: eq.packingTypeId || "",
+            bagSpecificationId: null,
+            quantity: eq.quantity || "",
+            unitPrice: eq.buyingInterest || "",
+            amount: parseFloat(((eq.quantity || 0) * (eq.buyingInterest || 0)).toFixed(2)) || 0,
+            marking: "",
+            remarks: "",
+          }],
+          shipments: eq.shipmentDate ? [{
+            shipmentNo: 1,
+            shipmentDate: eq.shipmentDate ? eq.shipmentDate.split("T")[0] : "",
+            quantity: eq.quantity || "",
+            noOfContainers: "",
+            ratePerMt: "",
+            currencyCode: "",
+            purchaseRate: "",
+            forex: "",
+            freight: "",
+            remarks: "",
+          }] : [],
+          documents: [],
+        });
+      } catch (err) {
+        console.error("Failed to load enquiry details:", err);
+      } finally {
+        setLoadingContract(false);
+      }
+    };
+    loadEnquiry();
+  }, [enquiryId, isEdit, isView, mastersLoading, masters]);
 
   const handleSave = async (asDraft = false) => {
     const errs = validate(form);

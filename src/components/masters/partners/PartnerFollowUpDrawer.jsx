@@ -23,6 +23,9 @@ export default function PartnerFollowUpDrawer({
   onClose,
   partner,
   onSaveSuccess,
+  enquiryId,
+  partnerId,
+  entityType,
 }) {
   const [followUps, setFollowUps] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -145,6 +148,8 @@ export default function PartnerFollowUpDrawer({
         followupDate: new Date(data.followupDate).toISOString(),
         nextFollowupDate: data.nextFollowupDate ? new Date(data.nextFollowupDate).toISOString() : null,
       };
+      if (partnerId) payload.partnerId = partnerId;
+      if (enquiryId) payload.enquiryId = enquiryId;
 
       if (editingId) {
         await axiosClient.patch(`/masters/partners/${partner.id}/follow-ups/${editingId}`, payload);

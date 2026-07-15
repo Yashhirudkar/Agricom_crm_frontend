@@ -63,6 +63,29 @@ export function Sidebar() {
     return () => window.removeEventListener("sidebar-updated", fetchSidebar);
   }, []);
 
+  // Auto-collapse sidebar on smaller screens (below lg/1024px)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setIsSidebarCollapsed(true);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Listen to mobile toggle event from Header
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleToggle = () => {
+      setIsSidebarCollapsed((prev) => !prev);
+    };
+    window.addEventListener("toggle-sidebar", handleToggle);
+    return () => window.removeEventListener("toggle-sidebar", handleToggle);
+  }, []);
+
   // We use SidebarDynamicIcon inside JSX, so we don't need to pre-map components.
   const formattedMenu = menuConfig;
 
@@ -133,11 +156,19 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`relative ${isSidebarCollapsed ? "w-[80px]" : "w-[260px]"} flex flex-col bg-white text-gray-500 h-full border-r border-gray-200 flex-shrink-0 font-sans transition-all duration-300 z-40`}
+      className={`fixed md:relative top-16 md:top-0 bottom-0 left-0 h-[calc(100vh-64px)] md:h-full flex flex-col bg-white text-gray-500 border-r border-gray-200 flex-shrink-0 font-sans transition-all duration-300 z-40 ${
+        isSidebarCollapsed
+          ? "w-0 md:w-[80px] overflow-hidden border-r-0 md:border-r"
+          : "w-[260px] shadow-2xl md:shadow-none"
+      }`}
     >
       <button
         onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        className="absolute -right-3.5 top-5 bg-white border border-gray-200 text-[#007aff] rounded-full p-1 shadow-md hover:bg-gray-50 z-50 transition-transform"
+        className={`absolute top-5 bg-white border border-gray-200 text-[#007aff] rounded-full p-1 shadow-md hover:bg-gray-50 z-50 transition-all duration-300 ${
+          isSidebarCollapsed
+            ? "left-full translate-x-2 md:translate-x-[-50%]"
+            : "left-full translate-x-[-50%]"
+        }`}
       >
         {isSidebarCollapsed ? (
           <ChevronRight className="h-4 w-4" />

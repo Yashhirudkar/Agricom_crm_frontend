@@ -83,12 +83,12 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
 
   return (
     <div className="flex flex-col border-b border-gray-200 bg-white shrink-0">
-      <div className="h-14 px-4 flex items-center justify-between gap-2">
+      <div className="flex flex-col md:flex-row px-4 py-2.5 md:py-0 md:items-center justify-between gap-3 min-h-[3.5rem]">
         
         {/* Left Side: Search & Bulk Actions */}
-        <div className="flex items-center gap-2 md:gap-4 flex-1">
+        <div className="flex items-center gap-2 md:gap-4 flex-wrap md:flex-nowrap w-full md:w-auto">
           {/* Global Search */}
-          <div className="relative w-full max-w-[160px] md:max-w-[256px]">
+          <div className="relative flex-1 md:flex-initial w-full max-w-none md:max-w-[256px] min-w-[140px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               id="task-global-search"
@@ -103,7 +103,7 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
           <button 
             onClick={() => canCreate && openCreateTaskDrawer()}
             disabled={!canCreate}
-            className={`flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-sm font-medium rounded-lg shadow-sm transition-colors shrink-0 ${
+            className={`flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 text-sm font-medium rounded-lg shadow-sm transition-colors shrink-0 ${
               canCreate 
                 ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer" 
                 : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
@@ -118,7 +118,7 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
 
           {/* Bulk Actions Dropdown */}
           {selectedCount > 0 && (
-            <div className="relative" ref={bulkRef}>
+            <div className="relative shrink-0" ref={bulkRef}>
               <button 
                 onClick={() => setIsBulkOpen(!isBulkOpen)}
                 className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
@@ -127,7 +127,7 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
               </button>
               
               {isBulkOpen && (
-                <div className="absolute top-full mt-1 left-0 w-48 bg-white border border-gray-100 shadow-xl rounded-xl py-1 z-50">
+                <div className="absolute top-full mt-1 right-0 md:right-auto md:left-0 w-48 bg-white border border-gray-100 shadow-xl rounded-xl py-1 z-50">
                   <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">Bulk Actions</div>
                   <button 
                     onClick={() => {
@@ -171,16 +171,16 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
         </div>
 
         {/* Right Side: Tools & Actions */}
-        <div className="flex items-center gap-1 md:gap-2 overflow-x-auto custom-scrollbar">
+        <div className="flex items-center gap-2 flex-wrap md:flex-nowrap w-full md:w-auto justify-start md:justify-end">
           
           {/* Company Context Dropdown Header for Super Admin */}
           {userType === "super_admin" && (
-            <div className="flex items-center gap-2 mr-2 border-r border-gray-200 pr-3">
+            <div className="flex items-center gap-2 mr-2 border-r border-gray-200 pr-3 flex-wrap sm:flex-nowrap">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider hidden md:inline">Super Admin Context</span>
               <select
                 value={selectedCompanyId || ""}
                 onChange={handleCompanyChange}
-                className="border border-gray-200 rounded-lg px-2.5 py-1 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white min-w-[140px]"
+                className="border border-gray-200 rounded-lg px-2.5 py-1 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white min-w-[140px] flex-1 md:flex-initial"
               >
                 <option value="">-- Select Company Context --</option>
                 {allCompanies?.map((c, idx) => (
@@ -193,42 +193,42 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
           )}
 
           {/* View Modes (List / Kanban / Calendar) */}
-          <div className="hidden sm:flex items-center bg-gray-100 p-0.5 rounded-lg mr-2 border border-gray-200">
+          <div className="flex items-center bg-gray-100 p-0.5 rounded-lg mr-2 border border-gray-200 shrink-0">
             <button 
               onClick={() => setActiveView('list')}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${activeView === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${activeView === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
             >
               List
             </button>
             <button 
               onClick={() => setActiveView('kanban')}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${activeView === 'kanban' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${activeView === 'kanban' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Kanban
             </button>
             <button 
               onClick={() => setActiveView('calendar')}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${activeView === 'calendar' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${activeView === 'calendar' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Calendar
             </button>
           </div>
 
-          <div className="hidden sm:block h-6 w-px bg-gray-200 mx-1"></div>
+          <div className="hidden md:block h-6 w-px bg-gray-200 mx-1"></div>
 
-          <button className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors hidden sm:block" title="Refresh">
+          <button className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Refresh">
             <RefreshCcw className="w-4 h-4" />
           </button>
-          <button className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors hidden sm:block" title="Export">
+          <button className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Export">
             <Download className="w-4 h-4" />
           </button>
-          <button className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors hidden sm:block" title="Columns">
+          <button className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Columns">
             <Columns className="w-4 h-4" />
           </button>
           <div className="relative" ref={saveViewRef}>
             <button 
               onClick={() => setIsSaveViewOpen(!isSaveViewOpen)}
-              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" 
+              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" 
               title="Save View"
             >
               <Bookmark className="w-4 h-4" />
@@ -244,7 +244,7 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
                   className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none mb-3"
                 />
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => setIsSaveViewOpen(false)} className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+                  <button onClick={() => setIsSaveViewOpen(false)} className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer">Cancel</button>
                   <button 
                     onClick={async () => {
                       if (!viewName.trim()) return;
@@ -260,7 +260,7 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
                       // We need to trigger an event to update sidebar, or use a context/store for custom views
                       window.dispatchEvent(new Event("taskViewsUpdated"));
                     }}
-                    className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
+                    className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-lg cursor-pointer"
                   >
                     Save
                   </button>
@@ -271,7 +271,7 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
 
           <button 
             onClick={toggleFilterDrawer}
-            className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 border border-gray-200 rounded-lg md:ml-2 transition-colors shrink-0"
+            className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 border border-gray-200 rounded-lg md:ml-2 transition-colors shrink-0 cursor-pointer"
           >
             <SlidersHorizontal className="w-4 h-4" />
             <span className="hidden md:inline">Filters</span>
