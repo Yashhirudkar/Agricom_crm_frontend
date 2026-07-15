@@ -37,13 +37,13 @@ axiosClient.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-      
+
       let activeCompanyId = localStorage.getItem("activeCompanyId");
-      
+
       if (store) {
         const state = store.getState();
         const user = state.auth?.user;
-        
+
         // Fallback: if no activeCompanyId in localStorage, try user's own companyId
         if (!activeCompanyId && user?.lastCompanyId) {
           activeCompanyId = user.lastCompanyId.toString();
@@ -51,12 +51,12 @@ axiosClient.interceptors.request.use(
         if (!activeCompanyId && user?.companyId) {
           activeCompanyId = user.companyId.toString();
         }
-        
+
         // If we have an ID and user is NOT super_admin, validate workspace access
         if (activeCompanyId && user && user.type !== "super_admin") {
           const workspaces = user.workspaces || [];
           const hasAccess = workspaces.some(w => w.id.toString() === activeCompanyId.toString());
-          
+
           if (!hasAccess) {
             if (workspaces.length > 0) {
               activeCompanyId = workspaces[0].id.toString();
@@ -68,7 +68,7 @@ axiosClient.interceptors.request.use(
           }
         }
       }
-      
+
       if (activeCompanyId) {
         config.headers["x-company-id"] = activeCompanyId;
       }
@@ -85,7 +85,7 @@ axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error("[Axios Error]", error.config?.url, error.response?.status, error.response?.data);
-    
+
     if (typeof window !== "undefined") {
       if (error.response?.status === 401) {
         sessionStorage.removeItem("accessToken");
@@ -95,7 +95,7 @@ axiosClient.interceptors.response.use(
 
       // Extract error message from standard backend DTO or fallback
       const message = error.response?.data?.message || error.response?.data?.error || "An unexpected error occurred.";
-      
+
       // Don't toast 404s globally if they are expected (optional), but for enterprise usually we toast 4xx and 5xx
       if (error.response?.status >= 400 && error.response?.status !== 404) {
         toast.error(message);
@@ -103,7 +103,7 @@ axiosClient.interceptors.response.use(
         toast.error("Network connection lost. Please check your internet connection.");
       }
     }
-    
+
     return Promise.reject(error);
   }
 );

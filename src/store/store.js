@@ -25,6 +25,11 @@ import productsReducer from "./entities/productSlice";
 import partnersReducer from "./entities/partnerSlice";
 import tasksReducer from "./entities/taskSlice";
 import bagSpecsReducer from "./entities/bagSpecsSlice";
+import financialYearReducer from "./entities/financialYearSlice";
+
+import shipmentTypeReducer from "./entities/shipmentTypeSlice";
+import paymentTermReducer from "./entities/paymentTermSlice";
+import tradeDocumentReducer from "./entities/tradeDocumentSlice";
 
 import { injectStore } from "../lib/axios";
 
@@ -48,6 +53,11 @@ const entitiesReducer = combineReducers({
   partners: partnersReducer,
   tasks: tasksReducer,
   bagSpecs: bagSpecsReducer,
+  financialYears: financialYearReducer,
+
+  shipmentTypes: shipmentTypeReducer,
+  paymentTerms: paymentTermReducer,
+  tradeDocuments: tradeDocumentReducer,
 });
 
 export const store = configureStore({
