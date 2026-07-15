@@ -10,6 +10,7 @@ import CommercialSection from "../components/CommercialSection";
 import ItemsTable from "../components/ItemsTable";
 import ShipmentTable from "../components/ShipmentTable";
 import DocumentSection from "../components/DocumentSection";
+import DocumentUploadSection from "../components/DocumentUploadSection";
 import RemarksSection from "../components/RemarksSection";
 
 const defaultForm = () => ({
@@ -75,6 +76,7 @@ export default function ContractFormPage({ editId, viewId }) {
   const [saving, setSaving] = useState(false);
   const [loadingContract, setLoadingContract] = useState(false);
   const [pageError, setPageError] = useState(null);
+  const [uploadedDocIds, setUploadedDocIds] = useState([]);
 
   const isEdit = !!editId;
   const isView = !!viewId && !editId;
@@ -202,12 +204,24 @@ export default function ContractFormPage({ editId, viewId }) {
     try {
       if (isEdit) {
         await salesContractApi.update(contractId, payload);
+        if (asDraft) {
+          // Stay on page
+        } else {
+          router.push("/sales-contracts");
+        }
       } else {
-        await salesContractApi.create(payload);
+        const res = await salesContractApi.create(payload);
+        if (asDraft) {
+          router.replace(`/sales-contracts/${res.data.id}/edit`);
+        } else {
+          router.push("/sales-contracts");
+        }
       }
-      router.push("/sales-contracts");
     } catch (err) {
-      // Axios interceptor already shows the toast
+      if (err.response?.data?.message && err.response.data.message.includes('Cannot activate contract')) {
+         setErrors({ activation: err.response.data.message });
+         window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     } finally {
       setSaving(false);
     }
@@ -290,8 +304,10 @@ export default function ContractFormPage({ editId, viewId }) {
           <div>
             <p className="text-xs font-bold text-red-700">Please fix the following errors before saving:</p>
             <ul className="mt-1 space-y-0.5">
-              {Object.values(errors).map((msg, i) => (
-                <li key={i} className="text-[11px] text-red-600">• {msg}</li>
+              {Object.entries(errors).map(([key, msg], i) => (
+                <li key={i} className="text-[11px] text-red-600">
+                   {key === 'activation' ? <pre className="font-sans whitespace-pre-wrap">{msg}</pre> : `• ${msg}`}
+                </li>
               ))}
             </ul>
           </div>
@@ -304,7 +320,16 @@ export default function ContractFormPage({ editId, viewId }) {
       <CommercialSection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
       <ItemsTable form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
       <ShipmentTable form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
-      <DocumentSection form={form} setForm={setForm} masters={masters} isView={isView} />
+      <DocumentSection form={form} setForm={setForm} masters={masters} isView={isView} uploadedDocIds={uploadedDocIds} />
+      {contractId && (
+        <DocumentUploadSection
+          contractId={contractId}
+          isView={isView}
+          selectedDocuments={form.documents}
+          tradeDocumentsMaster={masters.tradeDocuments}
+          onUploadedChange={setUploadedDocIds}
+        />
+      )}
       <RemarksSection form={form} setForm={setForm} isView={isView} />
 
       {/* Bottom Action Bar */}

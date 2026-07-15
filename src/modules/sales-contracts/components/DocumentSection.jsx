@@ -2,13 +2,15 @@
 import React from "react";
 import { FileCheck2 } from "lucide-react";
 
-export default function DocumentSection({ form, setForm, masters, isView }) {
+export default function DocumentSection({ form, setForm, masters, isView, uploadedDocIds = [] }) {
   const selected = form.documents || [];
 
   const toggle = (doc) => {
     if (isView) return;
     const exists = selected.find(d => d.tradeDocumentId === doc.id);
     if (exists) {
+      // Do not allow deselection if a file is already uploaded
+      if (uploadedDocIds.includes(doc.id)) return;
       setForm(f => ({ ...f, documents: (f.documents || []).filter(d => d.tradeDocumentId !== doc.id) }));
     } else {
       setForm(f => ({
@@ -23,6 +25,7 @@ export default function DocumentSection({ form, setForm, masters, isView }) {
   };
 
   const isSelected = (docId) => selected.some(d => d.tradeDocumentId === docId);
+  const isUploaded = (docId) => uploadedDocIds.includes(docId);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
@@ -43,23 +46,25 @@ export default function DocumentSection({ form, setForm, masters, isView }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {masters.tradeDocuments.map(doc => {
               const checked = isSelected(doc.id);
+              const hasFile = isUploaded(doc.id);
               return (
                 <label
                   key={doc.id}
-                  className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                    isView ? "cursor-default" : "cursor-pointer"
+                  className={`flex items-start gap-3 p-3 rounded-xl border transition-all ${
+                    isView || hasFile ? "cursor-not-allowed opacity-75" : "cursor-pointer"
                   } ${
                     checked
                       ? "bg-blue-50 border-[#007aff]/30 shadow-xs"
                       : "border-gray-200 hover:bg-gray-50"
                   }`}
+                  title={hasFile ? "Delete the uploaded file below first to deselect this document" : ""}
                 >
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggle(doc)}
-                    disabled={isView}
-                    className="mt-0.5 h-3.5 w-3.5 rounded accent-[#007aff] flex-shrink-0"
+                    disabled={isView || hasFile}
+                    className="mt-0.5 h-3.5 w-3.5 rounded accent-[#007aff] flex-shrink-0 cursor-pointer disabled:cursor-not-allowed"
                   />
                   <div className="min-w-0">
                     <p className={`text-xs font-semibold leading-tight ${checked ? "text-[#007aff]" : "text-gray-700"}`}>
@@ -68,11 +73,18 @@ export default function DocumentSection({ form, setForm, masters, isView }) {
                     {doc.description && (
                       <p className="text-[10px] text-gray-400 mt-0.5 leading-snug">{doc.description}</p>
                     )}
-                    {doc.mandatoryByDefault && (
-                      <span className="inline-block mt-1 text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-100">
-                        Mandatory
-                      </span>
-                    )}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      {doc.mandatoryByDefault && (
+                        <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-100">
+                          Mandatory
+                        </span>
+                      )}
+                      {hasFile && (
+                        <span className="text-[9px] font-bold text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full border border-green-150">
+                          File Uploaded
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </label>
               );

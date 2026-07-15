@@ -8,6 +8,16 @@ export const salesContractApi = {
   updateStatus: (id, status) =>
     axiosClient.patch(`/sales-contracts/${id}/status`, { status }),
   remove: (id) => axiosClient.delete(`/sales-contracts/${id}`),
+  
+  // Document Endpoints
+  getDocuments: (id) => axiosClient.get(`/sales-contracts/${id}/documents`),
+  uploadDocument: (id, tradeDocumentId, data, onUploadProgress) => 
+    axiosClient.post(`/sales-contracts/${id}/documents/${tradeDocumentId}/upload`, data, {
+      headers: { "Content-Type": "multipart/form-data" },
+      onUploadProgress
+    }),
+  deleteDocument: (id, tradeDocumentId) => 
+    axiosClient.delete(`/sales-contracts/${id}/documents/${tradeDocumentId}`),
 };
 
 export const mastersApi = {

@@ -1,7 +1,8 @@
 import React from "react";
 import { currencies } from "@/constants/currenciesData";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, Rocket } from "lucide-react";
 import ContractStatusBadge from "./ContractStatusBadge";
+import ScheduleBadge from "./ScheduleBadge";
 
 export default function ContractsTable({ contracts, loading, onView, onEdit, onDelete }) {
   if (loading) {
@@ -32,7 +33,7 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Contract No.", "Date", "Buyer", "Currency", "Total Qty (MT)", "Total Amount", "Status", "Actions"].map(h => (
+            {["Contract No.", "Date", "Schedule", "Buyer", "Currency", "Total Qty (MT)", "Total Amount", "Documents", "Status", "Actions"].map(h => (
               <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">{h}</th>
             ))}
           </tr>
@@ -46,6 +47,9 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
               <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                 {c.contractDate ? new Date(c.contractDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
               </td>
+              <td className="px-4 py-3 whitespace-nowrap">
+                <ScheduleBadge date={c.contractDate} />
+              </td>
               <td className="px-4 py-3 text-gray-800 font-medium whitespace-nowrap">
                 {c.buyer?.name || c.buyer?.entityName || "—"}
               </td>
@@ -58,6 +62,18 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
               <td className="px-4 py-3 text-gray-800 font-semibold tabular-nums">
                 {currencies[c.currencyCode]?.symbol || ""} {Number(c.totalAmount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </td>
+              <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                {c.documents?.length > 0 ? (
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${(c.documentFiles?.length || 0) === c.documents?.length
+                    ? "bg-green-50 text-green-700 border border-green-200"
+                    : "bg-amber-50 text-amber-700 border border-amber-200"
+                    }`}>
+                    {c.documentFiles?.length || 0} / {c.documents?.length}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-gray-400 font-normal italic">None</span>
+                )}
+              </td>
               <td className="px-4 py-3">
                 <ContractStatusBadge status={c.status} />
               </td>
@@ -65,17 +81,24 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => onView(c)}
-                    className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors"
+                    className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                     title="View"
                   >
                     <Eye className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => onEdit(c)}
-                    className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
+                    className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
                     title="Edit"
                   >
                     <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
+                    title="Execute Contract"
+                  >
+                    <Rocket className="h-3.5 w-3.5" />
                   </button>
                   {(c.status === "Draft" || c.status === "Cancelled") && (
                     <button
