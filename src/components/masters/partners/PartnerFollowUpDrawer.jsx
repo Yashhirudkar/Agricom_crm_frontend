@@ -102,7 +102,15 @@ export default function PartnerFollowUpDrawer({
     if (!partner) return;
     if (showLoading) setIsLoading(true);
     try {
-      const res = await axiosClient.get(`/masters/partners/${partner.id}/follow-ups`);
+      const eType = entityType || "partner";
+      const eId = entityType === "enquiry" ? enquiryId : (partnerId || partner.id);
+
+      const res = await axiosClient.get(`/masters/partners/${partner.id}/follow-ups`, {
+        params: {
+          entityType: eType,
+          entityId: eId
+        }
+      });
       const sorted = [...res.data].sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
@@ -148,8 +156,15 @@ export default function PartnerFollowUpDrawer({
         followupDate: new Date(data.followupDate).toISOString(),
         nextFollowupDate: data.nextFollowupDate ? new Date(data.nextFollowupDate).toISOString() : null,
       };
-      if (partnerId) payload.partnerId = partnerId;
-      if (enquiryId) payload.enquiryId = enquiryId;
+      const pId = partnerId || partner?.id;
+      if (pId) payload.partnerId = Number(pId);
+      if (enquiryId) payload.enquiryId = String(enquiryId);
+
+      const eType = entityType || "partner";
+      const eId = entityType === "enquiry" ? enquiryId : pId;
+      
+      payload.entityType = eType;
+      payload.entityId = Number(eId);
 
       if (editingId) {
         await axiosClient.patch(`/masters/partners/${partner.id}/follow-ups/${editingId}`, payload);
