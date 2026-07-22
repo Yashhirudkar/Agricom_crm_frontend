@@ -7,6 +7,7 @@ import { salesContractApi } from "../services/salesContractApi";
 import ContractsTable from "../components/ContractsTable";
 import ContractsFilter from "../components/ContractsFilter";
 import ContractViewModal from "../components/ContractViewModal";
+import DocumentUploadDrawer from "../components/DocumentUploadDrawer";
 import Pagination from "@/components/common/Pagination";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 
@@ -14,13 +15,17 @@ export default function SalesContractListPage() {
   const router = useRouter();
   const {
     contracts, loading, total, totalPages, page, setPage,
-    search, setSearch, statusFilter, setStatusFilter, fetchContracts,
+    search, setSearch,
+    statusFilter, setStatusFilter,
+    financialYearFilter, setFinancialYearFilter,
+    fetchContracts,
   } = useSalesContracts();
 
   const [toast, setToast] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewContractId, setViewContractId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [docContract, setDocContract] = useState(null); // contract object for document drawer
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -79,6 +84,8 @@ export default function SalesContractListPage() {
           setSearch={setSearch}
           status={statusFilter}
           setStatus={setStatusFilter}
+          financialYearFilter={financialYearFilter}
+          setFinancialYearFilter={setFinancialYearFilter}
           setPage={setPage}
           total={total}
         />
@@ -89,6 +96,7 @@ export default function SalesContractListPage() {
           onView={(c) => setViewContractId(c.id)}
           onEdit={(c) => router.push(`/sales-contracts/${c.id}/edit`)}
           onDelete={(c) => setDeleteTarget(c)}
+          onDocuments={(c) => setDocContract(c)}
         />
 
         <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
@@ -109,6 +117,15 @@ export default function SalesContractListPage() {
         <ContractViewModal
           contractId={viewContractId}
           onClose={() => setViewContractId(null)}
+        />
+      )}
+
+      {/* Document Upload Drawer */}
+      {docContract && (
+        <DocumentUploadDrawer
+          contract={docContract}
+          onClose={() => setDocContract(null)}
+          onRefreshList={fetchContracts}
         />
       )}
     </div>

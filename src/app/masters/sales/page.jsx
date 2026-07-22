@@ -2,13 +2,13 @@
 
 import React, { useState } from "react";
 import Tabs from "./components/Tabs";
-import FinancialYearTab from "./components/FinancialYearTab";
+import CurrencyTab from "./components/CurrencyTab";
 import ShipmentTypeTab from "./components/ShipmentTypeTab";
 import PaymentTermTab from "./components/PaymentTermTab";
 import TradeDocumentTab from "./components/TradeDocumentTab";
 
 const TABS = [
-  { id: "financial-years", label: "Financial Years" },
+  { id: "currencies", label: "Currencies" },
   { id: "shipment-types", label: "Shipment Types" },
   { id: "payment-terms", label: "Payment Terms" },
   { id: "trade-documents", label: "Trade Documents" },
@@ -39,9 +39,9 @@ export default function SalesMastersPage() {
       <div className="mt-4">
         {/* Lazy mount strategy with CSS hidden for state preservation */}
         
-        {openedTabs["financial-years"] && (
-          <div className={activeTab === "financial-years" ? "block animate-in fade-in duration-300" : "hidden"}>
-            <FinancialYearTab />
+        {openedTabs["currencies"] && (
+          <div className={activeTab === "currencies" ? "block animate-in fade-in duration-300" : "hidden"}>
+            <CurrencyTab />
           </div>
         )}
 

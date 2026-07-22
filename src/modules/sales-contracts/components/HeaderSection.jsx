@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
-import { FileText, Lock, ChevronDown } from "lucide-react";
+import { FileText, ChevronDown } from "lucide-react";
+import { getDynamicFinancialYears } from "../utils/dateUtils";
 
 const CONTRACT_TYPES = ["Export", "Import", "MTT"];
 
@@ -8,6 +9,9 @@ export default function HeaderSection({ form, setForm, errors, masters, isView }
   const inp = "w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white transition-all";
   const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
   const err = "text-[10px] text-red-500 mt-1";
+
+  // Generate dynamic financial years (Prev, Current, Next) + existing historical value if present
+  const fyOptions = getDynamicFinancialYears(form.financialYear || null);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
@@ -27,19 +31,19 @@ export default function HeaderSection({ form, setForm, errors, masters, isView }
           <label className={lbl}>Financial Year <span className="text-red-500">*</span></label>
           <div className="relative">
             <select
-              value={form.financialYearId || ""}
-              onChange={e => setForm(f => ({ ...f, financialYearId: e.target.value ? Number(e.target.value) : "" }))}
+              value={form.financialYear || ""}
+              onChange={e => setForm(f => ({ ...f, financialYear: e.target.value }))}
               disabled={isView}
-              className={`${inp} appearance-none pr-8 ${errors.financialYearId ? "border-red-300 focus:border-red-400 focus:ring-red-100" : ""}`}
+              className={`${inp} appearance-none pr-8 ${errors.financialYear ? "border-red-300 focus:border-red-400 focus:ring-red-100" : ""}`}
             >
               <option value="">Select FY</option>
-              {masters.financialYears.map(fy => (
-                <option key={fy.id} value={fy.id}>{fy.displayName || fy.year}</option>
+              {fyOptions.map(fy => (
+                <option key={fy} value={fy}>{fy}</option>
               ))}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
           </div>
-          {errors.financialYearId && <p className={err}>{errors.financialYearId}</p>}
+          {errors.financialYear && <p className={err}>{errors.financialYear}</p>}
         </div>
 
         {/* Contract Number */}

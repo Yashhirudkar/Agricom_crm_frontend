@@ -5,17 +5,18 @@ import { ArrowLeft, Save, Loader2, AlertCircle } from "lucide-react";
 import { useSalesMasters } from "../hooks/useSalesContracts";
 import { salesContractApi } from "../services/salesContractApi";
 import { enquiryApi } from "@/modules/enquiries/services/enquiryApi";
+import { getCurrentFinancialYear, getFinancialYearForDate } from "../utils/dateUtils";
 import HeaderSection from "../components/HeaderSection";
 import PartySection from "../components/PartySection";
 import CommercialSection from "../components/CommercialSection";
 import ItemsTable from "../components/ItemsTable";
 import ShipmentTable from "../components/ShipmentTable";
 import DocumentSection from "../components/DocumentSection";
-import DocumentUploadSection from "../components/DocumentUploadSection";
 import RemarksSection from "../components/RemarksSection";
+import TermsSection from "../components/TermsSection";
 
 const defaultForm = () => ({
-  financialYearId: "",
+  financialYear: getCurrentFinancialYear(),
   contractNumber: "",
   contractDate: "",
   contractType: "Export",
@@ -30,6 +31,13 @@ const defaultForm = () => ({
   portOfLoading: "",
   portOfDischarge: "",
   remarks: "",
+  terms: [
+    "Goods once dispatched cannot be cancelled.",
+    "Subject to Nagpur jurisdiction.",
+    "Payment shall follow agreed payment terms.",
+    "Quality disputes must be reported within agreed timeline.",
+    "All export documents shall be issued after payment compliance.",
+  ],
   numShipments: 3,
   items: [],
   shipments: [],
@@ -38,7 +46,7 @@ const defaultForm = () => ({
 
 function validate(form) {
   const e = {};
-  if (!form.financialYearId) e.financialYearId = "Financial Year is required";
+  if (!form.financialYear) e.financialYear = "Financial Year is required";
   if (!form.contractNumber?.trim()) e.contractNumber = "Contract No. is required";
   if (!form.contractDate) e.contractDate = "Contract Date is required";
   if (!form.buyerId) e.buyerId = "Buyer is required";
@@ -50,13 +58,12 @@ function validate(form) {
   if (!form.items || form.items.length === 0) {
     e.items = "At least one product item is required";
   } else {
-    // Validate each item row for required fields
     const itemErrors = [];
     form.items.forEach((item, idx) => {
       const rowErrors = [];
-      if (!item.productId)      rowErrors.push("Product");
-      if (!item.bagTypeId)      rowErrors.push("Bag Type");
-      if (!item.packingTypeId)  rowErrors.push("Packing Type");
+      if (!item.productId) rowErrors.push("Product");
+      if (!item.bagTypeId) rowErrors.push("Bag Type");
+      if (!item.packingTypeId) rowErrors.push("Packing Type");
       if (!item.quantity || parseFloat(item.quantity) <= 0) rowErrors.push("Quantity");
       if (!item.unitPrice || parseFloat(item.unitPrice) <= 0) rowErrors.push("Unit Price");
       if (rowErrors.length > 0) itemErrors.push(`Item ${idx + 1}: ${rowErrors.join(", ")} required`);
@@ -85,6 +92,7 @@ export default function ContractFormPage({ editId, viewId }) {
   const isView = !!viewId && !editId;
   const contractId = editId || viewId;
 
+  // Load existing contract for edit/view
   useEffect(() => {
     if (!contractId) return;
     const load = async () => {
@@ -93,7 +101,8 @@ export default function ContractFormPage({ editId, viewId }) {
         const res = await salesContractApi.getOne(contractId);
         const c = res.data;
         setForm({
-          financialYearId: c.financialYearId || "",
+          // financialYear is now a plain string from the server
+          financialYear: c.financialYear || getCurrentFinancialYear(),
           contractNumber: c.contractNumber || "",
           contractDate: c.contractDate ? c.contractDate.split("T")[0] : "",
           contractType: c.contractType || "Export",
@@ -108,6 +117,13 @@ export default function ContractFormPage({ editId, viewId }) {
           portOfLoading: c.portOfLoading || "",
           portOfDischarge: c.portOfDischarge || "",
           remarks: c.remarks || "",
+          terms: Array.isArray(c.terms) ? c.terms : [
+            "Goods once dispatched cannot be cancelled.",
+            "Subject to Nagpur jurisdiction.",
+            "Payment shall follow agreed payment terms.",
+            "Quality disputes must be reported within agreed timeline.",
+            "All export documents shall be issued after payment compliance.",
+          ],
           numShipments: c.shipments?.length || 3,
           items: (c.items || []).map(item => ({
             productId: item.productId || "",
@@ -126,7 +142,8 @@ export default function ContractFormPage({ editId, viewId }) {
             quantity: s.quantity || "",
             noOfContainers: s.noOfContainers || "",
             ratePerMt: s.ratePerMt || "",
-            currencyCode: s.currencyCode || "",
+            // Normalize to Contract Currency — discard any row-level divergence from older data
+            currencyCode: c.currencyCode || "",
             purchaseRate: s.purchaseRate || "",
             forex: s.forex || "",
             freight: s.freight || "",
@@ -147,6 +164,7 @@ export default function ContractFormPage({ editId, viewId }) {
     load();
   }, [contractId]);
 
+  // Pre-fill from enquiry
   useEffect(() => {
     if (!enquiryId || isEdit || isView || mastersLoading) return;
     const loadEnquiry = async () => {
@@ -156,18 +174,18 @@ export default function ContractFormPage({ editId, viewId }) {
         const eq = res.data;
         if (!eq) return;
 
-        let activeFyId = "";
-        if (masters.financialYears && masters.financialYears.length > 0) {
-          activeFyId = masters.financialYears[0].id;
-        }
-
         const matchedShipmentType = masters?.shipmentTypes?.find(
           s => s.name?.toLowerCase() === eq.shipmentType?.toLowerCase()
         );
         const shipmentTypeId = matchedShipmentType ? matchedShipmentType.id : "";
 
+        // Derive financial year from enquiry shipment date or today
+        const derivedFY = eq.shipmentDate
+          ? getFinancialYearForDate(new Date(eq.shipmentDate))
+          : getCurrentFinancialYear();
+
         setForm({
-          financialYearId: activeFyId,
+          financialYear: derivedFY,
           contractNumber: "",
           contractDate: new Date().toISOString().split("T")[0],
           contractType: "Export",
@@ -200,7 +218,8 @@ export default function ContractFormPage({ editId, viewId }) {
             quantity: eq.quantity || "",
             noOfContainers: "",
             ratePerMt: "",
-            currencyCode: "",
+            // Inherit the Contract Currency set above (USD default from enquiry)
+            currencyCode: "USD",
             purchaseRate: "",
             forex: "",
             freight: "",
@@ -228,12 +247,14 @@ export default function ContractFormPage({ editId, viewId }) {
     setSaving(true);
 
     const validItems = form.items.filter(i => i.productId);
-    const validShipments = form.shipments.filter(s => s.shipmentDate && s.quantity);
+    // Enforce Contract Currency on every shipment before saving (single source of truth)
+    const normalizedShipments = (form.shipments || []).map(s => ({ ...s, currencyCode: form.currencyCode }));
+    const validShipments = normalizedShipments.filter(s => s.shipmentDate && s.quantity);
     const totalQuantity = validItems.reduce((s, i) => s + (parseFloat(i.quantity) || 0), 0);
     const totalAmount = validItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
 
     const payload = {
-      financialYearId: Number(form.financialYearId),
+      financialYear: form.financialYear,
       contractNumber: form.contractNumber.trim(),
       contractDate: form.contractDate,
       buyerId: Number(form.buyerId),
@@ -246,22 +267,20 @@ export default function ContractFormPage({ editId, viewId }) {
       portOfLoading: form.portOfLoading || null,
       portOfDischarge: form.portOfDischarge || null,
       remarks: form.remarks || null,
+      terms: form.terms || [],
       totalQuantity,
       totalAmount,
       status: asDraft ? "Draft" : "Active",
       items: validItems.map(i => ({
         productId: Number(i.productId),
-        // bagTypeId and packingTypeId are NOT NULL in DB and @IsNotEmpty() in DTO
         bagTypeId: Number(i.bagTypeId),
         packingTypeId: Number(i.packingTypeId),
         bagSpecificationId: i.bagSpecificationId ? Number(i.bagSpecificationId) : null,
         quantity: parseFloat(i.quantity) || 0,
         unitPrice: parseFloat(i.unitPrice) || 0,
         amount: parseFloat(i.amount) || 0,
-        // backend DTO has single 'remarks' field - merge marking into it
-        remarks: [i.marking, i.remarks].filter(Boolean).join(' | ') || null,
+        remarks: [i.marking, i.remarks].filter(Boolean).join(" | ") || null,
       })),
-      // Backend CreateSalesContractShipmentDto only has: shipmentDate, quantity, remarks
       shipments: validShipments.map(s => ({
         shipmentDate: s.shipmentDate,
         quantity: parseFloat(s.quantity) || 0,
@@ -277,9 +296,7 @@ export default function ContractFormPage({ editId, viewId }) {
     try {
       if (isEdit) {
         await salesContractApi.update(contractId, payload);
-        if (asDraft) {
-          // Stay on page
-        } else {
+        if (!asDraft) {
           router.push("/sales-contracts");
         }
       } else {
@@ -291,9 +308,9 @@ export default function ContractFormPage({ editId, viewId }) {
         }
       }
     } catch (err) {
-      if (err.response?.data?.message && err.response.data.message.includes('Cannot activate contract')) {
-         setErrors({ activation: err.response.data.message });
-         window.scrollTo({ top: 0, behavior: "smooth" });
+      if (err.response?.data?.message && err.response.data.message.includes("Cannot activate contract")) {
+        setErrors({ activation: err.response.data.message });
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } finally {
       setSaving(false);
@@ -379,7 +396,7 @@ export default function ContractFormPage({ editId, viewId }) {
             <ul className="mt-1 space-y-0.5">
               {Object.entries(errors).map(([key, msg], i) => (
                 <li key={i} className="text-[11px] text-red-600">
-                   {key === 'activation' ? <pre className="font-sans whitespace-pre-wrap">{msg}</pre> : `• ${msg}`}
+                  {key === "activation" ? <pre className="font-sans whitespace-pre-wrap">{msg}</pre> : `• ${msg}`}
                 </li>
               ))}
             </ul>
@@ -394,16 +411,8 @@ export default function ContractFormPage({ editId, viewId }) {
       <ItemsTable form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
       <ShipmentTable form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
       <DocumentSection form={form} setForm={setForm} masters={masters} isView={isView} uploadedDocIds={uploadedDocIds} />
-      {contractId && (
-        <DocumentUploadSection
-          contractId={contractId}
-          isView={isView}
-          selectedDocuments={form.documents}
-          tradeDocumentsMaster={masters.tradeDocuments}
-          onUploadedChange={setUploadedDocIds}
-        />
-      )}
       <RemarksSection form={form} setForm={setForm} isView={isView} />
+      <TermsSection form={form} setForm={setForm} isView={isView} />
 
       {/* Bottom Action Bar */}
       {!isView && (

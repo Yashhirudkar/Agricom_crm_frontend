@@ -152,7 +152,15 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
           <div className="relative">
             <select
               value={form.currencyCode || ""}
-              onChange={e => setForm(f => ({ ...f, currencyCode: e.target.value }))}
+              onChange={e => {
+                const newCurrency = e.target.value;
+                setForm(f => ({
+                  ...f,
+                  currencyCode: newCurrency,
+                  // Sync Contract Currency to every shipment row immediately
+                  shipments: (f.shipments || []).map(s => ({ ...s, currencyCode: newCurrency })),
+                }));
+              }}
               disabled={isView}
               className={`${inp} appearance-none pr-8 ${errors.currencyCode ? "border-red-300" : ""}`}
             >

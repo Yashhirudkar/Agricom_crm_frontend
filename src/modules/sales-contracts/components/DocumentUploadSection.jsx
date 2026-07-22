@@ -10,7 +10,7 @@ export default function DocumentUploadSection({ contractId, isView, selectedDocu
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState({});
   const [error, setError] = useState(null);
-  
+
   // Create hidden file inputs for each document dynamically using refs
   const fileInputRefs = useRef({});
 
@@ -39,7 +39,7 @@ export default function DocumentUploadSection({ contractId, isView, selectedDocu
         const docId = selDoc.tradeDocumentId;
         const masterDoc = tradeDocumentsMaster?.find(d => d.id === docId);
         const backendDoc = documents.find(d => d.tradeDocument?.id === docId);
-        
+
         return {
           tradeDocument: {
             id: docId,
@@ -115,7 +115,7 @@ export default function DocumentUploadSection({ contractId, isView, selectedDocu
     try {
       const response = await axiosClient.get(url, { responseType: 'blob' });
       const blobUrl = window.URL.createObjectURL(new Blob([response.data], { type: response.headers['content-type'] }));
-      
+
       if (view) {
         window.open(blobUrl, '_blank');
       } else {
@@ -126,7 +126,7 @@ export default function DocumentUploadSection({ contractId, isView, selectedDocu
         link.click();
         link.parentNode.removeChild(link);
       }
-      
+
       // Cleanup blob url after a delay
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
     } catch (error) {
@@ -214,7 +214,7 @@ export default function DocumentUploadSection({ contractId, isView, selectedDocu
                     <td className="px-4 py-2">
                       {isUploading ? (
                         <div className="h-1.5 w-32 bg-gray-100 rounded-full overflow-hidden">
-                          <div 
+                          <div
                             className="h-full bg-[#007aff] transition-all duration-300"
                             style={{ width: `${uploadProgress}%` }}
                           />
@@ -240,14 +240,14 @@ export default function DocumentUploadSection({ contractId, isView, selectedDocu
                         <div className="flex items-center justify-end gap-1">
                           {attachment && (
                             <>
-                              <button 
+                              <button
                                 onClick={() => handleDownload(attachment.downloadUrl, attachment.originalName, true)}
                                 className="px-2 py-1 bg-white border border-gray-200 rounded text-[10px] font-semibold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors flex items-center gap-1 h-6"
                                 title="View document"
                               >
                                 <Eye className="h-2.5 w-2.5" /> View
                               </button>
-                              <button 
+                              <button
                                 onClick={() => handleDownload(attachment.downloadUrl, attachment.originalName, false)}
                                 className="px-2 py-1 bg-white border border-gray-200 rounded text-[10px] font-semibold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors flex items-center gap-1 h-6"
                                 title="Download file"

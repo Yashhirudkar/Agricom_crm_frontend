@@ -11,12 +11,19 @@ export function useSalesContracts() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [financialYearFilter, setFinancialYearFilter] = useState("");
   const limit = 10;
 
   const fetchContracts = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { page, limit, ...(search && { search }), ...(statusFilter && { status: statusFilter }) };
+      const params = {
+        page,
+        limit,
+        ...(search && { search }),
+        ...(statusFilter && { status: statusFilter }),
+        ...(financialYearFilter && { financialYear: financialYearFilter }),
+      };
       const res = await salesContractApi.getAll(params);
       setContracts(res.data.data || []);
       setTotal(res.data.total || 0);
@@ -26,7 +33,7 @@ export function useSalesContracts() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, limit]);
+  }, [page, search, statusFilter, financialYearFilter, limit]);
 
   useEffect(() => {
     fetchContracts();
@@ -34,13 +41,16 @@ export function useSalesContracts() {
 
   return {
     contracts, loading, total, totalPages, page, setPage,
-    search, setSearch, statusFilter, setStatusFilter, fetchContracts,
+    search, setSearch,
+    statusFilter, setStatusFilter,
+    financialYearFilter, setFinancialYearFilter,
+    fetchContracts,
   };
 }
 
 export function useSalesMasters() {
   const [masters, setMasters] = useState({
-    financialYears: [], currencies: [], shipmentTypes: [], paymentTerms: [],
+    currencies: [], shipmentTypes: [], paymentTerms: [],
     tradeDocuments: [], partners: [], products: [], countries: [],
     bagTypes: [], packingTypes: [], bagSpecifications: [],
   });
@@ -52,8 +62,7 @@ export function useSalesMasters() {
       try {
         const pNew = { limit: 100, status: "Active" };
         const pOld = { limit: 100, isActive: true };
-        const [fy, st, pt, td, rolesRes, prod, countries, bt, pkt, bsp] = await Promise.all([
-          mastersApi.getFinancialYears(pNew),
+        const [st, pt, td, rolesRes, prod, countries, bt, pkt, bsp, currRes] = await Promise.all([
           mastersApi.getShipmentTypes(pNew),
           mastersApi.getPaymentTerms(pNew),
           mastersApi.getTradeDocuments(pNew),
@@ -63,7 +72,13 @@ export function useSalesMasters() {
           mastersApi.getBagTypes(),
           mastersApi.getPackingTypes(),
           mastersApi.getBagSpecs(),
+          mastersApi.getCurrencies(pNew).catch(() => null),
         ]);
+
+        const fetchedCurrencies = currRes?.data?.data || [];
+        const finalCurrencies = fetchedCurrencies.length > 0
+          ? fetchedCurrencies.map(c => ({ code: c.code, name: c.name, symbol: c.symbol }))
+          : Object.values(currencies);
 
         const roles = rolesRes.data?.data || [];
         const buyerRole = roles.find(r => r.name?.toLowerCase() === "buyer");
@@ -77,8 +92,7 @@ export function useSalesMasters() {
         ]);
 
         setMasters({
-          financialYears: fy.data.data || [],
-          currencies: Object.values(currencies),
+          currencies: finalCurrencies,
           shipmentTypes: st.data.data || [],
           paymentTerms: pt.data.data || [],
           tradeDocuments: td.data.data || [],
@@ -87,7 +101,6 @@ export function useSalesMasters() {
           brokers: brokersRes.data?.data || [],
           products: prod.data.data || [],
           countries: countries.data.data || [],
-          // bag-types and packing-types return plain arrays, not paginated
           bagTypes: Array.isArray(bt.data) ? bt.data : (bt.data.data || []),
           packingTypes: Array.isArray(pkt.data) ? pkt.data : (pkt.data.data || []),
           bagSpecifications: bsp.data.data || bsp.data || [],

@@ -1,10 +1,10 @@
 import React from "react";
 import { currencies } from "@/constants/currenciesData";
-import { Eye, Pencil, Trash2, Rocket } from "lucide-react";
+import { Eye, Pencil, Trash2, Rocket, FolderOpen } from "lucide-react";
 import ContractStatusBadge from "./ContractStatusBadge";
 import ScheduleBadge from "./ScheduleBadge";
 
-export default function ContractsTable({ contracts, loading, onView, onEdit, onDelete }) {
+export default function ContractsTable({ contracts, loading, onView, onEdit, onDelete, onDocuments }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -93,6 +93,15 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
+                  {c.documents?.length > 0 && (
+                    <button
+                      onClick={() => onDocuments?.(c)}
+                      className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                      title="Manage Documents"
+                    >
+                      <FolderOpen className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"

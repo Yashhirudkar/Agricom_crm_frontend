@@ -2,12 +2,12 @@
 import React, { useEffect } from "react";
 import { Ship, ChevronDown } from "lucide-react";
 
+// currencyCode is intentionally omitted — it is always derived from form.currencyCode (Contract Currency)
 const emptyShipment = (no) => ({
   shipmentNo: no,
   shipmentDate: "",
   noOfContainers: "",
   ratePerMt: "",
-  currencyCode: "",
   purchaseRate: "",
   forex: "",
   freight: "",
@@ -19,25 +19,39 @@ export default function ShipmentTable({ form, setForm, errors, masters, isView }
   const shipments = form.shipments || [];
   const numShipments = form.numShipments || 3;
 
-  // Regenerate rows when count changes
+  // Regenerate rows when count changes — new rows always inherit the Contract Currency
   useEffect(() => {
     const count = parseInt(numShipments, 10) || 0;
     if (count === shipments.length) return;
     setForm(f => {
       const existing = f.shipments || [];
-      const newShipments = Array.from({ length: count }, (_, i) =>
-        existing[i] ?? emptyShipment(i + 1)
-      );
+      const contractCurrency = f.currencyCode || "";
+      const newShipments = Array.from({ length: count }, (_, i) => {
+        if (existing[i]) {
+          // Ensure existing rows are also normalized to Contract Currency
+          return { ...existing[i], currencyCode: contractCurrency };
+        }
+        return { ...emptyShipment(i + 1), currencyCode: contractCurrency };
+      });
       return { ...f, shipments: newShipments };
     });
   }, [numShipments]);
 
   const updateShipment = (idx, field, value) => {
-    setForm(f => {
-      const s = [...(f.shipments || [])];
-      s[idx] = { ...s[idx], [field]: value };
-      return { ...f, shipments: s };
-    });
+    if (field === "currencyCode") {
+      // Reverse sync: changing currency in ANY shipment row = changing the Contract Currency
+      setForm(f => ({
+        ...f,
+        currencyCode: value,
+        shipments: (f.shipments || []).map(s => ({ ...s, currencyCode: value })),
+      }));
+    } else {
+      setForm(f => {
+        const s = [...(f.shipments || [])];
+        s[idx] = { ...s[idx], [field]: value };
+        return { ...f, shipments: s };
+      });
+    }
   };
 
   const inpCls = "w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#007aff]/30 focus:border-[#007aff] bg-white";
@@ -100,12 +114,24 @@ export default function ShipmentTable({ form, setForm, errors, masters, isView }
                     <input type="number" min="0" step="0.01" value={s.ratePerMt || ""} onChange={e => updateShipment(idx, "ratePerMt", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
                   </td>
                   <td className="px-3 py-2 min-w-[110px]">
-                    <div className="relative">
-                      <select value={s.currencyCode || ""} onChange={e => updateShipment(idx, "currencyCode", e.target.value)} disabled={isView} className={selCls}>
-                        <option value="">Currency</option>
-                        {masters.currencies.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
-                      </select>
-                    </div>
+                    {isView ? (
+                      // In view mode — show as badge (always equals Contract Currency)
+                      <span className="inline-flex items-center px-2 py-1 text-[10px] font-bold bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100">
+                        {form.currencyCode || "—"}
+                      </span>
+                    ) : (
+                      <div className="relative">
+                        {/* Reads from form.currencyCode — single source of truth */}
+                        <select
+                          value={form.currencyCode || ""}
+                          onChange={e => updateShipment(idx, "currencyCode", e.target.value)}
+                          className={selCls}
+                        >
+                          <option value="">Currency</option>
+                          {masters.currencies.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+                        </select>
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-2 min-w-[90px]">
                     <input type="number" min="0" step="0.01" value={s.purchaseRate || ""} onChange={e => updateShipment(idx, "purchaseRate", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />

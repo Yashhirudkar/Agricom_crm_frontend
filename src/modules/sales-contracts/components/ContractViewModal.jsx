@@ -220,7 +220,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                   </tr>
                   <tr>
                     <td className="pr-2 text-slate-500 font-semibold">Financial Year:</td>
-                    <td className="font-bold text-slate-900">{contract.financialYear?.year || contract.financialYear?.displayName || "—"}</td>
+                    <td className="font-bold text-slate-900">{contract.financialYear || "—"}</td>
                   </tr>
                   <tr>
                     <td className="pr-2 text-slate-500 font-semibold">Created On:</td>
@@ -378,16 +378,28 @@ export default function ContractViewModal({ contractId, onClose }) {
           )}
 
           {/* TERMS & CONDITIONS */}
-          <div className="mb-8 print-avoid-break">
-            <h3 className="text-xs font-bold bg-[#007aff] text-white py-1.5 px-3 rounded-t-lg uppercase tracking-wider">Terms & Conditions</h3>
-            <ul className="list-disc pl-5 mt-3 text-[11px] text-slate-700 space-y-1">
-              <li>Goods once dispatched cannot be cancelled.</li>
-              <li>Subject to Nagpur jurisdiction.</li>
-              <li>Payment shall follow agreed payment terms.</li>
-              <li>Quality disputes must be reported within agreed timeline.</li>
-              <li>All export documents shall be issued after payment compliance.</li>
-            </ul>
-          </div>
+          {(() => {
+            const defaultTerms = [
+              "Goods once dispatched cannot be cancelled.",
+              "Subject to Nagpur jurisdiction.",
+              "Payment shall follow agreed payment terms.",
+              "Quality disputes must be reported within agreed timeline.",
+              "All export documents shall be issued after payment compliance.",
+            ];
+            const terms = Array.isArray(contract.terms) && contract.terms.length > 0
+              ? contract.terms
+              : defaultTerms;
+            return (
+              <div className="mb-8 print-avoid-break">
+                <h3 className="text-xs font-bold bg-[#007aff] text-white py-1.5 px-3 rounded-t-lg uppercase tracking-wider">Terms &amp; Conditions</h3>
+                <ul className="list-disc pl-5 mt-3 text-[11px] text-slate-700 space-y-1">
+                  {terms.map((term, idx) => (
+                    <li key={idx}>{term}</li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
 
           {/* SIGNATURES */}
           <div className="mt-12 pt-6 flex justify-between items-end print-avoid-break">
