@@ -1,5 +1,5 @@
 import React from 'react';
-import RichTextEditor from '../common/RichTextEditor';
+import RichTextEditor from '@/components/editor/RichTextEditor';
 import ChecklistSection from './ChecklistSection';
 
 export default function TaskDetailMain({ task }) {

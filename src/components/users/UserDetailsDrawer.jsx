@@ -65,8 +65,10 @@ export default function UserDetailsDrawer({
                     <span className="font-bold text-gray-800">{selectedUser?.email}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400 font-medium">Client Scoping ID</span>
-                    <span className="font-bold text-gray-800">Client #{selectedUser?.clientId}</span>
+                    <span className="text-gray-400 font-medium">Client Organization</span>
+                    <span className="font-bold text-gray-800">
+                      {selectedUser?.client?.name || `Client #${selectedUser?.clientId}`}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400 font-medium">Role Level Scope</span>

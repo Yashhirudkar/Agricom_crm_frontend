@@ -51,14 +51,13 @@ export default function ClientAccessConfigPage() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [clientsRes, sidebarRes, matrixRes] = await Promise.all([
-          axiosInstance.get("/clients/GetClients"),
+        const [clientRes, sidebarRes, matrixRes] = await Promise.all([
+          axiosInstance.get(`/clients/${clientId}/access-config`),
           axiosInstance.get("/system/sidebar/tree"),
           axiosInstance.get("/system/matrix/registry"),
         ]);
 
-        const clientsList = Array.isArray(clientsRes.data) ? clientsRes.data : (clientsRes.data?.data || []);
-        const currentClient = clientsList.find(c => c.id.toString() === clientId);
+        const currentClient = clientRes.data;
         if (currentClient) {
           setClient(currentClient);
           setSelectedFolderIds(new Set((currentClient.folderAccess || []).map(f => f.folder_id)));

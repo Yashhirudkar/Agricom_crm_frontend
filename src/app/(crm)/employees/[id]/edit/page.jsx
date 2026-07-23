@@ -125,6 +125,7 @@ export default function EditEmployeePage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      const existingUserId = form.userId ? Number(form.userId) : null;
       const payload = { 
         ...form,
         dob: form.dob || null,
@@ -133,13 +134,24 @@ export default function EditEmployeePage() {
         designationId: form.designationId ? Number(form.designationId) : null,
         branchId: form.branchId ? Number(form.branchId) : null,
         managerId: form.managerId ? Number(form.managerId) : null,
-        userId: form.userId ? Number(form.userId) : null,
+        // Keep existing userId — only null it when creating a brand-new login account
+        userId: existingUserId,
       };
-      if (payload.createLogin && payload.roleId) {
-        payload.roleId = Number(payload.roleId);
-        payload.userId = null;
+
+      if (payload.createLogin) {
+        if (payload.roleId) payload.roleId = Number(payload.roleId);
+        // If no existing user is linked, backend will create one (createLogin=true + no userId)
+        // If already linked, keep userId so backend updates the existing user
+        if (existingUserId) {
+          // Updating existing linked user — keep userId, don't force null
+          payload.userId = existingUserId;
+        } else {
+          // No existing user — backend will create new login
+          payload.userId = null;
+        }
       } else {
         delete payload.roleId;
+        delete payload.newPassword;
       }
       
       await dispatch(updateEmployee({ id: empId, data: payload })).unwrap();

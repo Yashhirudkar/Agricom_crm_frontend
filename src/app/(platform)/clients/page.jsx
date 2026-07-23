@@ -15,7 +15,7 @@ import {
 import { selectUserType } from "@/store/slices/authSlice";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import axiosClient from "@/lib/axios";
-import { Plus, Globe, Check, AlertCircle } from "lucide-react";
+import { Plus, Globe, Check, AlertCircle, Trash2 } from "lucide-react";
 
 import Pagination from "@/components/common/Pagination";
 import ClientFilters from "@/components/clients/ClientFilters";
@@ -52,6 +52,7 @@ function ClientsContent() {
 
   // State for Delete Confirm Dialog
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [selectedClientIds, setSelectedClientIds] = useState([]);
   const [isDeleting, setIsDeleting] = useState(false); // Bug Fix: Add isDeleting
 
   // State for Drawer
@@ -181,21 +182,34 @@ function ClientsContent() {
     if (!deleteConfirmId || isDeleting) return; // Prevent duplicate requests
     setIsDeleting(true);
     try {
-      const res = await dispatch(deleteClient(deleteConfirmId));
-      if (!res.error) {
-        showToast("Client and associated data cascaded successfully", "success");
-        if (selectedClient?.id === deleteConfirmId) {
+      const idsToDelete = Array.isArray(deleteConfirmId) ? deleteConfirmId : [deleteConfirmId];
+      let hasError = false;
+      let errorPayload = "";
+
+      for (const id of idsToDelete) {
+        const res = await dispatch(deleteClient(id));
+        if (res.error) {
+          hasError = true;
+          errorPayload = res.payload;
+        }
+      }
+
+      if (!hasError) {
+        showToast(`${idsToDelete.length} client(s) and associated data cascaded successfully`, "success");
+        if (idsToDelete.includes(selectedClient?.id)) {
           setDrawerOpen(false);
         }
         
+        setSelectedClientIds(prev => prev.filter(id => !idsToDelete.includes(id)));
+
         // Bug Fix: Fix pagination boundary when deleting
-        const newTotal = clients.length - 1;
+        const newTotal = clients.length - idsToDelete.length;
         const newTotalPages = Math.ceil(newTotal / itemsPerPage) || 1;
         if (currentPage > newTotalPages) {
           setCurrentPage(newTotalPages);
         }
       } else {
-        showToast(res.payload, "error");
+        showToast(errorPayload || "Failed to delete client(s)", "error");
       }
     } finally {
       setDeleteConfirmId(null);
@@ -251,12 +265,22 @@ function ClientsContent() {
             Global SaaS management controls for tenants, limits, and scoping.
           </p>
         </div>
-        <button
-          onClick={() => openModal()}
-          className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" /> Create Tenant Client
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          {selectedClientIds.length > 0 && (
+            <button
+              onClick={() => setDeleteConfirmId(selectedClientIds)}
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-red-500/20 cursor-pointer transition-colors"
+            >
+              <Trash2 className="h-4 w-4" /> Delete Selected ({selectedClientIds.length})
+            </button>
+          )}
+          <button
+            onClick={() => openModal()}
+            className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Create Tenant Client
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
@@ -277,6 +301,8 @@ function ClientsContent() {
           handleOpenDrawer={handleOpenDrawer}
           openModal={openModal}
           setDeleteConfirmId={setDeleteConfirmId}
+          selectedClientIds={selectedClientIds}
+          setSelectedClientIds={setSelectedClientIds}
         />
 
         <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />

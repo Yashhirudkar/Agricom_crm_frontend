@@ -14,6 +14,10 @@ import ShipmentTable from "../components/ShipmentTable";
 import DocumentSection from "../components/DocumentSection";
 import RemarksSection from "../components/RemarksSection";
 import TermsSection from "../components/TermsSection";
+import OtherConditionsSection from "../components/OtherConditionsSection";
+import DisputeResolutionSection from "../components/DisputeResolutionSection";
+import ForceMajeureSection from "../components/ForceMajeureSection";
+import ContractAcceptanceSection from "../components/ContractAcceptanceSection";
 
 const defaultForm = () => ({
   financialYear: getCurrentFinancialYear(),
@@ -28,6 +32,12 @@ const defaultForm = () => ({
   paymentTermId: "",
   originCountryId: "",
   destinationCountryId: "",
+  // Multi-Modal Transport Routing
+  originTransportMode: "sea",
+  destinationTransportMode: "sea",
+  originLocationName: "",
+  destinationLocationName: "",
+  // Legacy fields kept for backward compat (not used in new contracts)
   portOfLoading: "",
   portOfDischarge: "",
   remarks: "",
@@ -38,6 +48,17 @@ const defaultForm = () => ({
     "Quality disputes must be reported within agreed timeline.",
     "All export documents shall be issued after payment compliance.",
   ],
+  otherConditions: [],
+  disputeResolution: null,
+  forceMajeure: null,
+  sellerCompanyName: "",
+  sellerAuthorizedSignatory: "",
+  sellerSignature: "",
+  sellerCompanySeal: "",
+  buyerCompanyName: "",
+  buyerAuthorizedSignatory: "",
+  buyerSignature: "",
+  buyerCompanySeal: "",
   numShipments: 3,
   items: [],
   shipments: [],
@@ -55,6 +76,28 @@ function validate(form) {
   if (!form.paymentTermId) e.paymentTermId = "Payment Terms are required";
   if (!form.originCountryId) e.originCountryId = "Origin country is required";
   if (!form.destinationCountryId) e.destinationCountryId = "Destination country is required";
+
+  // Transport-mode-aware location validation
+  const modeLabels = {
+    sea:  { origin: "Port of Loading",          dest: "Port of Discharge" },
+    air:  { origin: "Origin Airport",            dest: "Destination Airport" },
+    road: { origin: "Pickup City",               dest: "Delivery City" },
+    rail: { origin: "Origin Railway Station",    dest: "Destination Railway Station" },
+  };
+  
+  const originMode = form.originTransportMode || "sea";
+  const destMode = form.destinationTransportMode || "sea";
+  
+  const originLabel = modeLabels[originMode]?.origin || modeLabels.sea.origin;
+  const destLabel = modeLabels[destMode]?.dest || modeLabels.sea.dest;
+
+  if (!form.originLocationName?.trim()) {
+    e.originLocationName = `${originLabel} is required`;
+  }
+  if (!form.destinationLocationName?.trim()) {
+    e.destinationLocationName = `${destLabel} is required`;
+  }
+
   if (!form.items || form.items.length === 0) {
     e.items = "At least one product item is required";
   } else {
@@ -114,6 +157,14 @@ export default function ContractFormPage({ editId, viewId }) {
           paymentTermId: c.paymentTermId || "",
           originCountryId: c.originCountryId || "",
           destinationCountryId: c.destinationCountryId || "",
+          // Multi-Modal Transport Routing
+          originTransportMode: c.originTransportMode || c.transportMode || "sea",
+          destinationTransportMode: c.destinationTransportMode || c.transportMode || "sea",
+          originLocationName:
+            c.originLocationName || c.portOfLoading || "",
+          destinationLocationName:
+            c.destinationLocationName || c.portOfDischarge || "",
+          // Keep legacy fields as-is for older records
           portOfLoading: c.portOfLoading || "",
           portOfDischarge: c.portOfDischarge || "",
           remarks: c.remarks || "",
@@ -124,6 +175,17 @@ export default function ContractFormPage({ editId, viewId }) {
             "Quality disputes must be reported within agreed timeline.",
             "All export documents shall be issued after payment compliance.",
           ],
+          otherConditions: Array.isArray(c.otherConditions) ? c.otherConditions : [],
+          disputeResolution: c.disputeResolution || null,
+          forceMajeure: c.forceMajeure || null,
+          sellerCompanyName: c.sellerCompanyName || "",
+          sellerAuthorizedSignatory: c.sellerAuthorizedSignatory || "",
+          sellerSignature: c.sellerSignature || "",
+          sellerCompanySeal: c.sellerCompanySeal || "",
+          buyerCompanyName: c.buyerCompanyName || "",
+          buyerAuthorizedSignatory: c.buyerAuthorizedSignatory || "",
+          buyerSignature: c.buyerSignature || "",
+          buyerCompanySeal: c.buyerCompanySeal || "",
           numShipments: c.shipments?.length || 3,
           items: (c.items || []).map(item => ({
             productId: item.productId || "",
@@ -155,6 +217,7 @@ export default function ContractFormPage({ editId, viewId }) {
             remarks: d.remarks || "",
           })),
         });
+
       } catch (err) {
         setPageError("Failed to load contract details.");
       } finally {
@@ -197,9 +260,25 @@ export default function ContractFormPage({ editId, viewId }) {
           paymentTermId: "",
           originCountryId: eq.originCountryId || "",
           destinationCountryId: "",
+          // Multi-Modal Transport defaults for new contracts from enquiry
+          originTransportMode: "sea",
+          destinationTransportMode: "sea",
+          originLocationName: "",
+          destinationLocationName: eq.podPort || "",
           portOfLoading: "",
           portOfDischarge: eq.podPort || "",
           remarks: `Created from Enquiry ${eq.enquiryNo || ""}`,
+          otherConditions: [],
+          disputeResolution: null,
+          forceMajeure: null,
+          sellerCompanyName: "",
+          sellerAuthorizedSignatory: "",
+          sellerSignature: "",
+          sellerCompanySeal: "",
+          buyerCompanyName: "",
+          buyerAuthorizedSignatory: "",
+          buyerSignature: "",
+          buyerCompanySeal: "",
           numShipments: eq.shipmentDate ? 1 : 3,
           items: [{
             productId: eq.productId || "",
@@ -227,6 +306,7 @@ export default function ContractFormPage({ editId, viewId }) {
           }] : [],
           documents: [],
         });
+
       } catch (err) {
         console.error("Failed to load enquiry details:", err);
       } finally {
@@ -258,16 +338,39 @@ export default function ContractFormPage({ editId, viewId }) {
       contractNumber: form.contractNumber.trim(),
       contractDate: form.contractDate,
       buyerId: Number(form.buyerId),
+      sellerId: form.sellerId ? Number(form.sellerId) : null,
       brokerId: form.brokerId ? Number(form.brokerId) : null,
       currencyCode: form.currencyCode,
       shipmentTypeId: Number(form.shipmentTypeId),
       paymentTermId: Number(form.paymentTermId),
       originCountryId: Number(form.originCountryId),
       destinationCountryId: Number(form.destinationCountryId),
-      portOfLoading: form.portOfLoading || null,
-      portOfDischarge: form.portOfDischarge || null,
+      // Multi-Modal Transport fields
+      originTransportMode: form.originTransportMode || "sea",
+      destinationTransportMode: form.destinationTransportMode || "sea",
+      originLocationName: form.originLocationName || null,
+      destinationLocationName: form.destinationLocationName || null,
+      
+      // Legacy port fields: keep in sync for backward compat
+      portOfLoading: (form.originTransportMode === "sea" || !form.originTransportMode)
+        ? (form.originLocationName || null)
+        : null,
+      portOfDischarge: (form.destinationTransportMode === "sea" || !form.destinationTransportMode)
+        ? (form.destinationLocationName || null)
+        : null,
       remarks: form.remarks || null,
       terms: form.terms || [],
+      otherConditions: form.otherConditions || [],
+      disputeResolution: form.disputeResolution || null,
+      forceMajeure: form.forceMajeure || null,
+      sellerCompanyName: form.sellerCompanyName || null,
+      sellerAuthorizedSignatory: form.sellerAuthorizedSignatory || null,
+      sellerSignature: form.sellerSignature || null,
+      sellerCompanySeal: form.sellerCompanySeal || null,
+      buyerCompanyName: form.buyerCompanyName || null,
+      buyerAuthorizedSignatory: form.buyerAuthorizedSignatory || null,
+      buyerSignature: form.buyerSignature || null,
+      buyerCompanySeal: form.buyerCompanySeal || null,
       totalQuantity,
       totalAmount,
       status: asDraft ? "Draft" : "Active",
@@ -292,6 +395,7 @@ export default function ContractFormPage({ editId, viewId }) {
         remarks: d.remarks || null,
       })),
     };
+
 
     try {
       if (isEdit) {
@@ -345,7 +449,7 @@ export default function ContractFormPage({ editId, viewId }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push("/sales-contracts")}
-            className="h-8 w-8 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+            className="h-8 w-8 flex items-center bg-white justify-center rounded-xl shadow-lg shadow-slate-300 cursor-pointer border border-gray-200 text-gray-500 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -363,14 +467,14 @@ export default function ContractFormPage({ editId, viewId }) {
           <div className="flex items-center gap-2.5 self-start sm:self-auto">
             <button
               onClick={() => router.push("/sales-contracts")}
-              className="px-4 py-2 text-xs font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-xs font-semibold text-gray-700 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors shadow-sm bg-white cursor-pointer "
             >
               Cancel
             </button>
             <button
               onClick={() => handleSave(true)}
               disabled={saving}
-              className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Save Draft
@@ -378,7 +482,7 @@ export default function ContractFormPage({ editId, viewId }) {
             <button
               onClick={() => handleSave(false)}
               disabled={saving}
-              className="px-5 py-2 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20"
+              className="px-5 py-2 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
               {isEdit ? "Update" : "Save"}
@@ -413,6 +517,10 @@ export default function ContractFormPage({ editId, viewId }) {
       <DocumentSection form={form} setForm={setForm} masters={masters} isView={isView} uploadedDocIds={uploadedDocIds} />
       <RemarksSection form={form} setForm={setForm} isView={isView} />
       <TermsSection form={form} setForm={setForm} isView={isView} />
+      <OtherConditionsSection form={form} setForm={setForm} isView={isView} />
+      <DisputeResolutionSection form={form} setForm={setForm} isView={isView} />
+      <ForceMajeureSection form={form} setForm={setForm} isView={isView} />
+      <ContractAcceptanceSection form={form} setForm={setForm} isView={isView} masters={masters} />
 
       {/* Bottom Action Bar */}
       {!isView && (
@@ -420,14 +528,14 @@ export default function ContractFormPage({ editId, viewId }) {
           <div className="bg-white border border-gray-200 rounded-2xl shadow-lg px-4 py-2.5 flex items-center gap-2.5">
             <button
               onClick={() => router.push("/sales-contracts")}
-              className="px-3 py-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+              className="px-3 py-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={() => handleSave(true)}
               disabled={saving}
-              className="px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               {saving && <Loader2 className="h-3 w-3 animate-spin" />}
               Save Draft
@@ -435,7 +543,7 @@ export default function ContractFormPage({ editId, viewId }) {
             <button
               onClick={() => handleSave(false)}
               disabled={saving}
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20"
+              className="px-4 py-1.5 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
             >
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
               {isEdit ? "Update" : "Save & Activate"}

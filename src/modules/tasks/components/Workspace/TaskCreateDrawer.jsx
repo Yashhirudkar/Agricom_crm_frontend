@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 import Drawer from '../../../../components/drawers/Drawer';
-import RichTextEditor from '../../components/common/RichTextEditor';
+import RichTextEditor from '@/components/editor/RichTextEditor';
 import { TaskAPI, ChecklistAPI, TaskAttachmentAPI } from '../../api';
 import { useTaskStore } from '../../store/taskStore';
 import { useTaskDetailQuery, useSubtasksQuery } from '../../queries/tasks.query';

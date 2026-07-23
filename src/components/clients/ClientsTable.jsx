@@ -11,6 +11,8 @@ export default function ClientsTable({
   handleOpenDrawer,
   openModal,
   setDeleteConfirmId,
+  selectedClientIds,
+  setSelectedClientIds,
 }) {
   const router = useRouter();
 
@@ -19,6 +21,22 @@ export default function ClientsTable({
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/30 text-gray-400 uppercase tracking-widest text-[10px] font-bold">
+            <th className="px-6 py-4 w-12 text-center">
+              <input
+                type="checkbox"
+                className="rounded border-gray-200 text-[#007aff] focus:ring-[#007aff] h-4 w-4 cursor-pointer"
+                checked={paginatedClients.length > 0 && paginatedClients.every((c) => selectedClientIds.includes(c.id))}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    const allIds = paginatedClients.map((c) => c.id);
+                    setSelectedClientIds((prev) => Array.from(new Set([...prev, ...allIds])));
+                  } else {
+                    const pageIds = paginatedClients.map((c) => c.id);
+                    setSelectedClientIds((prev) => prev.filter((id) => !pageIds.includes(id)));
+                  }
+                }}
+              />
+            </th>
             <th
               onClick={() => handleSort("name")}
               className="px-6 py-4 cursor-pointer hover:text-gray-900 transition-colors"
@@ -49,14 +67,27 @@ export default function ClientsTable({
         <tbody className="divide-y divide-gray-100 text-xs">
           {paginatedClients.map((client) => {
             const isSelected = selectedClient?.id === client.id;
+            const isChecked = selectedClientIds.includes(client.id);
             return (
               <tr
                 key={client.id}
                 onClick={() => handleOpenDrawer(client)}
                 className={`hover:bg-gray-50/70 transition-colors cursor-pointer ${
                   isSelected ? "bg-blue-50/40" : ""
-                }`}
+                } ${isChecked ? "bg-gray-50/50" : ""}`}
               >
+                <td className="px-6 py-4 w-12 text-center" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-200 text-[#007aff] focus:ring-[#007aff] h-4 w-4 cursor-pointer"
+                    checked={isChecked}
+                    onChange={() => {
+                      setSelectedClientIds((prev) =>
+                        prev.includes(client.id) ? prev.filter((id) => id !== client.id) : [...prev, client.id]
+                      );
+                    }}
+                  />
+                </td>
                 <td className="px-6 py-4 font-bold text-gray-800">{client.name}</td>
                 <td className="px-6 py-4 text-gray-500 font-medium">{client.email}</td>
                 <td className="px-6 py-4">
@@ -101,7 +132,7 @@ export default function ClientsTable({
 
           {paginatedClients.length === 0 && (
             <tr>
-              <td colSpan="5" className="px-6 py-12 text-center text-gray-400 font-semibold">
+              <td colSpan="6" className="px-6 py-12 text-center text-gray-400 font-semibold">
                 No matching tenants found.
               </td>
             </tr>

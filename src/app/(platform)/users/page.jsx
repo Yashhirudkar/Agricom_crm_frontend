@@ -10,6 +10,7 @@ import UsersTable from "@/components/users/UsersTable";
 import FloatingActionBar from "@/components/users/FloatingActionBar";
 import InviteUserModal from "@/components/users/InviteUserModal";
 import UserDetailsDrawer from "@/components/users/UserDetailsDrawer";
+import AssignWorkspaceModal from "@/components/users/AssignWorkspaceModal";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import { useUsersPage } from "@/hooks/useUsersPage";
 
@@ -205,6 +206,16 @@ function UsersContent() {
         setAssignForm={setAssignForm}
         setAssignWorkspaceOpen={setAssignWorkspaceOpen}
         handleRemoveWorkspace={handleRemoveWorkspace}
+      />
+
+      <AssignWorkspaceModal
+        isOpen={assignWorkspaceOpen}
+        onClose={() => setAssignWorkspaceOpen(false)}
+        onSubmit={handleAssignWorkspaceSubmit}
+        assignForm={assignForm}
+        setAssignForm={setAssignForm}
+        companies={companies}
+        selectedUser={selectedUser}
       />
 
       <InviteUserModal

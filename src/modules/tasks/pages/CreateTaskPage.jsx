@@ -5,7 +5,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-import RichTextEditor from '../components/common/RichTextEditor';
+import RichTextEditor from '@/components/editor/RichTextEditor';
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
