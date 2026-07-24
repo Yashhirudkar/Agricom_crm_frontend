@@ -63,6 +63,7 @@ const defaultForm = () => ({
   items: [],
   shipments: [],
   documents: [],
+  printOverrides: {},
 });
 
 function validate(form) {
@@ -216,6 +217,7 @@ export default function ContractFormPage({ editId, viewId }) {
             isMandatory: d.isMandatory || false,
             remarks: d.remarks || "",
           })),
+          printOverrides: c.printOverrides || {},
         });
 
       } catch (err) {
@@ -394,6 +396,7 @@ export default function ContractFormPage({ editId, viewId }) {
         isMandatory: !!d.isMandatory,
         remarks: d.remarks || null,
       })),
+      printOverrides: form.printOverrides || {},
     };
 
 

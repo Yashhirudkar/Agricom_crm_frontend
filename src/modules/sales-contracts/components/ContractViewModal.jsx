@@ -1,6 +1,7 @@
-"use client";
 import React, { useState, useEffect } from "react";
-import { X, Printer, Loader2, AlertCircle } from "lucide-react";
+import { X, Printer, Loader2, AlertCircle, Pencil, Edit3, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { salesContractApi } from "../services/salesContractApi";
 import RichTextEditor from "@/components/editor/RichTextEditor";
 
@@ -29,7 +30,7 @@ const incotermLabel = (contract) => {
 
 // ─── Row component ───────────────────────────────────────────────────────────
 const Row = ({ label, children, className = "" }) => (
-  <div className={`flex mb-4 ${className}`}>
+  <div className={`flex mb-4 print-avoid-break ${className}`}>
     <div className="w-[18%] font-bold uppercase pr-4 flex-shrink-0">{label}</div>
     <div className="w-[82%] uppercase leading-snug">{children}</div>
   </div>
@@ -38,9 +39,56 @@ const Row = ({ label, children, className = "" }) => (
 // ────────────────────────────────────────────────────────────────────────────
 
 export default function ContractViewModal({ contractId, onClose }) {
+  const router = useRouter();
   const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Document custom text overrides states
+  const [printOverrides, setPrintOverrides] = useState({});
+  const [isCustomizing, setIsCustomizing] = useState(false);
+  const [savingOverrides, setSavingOverrides] = useState(false);
+
+  useEffect(() => {
+    if (contract) {
+      setPrintOverrides(contract.printOverrides || {});
+    }
+  }, [contract]);
+
+  const handleSaveCustomOverrides = async () => {
+    setSavingOverrides(true);
+    try {
+      await salesContractApi.update(contract.id, {
+        printOverrides,
+      });
+      toast.success("Document customizations saved successfully!");
+      setContract((prev) => ({ ...prev, printOverrides }));
+      setIsCustomizing(false);
+    } catch (err) {
+      console.error("Failed to save overrides:", err);
+      toast.error("Failed to save customizations.");
+    } finally {
+      setSavingOverrides(false);
+    }
+  };
+
+  const renderValue = (key, defaultValue) => {
+    const value = printOverrides[key] !== undefined ? printOverrides[key] : defaultValue;
+
+    if (isCustomizing) {
+      return (
+        <textarea
+          value={value || ""}
+          onChange={(e) => setPrintOverrides(prev => ({ ...prev, [key]: e.target.value }))}
+          className="w-full text-xs font-sans p-1.5 border border-blue-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-blue-50/20 resize-y uppercase font-medium print:bg-transparent print:border-none print:p-0"
+          rows={1}
+          placeholder="Type custom override text..."
+        />
+      );
+    }
+
+    return <span>{value || "—"}</span>;
+  };
 
   useEffect(() => {
     if (!contractId) return;
@@ -158,16 +206,51 @@ export default function ContractViewModal({ contractId, onClose }) {
 
       {/* Floating buttons */}
       <div className="fixed top-6 right-6 flex flex-col gap-2 z-[110] print:hidden">
+        {/* Toggle Customize Text Mode */}
+        <button
+          onClick={() => setIsCustomizing(!isCustomizing)}
+          className={`h-10 w-10 flex items-center justify-center rounded-xl border shadow-sm transition-colors cursor-pointer ${isCustomizing
+            ? "bg-amber-500 border-amber-600 text-white hover:bg-amber-600"
+            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            }`}
+          title={isCustomizing ? "Exit Customizing" : "Customize Document Text"}
+        >
+          <Edit3 className="h-4.5 w-4.5" />
+        </button>
+
+        {/* Save Overrides Button (Visible only in Customizing mode) */}
+        {isCustomizing && (
+          <button
+            onClick={handleSaveCustomOverrides}
+            disabled={savingOverrides}
+            className="h-10 w-10 flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm cursor-pointer transition-colors"
+            title="Save Customizations"
+          >
+            {savingOverrides ? (
+              <Loader2 className="h-4.5 w-4.5 animate-spin" />
+            ) : (
+              <Check className="h-4.5 w-4.5" />
+            )}
+          </button>
+        )}
+
+        {/* <button
+          onClick={() => router.push(`/sales-contracts/${contractId}/edit`)}
+          className="h-10 w-10 flex items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 text-[#007aff] transition-colors cursor-pointer"
+          title="Edit Contract"
+        >
+          <Pencil className="h-4.5 w-4.5" />
+        </button> */}
         <button
           onClick={() => window.print()}
-          className="h-10 w-10 flex items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 text-[#007aff] transition-colors"
+          className="h-10 w-10 flex items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 text-[#007aff] transition-colors cursor-pointer"
           title="Print / PDF Export"
         >
           <Printer className="h-5 w-5" />
         </button>
         <button
           onClick={onClose}
-          className="h-10 w-10 flex items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 text-slate-700 transition-colors"
+          className="h-10 w-10 flex items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 text-slate-700 transition-colors cursor-pointer"
           title="Close"
         >
           <X className="h-5 w-5" />
@@ -197,14 +280,14 @@ export default function ContractViewModal({ contractId, onClose }) {
                       {hasSeller && (
                         <div className="text-center w-56 relative">
                           <p className="font-bold uppercase mb-1 text-[11px]">Accepted By Seller</p>
-                          <p className="font-bold uppercase text-[11px]">{sellerName}</p>
+                          <p className="font-bold uppercase text-[11px] mb-8">{sellerName}</p>
 
                           <div className="relative h-16 w-full my-1 flex items-center justify-center">
                             {contract.sellerCompanySeal && (
                               <img
                                 src={contract.sellerCompanySeal}
                                 alt="Seller Seal"
-                                className="absolute inset-0 m-auto max-h-16 max-w-[140px] object-contain opacity-85 pointer-events-none"
+                                className="absolute inset-0 m-auto max-h-55 pb-8 max-w-[180px] object-contain opacity-85 pointer-events-none "
                                 style={{ mixBlendMode: "multiply" }}
                               />
                             )}
@@ -212,7 +295,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                               <img
                                 src={contract.sellerSignature}
                                 alt="Seller Signature"
-                                className="absolute inset-0 m-auto max-h-14 max-w-[140px] object-contain z-10 pointer-events-none"
+                                className="absolute inset-0 m-auto max-h-15 max-w-[140px] object-contain z-10 pointer-events-none"
                                 style={{ mixBlendMode: "multiply" }}
                               />
                             )}
@@ -292,7 +375,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                   {/* ── LETTERHEAD ───────────────────────────────────────── */}
                   <div className="flex justify-between items-center print-avoid-break">
                     <div>
-                      <img src="/agri_logo.png" alt="Agricom Impex" className="h-30 object-contain" />
+                      <img src="/agri_logo.png" alt="Agricom Impex" className="h-32 object-contain" />
                     </div>
                     <div className="text-right text-[10px] text-gray-600 leading-tight">
                       <h1 className="text-base font-bold text-gray-500 uppercase mb-0.5">Agricom Impex</h1>
@@ -352,21 +435,21 @@ export default function ContractViewModal({ contractId, onClose }) {
                     {/* SELLER */}
                     {hasSeller && (
                       <Row label="Seller">
-                        {contract.seller ? partnerAddress(contract.seller) : contract.sellerCompanyName?.toUpperCase()}
+                        {renderValue("seller", contract.seller ? partnerAddress(contract.seller) : contract.sellerCompanyName?.toUpperCase())}
                       </Row>
                     )}
 
                     {/* BUYER */}
                     {hasBuyer && (
                       <Row label="Buyer">
-                        {contract.buyer ? partnerAddress(contract.buyer) : contract.buyerCompanyName?.toUpperCase()}
+                        {renderValue("buyer", contract.buyer ? partnerAddress(contract.buyer) : contract.buyerCompanyName?.toUpperCase())}
                       </Row>
                     )}
 
                     {/* BROKER */}
                     {hasBroker && (
                       <Row label="Broker" className="mb-8">
-                        {partnerAddress(contract.broker)}
+                        {renderValue("broker", partnerAddress(contract.broker))}
                       </Row>
                     )}
 
@@ -375,100 +458,90 @@ export default function ContractViewModal({ contractId, onClose }) {
                     {/* ORIGIN */}
                     {(contract.originLocationName || contract.portOfLoading) && (
                       <Row label="Origin Port">
-                        {(contract.originLocationName || contract.portOfLoading).toUpperCase()}
-                        {contract.originCountry?.name ? `   ${contract.originCountry.name.toUpperCase()}` : ""}
+                        {renderValue("originPort", `${(contract.originLocationName || contract.portOfLoading || "").toUpperCase()}${contract.originCountry?.name ? `   ${contract.originCountry.name.toUpperCase()}` : ""}`)}
                       </Row>
                     )}
 
                     {/* DESTINATION */}
                     {(contract.destinationLocationName || contract.portOfDischarge) && (
                       <Row label="Dest. Port">
-                        {(contract.destinationLocationName || contract.portOfDischarge).toUpperCase()}
-                        {contract.destinationCountry?.name ? ` ${contract.destinationCountry.name.toUpperCase()}` : ""}
+                        {renderValue("destPort", `${(contract.destinationLocationName || contract.portOfDischarge || "").toUpperCase()}${contract.destinationCountry?.name ? ` ${contract.destinationCountry.name.toUpperCase()}` : ""}`)}
                       </Row>
                     )}
 
                     {/* SHIPMENT TYPE */}
                     {contract.shipmentType?.name && (
                       <Row label="Shipment Type">
-                        {contract.shipmentType.name.toUpperCase()}
+                        {renderValue("shipmentType", contract.shipmentType.name.toUpperCase())}
                       </Row>
                     )}
 
                     <div className="mb-4" />
 
-                    {/* ── PRODUCT ITEMS ───────────────────────────────────── */}
+                    {/* ── PRODUCT ITEMS ──────────────────────────────────────────────────────────────────────────────────── */}
                     {contract.items?.map((item, idx) => (
                       <React.Fragment key={item.id || idx}>
                         <Row label="Product">
-                          {item.product?.name || "—"}
+                          {renderValue(`product_${idx}`, item.product?.name?.toUpperCase() || "—")}
                         </Row>
 
                         <Row label="Quality">
-                          {[
+                          {renderValue(`quality_${idx}`, [
                             item.product?.qualitySubType,
                             item.product?.specification || item.quality,
-                          ].filter(Boolean).join(" - ") || "—"}
+                          ].filter(Boolean).join(" - ")?.toUpperCase() || "—")}
                         </Row>
 
                         <Row label="Quantity">
-                          {Number(item.quantity).toLocaleString("en-IN")} MT +/- 5%
+                          {renderValue(`quantity_${idx}`, `${Number(item.quantity).toLocaleString("en-IN")} MT +/- 5%`)}
                         </Row>
 
                         <Row label="Packing">
-                          {[
+                          {renderValue(`packing_${idx}`, [
                             item.packingType?.name,
                             item.bagType?.name ? `OF EACH ${item.bagType.name}` : null,
                             item.bagSpecification?.name ? `(${item.bagSpecification.name})` : null,
-                          ].filter(Boolean).join(" ") || "—"}
+                          ].filter(Boolean).join(" ")?.toUpperCase() || "—")}
                         </Row>
 
                         <Row label="Marking">
-                          {item.marking || "NONE"}
+                          {renderValue(`marking_${idx}`, item.marking?.toUpperCase() || "NONE")}
                         </Row>
 
                         <Row label="Price">
-                          {contract.currencyCode}{" "}
-                          {Number(item.unitPrice).toLocaleString("en-IN", { minimumFractionDigits: 2 })} PER MT{" "}
-                          {incotermLabel(contract)}
+                          {renderValue(`price_${idx}`, `${contract.currencyCode} ${Number(item.unitPrice).toLocaleString("en-IN", { minimumFractionDigits: 2 })} PER MT ${incotermLabel(contract)}`.toUpperCase())}
                         </Row>
                       </React.Fragment>
                     ))}
 
                     {/* PAYMENT */}
                     <Row label="Payment">
-                      <div>{contract.paymentTerm?.name || "—"}</div>
-                      <div className="mt-3">
+                      {renderValue("payment", contract.paymentTerm?.name?.toUpperCase() || "—")}
+                      <div className="mt-3 text-[13px] text-black font-serif leading-snug">
                         IN THE EVENT OF DELAY IN PAYMENT FOR THE GOODS BEYOND THE TERMS SPECIFIED IN THIS CONTRACT, THE BUYER SHALL BE ENTITLED TO A PENALTY, WHICH SHALL BE CALCULATED AT 0.1% OF THE VALUE OF THE COMMERCIAL INVOICE FOR EACH DAY OF DELAY
                       </div>
                     </Row>
 
                     {/* SHIPMENT */}
                     <Row label="Shipment">
-                      {shipmentLine}
+                      {renderValue("shipment", shipmentLine?.toUpperCase())}
                     </Row>
 
                     {/* DOCUMENTS */}
                     {contract.documents?.length > 0 && (
                       <Row label="Documents" className="leading-relaxed">
-                        {documentLine}
+                        {renderValue("documents", documentLine?.toUpperCase())}
                       </Row>
                     )}
 
                     {/* NOTE / REMARKS */}
                     {contract.remarks && (
                       <Row label="Note" className="mb-6">
-                        <span className="whitespace-pre-wrap leading-relaxed">{contract.remarks}</span>
+                        {renderValue("note", contract.remarks?.toUpperCase())}
                       </Row>
                     )}
 
-                    {/* ══ PAGE BREAK AFTER NOTE — Terms etc. go to page 2 ══ */}
-                    {(contract.terms?.length > 0 ||
-                      contract.otherConditions?.length > 0 ||
-                      contract.disputeResolution ||
-                      contract.forceMajeure) && (
-                        <div className="print-page-break-before" />
-                      )}
+
 
                     {/* ── TERMS & CONDITIONS ──────────────────────────────── */}
                     {contract.terms?.length > 0 && (
@@ -523,14 +596,14 @@ export default function ContractViewModal({ contractId, onClose }) {
                         {hasSeller && (
                           <div className="text-center w-56 relative">
                             <p className="font-bold uppercase mb-1 text-[11px]">Accepted By Seller</p>
-                            <p className="font-bold uppercase text-[11px]">{sellerName}</p>
+                            <p className="font-bold uppercase text-[11px] mb-8">{sellerName}</p>
 
                             <div className="relative h-16 w-full my-1 flex items-center justify-center">
                               {contract.sellerCompanySeal && (
                                 <img
                                   src={contract.sellerCompanySeal}
                                   alt="Seller Seal"
-                                  className="absolute inset-0 m-auto max-h-16 max-w-[140px] object-contain opacity-85 pointer-events-none"
+                                  className="absolute inset-0 m-auto max-h-55 pb-8 max-w-[180px] object-contain opacity-85 pointer-events-none"
                                   style={{ mixBlendMode: "multiply" }}
                                 />
                               )}
@@ -538,7 +611,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                                 <img
                                   src={contract.sellerSignature}
                                   alt="Seller Signature"
-                                  className="absolute inset-0 m-auto max-h-14 max-w-[140px] object-contain z-10 pointer-events-none"
+                                  className="absolute inset-0 m-auto max-h-15 max-w-[140px] object-contain z-10 pointer-events-none"
                                   style={{ mixBlendMode: "multiply" }}
                                 />
                               )}

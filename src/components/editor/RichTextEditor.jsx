@@ -4,8 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import Link from '@tiptap/extension-link';
-import Underline from '@tiptap/extension-underline';
 import Mention from '@tiptap/extension-mention';
 import { Maximize2, Minimize2 } from 'lucide-react';
 
@@ -76,10 +74,12 @@ export default function RichTextEditor({ value, onChange, editable = true, place
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        link: {
+          openOnClick: false,
+        },
+      }),
       Placeholder.configure({ placeholder }),
-      Link.configure({ openOnClick: false }),
-      Underline,
     ],
     // Handle both HTML string (legacy tasks) and JSON object (new contracts)
     content: value || '',

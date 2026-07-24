@@ -4,8 +4,6 @@ import React, { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import Link from '@tiptap/extension-link';
-import Underline from '@tiptap/extension-underline';
 import Mention from '@tiptap/extension-mention';
 
 // Simple toolbar for the editor
@@ -63,10 +61,12 @@ const MenuBar = ({ editor }) => {
 export default function RichTextEditor({ value, onChange, editable = true, placeholder = 'Add a description...' }) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        link: {
+          openOnClick: false,
+        },
+      }),
       Placeholder.configure({ placeholder }),
-      Link.configure({ openOnClick: false }),
-      Underline,
       // Mention extension would require a suggestion config to fetch employees, omitting for basic setup
     ],
     content: value,

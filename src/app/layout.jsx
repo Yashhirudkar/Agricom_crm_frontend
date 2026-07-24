@@ -32,6 +32,7 @@ export default function RootLayout({ children }) {
     <html
       lang="en"
       className={`${roboto.variable} ${geistMono.variable} h-full antialiased`}
+      data-scroll-behavior="smooth"
     >
       <body className="h-full flex flex-col text-gray-900 font-sans overflow-hidden bg-[#f8f9fc]">
         <QueryProvider>
