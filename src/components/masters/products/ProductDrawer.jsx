@@ -15,6 +15,7 @@ import Drawer from "@/components/common/Drawer";
 import HasPermission from "@/components/rbac/HasPermission";
 import PackagingSelector from "@/components/masters/products/PackagingSelector";
 import axiosClient from "@/lib/axios";
+import CountrySelect from "@/components/common/CountrySelect";
 
 export default function ProductDrawer({
   isOpen,
@@ -99,7 +100,7 @@ export default function ProductDrawer({
   };
 
   const currentCategory = categories.find((c) => c.id === parseInt(form.categoryId, 10));
-  const currentCountry = countries.find((c) => c.id === parseInt(form.countryId, 10));
+  const currentCountryName = form.country || "";
   const currentHSCode = hscodes.find((h) => h.id === parseInt(form.hsCodeId, 10));
 
   const tabs = isEditMode
@@ -146,7 +147,7 @@ export default function ProductDrawer({
                   </span>
                 </div>
                 <div className="text-sm font-bold text-gray-800 flex items-center gap-1.5 mt-0.5">
-                  Origin: {currentCountry?.name || "-"}
+                  Origin: {currentCountryName || "-"}
                 </div>
               </div>
             </div>
@@ -219,7 +220,7 @@ export default function ProductDrawer({
                       <span className="text-xs font-bold text-gray-800 mt-2 flex flex-col gap-0.5">
                         <span className="flex items-center gap-1">
                           <Globe className="h-3.5 w-3.5 text-slate-400" />
-                          {currentCountry?.name || "-"}
+                          {currentCountryName || "-"}
                         </span>
                         <span className="flex items-center gap-1 text-[10px] text-gray-500 font-mono mt-0.5">
                           HS: {currentHSCode?.code || "-"}
@@ -295,7 +296,7 @@ export default function ProductDrawer({
                     </div>
                     <div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Origin Country</div>
-                      <div className="text-xs font-bold text-gray-800 mt-1">{currentCountry?.name || "-"}</div>
+                      <div className="text-xs font-bold text-gray-800 mt-1">{currentCountryName || "-"}</div>
                     </div>
                     <div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">HS Code</div>
@@ -407,27 +408,21 @@ export default function ProductDrawer({
                       <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                         Origin Country <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        required
-                        value={form.countryId}
-                        onChange={(e) => setForm({ ...form, countryId: parseInt(e.target.value, 10) || "" })}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 text-gray-700 bg-white shadow-sm transition-all"
-                      >
-                        <option value="">Select...</option>
-                        {countries.map((con) => (
-                          <option key={con.id} value={con.id}>{con.name}</option>
-                        ))}
-                      </select>
+                      <CountrySelect
+                        value={form.country || ""}
+                        onChange={(val) => {
+                          setForm({ ...form, country: val?.name || "" });
+                        }}
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
                     <div>
                       <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-                        HS Code <span className="text-red-500">*</span>
+                        HS Code
                       </label>
                       <select
-                        required
                         value={form.hsCodeId}
                         onChange={(e) => setForm({ ...form, hsCodeId: parseInt(e.target.value, 10) || "" })}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 text-gray-700 bg-white shadow-sm transition-all"

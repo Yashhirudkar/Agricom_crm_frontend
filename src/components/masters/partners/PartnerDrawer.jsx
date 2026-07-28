@@ -25,6 +25,11 @@ import axiosClient from "@/lib/axios";
 import { toast } from "sonner";
 import DynamicFieldRenderer from "@/components/common/DynamicFieldRenderer";
 import { City } from "country-state-city";
+import CountrySelect from "@/components/common/CountrySelect";
+import countriesLib from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+
+countriesLib.registerLocale(enLocale);
 
 // Custom virtualized MenuList for react-select to handle large options (e.g. cities) smoothly
 const VirtualMenuList = (props) => {
@@ -82,12 +87,12 @@ export default function PartnerDrawer({
   isSaving,
   error,
   isEditMode: initialEditMode,
-  countries,
-  partnerRoles,
-  products,
+  countries = [],
+  partnerRoles = [],
+  products = [],
 }) {
   const [isEditMode, setIsEditMode] = useState(initialEditMode);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("general");
   const { options } = useSystemOptions();
 
   const [dynamicSchema, setDynamicSchema] = useState(null);
@@ -95,7 +100,6 @@ export default function PartnerDrawer({
   const [dynamicConfigName, setDynamicConfigName] = useState("");
   const [dynamicValues, setDynamicValues] = useState({});
   const [loadingDynamic, setLoadingDynamic] = useState(false);
-  const [isSavingAdditional, setIsSavingAdditional] = useState(false);
   const [previousRoleId, setPreviousRoleId] = useState("");
 
   const {
@@ -109,7 +113,7 @@ export default function PartnerDrawer({
     defaultValues: {
       entityName: "",
       partnerRoleId: "",
-      countryId: "",
+      country: "",
       address: "",
       city: "",
       website: "",
@@ -124,26 +128,25 @@ export default function PartnerDrawer({
     },
   });
 
-  // Watch countryId to drive city dropdown
-  const watchedCountryId = useWatch({ control, name: "countryId" });
+  // Watch country to drive city dropdown
+  const watchedCountry = useWatch({ control, name: "country" });
+  const watchedCountryIso2 = useMemo(() => {
+    if (!watchedCountry) return "";
+    return countriesLib.getAlpha2Code(watchedCountry, "en") || "";
+  }, [watchedCountry]);
 
   // Derive available cities from selected country
   const availableCities = useMemo(() => {
-    if (!watchedCountryId || !countries?.length) return [];
-    const selectedCountry = countries.find(
-      (c) => String(c.id) === String(watchedCountryId)
-    );
-    if (!selectedCountry?.iso2Code) return [];
-
+    if (!watchedCountryIso2) return [];
     // Get cities from country-state-city package
-    const cities = City.getCitiesOfCountry(selectedCountry.iso2Code) || [];
+    const cities = City.getCitiesOfCountry(watchedCountryIso2) || [];
 
     // Map to react-select options format
     return cities.map(city => ({
       value: city.name,
       label: city.name
     }));
-  }, [watchedCountryId, countries]);
+  }, [watchedCountryIso2]);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -241,7 +244,7 @@ export default function PartnerDrawer({
         reset({
           entityName: editData.entityName || "",
           partnerRoleId: editData.partnerRoleId || "",
-          countryId: editData.countryId || "",
+          country: editData.country || "",
           address: editData.address || "",
           city: editData.city || "",
           website: editData.website || "",
@@ -267,7 +270,7 @@ export default function PartnerDrawer({
         reset({
           entityName: "",
           partnerRoleId: "",
-          countryId: "",
+          country: "",
           address: "",
           city: "",
           website: "",
@@ -313,13 +316,12 @@ export default function PartnerDrawer({
     }
 
     payload.partnerRoleId = parseInt(payload.partnerRoleId, 10);
-    payload.countryId = parseInt(payload.countryId, 10);
 
     onSubmit(payload);
   };
 
   const onFormInvalid = (errors) => {
-    if (errors.entityName || errors.partnerRoleId || errors.countryId) {
+    if (errors.entityName || errors.partnerRoleId || errors.country) {
       setActiveTab("general");
     } else if (
       errors.contactEmail ||
@@ -409,7 +411,7 @@ export default function PartnerDrawer({
                   </span>
                 </div>
                 <div className="text-sm font-bold text-gray-800 flex items-center gap-1.5 mt-0.5">
-                  {currentCountry?.name}
+                  {editData.country || "-"}
                   {editData.city && <span className="text-gray-400 font-normal">({editData.city})</span>}
                 </div>
               </div>
@@ -614,7 +616,7 @@ export default function PartnerDrawer({
                         Country
                       </div>
                       <div className="text-xs font-bold text-gray-800 mt-1">
-                        {currentCountry?.name || "-"}
+                        {editData.country || "-"}
                       </div>
                     </div>
                     <div>
@@ -849,20 +851,20 @@ export default function PartnerDrawer({
                       <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                         Country <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        {...register("countryId", { required: "Country is required" })}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-xs focus:outline-none focus:ring-0 text-gray-700 bg-gray-50/30"
-                      >
-                        <option value="">Select Country...</option>
-                        {countries.map((con) => (
-                          <option key={con.id} value={con.id}>
-                            {con.name}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.countryId && (
+                      <Controller
+                        control={control}
+                        name="country"
+                        rules={{ required: "Country is required" }}
+                        render={({ field }) => (
+                          <CountrySelect
+                            value={field.value}
+                            onChange={(val) => field.onChange(val?.name || "")}
+                          />
+                        )}
+                      />
+                      {errors.country && (
                         <p className="text-red-500 text-[10px] mt-1 font-semibold">
-                          {errors.countryId.message}
+                          {errors.country.message}
                         </p>
                       )}
                     </div>
@@ -888,9 +890,9 @@ export default function PartnerDrawer({
                           <Select
                             {...field}
                             options={availableCities}
-                            isDisabled={!watchedCountryId || availableCities.length === 0}
+                            isDisabled={!watchedCountry || availableCities.length === 0}
                             placeholder={
-                              !watchedCountryId
+                              !watchedCountry
                                 ? "Select Country first..."
                                 : "Search City..."
                             }

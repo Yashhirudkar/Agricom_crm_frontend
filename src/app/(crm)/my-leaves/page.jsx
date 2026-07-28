@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUser, fetchCurrentUser } from "@/store/slices/authSlice";
 import { fetchLeaveBalances, selectLeaveBalancesData, selectLeaveBalancesError } from "@/store/entities/leaveBalancesSlice";
-import { fetchLeaveTypes, selectLeaveTypesData } from "@/store/entities/leaveTypesSlice";
+import { fetchLeaveTypesForApply, selectLeaveTypesData } from "@/store/entities/leaveTypesSlice";
 import {
   fetchMyLeaves,
   applyLeave,
@@ -58,7 +58,7 @@ function MyLeavesContent() {
       if (isEmployee) {
         dispatch(fetchLeaveBalances({ employeeId: user.employeeId || user.employee?.id || "me", year: new Date().getFullYear() }));
       }
-      dispatch(fetchLeaveTypes({}));
+      dispatch(fetchLeaveTypesForApply({}));
     }
   }, [dispatch, user, isEmployee]);
 

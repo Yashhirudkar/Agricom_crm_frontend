@@ -246,7 +246,7 @@ export default function PartnerFollowUpDrawer({
                 <div className="text-xs text-gray-500 font-medium flex items-center gap-1.5 mt-0.5">
                   <span className="truncate max-w-[150px]">{partner.partnerRole?.name || "Business Partner"}</span>
                   <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                  <span>{partner.country?.name || "Global"}</span>
+                  <span>{partner.country || "Global"}</span>
                 </div>
               </div>
             </div>

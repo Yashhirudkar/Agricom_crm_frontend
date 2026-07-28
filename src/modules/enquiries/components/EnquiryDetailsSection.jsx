@@ -2,6 +2,11 @@
 import React from "react";
 import { Package, ChevronDown } from "lucide-react";
 import { PORTS_BY_COUNTRY } from "@/constants/portsData";
+import CountrySelect from "@/components/common/CountrySelect";
+import countriesLib from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+
+countriesLib.registerLocale(enLocale);
 
 export default function EnquiryDetailsSection({ form, setForm, errors, masters = {}, isView }) {
   const {
@@ -23,8 +28,7 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
     : [];
 
   // Port logic based on Origin Country
-  const originCountry = countries.find(c => c.id === form.originCountryId);
-  const originCode = originCountry?.code || originCountry?.iso2Code || originCountry?.iso2 || "";
+  const originCode = form.originCountry ? (countriesLib.getAlpha2Code(form.originCountry, "en") || "") : "";
   const originPorts = PORTS_BY_COUNTRY[originCode] || [];
 
   return (
@@ -104,20 +108,18 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
         {/* Origin Country */}
         <div>
           <label className={lbl}>Origin Country</label>
-          <div className="relative">
-            <select
-              value={form.originCountryId || ""}
-              onChange={e => setForm(f => ({ ...f, originCountryId: e.target.value ? Number(e.target.value) : "", podPort: "" }))}
-              disabled={isView}
-              className={`${inp} appearance-none pr-8`}
-            >
-              <option value="">Select Origin Country</option>
-              {countries.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-          </div>
+          {isView ? (
+            <div className={`${inp} text-gray-700 bg-gray-50/50`}>
+              {form.originCountry || "—"}
+            </div>
+          ) : (
+            <CountrySelect
+              value={form.originCountry || ""}
+              onChange={(val) => {
+                setForm(f => ({ ...f, originCountry: val?.name || "", podPort: "" }));
+              }}
+            />
+          )}
         </div>
 
         {/* Port of Discharge (podPort) */}

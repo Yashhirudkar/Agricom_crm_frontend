@@ -38,7 +38,7 @@ export const mastersApi = {
   getProducts: (params) =>
     axiosClient.get("/masters/products", { params }),
   getCountries: (params) =>
-    axiosClient.get("/masters/countries", { params }),
+    Promise.resolve({ data: { data: [] } }),
   // bag-types and packing-types use isActive (boolean), not status
   getBagTypes: () =>
     axiosClient.get("/masters/bag-types", { params: { isActive: true } }),

@@ -19,7 +19,6 @@ export default function EditEmployeePage() {
 
   const [selectedDept, setSelectedDept] = useState(null);
   const [selectedDesig, setSelectedDesig] = useState(null);
-  const [selectedBranch, setSelectedBranch] = useState(null);
   const [selectedManager, setSelectedManager] = useState(null);
 
   const [toast, setToast] = useState(null);
@@ -39,7 +38,6 @@ export default function EditEmployeePage() {
     dob: "",
     departmentId: "",
     designationId: "",
-    branchId: "",
     managerId: "",
     employmentType: "FULL_TIME",
     joiningDate: "",
@@ -269,7 +267,8 @@ export default function EditEmployeePage() {
                 value={selectedDept}
                 onChange={(val) => {
                   setSelectedDept(val);
-                  setForm(prev => ({ ...prev, departmentId: val ? val.value : "" }));
+                  setSelectedDesig(null);
+                  setForm(prev => ({ ...prev, departmentId: val ? val.value : "", designationId: "" }));
                 }}
                 placeholder="Search Department..."
               />
@@ -284,18 +283,8 @@ export default function EditEmployeePage() {
                   setForm(prev => ({ ...prev, designationId: val ? val.value : "" }));
                 }}
                 placeholder="Search Designation..."
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Branch</label>
-              <SearchableSelect
-                endpoint="/branches/options"
-                value={selectedBranch}
-                onChange={(val) => {
-                  setSelectedBranch(val);
-                  setForm(prev => ({ ...prev, branchId: val ? val.value : "" }));
-                }}
-                placeholder="Search Branch..."
+                additionalParams={selectedDept ? { departmentId: selectedDept.value } : {}}
+                key={selectedDept ? `dept-${selectedDept.value}` : 'no-dept'}
               />
             </div>
             <div>

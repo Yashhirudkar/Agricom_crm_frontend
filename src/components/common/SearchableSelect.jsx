@@ -29,7 +29,7 @@ const SearchableSelect = ({
       const response = await axiosClient.get(endpoint, {
         params: {
           search: inputValue,
-          limit: 20, // Enough for dropdown
+          limit: 20,
           page: 1,
           ...additionalParams,
         },
@@ -50,14 +50,14 @@ const SearchableSelect = ({
     control: (base, state) => ({
       ...base,
       minHeight: '42px',
-      borderRadius: '0.75rem', // rounded-xl
-      borderColor: state.isFocused ? '#007aff' : '#e5e7eb', // focus:border-[#007aff] or border-gray-200
+      borderRadius: '0.75rem',
+      borderColor: state.isFocused ? '#007aff' : '#e5e7eb',
       boxShadow: state.isFocused ? '0 0 0 2px rgba(0, 122, 255, 0.2)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
       '&:hover': {
         borderColor: state.isFocused ? '#007aff' : '#d1d5db'
       },
-      fontSize: '0.875rem', // text-sm
-      color: '#4b5563', // text-gray-600
+      fontSize: '0.875rem',
+      color: '#4b5563',
       backgroundColor: disabled ? '#f9fafb' : '#ffffff',
       cursor: disabled ? 'not-allowed' : 'pointer'
     }),
@@ -66,7 +66,11 @@ const SearchableSelect = ({
       borderRadius: '0.75rem',
       overflow: 'hidden',
       boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-      zIndex: 50
+      zIndex: 9999,
+    }),
+    menuPortal: (base) => ({
+      ...base,
+      zIndex: 9999,
     }),
     option: (base, state) => ({
       ...base,
@@ -81,11 +85,11 @@ const SearchableSelect = ({
     }),
     singleValue: (base) => ({
       ...base,
-      color: '#4b5563' // text-gray-600
+      color: '#4b5563'
     }),
     placeholder: (base) => ({
       ...base,
-      color: '#9ca3af' // text-gray-400
+      color: '#9ca3af'
     }),
     input: (base) => ({
       ...base,
@@ -110,6 +114,9 @@ const SearchableSelect = ({
         isDisabled={disabled}
         noOptionsMessage={() => "No results found"}
         loadingMessage={() => "Loading..."}
+        menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+        menuPosition="fixed"
+        menuPlacement="auto"
       />
     </div>
   );

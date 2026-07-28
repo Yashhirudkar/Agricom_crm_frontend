@@ -14,7 +14,7 @@ export const mastersApi = {
   getProducts: (params) =>
     axiosClient.get("/masters/products", { params }),
   getCountries: (params) =>
-    axiosClient.get("/masters/countries", { params }),
+    Promise.resolve({ data: { data: [] } }),
   getPackingTypes: () =>
     axiosClient.get("/masters/packing-types", { params: { isActive: true } }),
   getShipmentTypes: (params) =>

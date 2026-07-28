@@ -12,6 +12,15 @@ export const fetchLeaveTypes = createAsyncThunk("entities/leaveTypes/fetchAll", 
   }
 });
 
+export const fetchLeaveTypesForApply = createAsyncThunk("entities/leaveTypes/fetchForApply", async (params, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.get("/leave-types/for-apply", { params });
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to fetch leave types");
+  }
+});
+
 export const fetchLeaveTypeById = createAsyncThunk("entities/leaveTypes/fetchById", async (id, { rejectWithValue }) => {
   try {
     const res = await axiosClient.get(`/leave-types/${id}`);
@@ -75,6 +84,17 @@ const leaveTypesSlice = createSlice({
         state.totalPages = action.payload.totalPages || 1;
       })
       .addCase(fetchLeaveTypes.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
+
+      .addCase(fetchLeaveTypesForApply.pending, (state) => { state.isLoading = true; state.error = null; })
+      .addCase(fetchLeaveTypesForApply.fulfilled, (state, action) => { 
+        state.isLoading = false; 
+        leaveTypesAdapter.setAll(state, action.payload.data || action.payload);
+        state.total = action.payload.total || action.payload.length;
+        state.page = action.payload.page || 1;
+        state.limit = action.payload.limit || 10;
+        state.totalPages = action.payload.totalPages || 1;
+      })
+      .addCase(fetchLeaveTypesForApply.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
 
       .addCase(fetchLeaveTypeById.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchLeaveTypeById.fulfilled, (state, action) => { 

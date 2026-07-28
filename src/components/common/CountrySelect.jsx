@@ -83,7 +83,7 @@ export default function CountrySelect({ value, onChange, error, className }) {
       value={selectedOption}
       onChange={handleChange}
       styles={customStyles}
-      placeholder="Search or type custom country..."
+      placeholder="Search country..."
       formatCreateLabel={(inputValue) => `+ Add "${inputValue}"`}
       className={className}
     />

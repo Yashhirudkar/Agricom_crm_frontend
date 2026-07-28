@@ -52,7 +52,7 @@ export default function PartnersTable({
                   {item.city && <div className="text-[10px] text-gray-400">{item.city}</div>}
                 </td>
                 <td className="px-6 py-4 text-gray-600">
-                  {item.country?.name || "-"}
+                  {item.country || "-"}
                 </td>
                 <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-2">

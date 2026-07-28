@@ -9,6 +9,12 @@ import {
   TRANSPORT_MODE_CONFIG,
   getLocations,
 } from "../services/locationProvider";
+import CountrySelect from "@/components/common/CountrySelect";
+import countriesLib from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+
+countriesLib.registerLocale(enLocale);
+
 
 // ---------------------------------------------------------------------------
 // VirtualMenuList — reused from PartnerDrawer for large city dropdowns
@@ -161,11 +167,9 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
   const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
   const err = "text-[10px] text-red-500 mt-1";
 
-  // Resolve country ISO codes from masters
-  const originCountry = masters.countries.find((c) => c.id === form.originCountryId);
-  const destCountry = masters.countries.find((c) => c.id === form.destinationCountryId);
-  const originCode = originCountry?.iso2Code || originCountry?.code || originCountry?.iso2 || "";
-  const destCode = destCountry?.iso2Code || destCountry?.code || destCountry?.iso2 || "";
+  // Resolve country ISO codes
+  const originCode = form.originCountry ? (countriesLib.getAlpha2Code(form.originCountry, "en") || "") : "";
+  const destCode = form.destinationCountry ? (countriesLib.getAlpha2Code(form.destinationCountry, "en") || "") : "";
 
   // Current transport modes
   const originTransportMode = form.originTransportMode || "sea";
@@ -248,19 +252,19 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
   };
 
   // Handler: change origin country → clear origin location
-  const handleOriginCountryChange = (countryId) => {
+  const handleOriginCountryChange = (countryName) => {
     setForm((f) => ({
       ...f,
-      originCountryId: countryId ? Number(countryId) : "",
+      originCountry: countryName || "",
       originLocationName: "",
     }));
   };
 
   // Handler: change destination country → clear destination location
-  const handleDestCountryChange = (countryId) => {
+  const handleDestCountryChange = (countryName) => {
     setForm((f) => ({
       ...f,
-      destinationCountryId: countryId ? Number(countryId) : "",
+      destinationCountry: countryName || "",
       destinationLocationName: "",
     }));
   };
@@ -318,24 +322,17 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
                 <label className={lbl}>
                   Country <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <select
-                    id="originCountryId"
-                    value={form.originCountryId || ""}
-                    onChange={(e) => handleOriginCountryChange(e.target.value)}
-                    disabled={isView}
-                    className={`${inp} appearance-none pr-8 ${errors.originCountryId ? "border-red-300" : ""}`}
-                  >
-                    <option value="">Select Origin Country</option>
-                    {masters.countries.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-                </div>
-                {errors.originCountryId && <p className={err}>{errors.originCountryId}</p>}
+                {isView ? (
+                  <div className={`${inp} text-gray-700 bg-gray-50/50`}>
+                    {form.originCountry || "—"}
+                  </div>
+                ) : (
+                  <CountrySelect
+                    value={form.originCountry || ""}
+                    onChange={(val) => handleOriginCountryChange(val?.name || "")}
+                  />
+                )}
+                {errors.originCountry && <p className={err}>{errors.originCountry}</p>}
               </div>
 
               {/* Origin Location */}
@@ -407,25 +404,18 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
                 <label className={lbl}>
                   Country <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <select
-                    id="destinationCountryId"
-                    value={form.destinationCountryId || ""}
-                    onChange={(e) => handleDestCountryChange(e.target.value)}
-                    disabled={isView}
-                    className={`${inp} appearance-none pr-8 ${errors.destinationCountryId ? "border-red-300" : ""}`}
-                  >
-                    <option value="">Select Dest Country</option>
-                    {masters.countries.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-                </div>
-                {errors.destinationCountryId && (
-                  <p className={err}>{errors.destinationCountryId}</p>
+                {isView ? (
+                  <div className={`${inp} text-gray-700 bg-gray-50/50`}>
+                    {form.destinationCountry || "—"}
+                  </div>
+                ) : (
+                  <CountrySelect
+                    value={form.destinationCountry || ""}
+                    onChange={(val) => handleDestCountryChange(val?.name || "")}
+                  />
+                )}
+                {errors.destinationCountry && (
+                  <p className={err}>{errors.destinationCountry}</p>
                 )}
               </div>
 

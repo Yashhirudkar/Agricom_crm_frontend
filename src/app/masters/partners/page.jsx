@@ -96,13 +96,11 @@ function PartnersContent() {
     if (!selectedCompanyId) return;
     const fetchDependencies = async () => {
       try {
-        const [rolesRes, conRes, prodRes] = await Promise.all([
+        const [rolesRes, prodRes] = await Promise.all([
           axiosClient.get("/masters/partner-roles", { params: { limit: 100, isActive: true } }),
-          axiosClient.get("/masters/countries", { params: { limit: 100, isActive: true } }),
           axiosClient.get("/masters/products", { params: { limit: 100, isActive: true } }),
         ]);
         setPartnerRoles(rolesRes.data.data || []);
-        setCountries(conRes.data.data || []);
         setProducts(prodRes.data.data || []);
       } catch (err) {
         showToast("Failed to load master lookup data", "error");

@@ -59,7 +59,7 @@ function ProductsContent() {
     id: null, 
     name: "", 
     categoryId: "", 
-    countryId: "", 
+    country: "", 
     hsCodeId: "", 
     qualitySubType: "", 
     specification: "", 
@@ -86,13 +86,11 @@ function ProductsContent() {
   useEffect(() => {
     const fetchDependencies = async () => {
       try {
-        const [catRes, conRes, hsRes] = await Promise.all([
+        const [catRes, hsRes] = await Promise.all([
           axiosClient.get("/masters/categories", { params: { limit: 100, isActive: true } }),
-          axiosClient.get("/masters/countries", { params: { limit: 100, isActive: true } }),
           axiosClient.get("/masters/hs-codes", { params: { limit: 100, isActive: true } }),
         ]);
         setCategories(catRes.data.data || []);
-        setCountries(conRes.data.data || []);
         setHSCodes(hsRes.data.data || []);
       } catch (err) {
         showToast("Failed to load master lookup data", "error");
@@ -112,7 +110,7 @@ function ProductsContent() {
       id: item.id,
       name: item.name,
       categoryId: item.categoryId || "",
-      countryId: item.countryId || "",
+      country: item.country || "",
       hsCodeId: item.hsCodeId || "",
       qualitySubType: item.qualitySubType || "",
       specification: item.specification || "",
@@ -132,7 +130,7 @@ function ProductsContent() {
       id: item.id,
       name: item.name,
       categoryId: item.categoryId || "",
-      countryId: item.countryId || "",
+      country: item.country || "",
       hsCodeId: item.hsCodeId || "",
       qualitySubType: item.qualitySubType || "",
       specification: item.specification || "",
@@ -161,6 +159,7 @@ function ProductsContent() {
     
     // Clean up empty strings before submitting to match DTO
     const payload = { ...form };
+    if (payload.hsCodeId === "" || !payload.hsCodeId) delete payload.hsCodeId;
     if (payload.qualitySubType === "") delete payload.qualitySubType;
     if (payload.specification === "") delete payload.specification;
     if (payload.qty20ftContainer === null) delete payload.qty20ftContainer;
