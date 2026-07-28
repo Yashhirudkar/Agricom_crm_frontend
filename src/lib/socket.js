@@ -1,7 +1,5 @@
 import { io } from "socket.io-client";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-const SOCKET_URL = BASE_URL.replace(/\/api\/?$/, "");
+import { getBackendUrl } from "./axios";
 
 let socket = null;
 const listeners = {};
@@ -43,7 +41,7 @@ export const connectSocket = (companyId) => {
     socket.disconnect();
   }
 
-  socket = io(SOCKET_URL, {
+  socket = io(getBackendUrl(), {
     auth: {
       token,
       companyId: companyId ? companyId.toString() : "",

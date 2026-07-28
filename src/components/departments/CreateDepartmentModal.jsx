@@ -36,26 +36,7 @@ export default function CreateDepartmentModal({
             placeholder="e.g. Sales, Marketing"
           />
         </div>
-        <div>
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-            Parent Department
-          </label>
-          <select
-            value={form.parentId}
-            onChange={(e) => setForm({ ...form, parentId: e.target.value })}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
-          >
-            <option value="">-- None (Root) --</option>
-            {departments.map(
-              (d) =>
-                d.id !== editingDept?.id && (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                )
-            )}
-          </select>
-        </div>
+
         <div>
           <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
             Status

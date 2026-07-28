@@ -64,20 +64,7 @@ export default function CreateDesignationModal({
             placeholder="Search Department..."
           />
         </div>
-        <div>
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-            Parent Designation
-          </label>
-          <SearchableSelect
-            endpoint="/designations/options"
-            value={selectedParent}
-            onChange={(val) => {
-              setSelectedParent(val);
-              setForm({ ...form, parentId: val ? val.value : "" });
-            }}
-            placeholder="Search Parent Designation (Optional)..."
-          />
-        </div>
+
         <div className="flex gap-4">
           <div className="flex-1">
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">

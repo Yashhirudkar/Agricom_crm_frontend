@@ -6,6 +6,16 @@ export const injectStore = (_store) => {
   store = _store;
 };
 
+export const getBackendUrl = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/?$/, "");
+  }
+  if (typeof window !== "undefined") {
+    return `${window.location.protocol}//${window.location.hostname}:5000`;
+  }
+  return "http://localhost:5000";
+};
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 const axiosClient = axios.create({
@@ -33,6 +43,9 @@ const axiosClient = axios.create({
 axiosClient.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
+      if (!process.env.NEXT_PUBLIC_API_URL) {
+        config.baseURL = `${window.location.protocol}//${window.location.hostname}:5000/api`;
+      }
       const token = sessionStorage.getItem("accessToken");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
