@@ -164,7 +164,12 @@ export default function PartnerFollowUpDrawer({
       const eId = entityType === "enquiry" ? enquiryId : pId;
       
       payload.entityType = eType;
-      payload.entityId = Number(eId);
+      if (eType === "enquiry") {
+        // Enquiries use UUID string keys, so we don't map entityId to a number/integer
+        payload.entityId = undefined;
+      } else {
+        payload.entityId = Number(eId);
+      }
 
       if (editingId) {
         await axiosClient.patch(`/masters/partners/${partner.id}/follow-ups/${editingId}`, payload);
@@ -307,6 +312,14 @@ export default function PartnerFollowUpDrawer({
                         {getCommunicationIcon(item.communicationType)}
                         {item.communicationType}
                       </span>
+                      {item.entityType === 'enquiry' && (
+                        <>
+                          <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                          <span className="text-purple-600 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded text-[9px] font-black leading-none">
+                            Enquiry
+                          </span>
+                        </>
+                      )}
                     </span>
                   </div>
 
