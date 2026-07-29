@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import axiosClient from "@/lib/axios";
+import countriesLib from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+countriesLib.registerLocale(enLocale);
 import {
   fetchPartners,
   createPartner,
@@ -63,7 +66,7 @@ function PartnersContent() {
 
   // External dependencies for dropdowns
   const [partnerRoles, setPartnerRoles] = useState([]);
-  const [countries, setCountries] = useState([]);
+
   const [products, setProducts] = useState([]);
 
   const [search, setSearch] = useState("");
@@ -105,20 +108,24 @@ function PartnersContent() {
     if (!selectedCompanyId) return;
     const fetchDependencies = async () => {
       try {
-        const [rolesRes, prodRes, countriesRes] = await Promise.all([
+        const [rolesRes, prodRes] = await Promise.all([
           axiosClient.get("/masters/partner-roles", { params: { limit: 100, isActive: true } }),
           axiosClient.get("/masters/products", { params: { limit: 100, isActive: true } }),
-          axiosClient.get("/masters/partners/countries"),
         ]);
         setPartnerRoles(rolesRes.data.data || []);
         setProducts(prodRes.data.data || []);
-        setCountries(countriesRes.data.data || []);
       } catch (err) {
         showToast("Failed to load master lookup data", "error");
       }
     };
     fetchDependencies();
   }, [selectedCompanyId]);
+
+  // Populate countries from npm package (i18n-iso-countries) — same source as CountrySelect
+  const countries = useMemo(() => {
+    const rawNames = countriesLib.getNames("en");
+    return Object.values(rawNames).sort((a, b) => a.localeCompare(b));
+  }, []);
 
   const handleCompanyChange = (e) => {
     const val = e.target.value;

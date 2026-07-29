@@ -33,8 +33,9 @@ export default function RootLayout({ children }) {
       lang="en"
       className={`${roboto.variable} ${geistMono.variable} h-full antialiased`}
       data-scroll-behavior="smooth"
+      suppressHydrationWarning
     >
-      <body className="h-full flex flex-col text-gray-900 font-sans overflow-hidden bg-[#f8f9fc]">
+      <body className="h-full flex flex-col text-gray-900 font-sans overflow-hidden bg-[#f8f9fc]" suppressHydrationWarning>
         <QueryProvider>
           <ReduxProvider>
             <AuthGuard>

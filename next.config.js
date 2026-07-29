@@ -7,7 +7,7 @@ const __dirname = path.dirname(__filename);
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* config options here */
-  allowedDevOrigins: ['192.168.1.106', '192.168.1.222'],
+  // allowedDevOrigins: ['192.168.1.106', '192.168.1.222', 'http://localhost:3000/'],
   turbopack: {
     root: __dirname,
   },
