@@ -45,9 +45,11 @@ export const useTaskStore = create((set) => ({
     selectedTaskId: taskId, 
     isTaskDrawerOpen: !!taskId 
   }),
-  setSelectedRowIds: (rowIds) => set({
-    selectedRowIds: rowIds
-  }),
+  setSelectedRowIds: (rowIdsOrUpdater) => set((state) => ({
+    selectedRowIds: typeof rowIdsOrUpdater === 'function'
+      ? rowIdsOrUpdater(state.selectedRowIds)
+      : rowIdsOrUpdater
+  })),
   closeTaskDrawer: () => set({ 
     selectedTaskId: null, 
     isTaskDrawerOpen: false 

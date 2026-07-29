@@ -34,6 +34,8 @@ export function TaskTableFoundation({
       rowSelection,
       columnVisibility,
     },
+    enableRowSelection: true,
+    enableMultiRowSelection: true,
     pageCount: Math.ceil(totalCount / pagination.pageSize),
     onPaginationChange,
     onSortingChange,
@@ -42,7 +44,7 @@ export function TaskTableFoundation({
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
     manualSorting: true,
-    getRowId: (row) => row.id,
+    getRowId: (row) => String(row.id),
   });
 
   const { rows } = table.getRowModel();
@@ -115,6 +117,7 @@ export function TaskTableFoundation({
                         key={cell.id}
                         className="px-3 flex items-center h-full border-r border-gray-100 last:border-r-0 flex-shrink-0 overflow-hidden"
                         style={{ width: cell.column.getSize() }}
+                        onClick={cell.column.id === 'select' ? (e) => e.stopPropagation() : undefined}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </div>

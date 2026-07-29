@@ -206,7 +206,7 @@ function SubtaskCard({ index, control, register, remove, onDelete, employeeOptio
                     placeholder="Select owner..."
                     isClearable
                     styles={selectStyles}
-                    value={employeeOptions.find(opt => opt.value === field.value) || null}
+                    value={employeeOptions.find(opt => String(opt.value) === String(field.value)) || null}
                     onChange={(val) => field.onChange(val ? val.value : null)}
                     menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
                     menuPosition="fixed"
@@ -228,7 +228,7 @@ function SubtaskCard({ index, control, register, remove, onDelete, employeeOptio
                     isMulti
                     placeholder="Select team members..."
                     styles={selectStyles}
-                    value={employeeOptions.filter(opt => (field.value || []).includes(opt.value))}
+                    value={employeeOptions.filter(opt => (field.value || []).some(id => String(id) === String(opt.value)))}
                     onChange={(selectedOptions) => {
                       // Replace entirely — never merge with previous selection
                       field.onChange(selectedOptions ? selectedOptions.map(v => v.value) : []);
@@ -406,16 +406,19 @@ export default function TaskCreateDrawer() {
   });
   const companies = companiesRes?.data || (Array.isArray(companiesRes) ? companiesRes : []);
 
-  const targetCompanyId = isSuperAdmin ? selectedCompanyId : user?.companyId;
+  const activeCompanyId = typeof window !== 'undefined' ? localStorage.getItem('activeCompanyId') : null;
+  const targetCompanyId = (isSuperAdmin && selectedCompanyId) ? selectedCompanyId : (user?.companyId || user?.lastCompanyId || activeCompanyId);
 
   // Fetch Employees
   const { data: employeesRes } = useQuery({
-    queryKey: ['tasks', 'company-employees', targetCompanyId || 'all'],
+    queryKey: ['tasks', 'company-employees', targetCompanyId || 'active'],
     queryFn: async () => {
       const headers = targetCompanyId ? { 'x-company-id': targetCompanyId } : {};
       const { data } = await axiosClient.get("/v1/tasks/employees/assignable", { headers });
       return data.data || [];
-    }
+    },
+    staleTime: 0,
+    refetchOnMount: true,
   });
   const employees = employeesRes || [];
 
@@ -514,18 +517,26 @@ export default function TaskCreateDrawer() {
   });
 
   const employeeOptions = useMemo(() => {
+    if (!Array.isArray(employees)) return [];
     const seen = new Set();
-    return employees
-      .filter(emp => {
-        const id = emp.userId || emp.id;
-        if (!id || seen.has(id)) return false;
-        seen.add(id);
-        return true;
-      })
-      .map(emp => ({
-        value: emp.userId || emp.id,
-        label: `${emp.firstName || ''} ${emp.lastName || ''}`.trim()
-      }));
+    const result = [];
+
+    for (const emp of employees) {
+      if (!emp) continue;
+      const val = emp.userId || emp.id;
+      if (!val || seen.has(val)) continue;
+      seen.add(val);
+
+      const rawName = `${emp.firstName || ''} ${emp.lastName || ''}`.replace(/\s+/g, ' ').trim();
+      const displayName = rawName || emp.user?.name?.replace(/\s+/g, ' ').trim() || emp.email || `User #${val}`;
+
+      result.push({
+        value: val,
+        label: displayName
+      });
+    }
+
+    return result;
   }, [employees]);
 
   const onSubmit = async (data) => {
@@ -535,8 +546,8 @@ export default function TaskCreateDrawer() {
       const selectedStatus = statusOptions.find(s => s.id === parseInt(data.statusId));
       const selectedPriority = priorityOptions.find(p => p.id === parseInt(data.priorityId));
 
-      const teamUserIds = data.associatedTeamIds || [];
-      const ownerUserId = data.ownerId ? parseInt(data.ownerId) : undefined;
+      const teamUserIds = (data.associatedTeamIds || []).map(id => parseInt(id, 10)).filter(Boolean);
+      const ownerUserId = data.ownerId ? parseInt(data.ownerId, 10) : undefined;
       const filteredTeamUserIds = teamUserIds.filter(id => id !== ownerUserId);
 
       const payload = {
@@ -858,7 +869,7 @@ export default function TaskCreateDrawer() {
                     control={control}
                     rules={{ required: 'Owner is required' }}
                     render={({ field }) => (
-                  <Select
+                      <Select
                         name={field.name}
                         ref={field.ref}
                         onBlur={field.onBlur}
@@ -867,7 +878,7 @@ export default function TaskCreateDrawer() {
                         isClearable={false}
                         styles={selectStyles}
                         isDisabled={isSuperAdmin && !selectedCompanyId}
-                        value={employeeOptions.find(opt => opt.value === field.value) || null}
+                        value={employeeOptions.find(opt => String(opt.value) === String(field.value)) || null}
                         onChange={(val) => field.onChange(val ? val.value : '')}
                         menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
                         menuPosition="fixed"
@@ -883,7 +894,7 @@ export default function TaskCreateDrawer() {
                     name="associatedTeamIds"
                     control={control}
                     render={({ field }) => (
-                  <Select
+                      <Select
                         name={field.name}
                         ref={field.ref}
                         onBlur={field.onBlur}
