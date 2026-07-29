@@ -6,11 +6,18 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
-  // allowedDevOrigins: ['192.168.1.106', '192.168.1.222', 'http://localhost:3000/'],
+  allowedDevOrigins: [
+    'localhost',
+    '127.0.0.1',
+    'localhost:3000',
+    ...(process.env.NEXT_PUBLIC_ALLOWED_ORIGINS
+      ? process.env.NEXT_PUBLIC_ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+      : [])
+  ],
   turbopack: {
     root: __dirname,
   },
+  devIndicators: false,
 };
 
 export default nextConfig;

@@ -8,15 +8,15 @@ export const enquiriesApi = {
 
 export const mastersApi = {
   getPartnerRoles: (params) =>
-    axiosClient.get("/masters/partner-roles", { params }),
+    axiosClient.get("/masters/partner-roles/options", { params }),
   getPartners: (params) =>
     axiosClient.get("/masters/partners", { params }),
   getProducts: (params) =>
-    axiosClient.get("/masters/products", { params }),
+    axiosClient.get("/masters/products/options", { params }),
   getCountries: (params) =>
     Promise.resolve({ data: { data: [] } }),
   getPackingTypes: () =>
-    axiosClient.get("/masters/packing-types", { params: { isActive: true } }),
+    axiosClient.get("/masters/packing-types/options", { params: { isActive: true } }),
   getShipmentTypes: (params) =>
-    axiosClient.get("/masters/shipment-types", { params }),
+    axiosClient.get("/masters/shipment-types/options", { params }),
 };

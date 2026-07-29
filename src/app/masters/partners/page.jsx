@@ -109,8 +109,8 @@ function PartnersContent() {
     const fetchDependencies = async () => {
       try {
         const [rolesRes, prodRes] = await Promise.all([
-          axiosClient.get("/masters/partner-roles", { params: { limit: 100, isActive: true } }),
-          axiosClient.get("/masters/products", { params: { limit: 100, isActive: true } }),
+          axiosClient.get("/masters/partner-roles/options", { params: { limit: 100, isActive: true } }),
+          axiosClient.get("/masters/products/options", { params: { limit: 100, isActive: true } }),
         ]);
         setPartnerRoles(rolesRes.data.data || []);
         setProducts(prodRes.data.data || []);

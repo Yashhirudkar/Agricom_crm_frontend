@@ -3,7 +3,7 @@
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import axiosClient from '@/lib/axios';
 import PageLoader from '../../../../../modules/tasks/components/common/PageLoader';
 import ErrorState from '../../../../../modules/tasks/components/common/ErrorState';
 
@@ -16,9 +16,7 @@ export default function EditTaskRoute() {
   const { data: task, isLoading, isError } = useQuery({
     queryKey: ['task', taskId],
     queryFn: async () => {
-      const res = await axios.get(`http://localhost:4000/v1/tasks/${taskId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      const res = await axiosClient.get(`/v1/tasks/${taskId}`);
       return res.data.data;
     },
     enabled: !!taskId,

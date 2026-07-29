@@ -38,36 +38,6 @@ export default function HasPermission({
     return <>{children}</>;
   }
 
-  // If NOT authorized: return disabled version of children instead of hiding
-  if (React.isValidElement(children)) {
-    const existingClassName = children.props.className || "";
-    
-    // Remove hover effects and cursor classes to make it look frozen
-    const cleanClassName = existingClassName
-      .split(" ")
-      .filter(c => !c.startsWith("hover:") && !c.startsWith("cursor-") && c !== "")
-      .join(" ");
-
-    return React.cloneElement(children, {
-      disabled: true,
-      "aria-disabled": true,
-      title: "You don't have permission to perform this action",
-      className: `${cleanClassName} opacity-40 cursor-not-allowed`,
-      onClick: (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
-  }
-
-  // Fallback for non-element children
-  return (
-    <span 
-      title="You don't have permission to perform this action" 
-      className="opacity-40 cursor-not-allowed inline-block"
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-    >
-      {children}
-    </span>
-  );
+  // If NOT authorized: hide children completely (unless a fallback is provided)
+  return fallback;
 }

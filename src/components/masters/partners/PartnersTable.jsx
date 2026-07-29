@@ -92,7 +92,7 @@ export default function PartnersTable({
                     <Eye className="h-4 w-4 inline" />
                   </button>
 
-                  <HasPermission permission="partner:update">
+                  <HasPermission permission="partner:followup">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
