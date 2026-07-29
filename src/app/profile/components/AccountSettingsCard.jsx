@@ -18,7 +18,16 @@ export default function AccountSettingsCard({ preferences, onUpdate }) {
       setOldPassword("");
       setNewPassword("");
     } catch (error) {
-      alert(error.response?.data?.message || "Password change failed");
+      const status = error.response?.status;
+      const message = error.response?.data?.message || "Password change failed";
+
+      if (status === 429) {
+        alert("Too many password attempts. Please wait 15 minutes and try again.");
+      } else if (Array.isArray(message)) {
+        alert(message.join(", "));
+      } else {
+        alert(message);
+      }
     } finally {
       setPassLoading(false);
     }
