@@ -46,7 +46,7 @@ axiosClient.interceptors.request.use(
       if (!process.env.NEXT_PUBLIC_API_URL) {
         config.baseURL = `${window.location.protocol}//${window.location.hostname}:5000/api`;
       }
-      const token = sessionStorage.getItem("accessToken");
+      const token = localStorage.getItem("accessToken");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -93,24 +93,96 @@ axiosClient.interceptors.request.use(
 
 import { toast } from "sonner";
 
-// Response interceptor — on 401, clear session and redirect to /login
+// Silent Refresh state variables
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// Response interceptor — on 401, perform silent refresh with refresh token
 axiosClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    console.error("[Axios Error]", error.config?.url, error.response?.status, error.response?.data);
+  async (error) => {
+    const originalRequest = error.config;
+    console.error("[Axios Error]", originalRequest?.url, error.response?.status, error.response?.data);
 
     if (typeof window !== "undefined") {
-      if (error.response?.status === 401) {
-        sessionStorage.removeItem("accessToken");
-        window.location.href = "/login";
-        return Promise.reject(error);
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        // Prevent infinite loop if refresh endpoint itself returns 401
+        if (originalRequest.url?.includes("/auth/refresh")) {
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          window.location.href = "/login";
+          return Promise.reject(error);
+        }
+
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          })
+            .then((token) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              return axiosClient(originalRequest);
+            })
+            .catch((err) => {
+              return Promise.reject(err);
+            });
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (!refreshToken) {
+          localStorage.removeItem("accessToken");
+          window.location.href = "/login";
+          isRefreshing = false;
+          return Promise.reject(error);
+        }
+
+        try {
+          const res = await axios.post(`${originalRequest.baseURL || BASE_URL}/auth/refresh`, {
+            refreshToken,
+          });
+
+          const { accessToken, refreshToken: newRefreshToken } = res.data;
+          localStorage.setItem("accessToken", accessToken);
+          if (newRefreshToken) {
+            localStorage.setItem("refreshToken", newRefreshToken);
+          }
+
+          axiosClient.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+          originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
+
+          processQueue(null, accessToken);
+          isRefreshing = false;
+
+          return axiosClient(originalRequest);
+        } catch (err) {
+          processQueue(err, null);
+          isRefreshing = false;
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          window.location.href = "/login";
+          return Promise.reject(err);
+        }
       }
 
       // Extract error message from standard backend DTO or fallback
       const message = error.response?.data?.message || error.response?.data?.error || "An unexpected error occurred.";
 
       // Don't toast 404s globally if they are expected (optional), but for enterprise usually we toast 4xx and 5xx
-      if (error.response?.status >= 400 && error.response?.status !== 404) {
+      // Also ignore 401s here to prevent displaying error messages to users when silent refresh is about to occur
+      if (error.response?.status >= 400 && error.response?.status !== 404 && error.response?.status !== 401) {
         toast.error(message);
       } else if (error.message === "Network Error") {
         toast.error("Network connection lost. Please check your internet connection.");

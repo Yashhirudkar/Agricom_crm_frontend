@@ -11,10 +11,13 @@ export const loginUser = createAsyncThunk(
       // Step 1: Login to get tokens
       const loginRes = await axiosClient.post("/auth/login", { email, password });
 
-      const { accessToken } = loginRes.data;
+      const { accessToken, refreshToken } = loginRes.data;
 
-      // Step 2: Save token to sessionStorage so interceptor can use it immediately
-      sessionStorage.setItem("accessToken", accessToken);
+      // Step 2: Save tokens to localStorage so interceptor can use them immediately
+      localStorage.setItem("accessToken", accessToken);
+      if (refreshToken) {
+        localStorage.setItem("refreshToken", refreshToken);
+      }
 
       // Step 3: Fetch current user profile
       const meRes = await axiosClient.get("/auth/me");
@@ -50,7 +53,8 @@ export const logoutUser = createAsyncThunk(
     } catch (_) {
       // Even if the API call fails, we still clear local session
     } finally {
-      sessionStorage.removeItem("accessToken");
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
     }
   }
 );
@@ -74,7 +78,7 @@ const authSlice = createSlice({
     // Called on app boot to rehydrate token from localStorage
     rehydrateToken(state) {
       if (typeof window !== "undefined") {
-        const token = sessionStorage.getItem("accessToken");
+        const token = localStorage.getItem("accessToken");
         if (token) {
           state.accessToken = token;
         }
@@ -122,7 +126,8 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.isInitialized = true;
         if (typeof window !== "undefined") {
-          sessionStorage.removeItem("accessToken");
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
         }
       });
 

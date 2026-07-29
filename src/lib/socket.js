@@ -31,7 +31,7 @@ const triggerListeners = (event, payload) => {
 export const connectSocket = (companyId) => {
   if (typeof window === "undefined") return null;
 
-  const token = sessionStorage.getItem("accessToken");
+  const token = localStorage.getItem("accessToken");
   if (!token) {
     console.warn("[Socket] Cannot connect: No JWT access token found.");
     return null;
