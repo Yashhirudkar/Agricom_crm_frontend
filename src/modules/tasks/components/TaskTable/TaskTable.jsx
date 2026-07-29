@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useTaskStore } from "../../store/taskStore";
 import { useTasksQuery, useTaskStatusesQuery, useTaskPrioritiesQuery } from "../../queries/tasks.query";
 import { TaskTableFoundation } from "./TaskTableFoundation";
-import { Archive, CheckCircle2, ChevronDown, ChevronRight, Pencil } from "lucide-react";
+import { Archive, CheckCircle2, MinusSquare, PlusSquare, Pencil } from "lucide-react";
 import { useChangeTaskStatusMutation, useArchiveTaskMutation, useUpdateTaskMutation } from "../../mutations/tasks.mutation";
 import { useQuery } from '@tanstack/react-query';
 import axiosClient from "../../../../lib/axios";
@@ -353,12 +353,12 @@ export default function TaskTable() {
   const { hasPermission } = usePermissions();
   const canUpdate = hasPermission("task:update");
 
-  // Expanded subtask rows tracked by parent task id
-  const [expandedTaskIds, setExpandedTaskIds] = useState(new Set());
+  // Collapsed parent task IDs. By default, parents are expanded (not in this set).
+  const [collapsedTaskIds, setCollapsedTaskIds] = useState(new Set());
 
   const toggleExpand = (taskId, e) => {
     e.stopPropagation();
-    setExpandedTaskIds(prev => {
+    setCollapsedTaskIds(prev => {
       const next = new Set(prev);
       next.has(taskId) ? next.delete(taskId) : next.add(taskId);
       return next;
@@ -402,7 +402,7 @@ export default function TaskTable() {
   // Extract raw data from API response
   const rawData = response?.data || [];
 
-  // Group subtasks under parents, honoring the expanded Task IDs state
+  // Group subtasks under parents, honoring the collapsed Task IDs state (expanded by default)
   const data = useMemo(() => {
     const result = [];
     const parents = rawData.filter(task => !task.parentTaskId);
@@ -410,14 +410,14 @@ export default function TaskTable() {
 
     parents.forEach(parent => {
       result.push(parent);
-      if (expandedTaskIds.has(parent.id)) {
+      if (!collapsedTaskIds.has(parent.id)) {
         const children = subtasks.filter(sub => sub.parentTaskId === parent.id);
         result.push(...children);
       }
     });
 
     return result;
-  }, [rawData, expandedTaskIds]);
+  }, [rawData, collapsedTaskIds]);
 
   const meta = response?.meta || { totalCount: 0 };
 
@@ -487,7 +487,7 @@ export default function TaskTable() {
         cell: ({ row }) => {
           const isSubtask = !!row.original.parentTaskId;
           const hasSubtasks = rawData.some(t => t.parentTaskId === row.original.id);
-          const isExpanded = expandedTaskIds.has(row.original.id);
+          const isExpanded = !collapsedTaskIds.has(row.original.id);
 
           return (
             <div className="flex items-center gap-1.5 w-full overflow-hidden">
@@ -498,13 +498,12 @@ export default function TaskTable() {
                 </div>
               )}
 
-              {/* Expand/Collapse Chevron for parents with subtasks */}
               {!isSubtask && hasSubtasks && (
                 <button
                   onClick={(e) => toggleExpand(row.original.id, e)}
                   className="text-gray-400 hover:text-gray-600 transition-colors shrink-0"
                 >
-                  {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  {isExpanded ? <MinusSquare className="w-3.5 h-3.5" /> : <PlusSquare className="w-3.5 h-3.5" />}
                 </button>
               )}
 
@@ -713,7 +712,7 @@ export default function TaskTable() {
         ),
       },
     ],
-    [setSelectedTask, selectedRowIds, statuses, priorities, employeeOptions, changeStatusMutation, updateTaskMutation, expandedTaskIds, rawData, canUpdate]
+    [setSelectedTask, selectedRowIds, statuses, priorities, employeeOptions, changeStatusMutation, updateTaskMutation, collapsedTaskIds, rawData, canUpdate]
   );
 
   const handlePaginationChange = (updater) => {

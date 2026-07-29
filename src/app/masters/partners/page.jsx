@@ -68,6 +68,8 @@ function PartnersContent() {
 
   const [search, setSearch] = useState("");
   const [isActiveFilter, setIsActiveFilter] = useState("true");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [countryFilter, setCountryFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
@@ -87,21 +89,30 @@ function PartnersContent() {
   // Load partners list
   useEffect(() => {
     if (selectedCompanyId) {
-      dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      dispatch(fetchPartners({
+        page: currentPage,
+        limit: itemsPerPage,
+        search,
+        isActive: isActiveFilter,
+        partnerRoleId: roleFilter || undefined,
+        country: countryFilter || undefined,
+      }));
     }
-  }, [dispatch, currentPage, search, isActiveFilter, selectedCompanyId]);
+  }, [dispatch, currentPage, search, isActiveFilter, roleFilter, countryFilter, selectedCompanyId]);
 
   // Load dropdown dependencies once securely respecting max 100 limit
   useEffect(() => {
     if (!selectedCompanyId) return;
     const fetchDependencies = async () => {
       try {
-        const [rolesRes, prodRes] = await Promise.all([
+        const [rolesRes, prodRes, countriesRes] = await Promise.all([
           axiosClient.get("/masters/partner-roles", { params: { limit: 100, isActive: true } }),
           axiosClient.get("/masters/products", { params: { limit: 100, isActive: true } }),
+          axiosClient.get("/masters/partners/countries"),
         ]);
         setPartnerRoles(rolesRes.data.data || []);
         setProducts(prodRes.data.data || []);
+        setCountries(countriesRes.data.data || []);
       } catch (err) {
         showToast("Failed to load master lookup data", "error");
       }
@@ -310,6 +321,12 @@ function PartnersContent() {
             setIsActiveFilter={setIsActiveFilter}
             setCurrentPage={setCurrentPage}
             totalCount={totalCount}
+            partnerRoles={partnerRoles}
+            countries={countries}
+            roleFilter={roleFilter}
+            setRoleFilter={setRoleFilter}
+            countryFilter={countryFilter}
+            setCountryFilter={setCountryFilter}
           />
 
           <PartnersTable
