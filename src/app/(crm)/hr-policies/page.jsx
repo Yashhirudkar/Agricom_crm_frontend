@@ -51,7 +51,8 @@ function HrPoliciesContent() {
     minFullDayHours: 8,
     defaultShiftStartTime: "09:00",
     defaultShiftEndTime: "18:00",
-    lateMarkGraceMinutes: 15
+    lateMarkGraceMinutes: 15,
+    allowAttendanceCorrection: true
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -85,7 +86,8 @@ function HrPoliciesContent() {
         minFullDayHours: currentPolicy.minHoursForPresent ?? 8,
         defaultShiftStartTime: currentPolicy.defaultShiftStartTime || "09:00",
         defaultShiftEndTime: currentPolicy.defaultShiftEndTime || "18:00",
-        lateMarkGraceMinutes: currentPolicy.lateComingGraceMinutes ?? 15
+        lateMarkGraceMinutes: currentPolicy.lateComingGraceMinutes ?? 15,
+        allowAttendanceCorrection: currentPolicy.allowAttendanceCorrection ?? true
       });
     } else {
       // Defaults
@@ -97,7 +99,8 @@ function HrPoliciesContent() {
         minFullDayHours: 8,
         defaultShiftStartTime: "09:00",
         defaultShiftEndTime: "18:00",
-        lateMarkGraceMinutes: 15
+        lateMarkGraceMinutes: 15,
+        allowAttendanceCorrection: true
       });
     }
   }, [currentPolicy]);
@@ -124,7 +127,8 @@ function HrPoliciesContent() {
         defaultNoticePeriodDays: Number(form.noticePeriodDays),
         minHoursForHalfDay: Number(form.minHalfDayHours),
         minHoursForPresent: Number(form.minFullDayHours),
-        lateComingGraceMinutes: Number(form.lateMarkGraceMinutes)
+        lateComingGraceMinutes: Number(form.lateMarkGraceMinutes),
+        allowAttendanceCorrection: Boolean(form.allowAttendanceCorrection)
       };
       await dispatch(upsertCompanyHrPolicies(payload)).unwrap();
       showToast("Company HR Policies updated successfully");
@@ -287,6 +291,18 @@ function HrPoliciesContent() {
                   onChange={e => setForm({...form, lateMarkGraceMinutes: e.target.value})}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                 />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Attendance Correction</label>
+                <select
+                  disabled={!canUpdate}
+                  value={form.allowAttendanceCorrection ? "true" : "false"}
+                  onChange={e => setForm({...form, allowAttendanceCorrection: e.target.value === "true"})}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed bg-white"
+                >
+                  <option value="true">Allowed</option>
+                  <option value="false">Not Allowed</option>
+                </select>
               </div>
             </div>
           </div>

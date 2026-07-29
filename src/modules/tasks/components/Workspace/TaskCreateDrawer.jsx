@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PlusIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
@@ -14,6 +14,17 @@ import { useTaskStore } from '../../store/taskStore';
 import { useTaskDetailQuery, useSubtasksQuery } from '../../queries/tasks.query';
 import { useUpdateTaskMutation } from '../../mutations/tasks.mutation';
 import axiosClient from "../../../../lib/axios";
+
+const generateUUID = () => {
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
 
 const priorityStyles = {
   low: "text-green-500",
@@ -71,11 +82,16 @@ const selectStyles = {
   }),
   menu: (base) => ({
     ...base,
-    zIndex: 9999,
+    zIndex: 99999,
     borderRadius: '0.5rem',
     overflow: 'hidden'
-  })
+  }),
+  menuPortal: (base) => ({
+    ...base,
+    zIndex: 99999,
+  }),
 };
+
 
 // Fixed status options for subtasks
 const SUBTASK_STATUS_OPTIONS = [
@@ -183,13 +199,17 @@ function SubtaskCard({ index, control, register, remove, onDelete, employeeOptio
                 control={control}
                 render={({ field }) => (
                   <Select
-                    {...field}
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
                     options={employeeOptions}
                     placeholder="Select owner..."
                     isClearable
                     styles={selectStyles}
                     value={employeeOptions.find(opt => opt.value === field.value) || null}
                     onChange={(val) => field.onChange(val ? val.value : null)}
+                    menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                    menuPosition="fixed"
                   />
                 )}
               />
@@ -201,13 +221,20 @@ function SubtaskCard({ index, control, register, remove, onDelete, employeeOptio
                 control={control}
                 render={({ field }) => (
                   <Select
-                    {...field}
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
                     options={employeeOptions}
                     isMulti
                     placeholder="Select team members..."
                     styles={selectStyles}
                     value={employeeOptions.filter(opt => (field.value || []).includes(opt.value))}
-                    onChange={(val) => field.onChange(val ? val.map(v => v.value) : [])}
+                    onChange={(selectedOptions) => {
+                      // Replace entirely — never merge with previous selection
+                      field.onChange(selectedOptions ? selectedOptions.map(v => v.value) : []);
+                    }}
+                    menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                    menuPosition="fixed"
                   />
                 )}
               />
@@ -486,10 +513,20 @@ export default function TaskCreateDrawer() {
     name: "subtasks"
   });
 
-  const employeeOptions = employees.map(emp => ({
-    value: emp.userId || emp.id,
-    label: `${emp.firstName || ''} ${emp.lastName || ''}`.trim()
-  }));
+  const employeeOptions = useMemo(() => {
+    const seen = new Set();
+    return employees
+      .filter(emp => {
+        const id = emp.userId || emp.id;
+        if (!id || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      })
+      .map(emp => ({
+        value: emp.userId || emp.id,
+        label: `${emp.firstName || ''} ${emp.lastName || ''}`.trim()
+      }));
+  }, [employees]);
 
   const onSubmit = async (data) => {
     setIsSubmitting(true);
@@ -499,7 +536,7 @@ export default function TaskCreateDrawer() {
       const selectedPriority = priorityOptions.find(p => p.id === parseInt(data.priorityId));
 
       const teamUserIds = data.associatedTeamIds || [];
-      const ownerUserId = parseInt(data.ownerId);
+      const ownerUserId = data.ownerId ? parseInt(data.ownerId) : undefined;
       const filteredTeamUserIds = teamUserIds.filter(id => id !== ownerUserId);
 
       const payload = {
@@ -512,7 +549,7 @@ export default function TaskCreateDrawer() {
         estimatedMinutes: data.estimatedMinutes ? parseInt(data.estimatedMinutes) : undefined,
         startDate: data.startDate || undefined,
         dueDate: data.dueDate || undefined,
-        ownerId: ownerUserId,
+        ownerId: ownerUserId || undefined,
         assigneeIds: filteredTeamUserIds,
         companyId: isSuperAdmin && selectedCompanyId ? selectedCompanyId : undefined
       };
@@ -581,7 +618,7 @@ export default function TaskCreateDrawer() {
       const createdTask = await axiosClient.post("/v1/tasks", payload, {
         headers: {
           ...headers,
-          'Idempotency-Key': crypto.randomUUID()
+          'Idempotency-Key': generateUUID()
         }
       }).then(res => res.data.data);
 
@@ -821,8 +858,10 @@ export default function TaskCreateDrawer() {
                     control={control}
                     rules={{ required: 'Owner is required' }}
                     render={({ field }) => (
-                      <Select
-                        {...field}
+                  <Select
+                        name={field.name}
+                        ref={field.ref}
+                        onBlur={field.onBlur}
                         options={employeeOptions}
                         placeholder="Select Owner..."
                         isClearable={false}
@@ -830,6 +869,8 @@ export default function TaskCreateDrawer() {
                         isDisabled={isSuperAdmin && !selectedCompanyId}
                         value={employeeOptions.find(opt => opt.value === field.value) || null}
                         onChange={(val) => field.onChange(val ? val.value : '')}
+                        menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                        menuPosition="fixed"
                       />
                     )}
                   />
@@ -842,15 +883,22 @@ export default function TaskCreateDrawer() {
                     name="associatedTeamIds"
                     control={control}
                     render={({ field }) => (
-                      <Select
-                        {...field}
+                  <Select
+                        name={field.name}
+                        ref={field.ref}
+                        onBlur={field.onBlur}
                         options={employeeOptions}
                         isMulti
                         placeholder="Select team members..."
                         styles={selectStyles}
                         isDisabled={isSuperAdmin && !selectedCompanyId}
-                        value={employeeOptions.filter(opt => field.value?.includes(opt.value))}
-                        onChange={(val) => field.onChange(val ? val.map(v => v.value) : [])}
+                        value={employeeOptions.filter(opt => (field.value || []).includes(opt.value))}
+                        onChange={(selectedOptions) => {
+                          // Replace entirely — never merge with previous selection
+                          field.onChange(selectedOptions ? selectedOptions.map(v => v.value) : []);
+                        }}
+                        menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                        menuPosition="fixed"
                       />
                     )}
                   />
@@ -893,6 +941,8 @@ export default function TaskCreateDrawer() {
                       styles={selectStyles}
                       value={priorityOptions.map(p => ({ value: p.id, label: p.name })).find(opt => opt.value === parseInt(field.value)) || null}
                       onChange={(val) => field.onChange(val ? val.value.toString() : '')}
+                      menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                      menuPosition="fixed"
                       formatOptionLabel={({ label }) => {
                         const priorityKey = label.toLowerCase();
                         const priorityColor = priorityStyles[priorityKey] || "text-gray-400";

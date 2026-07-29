@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
-import { selectUser } from "@/store/slices/authSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { selectUser, fetchCurrentUser } from "@/store/slices/authSlice";
 import api from "@/lib/axios"; // Changed from @/lib/api
 import ProfileHeader from "./components/ProfileHeader";
 import PersonalInfoCard from "./components/PersonalInfoCard";
@@ -11,6 +11,7 @@ import DocumentStatusCard from "./components/DocumentStatusCard";
 import Widgets from "./components/Widgets";
 
 export default function ProfilePage() {
+  const dispatch = useDispatch();
   const authUser = useSelector(selectUser);
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState(null);
@@ -49,6 +50,7 @@ export default function ProfilePage() {
       setDocuments(docRes.data);
       setAttendance(attRes.data);
       setCompletion(compRes.data.completionPercentage);
+      dispatch(fetchCurrentUser());
     } catch (error) {
       console.error("Failed to load profile", error);
     } finally {

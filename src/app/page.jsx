@@ -411,15 +411,19 @@ export default function Home() {
             <div className="space-y-3.5 text-xs">
               <div className="flex justify-between">
                 <span className="text-gray-400 font-semibold">User ID</span>
-                <span className="font-bold text-gray-700">#{user?.id}</span>
+                <span className="font-bold text-gray-700">{user?.id}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400 font-semibold">Email Address</span>
                 <span className="font-bold text-gray-700">{user?.email}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400 font-semibold">Tenant Account</span>
-                <span className="font-bold text-gray-700">Client Tenant #{user?.clientId}</span>
+                <span className="text-gray-400 font-semibold">Account Number</span>
+                <span className="font-bold text-gray-700">{user?.clientId}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400 font-semibold">Role</span>
+                <span className="font-bold text-gray-700"> {activeWorkspace.role.name}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400 font-semibold">Account Status</span>
@@ -435,37 +439,6 @@ export default function Home() {
             <p className="text-[12px] text-blue-800 leading-normal">
               Operational metrics are being configured by your system administrator. Your active workspace role regulates permissions dynamically.
             </p>
-          </div>
-        </div>
-
-        {/* Workspace Operations Intro Card */}
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-6 flex flex-col justify-between">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Globe className="h-5 w-5 text-[#007aff]" />
-              <h3 className="text-sm font-bold text-gray-900">Workspace Operations</h3>
-            </div>
-
-            <p className="text-[12px] text-gray-500  leading-relaxed">
-              Welcome to the Agricom CRM Operations Hub. You are currently logged in as a workspace member. Use the left navigation sidebar to manage Leads, Customers, and Orders scoped specifically to your selected company workspace.
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div className="p-4 rounded-2xl border border-gray-100 bg-gray-50/20">
-                <p className="text-xs font-bold text-gray-800">Workspace Leads</p>
-                <p className="text-[10px] text-gray-400 font-semibold mt-1">Manage, filter, and track scoped business prospects.</p>
-              </div>
-              <div className="p-4 rounded-2xl border border-gray-100 bg-gray-50/20">
-                <p className="text-xs font-bold text-gray-800">Customers Database</p>
-                <p className="text-[10px] text-gray-400 font-semibold mt-1">Access scoped account profiles and contact metrics.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-400 border-t border-gray-50 pt-4">
-            <span className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4" /> Last login: {user?.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Just now"}
-            </span>
           </div>
         </div>
       </div>

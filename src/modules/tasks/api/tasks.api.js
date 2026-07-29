@@ -1,5 +1,16 @@
 import axiosClient from "../../../lib/axios";
 
+const generateUUID = () => {
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 export const TaskAPI = {
   getTasks: async (params) => {
     const { data } = await axiosClient.get("/v1/tasks", { params });
@@ -14,7 +25,7 @@ export const TaskAPI = {
   createTask: async (payload) => {
     const { data } = await axiosClient.post("/v1/tasks", payload, {
       headers: {
-        'Idempotency-Key': crypto.randomUUID()
+        'Idempotency-Key': generateUUID()
       }
     });
     return data.data;

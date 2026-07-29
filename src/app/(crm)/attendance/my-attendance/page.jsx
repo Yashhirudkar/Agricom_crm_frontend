@@ -157,12 +157,20 @@ export default function MyAttendancePage() {
       setCorrectionError("Date and Reason are required.");
       return;
     }
+
+    const checkInTime = (correctionForm.date && correctionForm.expectedCheckIn)
+      ? `${correctionForm.date}T${correctionForm.expectedCheckIn}`
+      : undefined;
+    const checkOutTime = (correctionForm.date && correctionForm.expectedCheckOut)
+      ? `${correctionForm.date}T${correctionForm.expectedCheckOut}`
+      : undefined;
+
     dispatch(
       requestCorrection({
         requestType: "MISSED_PUNCH",
         date: correctionForm.date,
-        checkInTime: correctionForm.expectedCheckIn || undefined,
-        checkOutTime: correctionForm.expectedCheckOut || undefined,
+        checkInTime,
+        checkOutTime,
         reason: correctionForm.reason,
       })
     ).then((result) => {

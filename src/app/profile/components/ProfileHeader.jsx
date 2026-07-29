@@ -3,9 +3,14 @@ import { Shield, CheckCircle2, AlertCircle } from "lucide-react";
 import api from "@/lib/axios";
 
 export default function ProfileHeader({ user, employee, completion }) {
-  const getInitials = (name) => {
-    if (!name) return "U";
-    return name.slice(0, 2).toUpperCase();
+  const getInitials = () => {
+    if (employee?.firstName) {
+      const f = employee.firstName.charAt(0);
+      const l = employee.lastName ? employee.lastName.charAt(0) : "";
+      return (f + l).toUpperCase() || "U";
+    }
+    if (!user?.name) return "U";
+    return user.name.slice(0, 2).toUpperCase();
   };
 
   const getAvatarUrl = (url) => {
@@ -14,6 +19,10 @@ export default function ProfileHeader({ user, employee, completion }) {
     const baseURL = api.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:5000';
     return `${baseURL}${url}`;
   };
+
+  const displayName = employee?.firstName
+    ? `${employee.firstName}${employee.lastName ? ' ' + employee.lastName : ''}`.trim()
+    : (user?.name || "Not Available");
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-7 animate-in fade-in zoom-in-95 duration-500">
@@ -25,7 +34,7 @@ export default function ProfileHeader({ user, employee, completion }) {
               {user?.avatarUrl ? (
                 <img src={getAvatarUrl(user.avatarUrl)} alt="Avatar" className="h-full w-full object-cover" />
               ) : (
-                <span className="text-lg font-bold text-[#007aff]">{getInitials(user?.name)}</span>
+                <span className="text-lg font-bold text-[#007aff]">{getInitials()}</span>
               )}
             </div>
             <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white border border-slate-100">
@@ -39,7 +48,7 @@ export default function ProfileHeader({ user, employee, completion }) {
 
           <div>
             <h1 className="text-xl font-black text-slate-900">
-              {user?.name || "Not Available"}
+              {displayName}
             </h1>
             <p className="text-sm font-semibold text-slate-500 mt-1 flex items-center gap-2">
               <Shield className="h-4 w-4 text-slate-400" />
