@@ -20,6 +20,35 @@ export default function AttendanceDashboardPage() {
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [filters, setFilters] = useState({ department: '', branch: '', shift: '' });
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getWorkHours = (record) => {
+    if ((record.attendanceState === 'WORKING' || record.attendanceState === 'ON_BREAK') && record.checkInTime && !record.checkOutTime) {
+      const start = new Date(record.checkInTime).getTime();
+      const current = now.getTime();
+      const diffMs = Math.max(0, current - start);
+      const totalMinutes = Math.floor(diffMs / (1000 * 60));
+      const hrs = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
+      return `${hrs}h ${mins}m`;
+    }
+    if (record.totalHours) {
+      const hoursNum = parseFloat(record.totalHours);
+      if (!isNaN(hoursNum)) {
+        const hrs = Math.floor(hoursNum);
+        const mins = Math.round((hoursNum - hrs) * 60);
+        return `${hrs}h ${mins}m`;
+      }
+    }
+    return '0h 0m';
+  };
 
   useEffect(() => {
     dispatch(fetchCompanyAttendance({ date }));
@@ -193,8 +222,8 @@ export default function AttendanceDashboardPage() {
                     <td className="px-4 py-2.5 text-xs font-medium text-gray-700">
                       {record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                     </td>
-                    <td className="px-4 py-2.5 text-xs font-bold text-gray-900 text-right tabular-nums">
-                      {record.totalHours || '0.00'} <span className="text-gray-400 font-normal">h</span>
+                    <td className="px-4 py-2.5 text-xs font-bold text-gray-900 text-right tabular-nums text-gray-800">
+                      {getWorkHours(record)}
                     </td>
                   </tr>
                 ))}

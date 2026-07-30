@@ -116,7 +116,7 @@ axiosClient.interceptors.response.use(
     console.error("[Axios Error]", originalRequest?.url, error.response?.status, error.response?.data);
 
     if (typeof window !== "undefined") {
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      if (error.response?.status === 401 && !originalRequest?._retry && !originalRequest?.url?.includes("/auth/login")) {
         // Prevent infinite loop if refresh endpoint itself returns 401
         if (originalRequest.url?.includes("/auth/refresh")) {
           localStorage.removeItem("accessToken");

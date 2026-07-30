@@ -1,12 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { Bell, Check, LogOut, ChevronDown, Building2, Search, Menu } from "lucide-react";
+import { Bell, Check, LogOut, ChevronDown, Building2, Search, Menu, CheckSquare } from "lucide-react";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { logoutUser, selectUser, fetchCurrentUser } from "@/store/slices/authSlice";
 import axiosClient from "@/lib/axios";
+import {
+  selectNotifications,
+  selectUnreadCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "@/store/slices/notificationsSlice";
 
 export function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -16,9 +22,8 @@ export function Header() {
   const router = useRouter();
   const user = useSelector(selectUser);
 
-  // Notifications disabled — backend /v1/notifications not yet live
-  const notifications = [];
-  const unreadCount = 0;
+  const notifications = useSelector(selectNotifications);
+  const unreadCount = useSelector(selectUnreadCount);
 
   const handleLogout = async () => {
     await dispatch(logoutUser());
@@ -38,9 +43,21 @@ export function Header() {
     }
   };
 
-  const handleMarkAsRead = async (_id) => { };
+  const handleMarkAsRead = async (id) => {
+    dispatch(markNotificationRead(id));
+  };
 
-  const handleMarkAllRead = async () => { };
+  const handleMarkAllRead = async () => {
+    dispatch(markAllNotificationsRead());
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead) {
+      dispatch(markNotificationRead(notif.id));
+    }
+    router.push("/tasks");
+    setIsNotificationsOpen(false);
+  };
 
 
   // Determine active workspace
@@ -219,7 +236,7 @@ export function Header() {
                     notifications.map((notif) => (
                       <div
                         key={notif.id}
-                        onClick={() => !notif.isRead && handleMarkAsRead(notif.id)}
+                        onClick={() => handleNotificationClick(notif)}
                         className={`flex items-start px-4 py-3 transition-colors cursor-pointer ${!notif.isRead ? "bg-blue-50/30 hover:bg-blue-50/50" : "hover:bg-gray-50"
                           }`}
                       >
@@ -228,12 +245,25 @@ export function Header() {
                             className={`h-7 w-7 rounded-full flex items-center justify-center ${!notif.isRead ? "bg-blue-100 text-[#007aff]" : "bg-gray-100 text-gray-400"
                               }`}
                           >
-                            <Bell className="h-3.5 w-3.5" />
+                            {notif.payload?.icon === "task" ? (
+                              <CheckSquare className="h-3.5 w-3.5" />
+                            ) : (
+                              <Bell className="h-3.5 w-3.5" />
+                            )}
                           </div>
                         </div>
                         <div className="flex-1 min-w-0 pr-2">
                           <p className="text-xs font-bold text-gray-800 leading-tight">{notif.title}</p>
-                          <p className="text-xs text-gray-500 mt-0.5 leading-snug">{notif.message}</p>
+                          <p className="text-xs text-gray-500 mt-0.5 leading-snug">
+                            {notif.payload?.taskName ? (
+                              <span>
+                                <strong>Task:</strong> {notif.payload.taskName} <br />
+                                <strong>Status:</strong> {notif.payload.status}
+                              </span>
+                            ) : (
+                              notif.payload?.message || ""
+                            )}
+                          </p>
                           <p className="text-[10px] text-gray-400 mt-1 font-medium">
                             {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>

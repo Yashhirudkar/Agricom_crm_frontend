@@ -4,6 +4,7 @@ import rolesReducer from "./slices/rolesSlice";
 import companiesReducer from "./slices/companiesSlice";
 import usersReducer from "./slices/usersSlice";
 import clientsReducer from "./slices/clientsSlice";
+import notificationsReducer from "./slices/notificationsSlice";
 
 // Entity reducers
 import departmentsReducer from "./entities/departmentsSlice";
@@ -61,6 +62,7 @@ export const store = configureStore({
     companies: companiesReducer,
     users: usersReducer,
     clients: clientsReducer,
+    notifications: notificationsReducer,
     entities: entitiesReducer,
   },
   devTools: process.env.NODE_ENV !== "production",
