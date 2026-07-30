@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSelector } from "react-redux";
 import { useTaskStore } from "../../store/taskStore";
 import { useDebounce } from "../../hooks/useDebounce";
+import { useTasksQuery } from "../../queries/tasks.query";
 import {
   Search,
   Plus,
@@ -57,6 +59,17 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
 
   const selectedIds = Object.keys(selectedRowIds).filter(k => selectedRowIds[k]).map(Number);
   const selectedCount = selectedIds.length;
+
+  const user = useSelector(state => state.auth.user);
+  const loggedInUserId = user?.userId || user?.id;
+
+  const { data: response } = useTasksQuery({
+    ...filters,
+    preset,
+  });
+  const tasks = response?.data || [];
+  const selectedTasks = tasks.filter(t => selectedIds.includes(t.id));
+  const isOwnerOfAllSelected = selectedTasks.length > 0 && selectedTasks.every(t => t.ownerId ? t.ownerId === loggedInUserId : t.createdById === loggedInUserId);
 
   const bulkArchive = useBulkArchiveTaskMutation();
   const bulkDelete = useBulkDeleteTaskMutation();
@@ -132,6 +145,10 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
               {/* Quick Delete button */}
               <button
                 onClick={() => {
+                  if (!isOwnerOfAllSelected) {
+                    toast.error("Only the owner can delete the task(s).");
+                    return;
+                  }
                   if (window.confirm(`Are you sure you want to permanently delete ${selectedCount} task(s)?`)) {
                     bulkDelete.mutate(
                       { ids: selectedIds },
@@ -139,8 +156,13 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
                     );
                   }
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-red-600 text-white hover:bg-red-700 rounded-lg shadow-sm transition-colors"
-                title="Delete selected tasks"
+                disabled={!isOwnerOfAllSelected}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg shadow-sm transition-colors ${
+                  isOwnerOfAllSelected
+                    ? "bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+                    : "bg-gray-150 text-gray-400 cursor-not-allowed border border-gray-200"
+                }`}
+                title={isOwnerOfAllSelected ? "Delete selected tasks" : "Only the task owner can delete tasks"}
               >
                 <Trash2 className="w-4 h-4" /> Delete
               </button>

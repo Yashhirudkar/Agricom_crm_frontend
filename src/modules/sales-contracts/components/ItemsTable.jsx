@@ -120,9 +120,22 @@ export default function ItemsTable({ form, setForm, errors, masters, isView }) {
                   </td>
                   <td className="px-3 py-2 min-w-[130px]">
                     <div className="relative">
-                      <select value={item.originCountryId || ""} onChange={e => updateItem(idx, "originCountryId", e.target.value ? Number(e.target.value) : "")} disabled={isView} className={selCls}>
+                      <select
+                        value={item.originCountry || item.originCountryId || ""}
+                        onChange={e => {
+                          const val = e.target.value;
+                          updateItem(idx, "originCountry", val);
+                          updateItem(idx, "originCountryId", val);
+                        }}
+                        disabled={isView}
+                        className={selCls}
+                      >
                         <option value="">Country</option>
-                        {masters.countries.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {masters.countries.map(c => (
+                          <option key={c.code || c.id || c.name || c} value={c.name || c.id || c}>
+                            {c.name || c}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </td>

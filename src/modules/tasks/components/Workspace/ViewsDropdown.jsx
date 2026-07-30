@@ -17,6 +17,7 @@ import {
   Trash2,
   ChevronDown
 } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const PRESETS = [
   { id: "all_tasks", label: "All Tasks", icon: List },
@@ -29,6 +30,7 @@ const PRESETS = [
 
 export default function ViewsDropdown() {
   const { preset, setPreset, setFilters, clearFilters } = useTaskStore();
+  const { hasPermission } = usePermissions();
   const [customViews, setCustomViews] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -55,7 +57,14 @@ export default function ViewsDropdown() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const activePresetItem = PRESETS.find(p => p.id === preset) || customViews.find(v => v.id === preset);
+  const displayPresets = PRESETS.filter(item => {
+    if (item.id === "all_tasks") {
+      return hasPermission("task:view_all");
+    }
+    return true;
+  });
+
+  const activePresetItem = displayPresets.find(p => p.id === preset) || customViews.find(v => v.id === preset);
   const ActiveIcon = activePresetItem?.icon || Bookmark;
 
   return (
@@ -74,7 +83,7 @@ export default function ViewsDropdown() {
           <div className="px-3 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Views</div>
           
           <div className="space-y-0.5">
-            {PRESETS.map((item) => {
+            {displayPresets.map((item) => {
               const Icon = item.icon;
               const isActive = preset === item.id;
               

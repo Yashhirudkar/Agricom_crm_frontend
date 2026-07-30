@@ -85,7 +85,7 @@ export default function ProductsTable({
                     <span className="font-semibold">Country:</span> {item.country?.name || item.country || "-"}
                   </div>
                   <div>
-                    <span className="font-semibold">HS Code:</span> {item.hsCode?.code || "-"}
+                    <span className="font-semibold">HS Code:</span> {typeof item.hsCode === "object" ? item.hsCode?.code : item.hsCode || "-"}
                   </div>
                 </td>
                 <td className="px-6 py-4 text-gray-600 max-w-[200px]">

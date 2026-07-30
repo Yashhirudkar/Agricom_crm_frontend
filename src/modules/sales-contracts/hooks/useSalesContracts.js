@@ -2,6 +2,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { salesContractApi, mastersApi } from "../services/salesContractApi";
 import { currencies } from "@/constants/currenciesData";
+import countriesLib from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+
+countriesLib.registerLocale(enLocale);
+
+const rawCountries = countriesLib.getNames("en");
+const defaultCountries = Object.entries(rawCountries)
+  .map(([code, name]) => ({
+    id: name,
+    code,
+    name,
+  }))
+  .sort((a, b) => a.name.localeCompare(b.name));
 
 export function useSalesContracts() {
   const [contracts, setContracts] = useState([]);
@@ -91,6 +104,9 @@ export function useSalesMasters() {
           brokerRole ? mastersApi.getPartners({ partnerRoleId: brokerRole.id, limit: 100, isActive: true }) : Promise.resolve({ data: { data: [] } }),
         ]);
 
+        const fetchedCountries = countries?.data?.data || [];
+        const finalCountries = fetchedCountries.length > 0 ? fetchedCountries : defaultCountries;
+
         setMasters({
           currencies: finalCurrencies,
           shipmentTypes: st.data.data || [],
@@ -100,7 +116,7 @@ export function useSalesMasters() {
           sellers: sellersRes.data?.data || [],
           brokers: brokersRes.data?.data || [],
           products: prod.data.data || [],
-          countries: countries.data.data || [],
+          countries: finalCountries,
           bagTypes: Array.isArray(bt.data) ? bt.data : (bt.data.data || []),
           packingTypes: Array.isArray(pkt.data) ? pkt.data : (pkt.data.data || []),
           bagSpecifications: bsp.data.data || bsp.data || [],

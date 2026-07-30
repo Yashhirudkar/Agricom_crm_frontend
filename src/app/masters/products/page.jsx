@@ -53,14 +53,13 @@ function ProductsContent() {
   // External dependencies for dropdowns
   const [categories, setCategories] = useState([]);
   const [countries, setCountries] = useState([]);
-  const [hscodes, setHSCodes] = useState([]);
 
   const initialFormState = { 
     id: null, 
     name: "", 
     categoryId: "", 
     country: "", 
-    hsCodeId: "", 
+    hsCode: "", 
     qualitySubType: "", 
     specification: "", 
     qty20ftContainer: null, 
@@ -82,18 +81,14 @@ function ProductsContent() {
     dispatch(fetchProducts({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
   }, [dispatch, currentPage, search, isActiveFilter]);
 
-  // Load dropdown dependencies once
+  // Load category dependency
   useEffect(() => {
     const fetchDependencies = async () => {
       try {
-        const [catRes, hsRes] = await Promise.all([
-          axiosClient.get("/masters/categories", { params: { limit: 100, isActive: true } }),
-          axiosClient.get("/masters/hs-codes", { params: { limit: 100, isActive: true } }),
-        ]);
+        const catRes = await axiosClient.get("/masters/categories", { params: { limit: 100, isActive: true } });
         setCategories(catRes.data.data || []);
-        setHSCodes(hsRes.data.data || []);
       } catch (err) {
-        showToast("Failed to load master lookup data", "error");
+        showToast("Failed to load categories lookup data", "error");
       }
     };
     fetchDependencies();
@@ -111,7 +106,7 @@ function ProductsContent() {
       name: item.name,
       categoryId: item.categoryId || "",
       country: item.country || "",
-      hsCodeId: item.hsCodeId || "",
+      hsCode: typeof item.hsCode === "object" ? (item.hsCode?.code || "") : (item.hsCode || ""),
       qualitySubType: item.qualitySubType || "",
       specification: item.specification || "",
       qty20ftContainer: item.qty20ftContainer ?? null,
@@ -131,7 +126,7 @@ function ProductsContent() {
       name: item.name,
       categoryId: item.categoryId || "",
       country: item.country || "",
-      hsCodeId: item.hsCodeId || "",
+      hsCode: typeof item.hsCode === "object" ? (item.hsCode?.code || "") : (item.hsCode || ""),
       qualitySubType: item.qualitySubType || "",
       specification: item.specification || "",
       qty20ftContainer: item.qty20ftContainer ?? null,
@@ -157,9 +152,9 @@ function ProductsContent() {
     e.preventDefault();
     setIsSaving(true);
     
-    // Clean up empty strings before submitting to match DTO
+    // Clean up payload to match Product DTO
     const payload = { ...form };
-    if (payload.hsCodeId === "" || !payload.hsCodeId) delete payload.hsCodeId;
+    if (!payload.hsCode) delete payload.hsCode;
     if (payload.qualitySubType === "") delete payload.qualitySubType;
     if (payload.specification === "") delete payload.specification;
     if (payload.qty20ftContainer === null) delete payload.qty20ftContainer;
@@ -318,7 +313,6 @@ function ProductsContent() {
         isEditMode={isEditMode}
         categories={categories}
         countries={countries}
-        hscodes={hscodes}
       />
 
       <ConfirmModal

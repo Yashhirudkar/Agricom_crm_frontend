@@ -126,7 +126,7 @@ function SubtaskCard({ index, control, register, remove, onDelete, employeeOptio
   });
 
   return (
-    <div className="border border-indigo-100 rounded-xl bg-gradient-to-b from-indigo-50/40 to-white shadow-sm overflow-hidden">
+    <div className="border border-indigo-100 rounded-xl bg-gradient-to-b from-indigo-50/40 to-white shadow-sm">
       {/* Subtask Header */}
       <div
         className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-50 to-blue-50 cursor-pointer select-none border-b border-indigo-100"
@@ -376,6 +376,11 @@ export default function TaskCreateDrawer() {
   const user = useSelector(state => state.auth.user);
   const isSuperAdmin = user?.type === 'SUPER_ADMIN';
 
+  const loggedInUserId = user?.userId || user?.id;
+  const isOwnerOfEditTask = editTask && editTask.ownerId === loggedInUserId;
+  const editTaskHasAssignees = editTask && editTask.assignees && editTask.assignees.length > 0;
+  const isStatusDisabledInEdit = isEditMode && isOwnerOfEditTask && editTaskHasAssignees;
+
   const { register, handleSubmit, control, formState: { errors }, reset, watch, setValue, getValues } = useForm({
     defaultValues: {
       title: '',
@@ -486,9 +491,10 @@ export default function TaskCreateDrawer() {
 
   // Fetch Statuses
   const { data: statusesRes } = useQuery({
-    queryKey: ['task-statuses'],
+    queryKey: ['task-statuses', targetCompanyId || 'active'],
     queryFn: async () => {
-      const res = await axiosClient.get("/v1/tasks/meta/statuses");
+      const headers = targetCompanyId ? { 'x-company-id': targetCompanyId } : {};
+      const res = await axiosClient.get("/v1/tasks/meta/statuses", { headers });
       return res.data;
     }
   });
@@ -496,9 +502,10 @@ export default function TaskCreateDrawer() {
 
   // Fetch Priorities
   const { data: prioritiesRes } = useQuery({
-    queryKey: ['task-priorities'],
+    queryKey: ['task-priorities', targetCompanyId || 'active'],
     queryFn: async () => {
-      const res = await axiosClient.get("/v1/tasks/meta/priorities");
+      const headers = targetCompanyId ? { 'x-company-id': targetCompanyId } : {};
+      const res = await axiosClient.get("/v1/tasks/meta/priorities", { headers });
       return res.data;
     }
   });
@@ -928,7 +935,11 @@ export default function TaskCreateDrawer() {
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
                   Status <span className="text-red-500">*</span>
                 </label>
-                <select {...register('statusId', { required: 'Status is required' })} className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm outline-none">
+                <select 
+                  {...register('statusId', { required: 'Status is required' })} 
+                  disabled={isStatusDisabledInEdit}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm outline-none disabled:opacity-70 disabled:cursor-not-allowed"
+                >
                   <option value="">-- Select Status --</option>
                   {statusOptions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>

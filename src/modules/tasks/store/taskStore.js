@@ -7,7 +7,7 @@ import { create } from 'zustand';
 export const useTaskStore = create((set) => ({
   // Active View & Preset
   activeView: 'list', // 'list' | 'kanban' | 'calendar'
-  preset: 'my_tasks',
+  preset: 'all_tasks',
 
   // Task Context
   selectedTaskId: null,
@@ -26,8 +26,6 @@ export const useTaskStore = create((set) => ({
     assigneeIds: [],
     dueDateStart: null,
     dueDateEnd: null,
-    isArchived: false,
-    isCompleted: false,
   },
 
   // Pagination (Table State)
@@ -85,8 +83,6 @@ export const useTaskStore = create((set) => ({
       assigneeIds: [],
       dueDateStart: null,
       dueDateEnd: null,
-      isArchived: false,
-      isCompleted: false,
     },
     pagination: { ...state.pagination, page: 1 }
   })),

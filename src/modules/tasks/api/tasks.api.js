@@ -51,18 +51,21 @@ export const TaskAPI = {
     return data;
   },
 
-  getStatuses: async () => {
-    const { data } = await axiosClient.get("/v1/tasks/meta/statuses");
+  getStatuses: async (companyId) => {
+    const headers = companyId ? { 'x-company-id': companyId } : {};
+    const { data } = await axiosClient.get("/v1/tasks/meta/statuses", { headers });
     return data.data;
   },
 
-  getPriorities: async () => {
-    const { data } = await axiosClient.get("/v1/tasks/meta/priorities");
+  getPriorities: async (companyId) => {
+    const headers = companyId ? { 'x-company-id': companyId } : {};
+    const { data } = await axiosClient.get("/v1/tasks/meta/priorities", { headers });
     return data.data;
   },
   
-  getStatusTransitions: async () => {
-    const { data } = await axiosClient.get("/v1/tasks/status-transitions");
+  getStatusTransitions: async (companyId) => {
+    const headers = companyId ? { 'x-company-id': companyId } : {};
+    const { data } = await axiosClient.get("/v1/tasks/status-transitions", { headers });
     return data.data;
   },
 

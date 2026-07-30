@@ -158,17 +158,16 @@ export function Sidebar() {
     <aside
       className={`fixed md:relative top-16 md:top-0 bottom-0 left-0 h-[calc(100vh-64px)] md:h-full flex flex-col bg-white text-gray-500 border-r border-gray-200 flex-shrink-0 font-sans transition-all duration-300 z-40 ${
         isSidebarCollapsed
-          ? "w-0 md:w-[80px] overflow-hidden border-r-0 md:border-r"
+          ? "w-0 md:w-[80px] border-r-0 md:border-r"
           : "w-[260px] shadow-2xl md:shadow-none"
       }`}
     >
       <button
         onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        className={`absolute top-5 bg-white border border-gray-200 text-[#007aff] rounded-full p-1 shadow-md hover:bg-gray-50 z-50 transition-all duration-300 ${
-          isSidebarCollapsed
+        className={`absolute top-5 bg-white border border-gray-200 text-[#007aff] rounded-full p-1 shadow-md hover:bg-gray-50 z-50 transition-all duration-300 ${isSidebarCollapsed
             ? "left-full translate-x-2 md:translate-x-[-50%]"
             : "left-full translate-x-[-50%]"
-        }`}
+          }`}
       >
         {isSidebarCollapsed ? (
           <ChevronRight className="h-4 w-4" />
@@ -177,7 +176,7 @@ export function Sidebar() {
         )}
       </button>
 
-      <div className={`h-[72px] flex items-center ${isSidebarCollapsed ? "justify-center px-0" : "px-5"} border-b border-gray-100`}>
+      <div className={`h-[72px] flex items-center ${isSidebarCollapsed ? "justify-center px-0" : "px-4 pr-7"} border-b border-gray-100`}>
         <div className="relative flex items-center justify-center flex-shrink-0">
           {user?.company?.logoUrl ? (
             <>
@@ -202,11 +201,11 @@ export function Sidebar() {
         </div>
 
         {!isSidebarCollapsed && (
-          <div className="ml-3 overflow-hidden flex flex-col justify-center">
-            <h1 className="text-gray-900 font-bold text-[15px] leading-tight truncate max-w-[150px]">
+          <div className="ml-3 overflow-hidden flex flex-col justify-center min-w-0 pr-2">
+            <h1 className="text-gray-900 font-bold text-[14px] leading-tight truncate max-w-[130px]">
               {user?.company?.name || "Agricom"}
             </h1>
-            <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mt-0.5">
+            <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mt-0.5 truncate">
               {user?.company?.name && user.company.name !== "Agricom" ? "Workspace" : "CRM SYSTEM"}
             </p>
           </div>

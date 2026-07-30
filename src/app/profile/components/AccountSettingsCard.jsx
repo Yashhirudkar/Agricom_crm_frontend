@@ -71,7 +71,7 @@ export default function AccountSettingsCard({ preferences, onUpdate }) {
         <h4 className="text-sm font-bold text-slate-800">{label}</h4>
         <p className="text-[11px] font-semibold text-slate-400 mt-0.5">{desc}</p>
       </div>
-      <button 
+      <button
         onClick={onClick}
         className={`w-11 h-6 rounded-full transition-colors relative ${active ? 'bg-emerald-500' : 'bg-slate-300'}`}
       >
@@ -90,21 +90,21 @@ export default function AccountSettingsCard({ preferences, onUpdate }) {
           Account & Security Settings
         </h3>
       </div>
-      
+
       <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-        
+
         {/* Security / Password */}
         <div className="space-y-6">
           <div>
             <h4 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2"><Shield className="h-4 w-4 text-slate-400" /> Change Password</h4>
-            <p className="text-xs text-slate-500 font-medium">Must be 8+ characters, include uppercase, number, and special character.</p>
+            <p className="text-xs text-slate-500 font-medium">Set any password of your choice </p>
           </div>
-          
+
           <form onSubmit={handlePasswordChange} className="space-y-4">
             <div>
-              <input 
-                type="password" 
-                placeholder="Current Password" 
+              <input
+                type="password"
+                placeholder="Current Password"
                 value={oldPassword}
                 onChange={e => setOldPassword(e.target.value)}
                 className="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
@@ -112,17 +112,17 @@ export default function AccountSettingsCard({ preferences, onUpdate }) {
               />
             </div>
             <div>
-              <input 
-                type="password" 
-                placeholder="New Password" 
+              <input
+                type="password"
+                placeholder="New Password"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
                 className="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
                 required
               />
             </div>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={passLoading}
               className="w-full bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold py-2.5 rounded-lg transition-all"
             >
@@ -137,10 +137,10 @@ export default function AccountSettingsCard({ preferences, onUpdate }) {
             <h4 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2"><UploadCloud className="h-4 w-4 text-slate-400" /> Profile Photo</h4>
             <p className="text-xs text-slate-500 font-medium">Upload a new avatar (max 2MB, JPG/PNG/WEBP).</p>
           </div>
-          
+
           <div className="relative">
-            <input 
-              type="file" 
+            <input
+              type="file"
               accept="image/png, image/jpeg, image/jpg, image/webp"
               onChange={handlePhotoUpload}
               disabled={photoLoading}
@@ -155,20 +155,20 @@ export default function AccountSettingsCard({ preferences, onUpdate }) {
           <div className="pt-2">
             <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><Bell className="h-4 w-4 text-slate-400" /> Notifications</h4>
             <div className="space-y-3">
-              <Toggle 
-                label="Email Notifications" 
+              <Toggle
+                label="Email Notifications"
                 desc="Receive updates via email"
                 active={preferences?.emailNotifications}
                 onClick={() => handlePrefToggle('emailNotifications')}
               />
-              <Toggle 
-                label="Push Notifications" 
+              <Toggle
+                label="Push Notifications"
                 desc="Receive updates on your device"
                 active={preferences?.pushNotifications}
                 onClick={() => handlePrefToggle('pushNotifications')}
               />
-              <Toggle 
-                label="Two-Factor Authentication" 
+              <Toggle
+                label="Two-Factor Authentication"
                 desc="Extra security layer"
                 active={preferences?.twoFactorEnabled}
                 onClick={() => handlePrefToggle('twoFactorEnabled')}

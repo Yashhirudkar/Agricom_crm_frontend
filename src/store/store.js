@@ -18,7 +18,6 @@ import leaveBalancesReducer from "./entities/leaveBalancesSlice";
 import attendanceReducer from "./entities/attendanceSlice";
 import shiftsReducer from "./entities/shiftsSlice";
 import categoriesReducer from "./entities/categoriesSlice";
-import hscodesReducer from "./entities/hscodeSlice";
 import partnerRolesReducer from "./entities/partnerRoleSlice";
 import productsReducer from "./entities/productSlice";
 import partnersReducer from "./entities/partnerSlice";
@@ -44,7 +43,6 @@ const entitiesReducer = combineReducers({
   attendance: attendanceReducer,
   shifts: shiftsReducer,
   categories: categoriesReducer,
-  hscodes: hscodesReducer,
   partnerRoles: partnerRolesReducer,
   products: productsReducer,
   partners: partnersReducer,

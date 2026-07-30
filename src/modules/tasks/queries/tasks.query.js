@@ -6,8 +6,8 @@ export const useTasksQuery = (filters) => {
   return useQuery({
     queryKey: TASK_QUERY_KEYS.list(filters),
     queryFn: () => TaskAPI.getTasks(filters),
-    // Keep previous data while fetching new pages/filters to avoid flickering
-    placeholderData: (previousData) => previousData,
+    // staleTime: 0 ensures a fresh backend API call on every preset/filter change
+    staleTime: 0,
   });
 };
 
@@ -19,26 +19,26 @@ export const useTaskDetailQuery = (taskId) => {
   });
 };
 
-export const useTaskStatusesQuery = () => {
+export const useTaskStatusesQuery = (companyId) => {
   return useQuery({
-    queryKey: TASK_QUERY_KEYS.statuses,
-    queryFn: () => TaskAPI.getStatuses(),
-    staleTime: 1000 * 60 * 60, // 1 hour
+    queryKey: [...TASK_QUERY_KEYS.statuses, companyId || 'active'],
+    queryFn: () => TaskAPI.getStatuses(companyId),
+    staleTime: 0, 
   });
 };
 
-export const useTaskPrioritiesQuery = () => {
+export const useTaskPrioritiesQuery = (companyId) => {
   return useQuery({
-    queryKey: TASK_QUERY_KEYS.priorities,
-    queryFn: () => TaskAPI.getPriorities(),
-    staleTime: 1000 * 60 * 60, // 1 hour
+    queryKey: [...TASK_QUERY_KEYS.priorities, companyId || 'active'],
+    queryFn: () => TaskAPI.getPriorities(companyId),
+    staleTime: 0,
   });
 };
 
-export const useTaskStatusTransitionsQuery = () => {
+export const useTaskStatusTransitionsQuery = (companyId) => {
   return useQuery({
-    queryKey: TASK_QUERY_KEYS.statusTransitions,
-    queryFn: () => TaskAPI.getStatusTransitions(),
+    queryKey: [...TASK_QUERY_KEYS.statusTransitions, companyId || 'active'],
+    queryFn: () => TaskAPI.getStatusTransitions(companyId),
     staleTime: 1000 * 60 * 60,
   });
 };

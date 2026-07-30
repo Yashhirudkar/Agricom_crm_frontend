@@ -16,6 +16,7 @@ import HasPermission from "@/components/rbac/HasPermission";
 import PackagingSelector from "@/components/masters/products/PackagingSelector";
 import axiosClient from "@/lib/axios";
 import CountrySelect from "@/components/common/CountrySelect";
+import HSCodeInput from "@/components/common/HSCodeInput";
 
 export default function ProductDrawer({
   isOpen,
@@ -28,7 +29,6 @@ export default function ProductDrawer({
   isEditMode: initialEditMode,
   categories,
   countries,
-  hscodes,
 }) {
   const [isEditMode, setIsEditMode] = useState(initialEditMode);
   const [activeTab, setActiveTab] = useState("overview");
@@ -101,7 +101,6 @@ export default function ProductDrawer({
 
   const currentCategory = categories.find((c) => c.id === parseInt(form.categoryId, 10));
   const currentCountryName = form.country || "";
-  const currentHSCode = hscodes.find((h) => h.id === parseInt(form.hsCodeId, 10));
 
   const tabs = isEditMode
     ? [
@@ -223,7 +222,7 @@ export default function ProductDrawer({
                           {currentCountryName || "-"}
                         </span>
                         <span className="flex items-center gap-1 text-[10px] text-gray-500 font-mono mt-0.5">
-                          HS: {currentHSCode?.code || "-"}
+                          HS: {form.hsCode || "-"}
                         </span>
                       </span>
                     </div>
@@ -300,7 +299,7 @@ export default function ProductDrawer({
                     </div>
                     <div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">HS Code</div>
-                      <div className="text-xs font-mono font-bold text-gray-800 mt-1">{currentHSCode?.code || "-"}</div>
+                      <div className="text-xs font-mono font-bold text-gray-800 mt-1">{form.hsCode || "-"}</div>
                     </div>
                     <div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Quality Sub-type</div>
@@ -422,16 +421,11 @@ export default function ProductDrawer({
                       <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                         HS Code
                       </label>
-                      <select
-                        value={form.hsCodeId}
-                        onChange={(e) => setForm({ ...form, hsCodeId: parseInt(e.target.value, 10) || "" })}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-0 text-gray-700 bg-white shadow-sm transition-all"
-                      >
-                        <option value="">Select...</option>
-                        {hscodes.map((hs) => (
-                          <option key={hs.id} value={hs.id}>{hs.code}</option>
-                        ))}
-                      </select>
+                      <HSCodeInput
+                        value={form.hsCode || ""}
+                        onChange={(val) => setForm({ ...form, hsCode: val })}
+                        placeholder="Enter HS Code"
+                      />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 import { useTaskStore } from "../../store/taskStore";
 import { useTaskDetailQuery, useTaskStatusesQuery, useSubtasksQuery } from "../../queries/tasks.query";
 import {
@@ -366,8 +367,15 @@ export default function TaskPreviewDrawer() {
   const { data: task, isLoading, isError } = useTaskDetailQuery(selectedTaskId);
   const { data: statuses = [] } = useTaskStatusesQuery();
 
+  const user = useSelector(state => state.auth.user);
+  const loggedInUserId = user?.userId || user?.id;
+  const isOwner = task?.ownerId === loggedInUserId;
+  const hasAssignees = task?.assignees && task?.assignees.length > 0;
+
   const archiveMutation = useArchiveTaskMutation();
   const changeStatusMutation = useChangeTaskStatusMutation();
+
+  const isStatusDisabled = changeStatusMutation.isPending || (isOwner && hasAssignees);
 
   const handleStatusChange = (newStatusId) => {
     if (!task) return;
@@ -413,10 +421,10 @@ export default function TaskPreviewDrawer() {
             <div className="flex items-center gap-2">
               {/* Dynamic Status Selector from API */}
               <select
-                className="text-sm font-medium border border-gray-300 rounded-lg bg-white py-1.5 pl-3 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer"
+                className="text-sm font-medium border border-gray-300 rounded-lg bg-white py-1.5 pl-3 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                 value={task.statusId || ""}
                 onChange={(e) => handleStatusChange(e.target.value)}
-                disabled={changeStatusMutation.isPending}
+                disabled={isStatusDisabled}
               >
                 <option value="" disabled>Select Status</option>
                 {statuses.length > 0

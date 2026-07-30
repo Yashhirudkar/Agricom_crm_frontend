@@ -369,10 +369,10 @@ export default function TaskTable() {
   const isSuperAdmin = user?.type === 'SUPER_ADMIN';
   const targetCompanyId = user?.companyId; // Simplified for table context
 
-  const { data: statusesData } = useTaskStatusesQuery();
+  const { data: statusesData } = useTaskStatusesQuery(targetCompanyId);
   const statuses = statusesData || [];
 
-  const { data: prioritiesData } = useTaskPrioritiesQuery();
+  const { data: prioritiesData } = useTaskPrioritiesQuery(targetCompanyId);
   const priorities = prioritiesData || [];
 
   const { data: employeesData } = useQuery({
@@ -599,11 +599,15 @@ export default function TaskTable() {
         header: () => <ColHeader>Status</ColHeader>,
         size: 130,
         cell: ({ row }) => {
+          const loggedInUserId = user?.userId || user?.id;
+          const isOwner = row.original.ownerId === loggedInUserId;
+          const hasAssignees = row.original.assignees && row.original.assignees.length > 0;
+          const isStatusDisabled = !canUpdate || (isOwner && hasAssignees);
           return (
             <EditableSelectCell
               value={row.original.statusId}
               options={statuses.map(s => ({ value: s.id, label: s.name }))}
-              disabled={!canUpdate}
+              disabled={isStatusDisabled}
               onSave={(val) => changeStatusMutation.mutate({ id: row.original.id, payload: { statusId: val, version: row.original.version || 0 } })}
               renderValue={() => {
                 const statusName = row.original.status?.name || "Open";
@@ -712,7 +716,7 @@ export default function TaskTable() {
         ),
       },
     ],
-    [setSelectedTask, selectedRowIds, statuses, priorities, employeeOptions, changeStatusMutation, updateTaskMutation, collapsedTaskIds, rawData, canUpdate]
+    [setSelectedTask, selectedRowIds, statuses, priorities, employeeOptions, changeStatusMutation, updateTaskMutation, collapsedTaskIds, rawData, canUpdate, user]
   );
 
   const handlePaginationChange = (updater) => {
