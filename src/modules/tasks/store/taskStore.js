@@ -16,7 +16,11 @@ export const useTaskStore = create((set) => ({
   createDrawerMode: 'create', // 'create' | 'edit'
   createDrawerTaskId: null, // task ID when in edit mode
   isFilterDrawerOpen: false, // Right side advanced filters
-  selectedRowIds: {}, // Row selection mapping { [taskId]: boolean }
+  isSelectAllActive: false, // Whitelist vs Blacklist mode
+  selectedRowIds: new Set(), // Set of selected Task IDs
+  scrollTop: 0, // Scroll coordinates memory
+  scrollCursor: null, // Scroll position marker cursor
+  firstVisibleRowId: null, // Scroll position marker row ID
 
   // Global Filters
   filters: {
@@ -36,7 +40,7 @@ export const useTaskStore = create((set) => ({
 
   // Actions - Views
   setActiveView: (view) => set({ activeView: view }),
-  setPreset: (preset) => set({ preset }),
+  setPreset: (preset) => set({ preset, isSelectAllActive: false, selectedRowIds: new Set() }),
 
   // Actions - Context
   setSelectedTask: (taskId) => set({ 
@@ -48,6 +52,12 @@ export const useTaskStore = create((set) => ({
       ? rowIdsOrUpdater(state.selectedRowIds)
       : rowIdsOrUpdater
   })),
+  setIsSelectAllActive: (active) => set({ isSelectAllActive: active }),
+  setScrollState: (scrollTop, scrollCursor = null, firstVisibleRowId = null) => set({
+    scrollTop,
+    scrollCursor,
+    firstVisibleRowId
+  }),
   closeTaskDrawer: () => set({ 
     selectedTaskId: null, 
     isTaskDrawerOpen: false 
@@ -72,8 +82,9 @@ export const useTaskStore = create((set) => ({
   // Actions - Filters
   setFilters: (newFilters) => set((state) => ({
     filters: { ...state.filters, ...newFilters },
-    // Reset page to 1 when filters change
-    pagination: { ...state.pagination, page: 1 }
+    pagination: { ...state.pagination, page: 1 },
+    isSelectAllActive: false,
+    selectedRowIds: new Set(),
   })),
   clearFilters: () => set((state) => ({
     filters: {
@@ -84,7 +95,9 @@ export const useTaskStore = create((set) => ({
       dueDateStart: null,
       dueDateEnd: null,
     },
-    pagination: { ...state.pagination, page: 1 }
+    pagination: { ...state.pagination, page: 1 },
+    isSelectAllActive: false,
+    selectedRowIds: new Set(),
   })),
 
   // Actions - Pagination

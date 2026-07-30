@@ -40,6 +40,8 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
     toggleFilterDrawer,
     selectedRowIds,
     setSelectedRowIds,
+    isSelectAllActive,
+    setIsSelectAllActive,
     activeView,
     setActiveView,
     openCreateTaskDrawer,
@@ -57,8 +59,8 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
   const bulkRef = useRef(null);
   const saveViewRef = useRef(null);
 
-  const selectedIds = Object.keys(selectedRowIds).filter(k => selectedRowIds[k]).map(Number);
-  const selectedCount = selectedIds.length;
+  const selectedCount = isSelectAllActive ? "All" : selectedRowIds.size;
+  const selectedIds = isSelectAllActive ? [] : Array.from(selectedRowIds);
 
   const user = useSelector(state => state.auth.user);
   const loggedInUserId = user?.userId || user?.id;
@@ -67,9 +69,9 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
     ...filters,
     preset,
   });
-  const tasks = response?.data || [];
-  const selectedTasks = tasks.filter(t => selectedIds.includes(t.id));
-  const isOwnerOfAllSelected = selectedTasks.length > 0 && selectedTasks.every(t => t.ownerId ? t.ownerId === loggedInUserId : t.createdById === loggedInUserId);
+  const tasks = response?.pages?.flatMap(page => page.items || page.data || []) || [];
+  const selectedTasks = isSelectAllActive ? tasks : tasks.filter(t => selectedRowIds.has(t.id));
+  const isOwnerOfAllSelected = isSelectAllActive || (selectedTasks.length > 0 && selectedTasks.every(t => t.ownerId ? t.ownerId === loggedInUserId : t.createdById === loggedInUserId));
 
   const bulkArchive = useBulkArchiveTaskMutation();
   const bulkDelete = useBulkDeleteTaskMutation();
@@ -78,7 +80,9 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
   // Sync debounced search to global filters
   useEffect(() => {
     if (debouncedSearch !== filters.search) {
-      setFilters({ search: debouncedSearch });
+      React.startTransition(() => {
+        setFilters({ search: debouncedSearch });
+      });
     }
   }, [debouncedSearch, filters.search, setFilters]);
 
@@ -131,11 +135,14 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
           <ViewsDropdown />
 
           {/* Bulk Actions Dropdown */}
-          {selectedCount > 0 && (
+          {(isSelectAllActive || selectedRowIds.size > 0) && (
             <div className="flex items-center gap-2 shrink-0">
               {/* Deselect all */}
               <button
-                onClick={() => setSelectedRowIds({})}
+                onClick={() => {
+                  setSelectedRowIds(new Set());
+                  setIsSelectAllActive(false);
+                }}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
                 title="Clear selection"
               >
@@ -149,10 +156,15 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
                     toast.error("Only the owner can delete the task(s).");
                     return;
                   }
-                  if (window.confirm(`Are you sure you want to permanently delete ${selectedCount} task(s)?`)) {
+                  if (window.confirm(`Are you sure you want to delete the selected task(s)?`)) {
                     bulkDelete.mutate(
-                      { ids: selectedIds },
-                      { onSuccess: () => setSelectedRowIds({}) }
+                      {
+                        selectAll: isSelectAllActive,
+                        excludedIds: Array.from(selectedRowIds),
+                        ids: Array.from(selectedRowIds),
+                        filters: { ...filters, preset }
+                      },
+                      { onSuccess: () => { setSelectedRowIds(new Set()); setIsSelectAllActive(false); } }
                     );
                   }
                 }}
@@ -183,8 +195,14 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
                       onClick={() => {
                         const targetArchiveState = preset !== 'archived_tasks';
                         bulkArchive.mutate(
-                          { ids: selectedIds, isArchived: targetArchiveState },
-                          { onSuccess: () => { setSelectedRowIds({}); setIsBulkOpen(false); } }
+                          {
+                            selectAll: isSelectAllActive,
+                            excludedIds: Array.from(selectedRowIds),
+                            ids: Array.from(selectedRowIds),
+                            isArchived: targetArchiveState,
+                            filters: { ...filters, preset }
+                          },
+                          { onSuccess: () => { setSelectedRowIds(new Set()); setIsSelectAllActive(false); setIsBulkOpen(false); } }
                         );
                       }}
                       className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -194,8 +212,15 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
                     <button
                       onClick={() => {
                         bulkChangeStatus.mutate(
-                          { ids: selectedIds, payload: { statusId: 4 } },
-                          { onSuccess: () => { setSelectedRowIds({}); setIsBulkOpen(false); } }
+                          {
+                            selectAll: isSelectAllActive,
+                            excludedIds: Array.from(selectedRowIds),
+                            ids: Array.from(selectedRowIds),
+                            statusId: 4, // Completed statusId
+                            version: undefined,
+                            filters: { ...filters, preset }
+                          },
+                          { onSuccess: () => { setSelectedRowIds(new Set()); setIsSelectAllActive(false); setIsBulkOpen(false); } }
                         );
                       }}
                       className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"

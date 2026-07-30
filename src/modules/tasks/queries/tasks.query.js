@@ -1,13 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { TaskAPI } from "../api";
 import { TASK_QUERY_KEYS } from "../constants/query-keys";
 
 export const useTasksQuery = (filters) => {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: TASK_QUERY_KEYS.list(filters),
-    queryFn: () => TaskAPI.getTasks(filters),
-    // staleTime: 0 ensures a fresh backend API call on every preset/filter change
+    queryFn: ({ pageParam, signal }) => TaskAPI.getTasks({ ...filters, cursor: pageParam }, { signal }),
+    initialPageParam: undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 0,
+    gcTime: 1000 * 60 * 5, // 5 minutes cache retention
+    refetchOnWindowFocus: false,
+    retry: 1,
+    maxPages: 10, // Prune older pages to keep browser memory lightweight
+    refetchInterval: () => (typeof window !== 'undefined' && window.socketConnected) ? false : 60000 // Polling fallback (60s)
   });
 };
 

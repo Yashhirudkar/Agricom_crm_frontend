@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTaskStore } from "../../store/taskStore";
 import { useTasksQuery, useTaskStatusesQuery, useTaskPrioritiesQuery } from "../../queries/tasks.query";
 import { TaskTableFoundation } from "./TaskTableFoundation";
@@ -96,10 +97,10 @@ function EditableTextCell({ value, onSave, disabled }) {
 
   return (
     <div
-      onClick={(e) => { 
+      onClick={(e) => {
         if (disabled) return;
-        e.stopPropagation(); 
-        setIsEditing(true); 
+        e.stopPropagation();
+        setIsEditing(true);
       }}
       className={`w-full min-h-[24px] text-[13px] text-gray-800 truncate flex items-center px-2 -mx-2 hover:bg-gray-50 rounded ${disabled ? "cursor-not-allowed opacity-90" : "hover:text-blue-600 cursor-pointer"}`}
       title={value}
@@ -147,10 +148,10 @@ function EditableNumberCell({ value, onSave, disabled }) {
 
   return (
     <div
-      onClick={(e) => { 
+      onClick={(e) => {
         if (disabled) return;
-        e.stopPropagation(); 
-        setIsEditing(true); 
+        e.stopPropagation();
+        setIsEditing(true);
       }}
       className={`w-full min-h-[24px] text-[13px] text-gray-800 truncate flex items-center px-2 -mx-2 hover:bg-gray-50 rounded ${disabled ? "cursor-not-allowed opacity-90" : "hover:text-blue-600 cursor-pointer"}`}
     >
@@ -162,7 +163,6 @@ function EditableNumberCell({ value, onSave, disabled }) {
 function EditableDateCell({ value, onSave, disabled }) {
   const [isEditing, setIsEditing] = useState(false);
 
-  // Format YYYY-MM-DD for the input type="date"
   const formattedForInput = value ? new Date(value).toISOString().split('T')[0] : "";
   const [val, setVal] = useState(formattedForInput);
 
@@ -193,10 +193,10 @@ function EditableDateCell({ value, onSave, disabled }) {
 
   return (
     <div
-      onClick={(e) => { 
+      onClick={(e) => {
         if (disabled) return;
-        e.stopPropagation(); 
-        setIsEditing(true); 
+        e.stopPropagation();
+        setIsEditing(true);
       }}
       className={`w-full min-h-[24px] text-[13px] text-gray-700 truncate flex items-center gap-1 px-2 -mx-2 hover:bg-gray-50 rounded ${disabled ? "cursor-not-allowed opacity-90" : "cursor-pointer"}`}
     >
@@ -233,43 +233,42 @@ function EditableSelectCell({ value, options, onSave, renderValue, isOwner, isMu
   };
 
   if (isEditing && !disabled) {
-    if (isOwner || isMulti || isPriority) {
-      // Searchable react-select using portal to escape overflow-hidden
-      const editor = (
-        <div
-          onClick={e => e.stopPropagation()}
-          onBlur={() => setTimeout(() => setIsEditing(false), 150)}
-          style={{
-            position: 'fixed',
-            top: rect ? rect.top - 4 : 0,
-            left: rect ? rect.left - 4 : 0,
-            width: rect ? Math.max(rect.width + 8, 200) : 200,
-            zIndex: 999999,
-          }}
-        >
-          <Select
-            autoFocus
-            menuIsOpen
-            isMulti={isMulti}
-            options={options}
-            value={
-              isMulti
-                ? options.filter(o => (value || []).includes(o.value))
-                : options.find(o => o.value === value) || null
+    const editor = (
+      <div
+        onClick={e => e.stopPropagation()}
+        onBlur={() => setTimeout(() => setIsEditing(false), 150)}
+        style={{
+          position: 'fixed',
+          top: rect ? rect.top - 4 : 0,
+          left: rect ? rect.left - 4 : 0,
+          width: rect ? Math.max(rect.width + 8, 200) : 200,
+          zIndex: 999999,
+        }}
+      >
+        <Select
+          autoFocus
+          menuIsOpen
+          isMulti={isMulti}
+          options={options}
+          value={
+            isMulti
+              ? options.filter(o => (value || []).includes(o.value))
+              : options.find(o => o.value === value) || null
+          }
+          onChange={(val) => {
+            if (isMulti) {
+              const newValues = val ? val.map(v => v.value) : [];
+              onSave(newValues);
+            } else {
+              if (val && val.value !== value) onSave(val.value);
+              setIsEditing(false);
             }
-            onChange={(val) => {
-              if (isMulti) {
-                const newValues = val ? val.map(v => v.value) : [];
-                onSave(newValues);
-              } else {
-                if (val && val.value !== value) onSave(val.value);
-                setIsEditing(false);
-              }
-            }}
-            onMenuClose={() => setIsEditing(false)}
-            menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
-            menuPosition="fixed"
-            formatOptionLabel={isPriority ? ({ label }) => {
+          }}
+          onMenuClose={() => setIsEditing(false)}
+          menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+          menuPosition="fixed"
+          formatOptionLabel={({ label, color }) => {
+            if (isPriority) {
               const priorityKey = label.toLowerCase();
               const priorityColor = priorityStyles[priorityKey] || "text-gray-400";
               return (
@@ -278,54 +277,44 @@ function EditableSelectCell({ value, options, onSave, renderValue, isOwner, isMu
                   <span>{label}</span>
                 </span>
               );
-            } : undefined}
-            styles={{
-              control: base => ({
-                ...base,
-                minHeight: '28px',
-                fontSize: '12px',
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
-              }),
-              menu: base => ({ ...base, zIndex: 9999 }),
-              menuPortal: base => ({ ...base, zIndex: 9999 }),
-              option: base => ({ ...base, fontSize: '12px', padding: '6px 10px' })
-            }}
-          />
-        </div>
-      );
-
-      return (
-        <>
-          <div ref={wrapperRef} className="w-full min-h-[24px]" />
-          {typeof document !== 'undefined' ? createPortal(editor, document.body) : editor}
-        </>
-      );
-    }
+            }
+            if (color) {
+              return (
+                <span className="flex items-center gap-1.5 text-gray-800">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                  <span>{label}</span>
+                </span>
+              );
+            }
+            return <span>{label}</span>;
+          }}
+          styles={{
+            control: base => ({
+              ...base,
+              minHeight: '28px',
+              fontSize: '12px',
+              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+            }),
+            menu: base => ({ ...base, zIndex: 9999 }),
+            menuPortal: base => ({ ...base, zIndex: 9999 }),
+            option: base => ({ ...base, fontSize: '12px', padding: '6px 10px' })
+          }}
+        />
+      </div>
+    );
 
     return (
-      <select
-        autoFocus
-        value={value || ""}
-        onChange={(e) => {
-          onSave(e.target.value ? Number(e.target.value) : null);
-          setIsEditing(false);
-        }}
-        onBlur={() => setIsEditing(false)}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full h-full px-1 py-1 text-[13px] border border-blue-500 rounded outline-none bg-white"
-      >
-        <option value="" disabled>Select...</option>
-        {options.map(opt => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
+      <>
+        <div ref={wrapperRef} className="w-full min-h-[24px]" />
+        {typeof document !== 'undefined' ? createPortal(editor, document.body) : editor}
+      </>
     );
   }
 
   return (
     <div
-      ref={wrapperRef}
       onClick={startEdit}
+      ref={wrapperRef}
       className={`w-full min-h-[24px] flex items-center px-2 -mx-2 hover:bg-gray-50 rounded ${disabled ? "cursor-not-allowed opacity-90" : "cursor-pointer"}`}
     >
       {renderValue(value)}
@@ -333,27 +322,31 @@ function EditableSelectCell({ value, options, onSave, renderValue, isOwner, isMu
   );
 }
 
-// Subtasks are now rendered inline inside the main table data payload.
-
 // ---------------------------------------------------------------------------
 // Main Task Table Component
 // ---------------------------------------------------------------------------
 export default function TaskTable() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
   const {
     filters,
-    pagination,
-    setPagination,
+    setFilters,
     selectedRowIds,
     setSelectedRowIds,
+    isSelectAllActive,
+    setIsSelectAllActive,
     setSelectedTask,
     openCreateTaskDrawer,
     preset,
+    setPreset,
   } = useTaskStore();
 
   const { hasPermission } = usePermissions();
   const canUpdate = hasPermission("task:update");
 
-  // Collapsed parent task IDs. By default, parents are expanded (not in this set).
+  // Collapsed parent task IDs
   const [collapsedTaskIds, setCollapsedTaskIds] = useState(new Set());
 
   const toggleExpand = (taskId, e) => {
@@ -366,8 +359,7 @@ export default function TaskTable() {
   };
 
   const user = useSelector(state => state.auth.user);
-  const isSuperAdmin = user?.type === 'SUPER_ADMIN';
-  const targetCompanyId = user?.companyId; // Simplified for table context
+  const targetCompanyId = user?.companyId;
 
   const { data: statusesData } = useTaskStatusesQuery(targetCompanyId);
   const statuses = statusesData || [];
@@ -392,17 +384,70 @@ export default function TaskTable() {
   const updateTaskMutation = useUpdateTaskMutation();
   const changeStatusMutation = useChangeTaskStatusMutation();
 
-  const { data: response, isLoading } = useTasksQuery({
+  // Sync Next.js query parameters on mount to hydrate filter state
+  useEffect(() => {
+    const urlFilters = {};
+    const search = searchParams.get('search');
+    if (search !== null) urlFilters.search = search;
+
+    const status = searchParams.get('status');
+    if (status) urlFilters.statusIds = status.split(',').map(Number);
+
+    const priority = searchParams.get('priority');
+    if (priority) urlFilters.priorityIds = priority.split(',').map(Number);
+
+    const assignees = searchParams.get('assignee');
+    if (assignees) urlFilters.assigneeIds = assignees.split(',').map(Number);
+
+    const presetParam = searchParams.get('preset');
+    if (presetParam) setPreset(presetParam);
+
+    if (Object.keys(urlFilters).length > 0) {
+      setFilters(urlFilters);
+    }
+  }, []);
+
+  // Sync filters back to Next.js query parameters on changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.search) params.set('search', filters.search);
+    if (filters.statusIds?.length > 0) params.set('status', filters.statusIds.join(','));
+    if (filters.priorityIds?.length > 0) params.set('priority', filters.priorityIds.join(','));
+    if (filters.assigneeIds?.length > 0) params.set('assignee', filters.assigneeIds.join(','));
+    if (preset) params.set('preset', preset);
+
+    const qs = params.toString();
+    const targetUrl = qs ? `${pathname}?${qs}` : pathname;
+    router.replace(targetUrl, { scroll: false });
+  }, [filters, preset, pathname, router]);
+
+  // Query infinite pages of tasks
+  const {
+    data: response,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    isError,
+    refetch
+  } = useTasksQuery({
     ...filters,
     preset,
-    page: pagination.page,
-    limit: pagination.limit,
+    limit: 30, // Standard batch loading limit
   });
 
-  // Extract raw data from API response
-  const rawData = response?.data || [];
+  // Extract raw data from API response pages, deduplicating to avoid visual glitches
+  const rawData = useMemo(() => {
+    const allTasks = response?.pages?.flatMap(page => page.items || page.data || []) || [];
+    const seen = new Set();
+    return allTasks.filter(task => {
+      if (seen.has(task.id)) return false;
+      seen.add(task.id);
+      return true;
+    });
+  }, [response]);
 
-  // Group subtasks under parents, honoring the collapsed Task IDs state (expanded by default)
+  // Group subtasks under parents, honoring collapsed parent nodes
   const data = useMemo(() => {
     const result = [];
     const parents = rawData.filter(task => !task.parentTaskId);
@@ -418,8 +463,6 @@ export default function TaskTable() {
 
     return result;
   }, [rawData, collapsedTaskIds]);
-
-  const meta = response?.meta || { totalCount: 0 };
 
   const [columnVisibility, setColumnVisibility] = useState({});
 
@@ -448,26 +491,96 @@ export default function TaskTable() {
     () => [
       {
         id: "select",
-        header: ({ table }) => (
+        header: () => (
           <div className="flex items-center justify-center">
             <input
               type="checkbox"
               className="w-3.5 h-3.5 rounded-sm border-gray-300 text-blue-500 focus:ring-blue-500/30 cursor-pointer"
-              checked={table.getIsAllPageRowsSelected()}
-              onChange={table.getToggleAllPageRowsSelectedHandler()}
+              checked={
+                isSelectAllActive
+                  ? selectedRowIds.size === 0
+                  : rawData.length > 0 && rawData.every(task => selectedRowIds.has(task.id))
+              }
+              ref={input => {
+                if (input) {
+                  if (isSelectAllActive) {
+                    input.indeterminate = selectedRowIds.size > 0;
+                  } else {
+                    const selectedCount = rawData.filter(task => selectedRowIds.has(task.id)).length;
+                    input.indeterminate = selectedCount > 0 && selectedCount < rawData.length;
+                  }
+                }
+              }}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                if (checked) {
+                  setIsSelectAllActive(true);
+                  setSelectedRowIds(new Set()); // Empty blacklist => select all
+                } else {
+                  setIsSelectAllActive(false);
+                  setSelectedRowIds(new Set()); // Empty whitelist => select none
+                }
+              }}
             />
           </div>
         ),
-        cell: ({ row }) => (
-          <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-            <input
-              type="checkbox"
-              className="w-3.5 h-3.5 rounded-sm border-gray-300 text-blue-500 focus:ring-blue-500/30 cursor-pointer"
-              checked={row.getIsSelected()}
-              onChange={row.getToggleSelectedHandler()}
-            />
-          </div>
-        ),
+        cell: ({ row }) => {
+          const isSelected = isSelectAllActive
+            ? !selectedRowIds.has(row.original.id)
+            : selectedRowIds.has(row.original.id);
+          return (
+            <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+              <input
+                type="checkbox"
+                className="w-3.5 h-3.5 rounded-sm border-gray-300 text-blue-500 focus:ring-blue-500/30 cursor-pointer"
+                checked={isSelected}
+                onClick={(e) => {
+                  // Support Shift + Click range check selections
+                  if (e.shiftKey && window.lastClickedRowIndex !== undefined) {
+                    e.preventDefault();
+                    const start = Math.min(window.lastClickedRowIndex, row.index);
+                    const end = Math.max(window.lastClickedRowIndex, row.index);
+                    const rangeRows = data.slice(start, end + 1);
+                    const targetState = isSelectAllActive
+                      ? selectedRowIds.has(row.original.id) // invert state
+                      : !selectedRowIds.has(row.original.id);
+
+                    setSelectedRowIds(prev => {
+                      const next = new Set(prev);
+                      rangeRows.forEach(r => {
+                        if (isSelectAllActive) {
+                          if (targetState) next.add(r.id);
+                          else next.delete(r.id);
+                        } else {
+                          if (targetState) next.add(r.id);
+                          else next.delete(r.id);
+                        }
+                      });
+                      return next;
+                    });
+                  }
+                }}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setSelectedRowIds(prev => {
+                    const next = new Set(prev);
+                    if (isSelectAllActive) {
+                      // In blacklist mode, check removes from blacklist
+                      if (checked) next.delete(row.original.id);
+                      else next.add(row.original.id);
+                    } else {
+                      // In whitelist mode, check adds to whitelist
+                      if (checked) next.add(row.original.id);
+                      else next.delete(row.original.id);
+                    }
+                    return next;
+                  });
+                  window.lastClickedRowIndex = row.index;
+                }}
+              />
+            </div>
+          );
+        },
         size: 40,
       },
       {
@@ -491,7 +604,6 @@ export default function TaskTable() {
 
           return (
             <div className="flex items-center gap-1.5 w-full overflow-hidden">
-              {/* Indentation for subtasks */}
               {isSubtask && (
                 <div className="flex items-center justify-end w-5 shrink-0 pl-1">
                   <span className="text-gray-400 text-[14px]">↳</span>
@@ -501,13 +613,12 @@ export default function TaskTable() {
               {!isSubtask && hasSubtasks && (
                 <button
                   onClick={(e) => toggleExpand(row.original.id, e)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+                  className="text-gray-400 hover:text-gray-600 transition-colors shrink-0 font-normal cursor-pointer"
                 >
                   {isExpanded ? <MinusSquare className="w-3.5 h-3.5" /> : <PlusSquare className="w-3.5 h-3.5" />}
                 </button>
               )}
 
-              {/* Spacer for parents without subtasks to align text */}
               {!isSubtask && !hasSubtasks && (
                 <div className="w-4 h-4 shrink-0" />
               )}
@@ -570,7 +681,7 @@ export default function TaskTable() {
                 return (
                   <div className="flex items-center -space-x-1 p-1 px-2 w-full truncate">
                     {assignees.slice(0, 3).map((assignee, idx) => {
-                      const user = assignee.user || assignee; // Fallback just in case
+                      const user = assignee.user || assignee;
                       const { bg, text } = getAvatarColor(user?.name || "");
                       return (
                         <div
@@ -606,7 +717,7 @@ export default function TaskTable() {
           return (
             <EditableSelectCell
               value={row.original.statusId}
-              options={statuses.map(s => ({ value: s.id, label: s.name }))}
+              options={statuses.map(s => ({ value: s.id, label: s.name, color: s.color }))}
               disabled={isStatusDisabled}
               onSave={(val) => changeStatusMutation.mutate({ id: row.original.id, payload: { statusId: val, version: row.original.version || 0 } })}
               renderValue={() => {
@@ -703,11 +814,10 @@ export default function TaskTable() {
                 }
               }}
               disabled={!canUpdate}
-              className={`p-1 rounded bg-gray-50 border border-gray-100 shadow-sm transition-colors ${
-                canUpdate 
-                  ? "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer" 
+              className={`p-1 rounded bg-gray-50 border border-gray-100 shadow-sm transition-colors ${canUpdate
+                  ? "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer"
                   : "text-gray-350 cursor-not-allowed opacity-50"
-              }`}
+                }`}
               title={canUpdate ? "Edit Task" : "Insufficient permissions to edit tasks"}
             >
               <Pencil className="w-3 h-3" />
@@ -716,23 +826,20 @@ export default function TaskTable() {
         ),
       },
     ],
-    [setSelectedTask, selectedRowIds, statuses, priorities, employeeOptions, changeStatusMutation, updateTaskMutation, collapsedTaskIds, rawData, canUpdate, user]
+    [setSelectedTask, selectedRowIds, statuses, priorities, employeeOptions, changeStatusMutation, updateTaskMutation, collapsedTaskIds, rawData, canUpdate, user, isSelectAllActive, data]
   );
-
-  const handlePaginationChange = (updater) => {
-    const newState = typeof updater === "function" ? updater({ pageIndex: pagination.page - 1, pageSize: pagination.limit }) : updater;
-    setPagination({ page: newState.pageIndex + 1, limit: newState.pageSize });
-  };
 
   return (
     <div className="h-full flex flex-col bg-white">
       <TaskTableFoundation
         data={data}
         columns={columns}
-        totalCount={meta.totalCount}
         isLoading={isLoading}
-        pagination={{ pageIndex: pagination.page - 1, pageSize: pagination.limit }}
-        onPaginationChange={handlePaginationChange}
+        isFetchingNextPage={isFetchingNextPage}
+        hasNextPage={hasNextPage}
+        fetchNextPage={fetchNextPage}
+        isError={isError}
+        refetch={refetch}
         rowSelection={selectedRowIds}
         onRowSelectionChange={setSelectedRowIds}
         columnVisibility={columnVisibility}

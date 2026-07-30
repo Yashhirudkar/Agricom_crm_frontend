@@ -207,7 +207,7 @@ function HrPoliciesContent() {
                   type="number"
                   disabled={!canUpdate}
                   value={form.probationMonths}
-                  onChange={e => setForm({...form, probationMonths: e.target.value})}
+                  onChange={e => setForm({ ...form, probationMonths: e.target.value })}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                 />
               </div>
@@ -217,7 +217,7 @@ function HrPoliciesContent() {
                   type="number"
                   disabled={!canUpdate}
                   value={form.noticePeriodDays}
-                  onChange={e => setForm({...form, noticePeriodDays: e.target.value})}
+                  onChange={e => setForm({ ...form, noticePeriodDays: e.target.value })}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                 />
               </div>
@@ -227,7 +227,7 @@ function HrPoliciesContent() {
                   type="number"
                   disabled={!canUpdate}
                   value={form.retirementAge}
-                  onChange={e => setForm({...form, retirementAge: e.target.value})}
+                  onChange={e => setForm({ ...form, retirementAge: e.target.value })}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                 />
               </div>
@@ -247,7 +247,7 @@ function HrPoliciesContent() {
                   step="0.5"
                   disabled={!canUpdate}
                   value={form.minHalfDayHours}
-                  onChange={e => setForm({...form, minHalfDayHours: e.target.value})}
+                  onChange={e => setForm({ ...form, minHalfDayHours: e.target.value })}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                 />
               </div>
@@ -258,7 +258,7 @@ function HrPoliciesContent() {
                   step="0.5"
                   disabled={!canUpdate}
                   value={form.minFullDayHours}
-                  onChange={e => setForm({...form, minFullDayHours: e.target.value})}
+                  onChange={e => setForm({ ...form, minFullDayHours: e.target.value })}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                 />
               </div>
@@ -268,7 +268,7 @@ function HrPoliciesContent() {
                   type="time"
                   disabled={!canUpdate}
                   value={form.defaultShiftStartTime}
-                  onChange={e => setForm({...form, defaultShiftStartTime: e.target.value})}
+                  onChange={e => setForm({ ...form, defaultShiftStartTime: e.target.value })}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                 />
               </div>
@@ -278,7 +278,7 @@ function HrPoliciesContent() {
                   type="time"
                   disabled={!canUpdate}
                   value={form.defaultShiftEndTime}
-                  onChange={e => setForm({...form, defaultShiftEndTime: e.target.value})}
+                  onChange={e => setForm({ ...form, defaultShiftEndTime: e.target.value })}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                 />
               </div>
@@ -288,7 +288,7 @@ function HrPoliciesContent() {
                   type="number"
                   disabled={!canUpdate}
                   value={form.lateMarkGraceMinutes}
-                  onChange={e => setForm({...form, lateMarkGraceMinutes: e.target.value})}
+                  onChange={e => setForm({ ...form, lateMarkGraceMinutes: e.target.value })}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                 />
               </div>
@@ -297,7 +297,7 @@ function HrPoliciesContent() {
                 <select
                   disabled={!canUpdate}
                   value={form.allowAttendanceCorrection ? "true" : "false"}
-                  onChange={e => setForm({...form, allowAttendanceCorrection: e.target.value === "true"})}
+                  onChange={e => setForm({ ...form, allowAttendanceCorrection: e.target.value === "true" })}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed bg-white"
                 >
                   <option value="true">Allowed</option>
@@ -313,11 +313,10 @@ function HrPoliciesContent() {
             <button
               type="submit"
               disabled={isSaving || !canUpdate}
-              className={`px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors ${
-                !canUpdate
+              className={`px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors ${!canUpdate
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
                   : "bg-[#007aff] hover:bg-blue-600 text-white cursor-pointer shadow-md"
-              }`}
+                }`}
             >
               {isSaving ? (
                 <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

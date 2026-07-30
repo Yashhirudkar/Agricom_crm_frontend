@@ -112,6 +112,9 @@ const processQueue = (error, token = null) => {
 axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
     const originalRequest = error.config;
     console.error("[Axios Error]", originalRequest?.url, error.response?.status, error.response?.data);
 

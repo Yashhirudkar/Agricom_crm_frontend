@@ -62,6 +62,8 @@ function EmployeesContent() {
   };
 
   const [selectedCompanyId, setSelectedCompanyId] = useState("");
+  const [selectedDeptId, setSelectedDeptId] = useState("");
+  const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -98,14 +100,39 @@ function EmployeesContent() {
   }, [dispatch, userType]);
 
   useEffect(() => {
+    const loadDepartments = async () => {
+      if (selectedCompanyId) {
+        try {
+          const res = await axiosClient.get("/departments/options", {
+            params: { limit: 100 },
+            headers: { "x-company-id": selectedCompanyId }
+          });
+          setDepartments(res.data?.data || res.data || []);
+        } catch (err) {
+          console.error("Failed to load departments options", err);
+        }
+      } else {
+        setDepartments([]);
+      }
+    };
+    loadDepartments();
+  }, [selectedCompanyId]);
+
+  useEffect(() => {
     if (selectedCompanyId) {
-      dispatch(fetchEmployees({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
+      dispatch(fetchEmployees({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: debouncedSearch,
+        departmentId: selectedDeptId || undefined
+      }));
     }
-  }, [dispatch, currentPage, debouncedSearch, selectedCompanyId]);
+  }, [dispatch, currentPage, debouncedSearch, selectedCompanyId, selectedDeptId]);
 
   const handleCompanyChange = (e) => {
     const val = e.target.value;
     setSelectedCompanyId(val);
+    setSelectedDeptId("");
     if (val) {
       localStorage.setItem("activeCompanyId", val);
     } else {
@@ -236,18 +263,35 @@ function EmployeesContent() {
       ) : (
       <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
         <div className="p-4 border-b border-gray-50 bg-gray-50/20 flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full max-w-xs">
-            <input
-              type="text"
-              className="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#007aff] text-gray-600 transition-colors"
-              placeholder="Search by name, email or code..."
-              value={search}
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-stretch sm:items-center">
+            <div className="relative w-full sm:w-64">
+              <input
+                type="text"
+                className="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#007aff] text-gray-600 transition-colors"
+                placeholder="Search by name, email or code..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
+            </div>
+            <select
+              value={selectedDeptId}
               onChange={(e) => {
-                setSearch(e.target.value);
+                setSelectedDeptId(e.target.value);
                 setCurrentPage(1);
               }}
-            />
-            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
+              className="border border-gray-200 rounded-xl px-3 py-1.5 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white cursor-pointer transition-colors"
+            >
+              <option value="">All Departments</option>
+              {departments.map((dept) => (
+                <option key={dept.value} value={dept.value}>
+                  {dept.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
             Total {total} Employees

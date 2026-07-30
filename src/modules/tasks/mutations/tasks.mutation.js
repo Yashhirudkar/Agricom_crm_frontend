@@ -3,15 +3,93 @@ import { TaskAPI } from "../api";
 import { TASK_QUERY_KEYS } from "../constants/query-keys";
 import { toast } from "sonner";
 
+// Helper to update tasks matching a predicate across infinite query pages
+const updateCachedTasks = (queryClient, predicate, updater) => {
+  queryClient.setQueriesData({ queryKey: TASK_QUERY_KEYS.lists() }, (old) => {
+    if (!old) return old;
+    if (old.pages) {
+      return {
+        ...old,
+        pages: old.pages.map(page => {
+          const items = page.items || page.data || [];
+          const updatedItems = items.map(task => predicate(task) ? updater(task) : task);
+          return {
+            ...page,
+            items: updatedItems,
+            data: updatedItems
+          };
+        })
+      };
+    }
+    if (!old.data) return old;
+    return {
+      ...old,
+      data: old.data.map(task => predicate(task) ? updater(task) : task),
+      items: old.items ? old.items.map(task => predicate(task) ? updater(task) : task) : undefined
+    };
+  });
+};
+
+// Helper to remove tasks from cache
+const removeCachedTasks = (queryClient, predicate) => {
+  queryClient.setQueriesData({ queryKey: TASK_QUERY_KEYS.lists() }, (old) => {
+    if (!old) return old;
+    if (old.pages) {
+      return {
+        ...old,
+        pages: old.pages.map(page => {
+          const items = page.items || page.data || [];
+          const updatedItems = items.filter(task => !predicate(task));
+          return {
+            ...page,
+            items: updatedItems,
+            data: updatedItems
+          };
+        })
+      };
+    }
+    if (!old.data) return old;
+    return {
+      ...old,
+      data: old.data.filter(task => !predicate(task)),
+      items: old.items ? old.items.filter(task => !predicate(task)) : undefined
+    };
+  });
+};
+
 export const useCreateTaskMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (payload) => TaskAPI.createTask(payload),
-    onSuccess: () => {
+    onSuccess: (newTask) => {
       toast.success("Task created successfully");
-      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
+      queryClient.setQueriesData({ queryKey: TASK_QUERY_KEYS.lists() }, (old) => {
+        if (!old) return old;
+        if (old.pages) {
+          const firstPage = old.pages[0];
+          if (!firstPage) return old;
+          const items = firstPage.items || firstPage.data || [];
+          const updatedFirstPage = {
+            ...firstPage,
+            items: [newTask, ...items],
+            data: [newTask, ...items],
+          };
+          return {
+            ...old,
+            pages: [updatedFirstPage, ...old.pages.slice(1)],
+          };
+        }
+        return {
+          ...old,
+          data: [newTask, ...(old.data || [])],
+          items: old.items ? [newTask, ...old.items] : undefined
+        };
+      });
     },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message || "Failed to create task");
+    }
   });
 };
 
@@ -24,15 +102,7 @@ export const useUpdateTaskMutation = () => {
       await queryClient.cancelQueries({ queryKey: TASK_QUERY_KEYS.lists() });
       const previousLists = queryClient.getQueriesData({ queryKey: TASK_QUERY_KEYS.lists() });
 
-      queryClient.setQueriesData({ queryKey: TASK_QUERY_KEYS.lists() }, (old) => {
-        if (!old?.data) return old;
-        return {
-          ...old,
-          data: old.data.map(task => 
-            task.id === id ? { ...task, ...payload } : task
-          )
-        };
-      });
+      updateCachedTasks(queryClient, (task) => task.id === id, (task) => ({ ...task, ...payload }));
 
       return { previousLists };
     },
@@ -42,17 +112,15 @@ export const useUpdateTaskMutation = () => {
           queryClient.setQueryData(queryKey, data);
         });
       }
-      toast.error("Failed to update task");
+      toast.error(err?.response?.data?.message || "Failed to update task");
     },
     onSuccess: (data, { id }) => {
       toast.success("Task updated successfully");
       queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.detail(id) });
-      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
     },
   });
 };
 
-// Optimistic Change Status
 export const useChangeTaskStatusMutation = () => {
   const queryClient = useQueryClient();
 
@@ -62,15 +130,7 @@ export const useChangeTaskStatusMutation = () => {
       await queryClient.cancelQueries({ queryKey: TASK_QUERY_KEYS.lists() });
       const previousLists = queryClient.getQueriesData({ queryKey: TASK_QUERY_KEYS.lists() });
 
-      queryClient.setQueriesData({ queryKey: TASK_QUERY_KEYS.lists() }, (old) => {
-        if (!old?.data) return old;
-        return {
-          ...old,
-          data: old.data.map(task => 
-            task.id === id ? { ...task, statusId: payload.statusId } : task
-          )
-        };
-      });
+      updateCachedTasks(queryClient, (task) => task.id === id, (task) => ({ ...task, statusId: payload.statusId }));
 
       return { previousLists };
     },
@@ -80,12 +140,14 @@ export const useChangeTaskStatusMutation = () => {
           queryClient.setQueryData(queryKey, data);
         });
       }
-      toast.error("Failed to change status");
+      toast.error(err?.response?.data?.message || "Failed to change status");
     },
     onSuccess: (data, { id, payload }, context) => {
       let oldStatusId = null;
       if (context?.previousLists?.length > 0 && context.previousLists[0][1]) {
-        const task = context.previousLists[0][1].data?.find(t => t.id === id);
+        const pages = context.previousLists[0][1].pages;
+        const allTasks = pages ? pages.flatMap(p => p.items || p.data || []) : (context.previousLists[0][1].data || []);
+        const task = allTasks.find(t => t.id === id);
         if (task) oldStatusId = task.statusId;
       }
 
@@ -94,19 +156,18 @@ export const useChangeTaskStatusMutation = () => {
           label: "Undo",
           onClick: () => {
             TaskAPI.changeStatus(id, { statusId: oldStatusId, version: 0 }).then(() => {
-              queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
+              queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.detail(id) });
+              updateCachedTasks(queryClient, (task) => task.id === id, (task) => ({ ...task, statusId: oldStatusId }));
               toast.success("Undo successful");
             });
           }
         } : undefined
       });
       queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.detail(id) });
-      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
     },
   });
 };
 
-// Optimistic Archive
 export const useArchiveTaskMutation = () => {
   const queryClient = useQueryClient();
 
@@ -116,22 +177,17 @@ export const useArchiveTaskMutation = () => {
       await queryClient.cancelQueries({ queryKey: TASK_QUERY_KEYS.lists() });
       const previousLists = queryClient.getQueriesData({ queryKey: TASK_QUERY_KEYS.lists() });
 
-      queryClient.setQueriesData({ queryKey: TASK_QUERY_KEYS.lists() }, (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          data: old.data.map(task => 
-            task.id === id ? { ...task, isArchived } : task
-          )
-        };
-      });
+      // Prune immediately if we are archiving and NOT viewing archived tasks
+      removeCachedTasks(queryClient, (task) => task.id === id);
 
       return { previousLists };
     },
     onError: (err, variables, context) => {
-      context.previousLists.forEach(([queryKey, data]) => {
-        queryClient.setQueryData(queryKey, data);
-      });
+      if (context?.previousLists) {
+        context.previousLists.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       toast.error("Failed to update archive status");
     },
     onSuccess: (data, { id, isArchived }) => {
@@ -140,6 +196,7 @@ export const useArchiveTaskMutation = () => {
           label: "Undo",
           onClick: () => {
             TaskAPI.archiveTask(id, !isArchived).then(() => {
+              queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.detail(id) });
               queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
               toast.success("Undo successful");
             });
@@ -147,7 +204,6 @@ export const useArchiveTaskMutation = () => {
         }
       });
       queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.detail(id) });
-      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
     },
   });
 };
@@ -157,52 +213,53 @@ export const useDeleteTaskMutation = () => {
 
   return useMutation({
     mutationFn: (id) => TaskAPI.deleteTask(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: TASK_QUERY_KEYS.lists() });
+      const previousLists = queryClient.getQueriesData({ queryKey: TASK_QUERY_KEYS.lists() });
+
+      removeCachedTasks(queryClient, (task) => task.id === id);
+
+      return { previousLists };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousLists) {
+        context.previousLists.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      toast.error("Failed to delete task");
+    },
     onSuccess: () => {
       toast.success("Task deleted permanently");
-      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
     },
   });
 };
 
-// BULK MUTATIONS
+// BULK MUTATIONS (Single transactional requests)
 export const useBulkArchiveTaskMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ ids, isArchived }) => {
-      return Promise.all(ids.map(id => TaskAPI.archiveTask(id, isArchived)));
-    },
-    onMutate: async ({ ids, isArchived }) => {
+    mutationFn: (payload) => TaskAPI.bulkArchive(payload),
+    onMutate: async ({ selectAll, excludedIds, ids, isArchived }) => {
       await queryClient.cancelQueries({ queryKey: TASK_QUERY_KEYS.lists() });
       const previousLists = queryClient.getQueriesData({ queryKey: TASK_QUERY_KEYS.lists() });
 
-      queryClient.setQueriesData({ queryKey: TASK_QUERY_KEYS.lists() }, (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          data: old.data.map(task => ids.includes(task.id) ? { ...task, isArchived } : task)
-        };
-      });
+      const predicate = (task) => selectAll ? !excludedIds.includes(task.id) : ids.includes(task.id);
+      removeCachedTasks(queryClient, predicate);
+
       return { previousLists };
     },
     onError: (err, variables, context) => {
-      context.previousLists.forEach(([queryKey, data]) => {
-        queryClient.setQueryData(queryKey, data);
-      });
+      if (context?.previousLists) {
+        context.previousLists.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       toast.error("Failed to archive tasks");
     },
-    onSuccess: (data, { ids, isArchived }) => {
-      toast.success(isArchived ? `Archived ${ids.length} tasks` : `Unarchived ${ids.length} tasks`, {
-        action: {
-          label: "Undo",
-          onClick: () => {
-             Promise.all(ids.map(id => TaskAPI.archiveTask(id, !isArchived))).then(() => {
-                 queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
-                 toast.success("Undo successful");
-             });
-          }
-        }
-      });
+    onSuccess: (data, { isArchived }) => {
+      toast.success(isArchived ? `Archived matching tasks` : `Unarchived matching tasks`);
       queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
     },
   });
@@ -212,30 +269,26 @@ export const useBulkDeleteTaskMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ ids }) => {
-      return Promise.all(ids.map(id => TaskAPI.deleteTask(id)));
-    },
-    onMutate: async ({ ids }) => {
+    mutationFn: (payload) => TaskAPI.bulkDelete(payload),
+    onMutate: async ({ selectAll, excludedIds, ids }) => {
       await queryClient.cancelQueries({ queryKey: TASK_QUERY_KEYS.lists() });
       const previousLists = queryClient.getQueriesData({ queryKey: TASK_QUERY_KEYS.lists() });
 
-      queryClient.setQueriesData({ queryKey: TASK_QUERY_KEYS.lists() }, (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          data: old.data.filter(task => !ids.includes(task.id))
-        };
-      });
+      const predicate = (task) => selectAll ? !excludedIds.includes(task.id) : ids.includes(task.id);
+      removeCachedTasks(queryClient, predicate);
+
       return { previousLists };
     },
     onError: (err, variables, context) => {
-      context.previousLists.forEach(([queryKey, data]) => {
-        queryClient.setQueryData(queryKey, data);
-      });
+      if (context?.previousLists) {
+        context.previousLists.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       toast.error("Failed to delete tasks");
     },
-    onSuccess: (data, { ids }) => {
-      toast.success(`Deleted ${ids.length} tasks permanently`);
+    onSuccess: () => {
+      toast.success(`Deleted tasks permanently`);
       queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
     },
   });
@@ -245,52 +298,26 @@ export const useBulkChangeTaskStatusMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ ids, payload }) => {
-      return Promise.all(ids.map(id => TaskAPI.changeStatus(id, payload)));
-    },
-    onMutate: async ({ ids, payload }) => {
+    mutationFn: (payload) => TaskAPI.bulkChangeStatus(payload),
+    onMutate: async ({ selectAll, excludedIds, ids, statusId }) => {
       await queryClient.cancelQueries({ queryKey: TASK_QUERY_KEYS.lists() });
       const previousLists = queryClient.getQueriesData({ queryKey: TASK_QUERY_KEYS.lists() });
 
-      queryClient.setQueriesData({ queryKey: TASK_QUERY_KEYS.lists() }, (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          data: old.data.map(task => ids.includes(task.id) ? { ...task, statusId: payload.statusId } : task)
-        };
-      });
+      const predicate = (task) => selectAll ? !excludedIds.includes(task.id) : ids.includes(task.id);
+      updateCachedTasks(queryClient, predicate, (task) => ({ ...task, statusId }));
+
       return { previousLists };
     },
     onError: (err, variables, context) => {
-      context.previousLists.forEach(([queryKey, data]) => {
-        queryClient.setQueryData(queryKey, data);
-      });
-      toast.error("Failed to change status for tasks");
-    },
-    onSuccess: (data, { ids, payload }, context) => {
-      // Find old statuses to allow undo
-      let oldStatuses = {};
-      if (context.previousLists.length > 0 && context.previousLists[0][1]) {
-        context.previousLists[0][1].data?.forEach(t => {
-          if (ids.includes(t.id)) {
-            oldStatuses[t.id] = t.statusId;
-          }
+      if (context?.previousLists) {
+        context.previousLists.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
         });
       }
-
-      toast.success(`Status changed for ${ids.length} tasks`, {
-        action: Object.keys(oldStatuses).length > 0 ? {
-          label: "Undo",
-          onClick: () => {
-            Promise.all(Object.entries(oldStatuses).map(([id, oldStatusId]) => 
-              TaskAPI.changeStatus(id, { statusId: oldStatusId })
-            )).then(() => {
-              queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
-              toast.success("Undo successful");
-            });
-          }
-        } : undefined
-      });
+      toast.error(err?.response?.data?.message || "Failed to change status for tasks");
+    },
+    onSuccess: () => {
+      toast.success(`Status updated for tasks`);
       queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
     },
   });
@@ -303,10 +330,31 @@ export const useCreateSubtaskMutation = (parentTaskId) => {
 
   return useMutation({
     mutationFn: (payload) => TaskAPI.createSubtask(parentTaskId, payload),
-    onSuccess: () => {
+    onSuccess: (newSubtask) => {
       toast.success("Subtask created successfully");
       queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.subtasks(parentTaskId) });
-      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
+      
+      queryClient.setQueriesData({ queryKey: TASK_QUERY_KEYS.lists() }, (old) => {
+        if (!old) return old;
+        if (old.pages) {
+          return {
+            ...old,
+            pages: old.pages.map(page => {
+              const items = page.items || page.data || [];
+              return {
+                ...page,
+                items: [...items, newSubtask],
+                data: [...items, newSubtask]
+              };
+            })
+          };
+        }
+        return {
+          ...old,
+          data: [...(old.data || []), newSubtask],
+          items: old.items ? [...old.items, newSubtask] : undefined
+        };
+      });
     },
     onError: (err) => {
       const message = err?.response?.data?.message || "Failed to create subtask";
@@ -320,13 +368,25 @@ export const useDeleteSubtaskMutation = (parentTaskId) => {
 
   return useMutation({
     mutationFn: (subtaskId) => TaskAPI.deleteSubtask(parentTaskId, subtaskId),
+    onMutate: async (subtaskId) => {
+      await queryClient.cancelQueries({ queryKey: TASK_QUERY_KEYS.lists() });
+      const previousLists = queryClient.getQueriesData({ queryKey: TASK_QUERY_KEYS.lists() });
+
+      removeCachedTasks(queryClient, (task) => task.id === subtaskId);
+
+      return { previousLists };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousLists) {
+        context.previousLists.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      toast.error("Failed to delete subtask");
+    },
     onSuccess: () => {
       toast.success("Subtask deleted");
       queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.subtasks(parentTaskId) });
-      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
-    },
-    onError: () => {
-      toast.error("Failed to delete subtask");
     },
   });
 };

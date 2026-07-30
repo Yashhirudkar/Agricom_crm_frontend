@@ -12,8 +12,23 @@ const generateUUID = () => {
 };
 
 export const TaskAPI = {
-  getTasks: async (params) => {
-    const { data } = await axiosClient.get("/v1/tasks", { params });
+  getTasks: async (params, config = {}) => {
+    const { data } = await axiosClient.get("/v1/tasks", { params, ...config });
+    return data;
+  },
+
+  bulkArchive: async (payload) => {
+    const { data } = await axiosClient.post("/v1/tasks/bulk-archive", payload);
+    return data;
+  },
+
+  bulkChangeStatus: async (payload) => {
+    const { data } = await axiosClient.post("/v1/tasks/bulk-status", payload);
+    return data;
+  },
+
+  bulkDelete: async (payload) => {
+    const { data } = await axiosClient.post("/v1/tasks/bulk-delete", payload);
     return data;
   },
 
