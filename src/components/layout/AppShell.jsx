@@ -3,13 +3,22 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { selectUser } from "@/store/slices/authSlice";
+import { selectUser, fetchCurrentUser } from "@/store/slices/authSlice";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 import CommandPalette from "@/components/CommandPalette";
 import { connectSocket, disconnectSocket } from "@/lib/socket";
 import { handleSocketBatchUpdate } from "@/store/entities/attendanceSlice";
 import { fetchNotifications, addSocketNotification } from "@/store/slices/notificationsSlice";
+import { useQueryClient } from "@tanstack/react-query";
+import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
+import axiosClient from "@/lib/axios";
+import {
+  selectActiveCompanyId,
+  selectCompanyContextLoading,
+  switchCompanyContext,
+  setActiveCompany
+} from "@/store/slices/companyContextSlice";
 
 const PUBLIC_ROUTES = ["/login", "/accept-invitation", "/select-company"];
 
@@ -20,24 +29,68 @@ export default function AppShellClient({ children }) {
   const dispatch = useDispatch();
   const isPublic = PUBLIC_ROUTES.includes(pathname);
 
+  const activeCompanyId = useSelector(selectActiveCompanyId);
+  const isSwitching = useSelector(selectCompanyContextLoading);
+  const companies = useSelector(selectCompanies) || [];
+  const queryClient = useQueryClient();
+
+  // 1. Fetch companies list if Super Admin
   useEffect(() => {
-    if (user && user.type !== "super_admin") {
+    if (user && user.type === "super_admin") {
+      dispatch(fetchCompanies());
+    }
+  }, [user, dispatch]);
+
+  // 2. Multi-Tenant Auto-Selection and Redux Synchronization
+  useEffect(() => {
+    if (isPublic || !user) return;
+
+    if (user.type === "super_admin") {
+      if (companies.length > 0) {
+        const stored = localStorage.getItem("activeCompanyId");
+        const isValid = stored && companies.some(c => c.id.toString() === stored.toString());
+        if (!isValid) {
+          const firstCompanyId = companies[0].id.toString();
+          dispatch(switchCompanyContext(firstCompanyId));
+        } else if (activeCompanyId !== stored) {
+          dispatch(setActiveCompany(companies.find(c => c.id.toString() === stored.toString()) || stored));
+        }
+      }
+    } else {
       const workspaces = user.workspaces || [];
-      if (workspaces.length === 1) {
-        localStorage.setItem("activeCompanyId", workspaces[0].id.toString());
+      const stored = localStorage.getItem("activeCompanyId");
+      const isValid = stored && workspaces.some(w => w.id.toString() === stored.toString());
+      if (!isValid) {
+        if (workspaces.length > 0) {
+          const firstWorkspaceId = workspaces[0].id.toString();
+          dispatch(switchCompanyContext(firstWorkspaceId));
+        } else if (user.companyId) {
+          dispatch(switchCompanyContext(user.companyId.toString()));
+        }
+      } else if (activeCompanyId !== stored) {
+        dispatch(setActiveCompany(workspaces.find(w => w.id.toString() === stored.toString()) || stored));
       }
     }
-  }, [user]);
+  }, [user, companies, activeCompanyId, isPublic, dispatch]);
 
+  // 3. Global React Query Invalidation Engine
   useEffect(() => {
-    if (isPublic || !user) {
+    if (activeCompanyId) {
+      console.log("[AppShell] Invalidating all queries reactively for company ID:", activeCompanyId);
+      queryClient.invalidateQueries();
+    }
+  }, [activeCompanyId, queryClient]);
+
+  // 4. Socket and Notifications Sync
+  useEffect(() => {
+    if (isPublic || !user || !activeCompanyId) {
       return;
     }
 
-    const activeCompanyId = localStorage.getItem("activeCompanyId") || user.lastCompanyId || user.companyId;
     const employeeId = user.employeeId;
+    const isAdmin = user.type === "super_admin" || user.type === "client_admin";
 
-    if (!activeCompanyId || !employeeId) {
+    if (!employeeId && !isAdmin) {
       return;
     }
 
@@ -111,7 +164,7 @@ export default function AppShellClient({ children }) {
       socket.off("notification");
       disconnectSocket();
     };
-  }, [user, isPublic, dispatch]);
+  }, [user, isPublic, dispatch, activeCompanyId, router]);
 
   if (isPublic) {
     return <>{children}</>;
@@ -119,6 +172,13 @@ export default function AppShellClient({ children }) {
 
   return (
     <>
+      {isSwitching && (
+        <div className="fixed inset-0 z-[9999] bg-white/70 backdrop-blur-xs flex flex-col items-center justify-center animate-in fade-in duration-200">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-900 text-sm font-bold tracking-tight">Switching Company Context...</p>
+          <p className="text-gray-500 text-xs mt-1">Please wait while we refresh your workspace permissions and data.</p>
+        </div>
+      )}
       <Header />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar />

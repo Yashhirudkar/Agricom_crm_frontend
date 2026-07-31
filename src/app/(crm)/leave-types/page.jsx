@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUserType } from "@/store/slices/authSlice";
-import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import {
   fetchLeaveTypes,
   createLeaveType,
@@ -26,7 +26,7 @@ function LeaveTypesContent() {
   const dispatch = useDispatch();
 
   const userType = useSelector(selectUserType);
-  const allCompanies = useSelector(selectCompanies) || [];
+  const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
   const { data: leaveTypes, totalPages } = useSelector(selectLeaveTypesData) || { data: [], totalPages: 1 };
   const isLoading = useSelector(selectLeaveTypesLoading);
@@ -41,26 +41,11 @@ function LeaveTypesContent() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const [selectedCompanyId, setSelectedCompanyId] = useState("");
-
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("activeCompanyId");
-      if (stored) setSelectedCompanyId(stored);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (userType === "super_admin") {
-      dispatch(fetchCompanies());
-    }
-  }, [dispatch, userType]);
-
-  useEffect(() => {
-    if (selectedCompanyId) {
+    if (activeCompanyId) {
       dispatch(fetchLeaveTypes({ page: currentPage, limit: itemsPerPage }));
     }
-  }, [dispatch, selectedCompanyId, currentPage]);
+  }, [dispatch, activeCompanyId, currentPage]);
 
   useEffect(() => {
     if (error) {
@@ -68,17 +53,6 @@ function LeaveTypesContent() {
       dispatch(clearLeaveTypesError());
     }
   }, [error, dispatch]);
-
-  const handleCompanyChange = (e) => {
-    const val = e.target.value;
-    setSelectedCompanyId(val);
-    setCurrentPage(1);
-    if (val) {
-      localStorage.setItem("activeCompanyId", val);
-    } else {
-      localStorage.removeItem("activeCompanyId");
-    }
-  };
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -223,24 +197,9 @@ function LeaveTypesContent() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {userType === "super_admin" && (
-            <select
-              value={selectedCompanyId}
-              onChange={handleCompanyChange}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
-            >
-              <option value="">-- Select Company Context --</option>
-              {allCompanies.map((c, idx) => (
-                <option key={`company-${c.id || idx}-${idx}`} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          )}
           <HasPermission permission="leave_types:create">
             <button
               onClick={openCreateModal}
-              disabled={!selectedCompanyId}
               className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors"
             >
               <Plus className="h-4 w-4" /> Add Leave Type
@@ -249,15 +208,6 @@ function LeaveTypesContent() {
         </div>
       </div>
 
-      {!selectedCompanyId ? (
-        <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-12 text-center">
-          <Building2 className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-          <h2 className="text-sm font-bold text-gray-700 mb-1">Company Context Required</h2>
-          <p className="text-xs text-gray-500">
-            Please select a company to manage leave types.
-          </p>
-        </div>
-      ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
           <LeaveTypesTable
             leaveTypes={leaveTypes}
@@ -266,7 +216,6 @@ function LeaveTypesContent() {
           />
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
-      )}
 
       <CreateLeaveTypeModal
         isModalOpen={isModalOpen}

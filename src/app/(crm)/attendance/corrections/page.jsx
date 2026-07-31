@@ -5,16 +5,20 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   fetchCorrections, approveCorrection, rejectCorrection,
   fetchRegularizationHistory,
-  selectCorrections, selectAttendanceLoading, selectRegularizationHistory
+  selectCorrections, selectAttendanceLoading, selectRegularizationHistory,
+  selectAttendanceError, clearAttendanceError
 } from "@/store/entities/attendanceSlice";
 import { Check, X, Clock, Calendar, AlertCircle, MessageSquare, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 
 export default function CorrectionsPage() {
   const dispatch = useDispatch();
   const corrections = useSelector(selectCorrections) || [];
   const history = useSelector(selectRegularizationHistory) || { data: [], page: 1, totalPages: 1, totalCount: 0 };
   const isLoading = useSelector(selectAttendanceLoading);
+  const error = useSelector(selectAttendanceError);
   const user = useSelector(state => state.auth?.user);
+  const activeCompanyId = useSelector(selectActiveCompanyId);
 
   const [activeTab, setActiveTab] = useState("PENDING"); // PENDING | HISTORY
   const [remarks, setRemarks] = useState({});
@@ -28,12 +32,13 @@ export default function CorrectionsPage() {
   const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
+    dispatch(clearAttendanceError());
     if (activeTab === "PENDING") {
       dispatch(fetchCorrections());
     } else {
       fetchHistory();
     }
-  }, [activeTab, dispatch, page, limit, statusFilter, startDate, endDate]);
+  }, [activeTab, dispatch, page, limit, statusFilter, startDate, endDate, activeCompanyId]);
 
   const fetchHistory = () => {
     dispatch(fetchRegularizationHistory({
@@ -53,16 +58,22 @@ export default function CorrectionsPage() {
   };
 
   const handleApprove = async (id) => {
+    dispatch(clearAttendanceError());
     if (confirm("Approve this regularization request?")) {
-      await dispatch(approveCorrection({ id, data: { remarks: remarks[id] || "" } }));
-      dispatch(fetchCorrections());
+      const res = await dispatch(approveCorrection({ id, data: { remarks: remarks[id] || "" } }));
+      if (res.meta.requestStatus === "fulfilled") {
+        dispatch(fetchCorrections());
+      }
     }
   };
 
   const handleReject = async (id) => {
+    dispatch(clearAttendanceError());
     if (confirm("Reject this regularization request?")) {
-      await dispatch(rejectCorrection({ id, data: { remarks: remarks[id] || "" } }));
-      dispatch(fetchCorrections());
+      const res = await dispatch(rejectCorrection({ id, data: { remarks: remarks[id] || "" } }));
+      if (res.meta.requestStatus === "fulfilled") {
+        dispatch(fetchCorrections());
+      }
     }
   };
 
@@ -73,7 +84,7 @@ export default function CorrectionsPage() {
   const pendingCorrections = corrections.filter(c => c.status === 'PENDING');
 
   return (
-    <div className="p-4 md:p-8 max-w-[1400px] mx-auto min-h-screen bg-slate-50 font-sans">
+    <div className="p-4 md:p-8 max-w-[1400px] mx-auto min-h-screen bg-slate-50 font-sans text-slate-800">
       {/* Header Section */}
       <div className="mb-6 border-b border-slate-200 pb-5 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
@@ -100,6 +111,17 @@ export default function CorrectionsPage() {
           History
         </button>
       </div>
+
+      {/* Error Alert Display */}
+      {error && (
+        <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-sm font-semibold flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button onClick={() => dispatch(clearAttendanceError())} className="text-rose-500 hover:text-rose-700 font-bold ml-2">✕</button>
+        </div>
+      )}
 
       {activeTab === "PENDING" && (
         <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
@@ -178,7 +200,7 @@ export default function CorrectionsPage() {
                         value={remarks[correction.id] || ''}
                         onChange={(e) => handleRemarksChange(correction.id, e.target.value)}
                         disabled={isOwnRequest}
-                        className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-all disabled:opacity-50"
+                        className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-all disabled:opacity-50 text-slate-700"
                       />
                     </div>
 
@@ -230,7 +252,7 @@ export default function CorrectionsPage() {
                   placeholder="Name..."
                   value={searchEmployee}
                   onChange={(e) => setSearchEmployee(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 outline-none"
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 outline-none text-slate-700"
                 />
               </div>
             </form>
@@ -240,7 +262,7 @@ export default function CorrectionsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                className="w-full md:w-32 py-2 px-3 text-sm border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 outline-none bg-white"
+                className="w-full md:w-32 py-2 px-3 text-sm border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 outline-none bg-white text-slate-700"
               >
                 <option value="">All</option>
                 <option value="APPROVED">Approved</option>

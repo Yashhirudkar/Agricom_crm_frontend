@@ -2,11 +2,17 @@
 
 import Image from "next/image";
 import { Bell, Check, LogOut, ChevronDown, Building2, Search, Menu, CheckSquare } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { logoutUser, selectUser, fetchCurrentUser } from "@/store/slices/authSlice";
 import axiosClient from "@/lib/axios";
+import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
+import {
+  selectActiveCompanyId,
+  selectActiveCompany,
+  switchCompanyContext
+} from "@/store/slices/companyContextSlice";
 import {
   selectNotifications,
   selectUnreadCount,
@@ -30,14 +36,15 @@ export function Header() {
     router.replace("/login");
   };
 
+  const activeCompanyId = useSelector(selectActiveCompanyId);
+  const activeCompany = useSelector(selectActiveCompany);
+  const companies = useSelector(selectCompanies) || [];
+
   // Switch Workspace
   const handleSwitchWorkspace = async (companyId) => {
     try {
-      await axiosClient.post("/auth/switch-workspace", { companyId: Number(companyId) });
-      localStorage.setItem("activeCompanyId", companyId.toString());
-      await dispatch(fetchCurrentUser());
+      await dispatch(switchCompanyContext(companyId)).unwrap();
       setIsSwitcherOpen(false);
-      window.location.reload();
     } catch (err) {
       console.error("Failed to switch workspace:", err);
     }
@@ -62,7 +69,6 @@ export function Header() {
 
   // Determine active workspace
   const workspaces = user?.workspaces || [];
-  const activeCompanyId = localStorage.getItem("activeCompanyId");
   const activeWorkspace =
     workspaces.find((w) => w.id.toString() === activeCompanyId) ||
     workspaces[0];
@@ -73,6 +79,13 @@ export function Header() {
     const baseURL = axiosClient.defaults.baseURL?.replace(/\/api$/, "") || "http://localhost:5000";
     return `${baseURL}${url}`;
   };
+
+  // Fetch companies list for Super Admin if not already fetched
+  useEffect(() => {
+    if (user?.type === "super_admin" && companies.length === 0) {
+      dispatch(fetchCompanies());
+    }
+  }, [user, dispatch, companies.length]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-200/50 bg-white backdrop-blur-xl transition-all duration-300">
@@ -103,11 +116,55 @@ export function Header() {
             </div>
           </div>
 
-          {/* Workspace Switcher */}
+          {/* Workspace / Company Switcher Context */}
           {user?.type === "super_admin" ? (
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200/60 rounded-full text-[11px] font-bold text-amber-700 shadow-xs">
-              <Building2 className="h-3.5 w-3.5" />
-              Global Platform Scope
+            <div
+              className="relative"
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                  setIsSwitcherOpen(false);
+                }
+              }}
+            >
+              <button
+                onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200/60 rounded-xl text-xs font-semibold text-amber-700 transition-all cursor-pointer shadow-xs"
+              >
+                <Building2 className="h-3.5 w-3.5 text-amber-500" />
+                <span>{activeCompany?.name || companies.find(c => c.id.toString() === activeCompanyId)?.name || "Select Company"}</span>
+                <ChevronDown className="h-3 w-3 text-amber-500" />
+              </button>
+
+              {isSwitcherOpen && (
+                <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden py-1">
+                  <div className="px-4 py-2 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Switch Company
+                  </div>
+                  <div className="max-h-[220px] overflow-y-auto scrollbar-thin divide-y divide-gray-50">
+                    {companies.map((c) => {
+                      const isActive = c.id.toString() === activeCompanyId;
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => handleSwitchWorkspace(c.id)}
+                          className={`w-full flex items-center justify-between px-4 py-2.5 text-left text-xs font-medium transition-colors cursor-pointer ${isActive
+                            ? "bg-amber-50 text-amber-700 font-bold"
+                            : "text-gray-600 hover:bg-gray-50"
+                            }`}
+                        >
+                          <span className="font-semibold">{c.name}</span>
+                          {isActive && <Check className="h-3.5 w-3.5 text-amber-600" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : user?.type === "client_admin" ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-semibold text-blue-700 shadow-xs">
+              <Building2 className="h-3.5 w-3.5 text-blue-500" />
+              <span>{activeCompany?.name || activeWorkspace?.name || user?.company?.name || "No Company Context"}</span>
             </div>
           ) : workspaces.length > 0 ? (
             <div
@@ -134,7 +191,7 @@ export function Header() {
                   </div>
                   <div className="max-h-[220px] overflow-y-auto scrollbar-thin divide-y divide-gray-50">
                     {workspaces.map((w) => {
-                      const isActive = w.id === activeWorkspace?.id;
+                      const isActive = w.id.toString() === activeCompanyId;
                       return (
                         <button
                           key={w.id}

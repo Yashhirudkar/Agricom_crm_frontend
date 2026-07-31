@@ -8,10 +8,16 @@ export default function TodayTimeline({ activityLogs, getTimelineStyles }) {
 
       <div className="relative pl-4 border-l-2 border-gray-100 ml-4 space-y-8">
         {activityLogs && activityLogs.length > 0 ? (
-          [...activityLogs]
-            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-            .slice(0, 5)
-            .reverse()
+          (() => {
+            const sortedLogs = [...activityLogs].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+            const firstCheckIn = sortedLogs.find(l => l.actionType === "CHECK_IN");
+            const remainingLogs = sortedLogs.filter(l => l !== firstCheckIn);
+            const latestLogs = remainingLogs.slice(-4);
+            const displayLogs = [];
+            if (firstCheckIn) displayLogs.push(firstCheckIn);
+            displayLogs.push(...latestLogs);
+            return displayLogs;
+          })()
             .map((log, idx) => {
               const styles = getTimelineStyles(log.actionType);
               return (

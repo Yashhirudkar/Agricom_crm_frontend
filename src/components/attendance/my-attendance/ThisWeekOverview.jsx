@@ -17,7 +17,8 @@ export default function ThisWeekOverview({ myAttendance }) {
 
             const dateStr = d.toLocaleDateString("en-CA");
             const isToday = dateStr === new Date().toLocaleDateString("en-CA");
-            const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+            const shiftWeeklyOffs = myAttendance[0]?.shift?.weeklyOffDays || [0, 6];
+            const isWeekend = shiftWeeklyOffs.includes(d.getDay());
 
             const dayRecord = myAttendance.find((r) => r.date === dateStr);
             let status = "-";

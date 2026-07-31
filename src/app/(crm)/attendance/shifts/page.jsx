@@ -7,11 +7,13 @@ import {
   selectAllShifts, selectShiftsLoading 
 } from "@/store/entities/shiftsSlice";
 import { Plus, Edit2, Trash2, Clock, Calendar } from "lucide-react";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 
 export default function ShiftsPage() {
   const dispatch = useDispatch();
   const shifts = useSelector(selectAllShifts) || [];
   const isLoading = useSelector(selectShiftsLoading);
+  const activeCompanyId = useSelector(selectActiveCompanyId);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingShift, setEditingShift] = useState(null);
@@ -28,7 +30,7 @@ export default function ShiftsPage() {
 
   useEffect(() => {
     dispatch(fetchShifts());
-  }, [dispatch]);
+  }, [dispatch, activeCompanyId]);
 
   const openModal = (shift = null) => {
     if (shift) {
@@ -167,6 +169,34 @@ export default function ShiftsPage() {
                   <input type="number" value={formData.gracePeriodMinutes} onChange={e => setFormData({...formData, gracePeriodMinutes: parseInt(e.target.value)})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Weekly Off Days</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => {
+                    const isChecked = formData.weeklyOffDays.includes(idx);
+                    return (
+                      <label key={day} className="flex items-center gap-1.5 p-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-xs font-medium cursor-pointer border border-gray-200 text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            let updated;
+                            if (e.target.checked) {
+                              updated = [...formData.weeklyOffDays, idx].sort();
+                            } else {
+                              updated = formData.weeklyOffDays.filter(d => d !== idx);
+                            }
+                            setFormData({ ...formData, weeklyOffDays: updated });
+                          }}
+                          className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        {day}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="flex items-center gap-2 py-2">
                 <input type="checkbox" id="isNightShift" checked={formData.isNightShift} onChange={e => setFormData({...formData, isNightShift: e.target.checked})} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
                 <label htmlFor="isNightShift" className="text-sm font-medium text-gray-700">This is a night shift (crosses midnight)</label>

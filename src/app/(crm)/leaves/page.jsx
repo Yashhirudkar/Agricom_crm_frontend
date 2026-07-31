@@ -2,13 +2,9 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
+import { fetchLeaveRequests, selectLeaveRequestsData, selectLeaveRequestsLoading } from "@/store/entities/leaveRequestsSlice";
 import { selectUserType } from "@/store/slices/authSlice";
-import {
-  fetchLeaveRequests,
-  selectLeaveRequestsData,
-  selectLeaveRequestsLoading
-} from "@/store/entities/leaveRequestsSlice";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import { fetchLeaveTypes, selectLeaveTypesData } from "@/store/entities/leaveTypesSlice";
 
 import HasPermission from "@/components/rbac/HasPermission";
@@ -22,14 +18,13 @@ import axiosClient from "@/lib/axios";
 function AdminLeavesContent() {
   const dispatch = useDispatch();
   const userType = useSelector(selectUserType);
-  const allCompanies = useSelector(selectCompanies) || [];
+  const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
   const { data: leaves, total, page, totalPages } = useSelector(selectLeaveRequestsData) || { data: [], total: 0, page: 1, totalPages: 0 };
   const isLoading = useSelector(selectLeaveRequestsLoading);
 
   const { data: leaveTypes } = useSelector(selectLeaveTypesData) || { data: [] };
 
-  const [selectedCompanyId, setSelectedCompanyId] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -51,24 +46,11 @@ function AdminLeavesContent() {
   const [selectedDept, setSelectedDept] = useState(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("activeCompanyId");
-      if (stored) setSelectedCompanyId(stored);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (userType === "super_admin") {
-      dispatch(fetchCompanies());
-    }
-  }, [dispatch, userType]);
-
-  useEffect(() => {
-    if (selectedCompanyId) {
+    if (activeCompanyId) {
       dispatch(fetchLeaveTypes({}));
       loadLeaves();
     }
-  }, [dispatch, selectedCompanyId, currentPage]);
+  }, [dispatch, activeCompanyId, currentPage]);
 
   const loadLeaves = () => {
     const query = { page: currentPage, limit: itemsPerPage };
@@ -107,17 +89,6 @@ function AdminLeavesContent() {
     }, 0);
   };
 
-  const handleCompanyChange = (e) => {
-    const val = e.target.value;
-    setSelectedCompanyId(val);
-    if (val) {
-      localStorage.setItem("activeCompanyId", val);
-    } else {
-      localStorage.removeItem("activeCompanyId");
-    }
-    setCurrentPage(1);
-  };
-
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   return (
@@ -133,20 +104,6 @@ function AdminLeavesContent() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {userType === "super_admin" && (
-            <select
-              value={selectedCompanyId}
-              onChange={handleCompanyChange}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
-            >
-              <option value="">-- Select Company Context --</option>
-              {allCompanies.map((c, idx) => (
-                <option key={`company-${c.id || idx}-${idx}`} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          )}
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={`px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm transition-colors ${isFilterOpen || activeFilterCount > 0 ? "bg-[#007aff] text-white" : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"}`}
@@ -156,16 +113,7 @@ function AdminLeavesContent() {
         </div>
       </div>
 
-      {!selectedCompanyId ? (
-        <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-12 text-center">
-          <CalendarDays className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-          <h2 className="text-sm font-bold text-gray-700 mb-1">Company Context Required</h2>
-          <p className="text-xs text-gray-500">
-            Please select a company to view the leave dashboard.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
+      <div className="space-y-4">
           {/* Advanced Filters Panel */}
           {isFilterOpen && (
             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm animate-in fade-in slide-in-from-top-2">
@@ -347,7 +295,6 @@ function AdminLeavesContent() {
             )}
           </div>
         </div>
-      )}
     </div>
   );
 }

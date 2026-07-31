@@ -22,13 +22,21 @@ const getSecondsFromMidnight = (timeData) => {
 export const calculateTimePercent = (timeData, shiftStart = "09:30", shiftEnd = "18:00") => {
   if (!timeData) return 0;
   
-  const timeSecs = getSecondsFromMidnight(timeData);
   const startSecs = getSecondsFromMidnight(shiftStart);
-  const endSecs = getSecondsFromMidnight(shiftEnd);
+  let endSecs = getSecondsFromMidnight(shiftEnd);
+  
+  if (endSecs < startSecs) {
+    endSecs += 24 * 3600; // Add 24 hours in seconds for cross-midnight shift
+  }
   
   const totalShiftSecs = endSecs - startSecs;
   if (totalShiftSecs <= 0) return 0;
 
+  let timeSecs = getSecondsFromMidnight(timeData);
+  if (timeSecs < startSecs && timeSecs + 24 * 3600 <= endSecs) {
+    timeSecs += 24 * 3600; // Shift punch to the next calendar day matching the night shift crossover
+  }
+  
   // Clamp percentage between 0 and 100
   let percent = ((timeSecs - startSecs) / totalShiftSecs) * 100;
   return Math.max(0, Math.min(100, percent));

@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUserType } from "@/store/slices/authSlice";
-import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import {
   fetchBranches,
   createBranch,
@@ -29,12 +29,11 @@ function BranchesContent() {
   const dispatch = useDispatch();
 
   const userType = useSelector(selectUserType);
-  const allCompanies = useSelector(selectCompanies) || [];
+  const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
   const { data: branches, total, page, totalPages } = useSelector(
     selectBranchesData
   ) || { data: [], total: 0, page: 1, totalPages: 0 };
-
 
   const isLoading = useSelector(selectBranchesLoading);
   const error = useSelector(selectBranchesError);
@@ -44,19 +43,9 @@ function BranchesContent() {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
-
-  const [selectedCompanyId, setSelectedCompanyId] = useState("");
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("activeCompanyId");
-      if (stored) setSelectedCompanyId(stored);
-    }
-  }, []);
-
-  const [selectedBranch, setSelectedBranch] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [selectedBranch, setSelectedBranch] = useState(null);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
@@ -84,27 +73,10 @@ function BranchesContent() {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    if (userType === "super_admin") {
-      dispatch(fetchCompanies());
-    }
-  }, [dispatch, userType]);
-
-  useEffect(() => {
-    if (selectedCompanyId) {
+    if (activeCompanyId) {
       dispatch(fetchBranches({ page: currentPage, limit: itemsPerPage, search: debouncedSearch }));
     }
-  }, [dispatch, currentPage, debouncedSearch, selectedCompanyId]);
-
-  const handleCompanyChange = (e) => {
-    const val = e.target.value;
-    setSelectedCompanyId(val);
-    if (val) {
-      localStorage.setItem("activeCompanyId", val);
-    } else {
-      localStorage.removeItem("activeCompanyId");
-    }
-    setCurrentPage(1);
-  };
+  }, [dispatch, currentPage, debouncedSearch, activeCompanyId]);
 
   const handleOpenDrawer = (branchObj) => {
     setSelectedBranch(branchObj);
@@ -245,23 +217,8 @@ function BranchesContent() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {userType === "super_admin" && (
-            <select
-              value={selectedCompanyId}
-              onChange={handleCompanyChange}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
-            >
-              <option value="">-- Select Company Context --</option>
-              {allCompanies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          )}
           <button
             onClick={openCreate}
-            disabled={!selectedCompanyId}
             className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors"
           >
             <Plus className="h-4 w-4" /> Add Branch
@@ -269,18 +226,7 @@ function BranchesContent() {
         </div>
       </div>
 
-      {!selectedCompanyId ? (
-        <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-12 text-center">
-          <MapPin className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-          <h2 className="text-sm font-bold text-gray-700 mb-1">
-            Company Context Required
-          </h2>
-          <p className="text-xs text-gray-500">
-            Please select a company from the dropdown above.
-          </p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
           <BranchesFilters
             search={search}
             setSearch={setSearch}
@@ -303,7 +249,6 @@ function BranchesContent() {
             onPageChange={setCurrentPage}
           />
         </div>
-      )}
 
       <BranchDetailsDrawer
         drawerOpen={drawerOpen}

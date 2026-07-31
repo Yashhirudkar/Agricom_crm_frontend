@@ -5,7 +5,7 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUserType } from "@/store/slices/authSlice";
-import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import axiosClient from "@/lib/axios";
 import { toast } from "sonner";
 import {
@@ -29,8 +29,7 @@ export default function DynamicSchemaPage({ params: paramsPromise }) {
   const dispatch = useDispatch();
 
   const userType = useSelector(selectUserType);
-  const allCompanies = useSelector(selectCompanies) || [];
-  const [selectedCompanyId, setSelectedCompanyId] = useState("");
+  const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
   // Role Metadata
   const [role, setRole] = useState(null);
@@ -91,23 +90,9 @@ export default function DynamicSchemaPage({ params: paramsPromise }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
 
-  // Company context effects
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("activeCompanyId");
-      if (stored) setSelectedCompanyId(stored);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (userType === "super_admin") {
-      dispatch(fetchCompanies());
-    }
-  }, [dispatch, userType]);
-
   // Load basic role data
   useEffect(() => {
-    if (!roleId || !selectedCompanyId) return;
+    if (!roleId || !activeCompanyId) return;
     const fetchRoleData = async () => {
       try {
         const res = await axiosClient.get(`/masters/partner-roles/${roleId}`);
@@ -120,7 +105,7 @@ export default function DynamicSchemaPage({ params: paramsPromise }) {
       }
     };
     fetchRoleData();
-  }, [roleId, selectedCompanyId]);
+  }, [roleId, activeCompanyId]);
 
   // Load config details
   const fetchConfig = async () => {
@@ -180,11 +165,11 @@ export default function DynamicSchemaPage({ params: paramsPromise }) {
   };
 
   useEffect(() => {
-    if (roleId && selectedCompanyId) {
+    if (roleId && activeCompanyId) {
       fetchConfig();
       fetchHistory(1);
     }
-  }, [roleId, selectedCompanyId]);
+  }, [roleId, activeCompanyId]);
 
   // Track modification dirty state
   const isDirty =
@@ -546,7 +531,7 @@ export default function DynamicSchemaPage({ params: paramsPromise }) {
 
   const editingField = fields.find((f) => f.key === editingFieldKey) || null;
 
-  if (selectedCompanyId && (loadingRole || loadingConfig)) {
+  if (activeCompanyId && (loadingRole || loadingConfig)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[500px]">
         <div className="h-8 w-8 rounded-full border-2 border-[#007aff] border-t-transparent animate-spin mb-3" />
@@ -561,9 +546,7 @@ export default function DynamicSchemaPage({ params: paramsPromise }) {
         router={router}
         role={role}
         userType={userType}
-        allCompanies={allCompanies}
-        selectedCompanyId={selectedCompanyId}
-        setSelectedCompanyId={setSelectedCompanyId}
+        activeCompanyId={activeCompanyId}
         hasConfig={hasConfig || historyList.length > 0}
         configVersion={isConfigActive ? configVersion : (historyList[0]?.configId || 0)}
         isConfigActive={isConfigActive}
@@ -574,16 +557,7 @@ export default function DynamicSchemaPage({ params: paramsPromise }) {
         setPreviewActiveTab={setPreviewActiveTab}
       />
 
-      {!selectedCompanyId ? (
-        <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-12 text-center shadow-xs">
-          <Building2 className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-          <h2 className="text-sm font-bold text-gray-700 mb-1">Company Context Required</h2>
-          <p className="text-xs text-gray-500">
-            Please select a company context to configure custom layouts.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-6">
+      <div className="space-y-6">
           {/* Sub Navigation tabs */}
           <div className="flex border-b border-gray-200 shrink-0">
             <button
@@ -675,7 +649,6 @@ export default function DynamicSchemaPage({ params: paramsPromise }) {
             />
           )}
         </div>
-      )}
 
       <AddFieldDrawer
         isOpen={isAddDrawerOpen}

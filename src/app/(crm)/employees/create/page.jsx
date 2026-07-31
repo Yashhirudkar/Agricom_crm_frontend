@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { createEmployee } from "@/store/entities/employeesSlice";
 import { fetchUsers, selectUsers } from "@/store/slices/usersSlice";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import { ChevronLeft, Save, UploadCloud, Shield, Check, AlertCircle } from "lucide-react";
 import axiosClient from "@/lib/axios";
 import SearchableSelect from "@/components/common/SearchableSelect";
@@ -29,6 +30,7 @@ export default function CreateEmployeePage() {
   const dispatch = useDispatch();
 
   const users = useSelector(selectUsers) || [];
+  const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
   const [selectedDept, setSelectedDept] = useState(null);
   const [selectedDesig, setSelectedDesig] = useState(null);
@@ -71,13 +73,12 @@ export default function CreateEmployeePage() {
   useEffect(() => {
     const fetchFormData = async () => {
       try {
-        const companyId = localStorage.getItem("activeCompanyId");
-        if (!companyId) return;
+        if (!activeCompanyId) return;
 
         dispatch(fetchUsers());
 
         const [rolesRes] = await Promise.all([
-          axiosClient.get("/GetRoles", { headers: { "x-company-id": companyId } }).catch(() => ({ data: [] }))
+          axiosClient.get("/GetRoles").catch(() => ({ data: [] }))
         ]);
 
         setRoles(rolesRes.data?.data || (Array.isArray(rolesRes.data) ? rolesRes.data : []));
@@ -86,7 +87,7 @@ export default function CreateEmployeePage() {
       }
     };
     fetchFormData();
-  }, [dispatch]);
+  }, [dispatch, activeCompanyId]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -140,8 +141,7 @@ export default function CreateEmployeePage() {
       const employeeId = res.id;
 
       // 2. Upload Documents if any
-      const companyId = localStorage.getItem("activeCompanyId");
-      if (files.length > 0 && companyId && employeeId) {
+      if (files.length > 0 && activeCompanyId && employeeId) {
         for (const item of files) {
           const formData = new FormData();
           formData.append("file", item.fileObj);
@@ -150,10 +150,7 @@ export default function CreateEmployeePage() {
           formData.append("documentName", item.fileObj.name);
 
           await axiosClient.post(`/employees/${employeeId}/documents`, formData, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              "x-company-id": companyId,
-            },
+            headers: { "Content-Type": "multipart/form-data" },
           });
         }
       }

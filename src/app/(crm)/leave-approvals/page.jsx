@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUser } from "@/store/slices/authSlice";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import {
   fetchLeaveRequests,
   approveLeave,
@@ -22,6 +23,7 @@ import { getFriendlyError } from "@/lib/errorMessages";
 function LeaveApprovalsContent() {
   const dispatch = useDispatch();
   const user = useSelector(selectUser);
+  const activeCompanyId = useSelector(selectActiveCompanyId);
 
   const { data: allLeaves } = useSelector(selectLeaveRequestsData) || { data: [] };
   const isLoading = useSelector(selectLeaveRequestsLoading);
@@ -35,13 +37,10 @@ function LeaveApprovalsContent() {
   const [activeTab, setActiveTab] = useState("PENDING");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const activeCompanyId = localStorage.getItem("activeCompanyId");
-      if (activeCompanyId) {
-        dispatch(fetchLeaveRequests({}));
-      }
+    if (activeCompanyId) {
+      dispatch(fetchLeaveRequests({}));
     }
-  }, [dispatch]);
+  }, [dispatch, activeCompanyId]);
 
   const filteredLeaves = allLeaves.filter(l => activeTab === "PENDING" ? l.status === "PENDING" : l.status !== "PENDING");
 

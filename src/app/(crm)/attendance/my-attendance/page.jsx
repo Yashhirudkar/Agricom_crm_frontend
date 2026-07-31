@@ -17,6 +17,7 @@ import {
 import { fetchShifts, selectAllShifts } from "@/store/entities/shiftsSlice";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { getFriendlyError } from "@/lib/errorMessages";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 
 import TodayAttendanceCard from "@/components/attendance/my-attendance/TodayAttendanceCard";
 import ThisWeekOverview from "@/components/attendance/my-attendance/ThisWeekOverview";
@@ -67,6 +68,7 @@ export default function MyAttendancePage() {
   const isLoading = useSelector(selectAttendanceLoading);
   const error = useSelector(selectAttendanceError);
   const success = useSelector(selectAttendanceSuccess);
+  const activeCompanyId = useSelector(selectActiveCompanyId);
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
@@ -92,7 +94,7 @@ export default function MyAttendancePage() {
 
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
-  }, [dispatch]);
+  }, [dispatch, activeCompanyId]);
 
   useEffect(() => {
     if (error || success) {
@@ -109,10 +111,10 @@ export default function MyAttendancePage() {
   const currentShift = todayRecord?.shiftId
     ? shifts.find((s) => s.id === todayRecord.shiftId)
     : shifts[0] || {
-        name: "General Shift",
-        startTime: "09:30 AM",
-        endTime: "06:30 PM",
-      };
+      name: "General Shift",
+      startTime: "09:30 AM",
+      endTime: "06:30 PM",
+    };
 
   const handleAction = async (actionStr, type) => {
     if (actionLoading) return;
@@ -276,11 +278,10 @@ export default function MyAttendancePage() {
         <div className="flex-1 space-y-6">
           {(error || success) && (
             <div
-              className={`p-4 rounded-2xl flex items-center gap-3 text-xs font-bold ${
-                error
+              className={`p-4 rounded-2xl flex items-center gap-3 text-xs font-bold ${error
                   ? "bg-red-50 text-red-700 border border-red-100"
                   : "bg-green-50 text-green-700 border border-green-100"
-              }`}
+                }`}
             >
               {error ? (
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />

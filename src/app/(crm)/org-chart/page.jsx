@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import axiosClient from "@/lib/axios";
+import { useSelector } from "react-redux";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import { Tree, TreeNode } from "react-organizational-chart";
 import { Users, Search, RefreshCw } from "lucide-react";
 import SearchableSelect from "@/components/common/SearchableSelect";
@@ -13,31 +15,28 @@ export default function OrgChartPage() {
   const [selectedEmpId, setSelectedEmpId] = useState("");
   const [selectedEmp, setSelectedEmp] = useState(null);
 
+  const activeCompanyId = useSelector(selectActiveCompanyId) || "";
+
   useEffect(() => {
     fetchChartData();
-  }, [viewMode, selectedEmpId]);
+  }, [viewMode, selectedEmpId, activeCompanyId]);
 
   const fetchChartData = async () => {
     try {
       setIsLoading(true);
-      const companyId = localStorage.getItem("activeCompanyId");
-      if (!companyId) {
+      if (!activeCompanyId) {
         setIsLoading(false);
         return;
       }
 
       let url = "/employees/org-chart/full";
       if (viewMode === "my-team") {
-         // Assuming the current user's employeeId isn't easily available, let's just use full for now
-         // Or if they select a user, we can show their team
          if (selectedEmp) url = `/employees/${selectedEmp.value}/all-subordinates`;
          else url = "/employees/org-chart/full";
       }
       else if (viewMode === "chain" && selectedEmp) url = `/employees/${selectedEmp.value}/reporting-chain`;
 
-      // The chain returns an array from bottom to top. We need to convert it into a tree.
-      // But let's assume the endpoint handles standard tree response for full & my-team.
-      const res = await axiosClient.get(url, { headers: { "x-company-id": companyId } });
+      const res = await axiosClient.get(url);
       
       if (viewMode === "chain") {
         // Build nested tree from array [employee, manager, director...]

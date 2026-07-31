@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
 import { selectUserType } from "@/store/slices/authSlice";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import { ChevronLeft, MessageSquare, Check, AlertCircle } from "lucide-react";
 import { useEnquiries } from "@/modules/enquiries/hooks/useEnquiries";
 import { enquiriesApi } from "@/modules/enquiries/services/enquiriesApi";
@@ -18,40 +18,12 @@ export default function CompletedEnquiriesListPage() {
   const dispatch = useDispatch();
 
   const userType = useSelector(selectUserType);
-  const allCompanies = useSelector(selectCompanies) || [];
-  const [selectedCompanyId, setSelectedCompanyId] = useState("");
+  const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
   const [search, setSearch] = useState("");
   const [completedTab, setCompletedTab] = useState("CONFIRMED,COMPLETED");
 
-  const completedQuery = useEnquiries(selectedCompanyId, completedTab, search);
-
-  const [toast, setToast] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [followUpPartner, setFollowUpPartner] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("activeCompanyId");
-      if (stored) setSelectedCompanyId(stored);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (userType === "super_admin") {
-      dispatch(fetchCompanies());
-    }
-  }, [dispatch, userType]);
-
-  const handleCompanyChange = (e) => {
-    const val = e.target.value;
-    setSelectedCompanyId(val);
-    if (typeof window !== "undefined") {
-      if (val) localStorage.setItem("activeCompanyId", val);
-      else localStorage.removeItem("activeCompanyId");
-    }
-  };
+  const completedQuery = useEnquiries(activeCompanyId, completedTab, search);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -114,22 +86,6 @@ export default function CompletedEnquiriesListPage() {
               View confirmed and closed enquiries.
             </p>
           </div>
-        </div>
-        <div className="flex items-center gap-3 self-start sm:self-auto">
-          {userType === "super_admin" && (
-            <select
-              value={selectedCompanyId}
-              onChange={handleCompanyChange}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
-            >
-              <option value="">-- Select Company Context --</option>
-              {allCompanies.map((c, idx) => (
-                <option key={`company-${c.id || idx}-${idx}`} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          )}
         </div>
       </div>
 

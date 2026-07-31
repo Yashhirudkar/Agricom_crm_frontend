@@ -43,15 +43,18 @@ const axiosClient = axios.create({
 axiosClient.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
-      if (!process.env.NEXT_PUBLIC_API_URL) {
-        config.baseURL = `${window.location.protocol}//${window.location.hostname}:5000/api`;
-      }
       const token = localStorage.getItem("accessToken");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
 
-      let activeCompanyId = localStorage.getItem("activeCompanyId");
+      let activeCompanyId = null;
+      if (store) {
+        activeCompanyId = store.getState().companyContext?.activeCompanyId;
+      }
+      if (!activeCompanyId) {
+        activeCompanyId = localStorage.getItem("activeCompanyId");
+      }
 
       if (store) {
         const state = store.getState();

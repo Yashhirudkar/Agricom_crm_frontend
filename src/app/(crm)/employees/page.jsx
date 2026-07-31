@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { selectUserType } from "@/store/slices/authSlice";
-import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import {
   fetchEmployees,
   deleteEmployee,
@@ -50,7 +50,11 @@ function EmployeesContent() {
   const router = useRouter();
 
   const userType = useSelector(selectUserType);
-  const allCompanies = useSelector(selectCompanies) || [];
+  const activeCompanyId = useSelector(selectActiveCompanyId) || "";
+
+
+  const [selectedDeptId, setSelectedDeptId] = useState("");
+  const [departments, setDepartments] = useState([]);
 
   const { data: employees, total, page, totalPages } = useSelector(selectEmployeesData) || { data: [], total: 0, page: 1, totalPages: 0 };
   const isLoading = useSelector(selectEmployeesLoading);
@@ -60,17 +64,6 @@ function EmployeesContent() {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
-
-  const [selectedCompanyId, setSelectedCompanyId] = useState("");
-  const [selectedDeptId, setSelectedDeptId] = useState("");
-  const [departments, setDepartments] = useState([]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("activeCompanyId");
-      if (stored) setSelectedCompanyId(stored);
-    }
-  }, []);
 
   // Main Employee Drawer
   const [selectedEmp, setSelectedEmp] = useState(null);
@@ -94,18 +87,11 @@ function EmployeesContent() {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    if (userType === "super_admin") {
-      dispatch(fetchCompanies());
-    }
-  }, [dispatch, userType]);
-
-  useEffect(() => {
     const loadDepartments = async () => {
-      if (selectedCompanyId) {
+      if (activeCompanyId) {
         try {
           const res = await axiosClient.get("/departments/options", {
             params: { limit: 100 },
-            headers: { "x-company-id": selectedCompanyId }
           });
           setDepartments(res.data?.data || res.data || []);
         } catch (err) {
@@ -116,10 +102,10 @@ function EmployeesContent() {
       }
     };
     loadDepartments();
-  }, [selectedCompanyId]);
+  }, [activeCompanyId]);
 
   useEffect(() => {
-    if (selectedCompanyId) {
+    if (activeCompanyId) {
       dispatch(fetchEmployees({
         page: currentPage,
         limit: itemsPerPage,
@@ -127,25 +113,11 @@ function EmployeesContent() {
         departmentId: selectedDeptId || undefined
       }));
     }
-  }, [dispatch, currentPage, debouncedSearch, selectedCompanyId, selectedDeptId]);
-
-  const handleCompanyChange = (e) => {
-    const val = e.target.value;
-    setSelectedCompanyId(val);
-    setSelectedDeptId("");
-    if (val) {
-      localStorage.setItem("activeCompanyId", val);
-    } else {
-      localStorage.removeItem("activeCompanyId");
-    }
-    setCurrentPage(1);
-  };
+  }, [dispatch, currentPage, debouncedSearch, activeCompanyId, selectedDeptId]);
 
   const loadFullEmployeeDetails = async (empId) => {
     try {
-      const res = await axiosClient.get(`/employees/${empId}`, {
-        headers: { "x-company-id": selectedCompanyId }
-      });
+      const res = await axiosClient.get(`/employees/${empId}`);
       setEmpDetails(res.data);
     } catch (err) {
       console.error(err);
@@ -162,9 +134,7 @@ function EmployeesContent() {
 
   const loadDocuments = async (empId) => {
     try {
-      const res = await axiosClient.get(`/employees/${empId}/documents`, {
-        headers: { "x-company-id": selectedCompanyId }
-      });
+      const res = await axiosClient.get(`/employees/${empId}/documents`);
       setEmpDocuments(res.data);
     } catch (err) {
       showToast("Failed to load documents", "error");
@@ -224,24 +194,9 @@ function EmployeesContent() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {userType === "super_admin" && (
-            <select
-              value={selectedCompanyId}
-              onChange={handleCompanyChange}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
-            >
-              <option value="">-- Select Company Context --</option>
-              {allCompanies.map((c, idx) => (
-                <option key={`company-${c.id || idx}-${idx}`} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          )}
           <HasPermission permission="employees:create">
             <button
               onClick={() => router.push("/employees/create")}
-              disabled={!selectedCompanyId}
               className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors self-start sm:self-auto"
             >
               <Plus className="h-4 w-4" /> Add Employee
@@ -250,17 +205,6 @@ function EmployeesContent() {
         </div>
       </div>
 
-      {!selectedCompanyId ? (
-        <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-12 text-center">
-          <Users className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-          <h2 className="text-sm font-bold text-gray-700 mb-1">Company Context Required</h2>
-          <p className="text-xs text-gray-500">
-            {userType === "super_admin" 
-              ? "Please select a company from the dropdown above to manage its employees."
-              : "You do not have an active company selected. Please select or create a company first."}
-          </p>
-        </div>
-      ) : (
       <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
         <div className="p-4 border-b border-gray-50 bg-gray-50/20 flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-stretch sm:items-center">
@@ -424,7 +368,6 @@ function EmployeesContent() {
           </div>
         )}
       </div>
-      )}
 
       <Drawer
         isOpen={drawerOpen}
@@ -477,7 +420,7 @@ function EmployeesContent() {
       >
         <EmployeeDocumentsTab 
           selectedEmp={selectedEmp}
-          selectedCompanyId={selectedCompanyId}
+          selectedCompanyId={activeCompanyId}
           empDocuments={empDocuments}
           loadDocuments={loadDocuments}
         />

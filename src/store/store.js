@@ -5,6 +5,7 @@ import companiesReducer from "./slices/companiesSlice";
 import usersReducer from "./slices/usersSlice";
 import clientsReducer from "./slices/clientsSlice";
 import notificationsReducer from "./slices/notificationsSlice";
+import companyContextReducer from "./slices/companyContextSlice";
 
 // Entity reducers
 import departmentsReducer from "./entities/departmentsSlice";
@@ -58,6 +59,7 @@ const entitiesReducer = combineReducers({
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    companyContext: companyContextReducer,
     roles: rolesReducer,
     companies: companiesReducer,
     users: usersReducer,

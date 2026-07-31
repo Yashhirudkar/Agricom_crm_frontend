@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { updateEmployee } from "@/store/entities/employeesSlice";
 import { fetchUsers, selectUsers } from "@/store/slices/usersSlice";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import { ChevronLeft, Save, Shield, Check, AlertCircle } from "lucide-react";
 import axiosClient from "@/lib/axios";
 import SearchableSelect from "@/components/common/SearchableSelect";
@@ -16,6 +17,7 @@ export default function EditEmployeePage() {
   const empId = params.id;
 
   const users = useSelector(selectUsers) || [];
+  const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
   const [selectedDept, setSelectedDept] = useState(null);
   const [selectedDesig, setSelectedDesig] = useState(null);
@@ -58,14 +60,13 @@ export default function EditEmployeePage() {
   useEffect(() => {
     const fetchFormData = async () => {
       try {
-        const companyId = localStorage.getItem("activeCompanyId");
-        if (!companyId) return;
+        if (!activeCompanyId) return;
 
         dispatch(fetchUsers());
 
         const [rolesRes, empRes] = await Promise.all([
-          axiosClient.get("/GetRoles", { headers: { "x-company-id": companyId } }).catch(() => ({ data: [] })),
-          axiosClient.get(`/employees/${empId}`, { headers: { "x-company-id": companyId } })
+          axiosClient.get("/GetRoles").catch(() => ({ data: [] })),
+          axiosClient.get(`/employees/${empId}`)
         ]);
 
         setRoles(rolesRes.data?.data || (Array.isArray(rolesRes.data) ? rolesRes.data : []));
@@ -109,7 +110,7 @@ export default function EditEmployeePage() {
       }
     };
     if (empId) fetchFormData();
-  }, [dispatch, empId]);
+  }, [dispatch, empId, activeCompanyId]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

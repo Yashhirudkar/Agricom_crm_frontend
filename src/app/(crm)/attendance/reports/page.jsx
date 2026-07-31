@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchMonthlyReport, selectMonthlyReport, selectAttendanceLoading } from "@/store/entities/attendanceSlice";
 import { Calendar as CalendarIcon, Download, ChevronLeft, ChevronRight, LayoutList } from "lucide-react";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 
 import ReportStats from "./components/ReportStats";
 import CalendarView from "./components/CalendarView";
@@ -13,6 +14,7 @@ export default function ReportsPage() {
   const dispatch = useDispatch();
   const reportData = useSelector(selectMonthlyReport) || {};
   const isLoading = useSelector(selectAttendanceLoading);
+  const activeCompanyId = useSelector(selectActiveCompanyId);
 
   // States
   const [referenceDate, setReferenceDate] = useState(new Date()); // Current tracking date
@@ -25,7 +27,7 @@ export default function ReportsPage() {
       month: referenceDate.getMonth() + 1,
       year: referenceDate.getFullYear()
     }));
-  }, [dispatch, referenceDate.getMonth(), referenceDate.getFullYear()]);
+  }, [dispatch, activeCompanyId, referenceDate.getMonth(), referenceDate.getFullYear()]);
 
   // Generate Dates Array based on 'week' or 'month'
   const getDaysInView = () => {
@@ -60,6 +62,32 @@ export default function ReportsPage() {
   const currentReport = reportArray.length > 0 ? reportArray[0] : null;
   const stats = currentReport?.summary || { present: 0, absent: 0, late: 0, halfDay: 0, overtime: 0 };
   const records = currentReport?.days || [];
+
+  const handleExport = () => {
+    if (records.length === 0) return;
+    const headers = ["Date", "Status", "Live State", "Check In", "Check Out", "Work Hours", "Overtime", "Late Minutes"];
+    const rows = records.map(r => [
+      r.date || "",
+      r.status || "",
+      r.attendanceState || "",
+      r.checkIn ? new Date(r.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
+      r.checkOut ? new Date(r.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
+      r.workHours || 0,
+      r.overtime || 0,
+      r.lateMinutes || 0
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `attendance_summary_${referenceDate.getFullYear()}_${referenceDate.getMonth() + 1}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="p-4 md:p-8 max-w-[1400px] mx-auto space-y-8 bg-gray-50 min-h-screen">
@@ -100,7 +128,11 @@ export default function ReportsPage() {
             className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm bg-white"
           />
 
-          <button className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 shadow-md transition-all">
+          <button
+            onClick={handleExport}
+            disabled={records.length === 0}
+            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <Download className="w-4 h-4" /> Export
           </button>
         </div>

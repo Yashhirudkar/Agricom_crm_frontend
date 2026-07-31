@@ -25,8 +25,8 @@ import PartnerRolesTable from "@/components/masters/partner-roles/PartnerRolesTa
 import PartnerRolesFilters from "@/components/masters/partner-roles/PartnerRolesFilters";
 import PartnerRoleModal from "@/components/masters/partner-roles/PartnerRoleModal";
 import PermanentDeleteModal from "@/components/common/PermanentDeleteModal";
-import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
 import { selectUserType } from "@/store/slices/authSlice";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 
 function PartnerRolesContent() {
   const dispatch = useDispatch();
@@ -38,8 +38,7 @@ function PartnerRolesContent() {
   const totalPages = useSelector(selectPartnerRolesTotalPages);
 
   const userType = useSelector(selectUserType);
-  const allCompanies = useSelector(selectCompanies) || [];
-  const [selectedCompanyId, setSelectedCompanyId] = useState("");
+  const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = "success") => {
@@ -64,34 +63,10 @@ function PartnerRolesContent() {
   const itemsPerPage = 8;
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("activeCompanyId");
-      if (stored) setSelectedCompanyId(stored);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (userType === "super_admin") {
-      dispatch(fetchCompanies());
-    }
-  }, [dispatch, userType]);
-
-  useEffect(() => {
-    if (selectedCompanyId) {
+    if (activeCompanyId) {
       dispatch(fetchPartnerRoles({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
     }
-  }, [dispatch, currentPage, search, isActiveFilter, selectedCompanyId]);
-
-  const handleCompanyChange = (e) => {
-    const val = e.target.value;
-    setSelectedCompanyId(val);
-    if (val) {
-      localStorage.setItem("activeCompanyId", val);
-    } else {
-      localStorage.removeItem("activeCompanyId");
-    }
-    setCurrentPage(1);
-  };
+  }, [dispatch, currentPage, search, isActiveFilter, activeCompanyId]);
 
   const openCreateModal = () => {
     setForm(initialFormState);
@@ -227,25 +202,9 @@ function PartnerRolesContent() {
         </div>
         
         <div className="flex items-center gap-3 self-start sm:self-auto">
-          {userType === "super_admin" && (
-            <select
-              value={selectedCompanyId}
-              onChange={handleCompanyChange}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-white"
-            >
-              <option value="">-- Select Company Context --</option>
-              {allCompanies.map((c, idx) => (
-                <option key={`company-${c.id || idx}-${idx}`} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          )}
-
           <HasPermission permission="partnerrole:create">
             <button
               onClick={openCreateModal}
-              disabled={!selectedCompanyId}
               className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="h-4 w-4" /> Create Role
@@ -254,15 +213,6 @@ function PartnerRolesContent() {
         </div>
       </div>
 
-      {!selectedCompanyId ? (
-        <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-12 text-center shadow-xs">
-          <Building2 className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-          <h2 className="text-sm font-bold text-gray-700 mb-1">Company Context Required</h2>
-          <p className="text-xs text-gray-500">
-            Please select a company to continue.
-          </p>
-        </div>
-      ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
           <PartnerRolesFilters
             search={search}
@@ -283,7 +233,6 @@ function PartnerRolesContent() {
 
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
-      )}
 
       <PartnerRoleModal
         isOpen={isModalOpen}

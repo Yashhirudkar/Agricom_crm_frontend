@@ -86,6 +86,10 @@ export const disconnectSocket = () => {
     socket.disconnect();
     socket = null;
   }
+  // Clear all registered event listeners to prevent memory leaks
+  for (const key of Object.keys(listeners)) {
+    delete listeners[key];
+  }
 };
 
 export const getSocketInstance = () => socket;

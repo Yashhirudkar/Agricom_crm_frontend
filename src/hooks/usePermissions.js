@@ -69,14 +69,14 @@ export function usePermissions() {
   const normalizedUserPermissions = useMemo(() => {
     return permissions?.map(p => normalizePermission(p)) || [];
   }, [permissions]);
-  
+
   const checkIsAdmin = () => {
     // 1. Check global userType
     if (userType) {
       const type = String(userType).toLowerCase().trim();
       if (type === "super_admin" || type === "client_admin" || type === "admin") return true;
     }
-    
+
     // 2. Check workspace-level roles
     if (user?.workspaces && Array.isArray(user.workspaces)) {
       return user.workspaces.some(ws => {
