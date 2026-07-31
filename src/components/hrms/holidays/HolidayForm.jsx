@@ -41,7 +41,8 @@ export default function HolidayForm({ holiday, onSave, onCancel }) {
     const fetchCompanies = async () => {
       try {
         const res = await axiosClient.get("/GetCompanies");
-        setCompanies(res.data || []);
+        const companyList = res.data?.data || (Array.isArray(res.data) ? res.data : []);
+        setCompanies(companyList);
       } catch (err) {
         console.error("Error fetching companies", err);
       }

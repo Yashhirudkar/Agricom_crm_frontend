@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUser, fetchCurrentUser } from "@/store/slices/authSlice";
 import { Header } from "./Header";
@@ -13,12 +13,14 @@ import { fetchNotifications, addSocketNotification } from "@/store/slices/notifi
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
 import axiosClient from "@/lib/axios";
+import { TASK_QUERY_KEYS } from "@/modules/tasks/constants/query-keys";
 import {
   selectActiveCompanyId,
   selectCompanyContextLoading,
   switchCompanyContext,
   setActiveCompany
 } from "@/store/slices/companyContextSlice";
+import { resolveNotificationUrl } from "@/lib/notificationRouter";
 
 const PUBLIC_ROUTES = ["/login", "/accept-invitation", "/select-company"];
 
@@ -33,6 +35,12 @@ export default function AppShellClient({ children }) {
   const isSwitching = useSelector(selectCompanyContextLoading);
   const companies = useSelector(selectCompanies) || [];
   const queryClient = useQueryClient();
+
+
+  // Stable ref so the socket notification handler always uses the latest router
+  // without causing the socket effect to re-run on every navigation.
+  const routerRef = useRef(router);
+  useEffect(() => { routerRef.current = router; }, [router]);
 
   // 1. Fetch companies list if Super Admin
   useEffect(() => {
@@ -114,32 +122,51 @@ export default function AppShellClient({ children }) {
       }
     }
 
-    // Register notification socket listener
-    socket.off("notification");
-    socket.on("notification", (payload) => {
-      console.log("[AppShell] Socket notification event received:", payload);
+    // Register notification socket listener.
+    // IMPORTANT: Always pass the handler reference to socket.off() — never call
+    // socket.off("notification") with no callback, because that wipes ALL listeners
+    // for the event (including those registered by individual pages like leave-approvals).
+    const handleSocketNotification = (payload) => {
+      // Step 1: Push into Redux — Header bell re-renders instantly
       dispatch(addSocketNotification(payload));
 
-      const isDifferentPage = window.location.pathname !== payload.payload?.url;
+      // Step 2: Entity-type-specific cache invalidation
+      // Each entityType maps to the correct cache layer so the relevant
+      // page updates in real-time without a browser refresh.
+      const entityType = (payload?.entityType || '').toUpperCase();
+      if (entityType === 'TASK') {
+        // Invalidate the tasks infinite-query list so TanStack Query refetches
+        // in the background. All recipients on the Tasks page will see the
+        // new / updated task appear immediately.
+        queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
+      }
+
+      // Step 3: Resolve canonical route
+      const targetUrl = resolveNotificationUrl(payload);
+
+      // Step 4: Desktop notification (only when page is backgrounded or on a different route)
+      const isDifferentPage = window.location.pathname !== targetUrl;
       const isBackgrounded = document.visibilityState === "hidden";
-      console.log("[AppShell] Popup check: isBackgrounded =", isBackgrounded, ", isDifferentPage =", isDifferentPage);
 
       if (isBackgrounded || isDifferentPage) {
         if (typeof window !== "undefined" && "Notification" in window) {
           if (Notification.permission === "granted") {
+            const bodyMessage = payload.payload?.message || (payload.payload?.taskName ? `${payload.payload.taskName} - ${payload.payload.status || ""}` : "");
             const notif = new Notification(payload.title, {
-              body: `${payload.payload?.taskName || ""} - ${payload.payload?.status || ""}`,
+              body: bodyMessage,
               icon: "/agri_logo.png",
             });
+            // Use resolveNotificationUrl — single source of truth for all routing
             notif.onclick = (e) => {
               e.preventDefault();
               window.focus();
-              router.push("/tasks");
+              routerRef.current.push(targetUrl);
             };
           }
         }
       }
-    });
+    };
+    socket.on("notification", handleSocketNotification);
 
     const events = [
       "attendance-checkin",
@@ -161,10 +188,16 @@ export default function AppShellClient({ children }) {
 
     return () => {
       events.forEach(event => socket.off(event));
-      socket.off("notification");
+      // Pass the specific handler ref so only AppShell's listener is removed;
+      // page-level listeners (leave-approvals, etc.) remain intact.
+      socket.off("notification", handleSocketNotification);
       disconnectSocket();
     };
-  }, [user, isPublic, dispatch, activeCompanyId, router]);
+  // NOTE: `router` is intentionally excluded from deps — it changes on every
+  // navigation and would cause the socket to disconnect/reconnect on every page
+  // change, losing in-flight events. routerRef keeps the handler up-to-date.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isPublic, dispatch, activeCompanyId]);
 
   if (isPublic) {
     return <>{children}</>;

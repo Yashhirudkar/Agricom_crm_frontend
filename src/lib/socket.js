@@ -13,6 +13,12 @@ export const subscribeToSocketEvent = (event, callback) => {
 
 export const unsubscribeFromSocketEvent = (event, callback) => {
   if (!listeners[event]) return;
+  // If no specific callback provided, remove ALL listeners for this event
+  // (matches socket.io semantics: socket.off('event') clears all handlers)
+  if (callback === undefined) {
+    delete listeners[event];
+    return;
+  }
   listeners[event] = listeners[event].filter(cb => cb !== callback);
 };
 

@@ -19,6 +19,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
 } from "@/store/slices/notificationsSlice";
+import { createNotificationClickHandler } from "@/lib/notificationRouter";
 
 export function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -58,14 +59,13 @@ export function Header() {
     dispatch(markAllNotificationsRead());
   };
 
-  const handleNotificationClick = async (notif) => {
-    if (!notif.isRead) {
-      dispatch(markNotificationRead(notif.id));
-    }
-    router.push("/tasks");
-    setIsNotificationsOpen(false);
-  };
-
+  // Centralized notification click: markAsRead → navigate (via notificationRouter)
+  const handleNotificationClick = createNotificationClickHandler(
+    dispatch,
+    router,
+    markNotificationRead,
+    () => setIsNotificationsOpen(false),
+  );
 
   // Determine active workspace
   const workspaces = user?.workspaces || [];
@@ -86,6 +86,62 @@ export function Header() {
       dispatch(fetchCompanies());
     }
   }, [user, dispatch, companies.length]);
+
+  const [holidayBanner, setHolidayBanner] = useState(null);
+
+  useEffect(() => {
+    if (!user || !activeCompanyId) return;
+
+    const fetchHolidays = async () => {
+      try {
+        const res = await axiosClient.get("/holidays/upcoming");
+        const upcoming = res.data || [];
+        if (upcoming.length > 0) {
+          const firstHoliday = upcoming[0];
+          const holidayDateStr = firstHoliday.holidayDate;
+          if (!holidayDateStr) return;
+
+          const normalizedDateStr = holidayDateStr.split("T")[0];
+          const todayStr = new Date().toLocaleDateString("en-CA");
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const tomorrowStr = tomorrow.toLocaleDateString("en-CA");
+
+          const isToday = normalizedDateStr === todayStr;
+          const isTomorrow = normalizedDateStr === tomorrowStr;
+
+          if (isToday || isTomorrow) {
+            const dismissedId = localStorage.getItem(`dismissed_holiday_${firstHoliday.id}`);
+            if (dismissedId !== firstHoliday.id.toString()) {
+              setHolidayBanner({
+                id: firstHoliday.id,
+                title: firstHoliday.title,
+                isToday,
+                isTomorrow,
+              });
+            } else {
+              setHolidayBanner(null);
+            }
+          } else {
+            setHolidayBanner(null);
+          }
+        } else {
+          setHolidayBanner(null);
+        }
+      } catch (err) {
+        console.error("Failed to fetch upcoming holidays:", err);
+      }
+    };
+
+    fetchHolidays();
+  }, [user, activeCompanyId]);
+
+  const handleDismissHoliday = () => {
+    if (holidayBanner) {
+      localStorage.setItem(`dismissed_holiday_${holidayBanner.id}`, holidayBanner.id.toString());
+      setHolidayBanner(null);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-200/50 bg-white backdrop-blur-xl transition-all duration-300">
@@ -298,10 +354,11 @@ export function Header() {
                     </div>
                   ) : (
                     notifications.map((notif) => (
-                      <div
+                      <button
                         key={notif.id}
+                        type="button"
                         onClick={() => handleNotificationClick(notif)}
-                        className={`flex items-start px-4 py-3 transition-colors cursor-pointer ${!notif.isRead ? "bg-blue-50/30 hover:bg-blue-50/50" : "hover:bg-gray-50"
+                        className={`w-full text-left flex items-start px-4 py-3 transition-colors cursor-pointer ${!notif.isRead ? "bg-blue-50/30 hover:bg-blue-50/50" : "hover:bg-gray-50"
                           }`}
                       >
                         <div className="flex-shrink-0 mr-3 mt-0.5">
@@ -335,7 +392,7 @@ export function Header() {
                         {!notif.isRead && (
                           <span className="h-2 w-2 rounded-full bg-[#007aff] self-center flex-shrink-0" />
                         )}
-                      </div>
+                      </button>
                     ))
                   )}
                 </div>
@@ -400,6 +457,24 @@ export function Header() {
           </button>
         </div>
       </div>
+      {holidayBanner && (
+        <div className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white px-4 py-2 flex items-center justify-between text-xs font-semibold shadow-inner transition-all duration-300">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">🎉</span>
+            <span>
+              {holidayBanner.isToday
+                ? `Today is a holiday: ${holidayBanner.title}! Office is closed today.`
+                : `Tomorrow is a holiday: ${holidayBanner.title}. Office will remain closed tomorrow.`}
+            </span>
+          </div>
+          <button
+            onClick={handleDismissHoliday}
+            className="text-white/90 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 py-0.5 rounded-lg transition-all cursor-pointer text-[10px]"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
     </header>
   );
 }

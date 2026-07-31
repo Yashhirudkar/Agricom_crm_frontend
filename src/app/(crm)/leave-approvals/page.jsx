@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUser } from "@/store/slices/authSlice";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
@@ -11,6 +12,7 @@ import {
   selectLeaveRequestsData,
   selectLeaveRequestsLoading
 } from "@/store/entities/leaveRequestsSlice";
+import { subscribeToSocketEvent, unsubscribeFromSocketEvent } from "@/lib/socket";
 import Modal from "@/components/modals/Modal";
 import HasPermission from "@/components/rbac/HasPermission";
 import {
@@ -24,6 +26,8 @@ function LeaveApprovalsContent() {
   const dispatch = useDispatch();
   const user = useSelector(selectUser);
   const activeCompanyId = useSelector(selectActiveCompanyId);
+  const searchParams = useSearchParams();
+  const requestId = searchParams.get("requestId");
 
   const { data: allLeaves } = useSelector(selectLeaveRequestsData) || { data: [] };
   const isLoading = useSelector(selectLeaveRequestsLoading);
@@ -35,12 +39,49 @@ function LeaveApprovalsContent() {
   };
 
   const [activeTab, setActiveTab] = useState("PENDING");
+  const [highlightedId, setHighlightedId] = useState(null);
+  const cardRefs = useRef({});
 
   useEffect(() => {
     if (activeCompanyId) {
       dispatch(fetchLeaveRequests({}));
     }
   }, [dispatch, activeCompanyId]);
+
+  // Realtime: refetch when any LEAVE_REQUEST notification arrives on the socket
+  useEffect(() => {
+    const handleNotification = (payload) => {
+      const entityType = (payload?.entityType || '').toUpperCase();
+      if (entityType === 'LEAVE_REQUEST') {
+        dispatch(fetchLeaveRequests({}));
+      }
+    };
+    subscribeToSocketEvent('notification', handleNotification);
+    return () => unsubscribeFromSocketEvent('notification', handleNotification);
+  }, [dispatch]);
+
+  // Deep-link: auto-switch tab and highlight the requested leave card
+  useEffect(() => {
+    if (!requestId || allLeaves.length === 0) return;
+    const id = parseInt(requestId, 10);
+    const leave = allLeaves.find((l) => l.id === id);
+    if (!leave) return;
+
+    // Switch to the correct tab
+    const isPending = leave.status === "PENDING";
+    setActiveTab(isPending ? "PENDING" : "HISTORY");
+
+    // Wait for the tab to render, then scroll and flash
+    setTimeout(() => {
+      const el = cardRefs.current[id];
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      setHighlightedId(id);
+      // Remove highlight after animation
+      setTimeout(() => setHighlightedId(null), 2500);
+    }, 150);
+  }, [requestId, allLeaves]);
 
   const filteredLeaves = allLeaves.filter(l => activeTab === "PENDING" ? l.status === "PENDING" : l.status !== "PENDING");
 
@@ -134,7 +175,14 @@ function LeaveApprovalsContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredLeaves.length > 0 ? (
           filteredLeaves.map((leave, idx) => (
-            <div key={leave.id || idx} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow flex flex-col">
+            <div
+              key={leave.id || idx}
+              ref={(el) => { if (el) cardRefs.current[leave.id] = el; }}
+              className="bg-white border border-gray-100 rounded-2xl p-5 shadow-xs hover:shadow-md transition-shadow flex flex-col"
+              style={highlightedId === leave.id ? {
+                animation: 'notif-highlight 2.5s ease-out forwards',
+              } : {}}
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-blue-50 text-[#007aff] flex items-center justify-center font-bold text-sm">
@@ -167,8 +215,10 @@ function LeaveApprovalsContent() {
                   </div>
                   <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
                     <Calendar className="h-4 w-4 text-gray-400" />
-                    {format(parseISO(leave.fromDate), "MMM dd")} 
-                    {leave.fromDate !== leave.toDate && ` - ${format(parseISO(leave.toDate), "MMM dd")}`}
+                    {leave.fromDate ? format(parseISO(leave.fromDate), "MMM dd") : '—'}
+                    {leave.fromDate !== leave.toDate && leave.toDate
+                      ? ` - ${format(parseISO(leave.toDate), "MMM dd")}`
+                      : ''}
                     <span className="text-gray-400 font-normal">({leave.totalDays} {leave.totalDays === 1 ? 'day' : 'days'})</span>
                   </div>
                   {leave.isHalfDay && <div className="text-[10px] text-purple-500 font-bold mt-1">Half Day</div>}

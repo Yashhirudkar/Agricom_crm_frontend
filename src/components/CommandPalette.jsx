@@ -70,7 +70,7 @@ export default function CommandPalette() {
           companiesPromise = axiosClient
             .get("/GetCompanies")
             .then((res) => {
-              const list = Array.isArray(res.data) ? res.data : [];
+              const list = res.data?.data || (Array.isArray(res.data) ? res.data : []);
               return list.filter((c) => c.name.toLowerCase().includes(searchQuery));
             })
             .catch(() => []);

@@ -115,3 +115,12 @@ table {
   animation: sequential-blink 1.2s infinite ease-in-out;
   animation-delay: 0.6s;
 }
+
+/* ── Notification deep-link highlight flash ─────────────────────────────── */
+/* Applied to records that are auto-scrolled-to via a notification deep-link. */
+/* Usage: style={{ animation: 'notif-highlight 2.5s ease-out forwards' }}    */
+@keyframes notif-highlight {
+  0%   { background-color: #fef9c3; box-shadow: 0 0 0 3px #facc15; }
+  40%  { background-color: #fef9c3; box-shadow: 0 0 0 3px #facc15; }
+  100% { background-color: transparent; box-shadow: none; }
+}

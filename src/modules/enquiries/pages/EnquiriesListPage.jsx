@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUserType } from "@/store/slices/authSlice";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
@@ -16,11 +16,17 @@ import PartnerFollowUpDrawer from "@/components/masters/partners/PartnerFollowUp
 export default function EnquiriesListPage() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const searchParams = useSearchParams();
+  const enquiryIdParam = searchParams.get("enquiryId");
 
   const userType = useSelector(selectUserType);
   const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
   const [search, setSearch] = useState("");
+  const [toast, setToast] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [followUpPartner, setFollowUpPartner] = useState(null);
 
   const activeQuery = useEnquiries(activeCompanyId, "NEW,PENDING,WAITING_RESPONSE,IN_PROGRESS", search);
 
@@ -28,6 +34,27 @@ export default function EnquiriesListPage() {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   };
+
+  // Deep-link: auto-open the follow-up drawer for the enquiry from notification
+  useEffect(() => {
+    if (!enquiryIdParam) return;
+    const id = enquiryIdParam;
+    enquiriesApi.getOne(id)
+      .then((enquiry) => {
+        if (!enquiry) return;
+        const pId = enquiry.partner?.id || enquiry.partnerId || 0;
+        const pName = enquiry.partner?.entityName || enquiry.partnerName || "Unknown Partner";
+        const roleName = enquiry.partner?.partnerRole?.name || "";
+        setFollowUpPartner({
+          partner: { id: pId, entityName: pName, partnerRole: { name: roleName } },
+          enquiryId: enquiry.id,
+          partnerId: pId,
+        });
+      })
+      .catch(() => {
+        // silently fail — user is still on the correct page
+      });
+  }, [enquiryIdParam]);
 
   const handleDelete = async () => {
     setIsDeleting(true);

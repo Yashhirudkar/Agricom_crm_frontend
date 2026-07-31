@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUser, fetchCurrentUser } from "@/store/slices/authSlice";
 import { fetchLeaveBalances, selectLeaveBalancesData, selectLeaveBalancesError } from "@/store/entities/leaveBalancesSlice";
@@ -16,6 +17,7 @@ import {
 import { Plus, Calendar as CalendarIcon, Check, AlertCircle, Clock, XCircle, CalendarDays, UserX } from "lucide-react";
 import { startOfMonth, endOfMonth, eachDayOfInterval, getDay, parseISO } from "date-fns";
 import { getFriendlyError } from "@/lib/errorMessages";
+import { subscribeToSocketEvent, unsubscribeFromSocketEvent } from "@/lib/socket";
 
 import LeaveBalanceWidget from "@/components/my-leaves/LeaveBalanceWidget";
 import MyLeavesListTable from "@/components/my-leaves/MyLeavesListTable";
@@ -46,6 +48,11 @@ function MyLeavesContent() {
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+  const [highlightedId, setHighlightedId] = useState(null);
+  const rowRefs = useRef({});
+
+  const searchParams = useSearchParams();
+  const requestId = searchParams.get("requestId");
 
   const isEmployee = user?.employeeId || user?.employee;
 
@@ -76,6 +83,63 @@ function MyLeavesContent() {
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, viewMode]);
+
+  // Realtime: refetch when any LEAVE_REQUEST notification arrives on the socket
+  // (covers leave_approved, leave_rejected, leave_cancelled sent to the employee)
+  useEffect(() => {
+    const handleNotification = (payload) => {
+      const entityType = (payload?.entityType || '').toUpperCase();
+      if (entityType === 'LEAVE_REQUEST') {
+        // Re-fetch current view
+        if (viewMode === 'list') {
+          dispatch(fetchMyLeaves({ page: currentPage, limit: itemsPerPage, status: activeTab }));
+        } else {
+          dispatch(fetchMyLeaves({ limit: 100 }));
+        }
+        // Also refresh leave balances so the balance widget stays accurate
+        if (user) {
+          dispatch(fetchLeaveBalances({
+            employeeId: user.employeeId || user.employee?.id || 'me',
+            year: new Date().getFullYear()
+          }));
+        }
+      }
+    };
+    subscribeToSocketEvent('notification', handleNotification);
+    return () => unsubscribeFromSocketEvent('notification', handleNotification);
+  }, [dispatch, user, viewMode, currentPage, activeTab]);
+
+  // Deep-link: auto-switch tab and highlight the requested leave row
+  useEffect(() => {
+    if (!requestId || myLeaves.length === 0) return;
+    const id = parseInt(requestId, 10);
+    const leave = myLeaves.find((l) => l.id === id);
+
+    if (leave) {
+      // Switch to the correct tab
+      const tabMap = {
+        PENDING: "PENDING",
+        APPROVED: "APPROVED",
+        REJECTED: "REJECTED",
+        CANCELLED: "CANCELLED",
+      };
+      const targetTab = tabMap[leave.status] || "PENDING";
+      setActiveTab(targetTab);
+
+      setTimeout(() => {
+        const el = rowRefs.current[id];
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        setHighlightedId(id);
+        setTimeout(() => setHighlightedId(null), 2500);
+      }, 150);
+    } else {
+      // Not on current page — fetch all to find it, then switch tab
+      // Dispatch a broader fetch without status filter to locate the record
+      dispatch(fetchMyLeaves({ page: 1, limit: 100 }));
+    }
+  }, [requestId, myLeaves, dispatch]);
 
   // Apply Leave Modal
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
@@ -267,6 +331,8 @@ function MyLeavesContent() {
               activeTab={activeTab}
               statusConfig={statusConfig}
               setCancelTarget={setCancelTarget}
+              highlightedId={highlightedId}
+              rowRefs={rowRefs}
             />
             <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
           </>

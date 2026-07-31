@@ -119,7 +119,16 @@ axiosClient.interceptors.response.use(
       return Promise.reject(error);
     }
     const originalRequest = error.config;
-    console.error("[Axios Error]", originalRequest?.url, error.response?.status, error.response?.data);
+
+    const isRefreshable401 =
+      error.response?.status === 401 &&
+      !originalRequest?._retry &&
+      !originalRequest?.url?.includes("/auth/login") &&
+      !originalRequest?.url?.includes("/auth/refresh");
+
+    if (!isRefreshable401) {
+      console.error("[Axios Error]", originalRequest?.url, error.response?.status, error.response?.data);
+    }
 
     if (typeof window !== "undefined") {
       if (error.response?.status === 401 && !originalRequest?._retry && !originalRequest?.url?.includes("/auth/login")) {

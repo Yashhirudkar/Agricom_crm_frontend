@@ -89,7 +89,7 @@ export default function HolidaysPage() {
         </div>
       </div>
 
-        /* Main Grid Layout */
+        {/* Main Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3 bg-white p-5 md:p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
             <HolidayCalendar holidays={holidays} onHolidayClick={handleEdit} />

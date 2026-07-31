@@ -7,6 +7,8 @@ export default function MyLeavesListTable({
   activeTab,
   statusConfig,
   setCancelTarget,
+  highlightedId,
+  rowRefs,
 }) {
   return (
     <div className="overflow-x-auto">
@@ -28,7 +30,11 @@ export default function MyLeavesListTable({
               return (
                 <tr
                   key={leave.id || idx}
+                  ref={(el) => { if (rowRefs && el) rowRefs.current[leave.id] = el; }}
                   className="hover:bg-gray-50/70 transition-colors"
+                  style={highlightedId === leave.id ? {
+                    animation: 'notif-highlight 2.5s ease-out forwards',
+                  } : {}}
                 >
                   <td className="px-6 py-4">
                     <div className="font-bold text-gray-800">
@@ -59,9 +65,20 @@ export default function MyLeavesListTable({
                     </span>
                   </td>
                   <td className="px-6 py-4 text-gray-500">
-                    {leave.approver
-                      ? `${leave.approver.firstName} ${leave.approver.lastName}`
-                      : "-"}
+                    {leave.status === "PENDING" ? (
+                      "-"
+                    ) : (
+                      <div>
+                        <div className="font-semibold text-gray-700">
+                          {leave.approverName || "Former User"}
+                        </div>
+                        {leave.approvedAt && (
+                          <div className="text-[10px] text-gray-400 mt-0.5">
+                            {format(parseISO(leave.approvedAt), "MMM dd, yyyy")}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {leave.remarks && (
                       <div className="text-[10px] text-gray-400 mt-1 italic">
                         "{leave.remarks}"

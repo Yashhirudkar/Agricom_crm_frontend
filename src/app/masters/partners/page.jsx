@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import axiosClient from "@/lib/axios";
 import countriesLib from "i18n-iso-countries";
@@ -75,6 +76,9 @@ function PartnersContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
+  const searchParams = useSearchParams();
+  const partnerIdParam = searchParams.get("partnerId");
+
   // Load partners list
   useEffect(() => {
     if (activeCompanyId) {
@@ -113,6 +117,23 @@ function PartnersContent() {
     const rawNames = countriesLib.getNames("en");
     return Object.values(rawNames).sort((a, b) => a.localeCompare(b));
   }, []);
+
+  // Deep-link: auto-open the follow-up drawer for a partner from notification
+  useEffect(() => {
+    if (!partnerIdParam) return;
+    const id = parseInt(partnerIdParam, 10);
+    if (!id) return;
+    axiosClient.get(`/masters/partners/${id}`)
+      .then((res) => {
+        const partner = res.data?.data ?? res.data;
+        if (!partner) return;
+        setFollowUpPartner(partner);
+        setIsFollowUpDrawerOpen(true);
+      })
+      .catch(() => {
+        // silently fail — user is still on the correct page
+      });
+  }, [partnerIdParam]);
 
 
   const openCreateModal = () => {
