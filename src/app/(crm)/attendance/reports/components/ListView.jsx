@@ -176,6 +176,16 @@ export default function ListView({ daysInView, records }) {
                 {isNonWorking && !record?.checkIn ? "00:00" : totalHoursStr}
               </span>
               <span className="text-[9px] md:text-[10px] text-gray-500">Hrs worked</span>
+              {record?.isConflict && (
+                <span className="mt-1 inline-block text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded px-1 self-end">
+                  Conflict: Yes
+                </span>
+              )}
+              {record?.isIgnored && (
+                <span className="mt-1 inline-block text-[9px] font-bold text-gray-500 bg-gray-50 border border-gray-200 rounded px-1 self-end">
+                  Ignored: Leave
+                </span>
+              )}
             </div>
           </div>
         );

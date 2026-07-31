@@ -122,12 +122,40 @@ export const assignShift = createAsyncThunk("entities/attendance/assignShift", a
   }
 });
 
+export const fetchConflicts = createAsyncThunk("entities/attendance/fetchConflicts", async (_, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.get("/attendance/exceptions/conflicts");
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to fetch conflicts");
+  }
+});
+
+export const startReviewConflict = createAsyncThunk("entities/attendance/startReviewConflict", async (id, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.put(`/attendance/exceptions/conflicts/${id}/review`);
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to start review");
+  }
+});
+
+export const resolveConflict = createAsyncThunk("entities/attendance/resolveConflict", async ({ id, data }, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.post(`/attendance/exceptions/conflicts/${id}/resolve`, data);
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to resolve conflict");
+  }
+});
+
 const attendanceSlice = createSlice({
   name: "attendance",
   initialState: attendanceAdapter.getInitialState({
     myAttendance: [],
     companyAttendance: [],
     corrections: [],
+    conflicts: [],
     history: { data: [], page: 1, totalPages: 1, totalCount: 0 },
     monthlyReport: [],
     isLoading: false,
@@ -351,7 +379,25 @@ const attendanceSlice = createSlice({
       
       .addCase(manualAttendance.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(manualAttendance.fulfilled, (state, action) => { state.isLoading = false; state.successMessage = "Attendance marked successfully"; })
-      .addCase(manualAttendance.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; });
+      .addCase(manualAttendance.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
+      
+      .addCase(fetchConflicts.pending, (state) => { state.isLoading = true; state.error = null; })
+      .addCase(fetchConflicts.fulfilled, (state, action) => { state.isLoading = false; state.conflicts = action.payload; })
+      .addCase(fetchConflicts.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
+
+      .addCase(startReviewConflict.fulfilled, (state, action) => {
+        state.successMessage = "Review started successfully";
+        const idx = state.conflicts.findIndex(c => c.id === action.payload.id);
+        if (idx >= 0) state.conflicts[idx] = action.payload;
+      })
+      .addCase(startReviewConflict.rejected, (state, action) => { state.error = action.payload; })
+
+      .addCase(resolveConflict.fulfilled, (state, action) => {
+        state.successMessage = "Conflict resolved successfully";
+        const idx = state.conflicts.findIndex(c => c.id === action.payload.id);
+        if (idx >= 0) state.conflicts[idx] = action.payload;
+      })
+      .addCase(resolveConflict.rejected, (state, action) => { state.error = action.payload; });
   },
 });
 
@@ -360,6 +406,7 @@ export const { clearAttendanceError, clearAttendanceSuccessMessage, handleSocket
 export const selectMyAttendance = (state) => state.entities.attendance.myAttendance;
 export const selectCompanyAttendance = (state) => state.entities.attendance.companyAttendance;
 export const selectCorrections = (state) => state.entities.attendance.corrections;
+export const selectConflicts = (state) => state.entities.attendance.conflicts;
 export const selectRegularizationHistory = (state) => state.entities.attendance.history;
 export const selectMonthlyReport = (state) => state.entities.attendance.monthlyReport;
 export const selectAttendanceLoading = (state) => state.entities.attendance.isLoading;

@@ -65,7 +65,7 @@ export default function ReportsPage() {
 
   const handleExport = () => {
     if (records.length === 0) return;
-    const headers = ["Date", "Status", "Live State", "Check In", "Check Out", "Work Hours", "Overtime", "Late Minutes"];
+    const headers = ["Date", "Status", "Live State", "Check In", "Check Out", "Work Hours", "Overtime", "Late Minutes", "Conflict"];
     const rows = records.map(r => [
       r.date || "",
       r.status || "",
@@ -74,7 +74,8 @@ export default function ReportsPage() {
       r.checkOut ? new Date(r.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
       r.workHours || 0,
       r.overtime || 0,
-      r.lateMinutes || 0
+      r.lateMinutes || 0,
+      r.isConflict ? "Yes" : "No"
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8,"

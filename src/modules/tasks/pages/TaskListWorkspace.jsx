@@ -8,7 +8,8 @@ import TaskTable from "../components/TaskTable/TaskTable";
 import TaskCreateDrawer from "../components/Workspace/TaskCreateDrawer";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUserType } from "@/store/slices/authSlice";
-import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
+import { selectActiveCompanyId, switchCompanyContext } from "@/store/slices/companyContextSlice";
+import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
 import { CalendarDays } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -20,13 +21,35 @@ export default function TaskListWorkspace() {
   const queryClient = useQueryClient();
   const userType = useSelector(selectUserType);
   const activeCompanyId = useSelector(selectActiveCompanyId) || "";
+  const companies = useSelector(selectCompanies) || [];
+
+  useEffect(() => {
+    if (userType === "super_admin" && companies.length === 0) {
+      dispatch(fetchCompanies());
+    }
+  }, [userType, dispatch, companies.length]);
+
+  const handleCompanyChange = async (e) => {
+    const companyId = e.target.value;
+    if (companyId) {
+      try {
+        await dispatch(switchCompanyContext(companyId)).unwrap();
+        // Invalidate queries to refresh task list
+        queryClient.invalidateQueries(["tasks"]);
+      } catch (err) {
+        console.error("Failed to switch workspace context:", err);
+      }
+    }
+  };
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] w-full overflow-hidden bg-[#f8f9fc]">
       {/* Top Toolbar */}
       <TopToolbar
         userType={userType}
-        activeCompanyId={activeCompanyId}
+        allCompanies={companies}
+        selectedCompanyId={activeCompanyId}
+        handleCompanyChange={handleCompanyChange}
       />
 
       {/* Main Content Area */}
