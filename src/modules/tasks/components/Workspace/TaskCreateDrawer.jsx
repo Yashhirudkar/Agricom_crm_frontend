@@ -625,7 +625,6 @@ export default function TaskCreateDrawer() {
           }
         }
 
-        toast.success('Task updated successfully!');
         reset();
         closeCreateTaskDrawer();
         return; // Exit edit mode execution

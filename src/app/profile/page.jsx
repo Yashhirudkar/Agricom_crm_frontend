@@ -22,9 +22,9 @@ export default function ProfilePage() {
   const [attendance, setAttendance] = useState(null);
   const [completion, setCompletion] = useState(0);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [
         meRes,
         prefRes,
@@ -54,7 +54,7 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("Failed to load profile", error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 

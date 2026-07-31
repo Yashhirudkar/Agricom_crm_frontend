@@ -67,6 +67,13 @@ export function Header() {
     workspaces.find((w) => w.id.toString() === activeCompanyId) ||
     workspaces[0];
 
+  const getAvatarUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    const baseURL = axiosClient.defaults.baseURL?.replace(/\/api$/, "") || "http://localhost:5000";
+    return `${baseURL}${url}`;
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-200/50 bg-white backdrop-blur-xl transition-all duration-300">
       <div className="w-full px-4 h-16 flex items-center justify-between">
@@ -125,7 +132,7 @@ export function Header() {
                   <div className="px-4 py-2 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                     Switch Workspace
                   </div>
-                  <div className="max-h-[220px] overflow-y-auto scrollbar-thin">
+                  <div className="max-h-[220px] overflow-y-auto scrollbar-thin divide-y divide-gray-50">
                     {workspaces.map((w) => {
                       const isActive = w.id === activeWorkspace?.id;
                       return (
@@ -287,11 +294,19 @@ export function Header() {
           >
             <div
               onClick={() => router.push("/profile")}
-              className="bg-gradient-to-tr from-blue-500 to-indigo-400 h-8 w-8 rounded-full cursor-pointer flex items-center justify-center text-white text-xs font-bold shadow-xs"
+              className="bg-gradient-to-tr from-blue-500 to-indigo-400 h-8 w-8 rounded-full cursor-pointer flex items-center justify-center text-white text-xs font-bold shadow-xs overflow-hidden border border-gray-100/50"
             >
-              {(user?.name?.trim()?.slice(0, 2) ||
-                user?.email?.trim()?.slice(0, 2) ||
-                "??").toUpperCase()}
+              {user?.avatarUrl ? (
+                <img
+                  src={getAvatarUrl(user.avatarUrl)}
+                  alt="Avatar"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                (user?.name?.trim()?.slice(0, 2) ||
+                  user?.email?.trim()?.slice(0, 2) ||
+                  "??").toUpperCase()
+              )}
             </div>
             <div className="hidden sm:flex flex-col text-left">
               <span className="text-xs font-bold text-gray-800 leading-tight max-w-[130px] truncate">

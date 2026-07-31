@@ -45,7 +45,7 @@ export default function AccountSettingsCard({ preferences, onUpdate }) {
       await api.patch('/profile/upload-photo', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      onUpdate();
+      onUpdate(true);
     } catch (error) {
       alert(error.response?.data?.message || "Photo upload failed");
     } finally {
@@ -59,23 +59,35 @@ export default function AccountSettingsCard({ preferences, onUpdate }) {
         [key]: !preferences[key],
         updatedAt: preferences.updatedAt,
       });
-      onUpdate();
+      onUpdate(true);
     } catch (error) {
       alert("Failed to update preference");
     }
   };
 
   const Toggle = ({ label, desc, active, onClick }) => (
-    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-      <div>
-        <h4 className="text-sm font-bold text-slate-800">{label}</h4>
-        <p className="text-[11px] font-semibold text-slate-400 mt-0.5">{desc}</p>
+    <div className="flex items-center justify-between p-5 bg-slate-50 hover:bg-slate-100/60 rounded-2xl border border-slate-100/80 transition-all duration-300">
+      <div className="mr-4">
+        <h4 className="text-sm font-black text-slate-800">{label}</h4>
+        <p className="text-[11px] font-bold text-slate-400 mt-1 leading-relaxed">{desc}</p>
       </div>
       <button
         onClick={onClick}
-        className={`w-11 h-6 rounded-full transition-colors relative ${active ? 'bg-emerald-500' : 'bg-slate-300'}`}
+        type="button"
+        style={{ width: '48px', height: '26px' }}
+        className={`rounded-full transition-all duration-300 relative cursor-pointer focus:outline-none focus:ring-4 focus:ring-blue-500/10 ${
+          active ? 'bg-[#007aff] shadow-lg shadow-[#007aff]/20' : 'bg-slate-200 hover:bg-slate-300/80'
+        }`}
       >
-        <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${active ? 'left-6' : 'left-1'}`}></div>
+        <div 
+          style={{
+            width: '18px',
+            height: '18px',
+            top: '4px',
+            left: active ? '26px' : '4px'
+          }}
+          className="bg-white rounded-full absolute shadow-md transition-all duration-300 ease-out"
+        ></div>
       </button>
     </div>
   );
@@ -156,22 +168,10 @@ export default function AccountSettingsCard({ preferences, onUpdate }) {
             <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><Bell className="h-4 w-4 text-slate-400" /> Notifications</h4>
             <div className="space-y-3">
               <Toggle
-                label="Email Notifications"
-                desc="Receive updates via email"
-                active={preferences?.emailNotifications}
-                onClick={() => handlePrefToggle('emailNotifications')}
-              />
-              <Toggle
                 label="Push Notifications"
-                desc="Receive updates on your device"
+                desc="Mute/unmute all notifications (like task updates) on your device"
                 active={preferences?.pushNotifications}
                 onClick={() => handlePrefToggle('pushNotifications')}
-              />
-              <Toggle
-                label="Two-Factor Authentication"
-                desc="Extra security layer"
-                active={preferences?.twoFactorEnabled}
-                onClick={() => handlePrefToggle('twoFactorEnabled')}
               />
             </div>
           </div>

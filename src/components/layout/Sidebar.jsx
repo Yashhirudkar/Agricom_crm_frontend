@@ -32,6 +32,13 @@ export function Sidebar() {
   const user = useSelector(selectUser);
   const userType = useSelector(selectUserType);
 
+  const getAvatarUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    const baseURL = axiosInstance.defaults.baseURL?.replace(/\/api$/, '') || 'http://localhost:5000';
+    return `${baseURL}${url}`;
+  };
+
   const handleLogout = async () => {
     await dispatch(logoutUser());
     router.replace("/login");
@@ -372,9 +379,17 @@ export function Sidebar() {
           <div className="flex items-center gap-3">
             <div
               onClick={() => router.push("/profile")}
-              className="h-9 w-9 rounded-full bg-[#007aff] flex items-center justify-center text-white font-bold text-[13px] flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+              className="h-9 w-9 rounded-full bg-[#007aff] flex items-center justify-center text-white font-bold text-[13px] flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity overflow-hidden border border-gray-200"
             >
-              {initials}
+              {user?.avatarUrl ? (
+                <img
+                  src={getAvatarUrl(user.avatarUrl)}
+                  alt="Avatar"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                initials
+              )}
             </div>
 
             {!isSidebarCollapsed && (

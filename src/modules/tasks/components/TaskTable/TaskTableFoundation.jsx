@@ -34,7 +34,7 @@ const getStickyClassName = (columnId) => {
 };
 
 // Highly optimized memoized row component
-const TaskTableRow = React.memo(({ row, onRowClick, virtualRow, visibleCells, isFocused }) => {
+const TaskTableRow = React.memo(({ row, onRowClick, virtualRow, visibleCells, isFocused, isSelected }) => {
   return (
     <div
       onClick={() => onRowClick && onRowClick(row)}
@@ -79,6 +79,7 @@ const TaskTableRow = React.memo(({ row, onRowClick, virtualRow, visibleCells, is
   return (
     sizesEqual &&
     prevProps.isFocused === nextProps.isFocused &&
+    prevProps.isSelected === nextProps.isSelected &&
     prevProps.virtualRow.start === nextProps.virtualRow.start &&
     prevProps.virtualRow.size === nextProps.virtualRow.size &&
     prevProps.row.original === nextProps.row.original &&
@@ -127,8 +128,8 @@ export function TaskTableFoundation({
   const sentinelRef = useRef(null);
   const [focusedRowIndex, setFocusedRowIndex] = useState(-1);
 
-  // Zustand Scroll Restoration State
-  const { scrollTop, setScrollState } = useTaskStore();
+  // Zustand Scroll Restoration & Selection State
+  const { scrollTop, setScrollState, isSelectAllActive, selectedRowIds } = useTaskStore();
 
   // Column Width Layout v2 Storage state
   const [columnSizing, setColumnSizing] = useState({});
@@ -454,6 +455,9 @@ export function TaskTableFoundation({
 
                   const row = rows[virtualRow.index];
                   const isFocused = virtualRow.index === focusedRowIndex;
+                  const isSelected = isSelectAllActive
+                    ? !selectedRowIds.has(row.original.id)
+                    : selectedRowIds.has(row.original.id);
 
                   return (
                     <TaskTableRow
@@ -463,6 +467,7 @@ export function TaskTableFoundation({
                       virtualRow={virtualRow}
                       visibleCells={row.getVisibleCells()}
                       isFocused={isFocused}
+                      isSelected={isSelected}
                     />
                   );
                 })
