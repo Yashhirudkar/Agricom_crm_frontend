@@ -37,20 +37,17 @@ const triggerListeners = (event, payload) => {
 export const connectSocket = (companyId) => {
   if (typeof window === "undefined") return null;
 
-  const token = localStorage.getItem("accessToken");
-  if (!token) {
-    console.warn("[Socket] Cannot connect: No JWT access token found.");
-    return null;
-  }
-
   if (socket) {
     socket.disconnect();
   }
 
   socket = io(getBackendUrl(), {
-    auth: {
-      token,
-      companyId: companyId ? companyId.toString() : "",
+    auth: (cb) => {
+      const currentToken = localStorage.getItem("accessToken");
+      cb({
+        token: currentToken || "",
+        companyId: companyId ? companyId.toString() : "",
+      });
     },
     transports: ["websocket"],
     autoConnect: true,

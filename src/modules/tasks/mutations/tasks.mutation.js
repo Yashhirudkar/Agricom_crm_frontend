@@ -231,6 +231,7 @@ export const useDeleteTaskMutation = () => {
     },
     onSuccess: () => {
       toast.success("Task deleted permanently");
+      queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
     },
   });
 };

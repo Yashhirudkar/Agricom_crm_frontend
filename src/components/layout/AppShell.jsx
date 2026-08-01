@@ -162,7 +162,8 @@ export default function AppShellClient({ children }) {
         queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
       }
 
-      // Step 4: Show Desktop (OS) Notification
+
+      // Step 5: Show Desktop (OS) Notification
       console.log("[AppShell] Checking window & Notification support:", {
         hasWindow: typeof window !== "undefined",
         hasNotification: typeof window !== "undefined" && "Notification" in window
