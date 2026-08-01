@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { calculateTimePercent, formatDisplayTime, formatDateString } from "../utils";
+import VisualAttendanceTimeline from "@/components/attendance/VisualAttendanceTimeline";
 
 export default function ListView({ daysInView, records }) {
   const [now, setNow] = useState(new Date());
@@ -93,77 +94,35 @@ export default function ListView({ daysInView, records }) {
             </div>
 
             {/* Main Timeline Section */}
-            <div className="flex-1 flex items-center gap-2 md:gap-4 px-2 md:px-4 min-w-[200px] md:min-w-[300px]">
-              <div className="w-14 md:w-16 text-right flex-shrink-0">
-                {hasPunch && <span className="text-[11px] md:text-[13px] font-bold text-gray-800">{checkInTime || "--:--"}</span>}
-              </div>
-
-              <div className="flex-1 relative flex items-center h-6">
-                <div className="absolute inset-x-0 flex items-center justify-between w-full">
-                  <div className="flex gap-[3px]">
-                    <div className="w-[4px] h-[4px] rounded-full bg-gray-200"></div>
-                    <div className="w-[4px] h-[4px] rounded-full bg-gray-200"></div>
-                  </div>
-                  <div className="flex-1 h-[2px] bg-gray-100 mx-2"></div>
-                  <div className="flex gap-[3px]">
-                    <div className="w-[4px] h-[4px] rounded-full bg-gray-200"></div>
-                    <div className="w-[4px] h-[4px] rounded-full bg-gray-200"></div>
-                  </div>
-                </div>
-
-                <div className="absolute inset-x-6 top-0 bottom-0 flex items-center z-10">
-                  {hasPunch ? (
-                    (() => {
-                      const shiftStart = record.shift?.startTime || "09:30";
-                      const shiftEnd = record.shift?.endTime || "18:00";
-
-                      const startPercent = calculateTimePercent(record.checkIn, shiftStart, shiftEnd);
-                      let endPercent = record.checkOut ? calculateTimePercent(record.checkOut, shiftStart, shiftEnd) : 100;
-                      if (!record.checkOut && isToday) endPercent = calculateTimePercent(now, shiftStart, shiftEnd);
-                      const barWidth = Math.max(endPercent - startPercent, 0);
-
-
-                      return (
-                        <div
-                          className="absolute h-[2px] bg-emerald-400 rounded-full"
-                          style={{ left: `${startPercent}%`, width: `${barWidth}%` }}
-                        >
-                          <div className="absolute w-[8px] h-[8px] md:w-[9px] md:h-[9px] bg-emerald-500 rounded-full top-1/2 -translate-y-1/2 -left-1 ring-2 ring-white"></div>
-                          {!record.checkOut && isToday && record.attendanceState === "WORKING" ? (
-                            <div className="absolute top-1/2 -translate-y-1/2 -right-2 flex items-center justify-center">
-
-                              {/* Outer pulse */}
-                              <div className="absolute w-[18px] h-[18px] rounded-full bg-emerald-300 animate-radar"></div>
-
-                              {/* Main dot */}
-                              <div className="w-[8px] h-[8px] md:w-[9px] md:h-[9px] bg-emerald-500 rounded-full ring-2 ring-white shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
-
-                            </div>
-                          ) : record.checkOut ? (
-                            <div className="absolute w-[8px] h-[8px] md:w-[9px] md:h-[9px] bg-rose-400 rounded-full top-1/2 -translate-y-1/2 -right-1 ring-2 ring-white"></div>
-                          ) : null}
-                        </div>
-                      );
-                    })()
-                  ) : isNonWorking && st.label ? (
-                    <div className="w-full flex items-center justify-center relative">
-                      <div className={`absolute w-full h-[2px] ${st.lineColor}`}></div>
-                      <div
-                        className={`relative z-10 px-2 py-0.5 rounded text-[10px] md:text-[11px] font-bold bg-white border ${st.borderColor} ${st.textColor}`}
-                      >
-                        {st.label}
-                      </div>
+            <div className="flex-1 flex items-center gap-2 md:gap-4 px-2 md:px-4 min-w-[220px] md:min-w-[320px]">
+              <div className="w-full">
+                {hasPunch ? (
+                  <VisualAttendanceTimeline
+                    checkIn={record.checkIn}
+                    checkOut={record.checkOut}
+                    logs={record.logs}
+                    isWorking={record.attendanceState === "WORKING" && isToday}
+                    shiftStart={record.shift?.startTime || "09:30"}
+                    shiftEnd={record.shift?.endTime || "18:00"}
+                    breakStart={record.shift?.breakStartTime || "13:00"}
+                    breakEnd={record.shift?.breakEndTime || "13:30"}
+                    showLabels={false}
+                    compact={true}
+                  />
+                ) : isNonWorking && st.label ? (
+                  <div className="w-full flex items-center justify-center relative py-1">
+                    <div className={`absolute w-full h-[2px] ${st.lineColor}`}></div>
+                    <div
+                      className={`relative z-10 px-2 py-0.5 rounded text-[10px] md:text-[11px] font-bold bg-white border ${st.borderColor} ${st.textColor}`}
+                    >
+                      {st.label}
                     </div>
-                  ) : record?.status === "UPCOMING" ? (
-                    <div className="w-full flex items-center justify-center text-[12px] text-gray-400 font-bold">
-                      -
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="w-14 md:w-16 flex-shrink-0">
-                {hasPunch && <span className="text-[11px] md:text-[13px] font-bold text-gray-800">{checkOutTime || "--:--"}</span>}
+                  </div>
+                ) : record?.status === "UPCOMING" ? (
+                  <div className="w-full flex items-center justify-center text-[12px] text-gray-400 font-bold py-1">
+                    -
+                  </div>
+                ) : null}
               </div>
             </div>
 

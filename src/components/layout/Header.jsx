@@ -482,13 +482,16 @@ export function Header() {
       </div>
       {holidayBanner && (
         <div className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white px-4 py-2 flex items-center justify-between text-xs font-semibold shadow-inner transition-all duration-300">
-          <div className="flex items-center gap-2">
-            <span className="text-sm">🎉</span>
-            <span>
-              {holidayBanner.isToday
-                ? `Today is a holiday: ${holidayBanner.title}! Office is closed today.`
-                : `Tomorrow is a holiday: ${holidayBanner.title}. Office will remain closed tomorrow.`}
-            </span>
+          <div className="flex items-center gap-2 flex-1 w-0">
+            <marquee className="flex-1">
+              {[1, 2, 3].map((item) => (
+                <span key={item} className="mr-[50vw]">
+                  {holidayBanner.isToday
+                    ? `Today is a  ${holidayBanner.title}! Office is closed today.`
+                    : `Tomorrow is a  ${holidayBanner.title}. Office will remain closed tomorrow.`}
+                </span>
+              ))}
+            </marquee>
           </div>
           <button
             onClick={handleDismissHoliday}

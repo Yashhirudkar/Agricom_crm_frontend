@@ -1,12 +1,37 @@
 import React from "react";
 import { MapPin } from "lucide-react";
+import VisualAttendanceTimeline from "@/components/attendance/VisualAttendanceTimeline";
 
-export default function TodayTimeline({ activityLogs, getTimelineStyles }) {
+export default function TodayTimeline({ activityLogs, getTimelineStyles, todayRecord }) {
+  const checkIn = todayRecord?.checkInTime || (activityLogs?.find(l => l.actionType === "CHECK_IN")?.timestamp);
+  const checkOut = todayRecord?.checkOutTime;
+  const isWorking = todayRecord?.attendanceState === "WORKING";
+
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-      <h3 className="text-lg font-bold text-gray-900 mb-6">Today's Timeline</h3>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-bold text-gray-900">Today's Timeline</h3>
+      </div>
 
-      <div className="relative pl-4 border-l-2 border-gray-100 ml-4 space-y-8">
+      {/* Visual Timeline Bar with Segmented Work & Break Time */}
+      {checkIn && (
+        <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-100/80">
+          <VisualAttendanceTimeline
+            checkIn={checkIn}
+            checkOut={checkOut}
+            logs={activityLogs}
+            isWorking={isWorking}
+            shiftStart={todayRecord?.shift?.startTime || "09:30"}
+            shiftEnd={todayRecord?.shift?.endTime || "18:00"}
+            breakStart={todayRecord?.shift?.breakStartTime || "13:00"}
+            breakEnd={todayRecord?.shift?.breakEndTime || "13:30"}
+            showLabels={true}
+          />
+        </div>
+      )}
+
+      {/* Activity Logs */}
+      <div className="relative pl-4 border-l-2 border-gray-100 ml-4 space-y-6">
         {activityLogs && activityLogs.length > 0 ? (
           (() => {
             const sortedLogs = [...activityLogs].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());

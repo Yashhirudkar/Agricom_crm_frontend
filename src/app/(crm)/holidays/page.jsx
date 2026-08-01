@@ -52,6 +52,9 @@ export default function HolidaysPage() {
   const handleSave = () => {
     setIsDrawerOpen(false);
     fetchHolidays();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("holidays-updated"));
+    }
   };
 
   const handleDelete = async (id) => {
@@ -60,6 +63,9 @@ export default function HolidaysPage() {
         await deleteHoliday(id);
         setIsDrawerOpen(false);
         fetchHolidays();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("holidays-updated"));
+        }
       } catch (error) {
         console.error("Error deleting holiday:", error);
       }

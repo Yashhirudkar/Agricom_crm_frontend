@@ -66,8 +66,8 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
 
   const [currentTitle, setCurrentTitle] = useState("");
   const [currentView, setCurrentView] = useState("dayGridMonth");
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [monthHolidaysCount, setMonthHolidaysCount] = useState(0);
 
   const events = holidays
     .filter((h) => !(isWeeklyOffHelper(h) && currentView === "dayGridMonth"))
@@ -129,16 +129,17 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
 
     const start = dateInfo.view.currentStart;
     if (start) {
+      setCurrentMonth(start.getMonth());
       setCurrentYear(start.getFullYear());
-
-      // Calculate how many holidays are in this active month
-      const count = holidays.filter((h) => {
-        const d = parseLocalDate(h.holidayDate);
-        return d && d.getMonth() === start.getMonth() && d.getFullYear() === start.getFullYear();
-      }).length;
-      setMonthHolidaysCount(count);
     }
   };
+
+  // Calculate dynamic month holidays count on every render when holidays prop or active month changes
+  const activeMonthHolidaysCount = holidays.filter((h) => {
+    if (isWeeklyOffHelper(h)) return false;
+    const d = parseLocalDate(h.holidayDate);
+    return d && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).length;
 
   // Custom Event Card Rendering
   const renderEventContent = (eventInfo) => {
@@ -292,7 +293,7 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
         <div className="flex items-center gap-3">
           {/* Calendar statistics count */}
           <div className="hidden md:flex items-center gap-1.5 text-xs text-gray-500 bg-slate-50 border border-slate-100 rounded-xl px-3 py-1.5">
-            <span className="font-bold text-slate-800">{monthHolidaysCount}</span>
+            <span className="font-bold text-slate-800">{activeMonthHolidaysCount}</span>
             <span>holidays this month</span>
           </div>
 

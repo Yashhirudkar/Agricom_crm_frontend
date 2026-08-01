@@ -345,6 +345,7 @@ export default function MyAttendancePage() {
           <TodayTimeline
             activityLogs={activityLogs}
             getTimelineStyles={getTimelineStyles}
+            todayRecord={todayRecord}
           />
         </div>
       </div>

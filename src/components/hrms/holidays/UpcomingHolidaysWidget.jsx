@@ -141,6 +141,19 @@ export default function UpcomingHolidaysWidget() {
       }
     };
     fetchUpcoming();
+
+    const handleUpdate = () => {
+      fetchUpcoming();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("holidays-updated", handleUpdate);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("holidays-updated", handleUpdate);
+      }
+    };
   }, []);
 
   return (
