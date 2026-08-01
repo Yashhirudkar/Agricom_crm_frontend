@@ -803,8 +803,7 @@ export default function AttendanceDashboardPage() {
                           !(
                             userType === "super_admin" ||
                             userType === "client_admin" ||
-                            hasPermission("attendance_override:update") ||
-                            hasPermission("attendance_regularization_override:update")
+                            hasPermission("attendance_regularization:override")
                           )
                         }
                         className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded shadow-sm transition-all cursor-pointer font-sans"
@@ -881,8 +880,7 @@ export default function AttendanceDashboardPage() {
                             !(
                               userType === "super_admin" ||
                               userType === "client_admin" ||
-                              hasPermission("attendance_override:update") ||
-                              hasPermission("attendance_regularization_override:update")
+                              hasPermission("attendance_regularization:override")
                             )
                           }
                           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg shadow-sm transition-all cursor-pointer font-sans"
@@ -895,8 +893,7 @@ export default function AttendanceDashboardPage() {
                   {!(
                     userType === "super_admin" ||
                     userType === "client_admin" ||
-                    hasPermission("attendance_override:update") ||
-                    hasPermission("attendance_regularization_override:update")
+                    hasPermission("attendance_regularization:override")
                   ) && (
                     <div className="text-[11px] text-rose-500 font-semibold italic text-center mt-2">
                       Read-only access: you do not possess override/resolution permissions.

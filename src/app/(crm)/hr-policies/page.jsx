@@ -50,6 +50,7 @@ function HrPoliciesContent() {
     minFullDayHours: 8,
     defaultShiftStartTime: "09:00",
     defaultShiftEndTime: "18:00",
+    defaultBreakMinutes: 30,
     lateMarkGraceMinutes: 15,
     allowAttendanceCorrection: true
   });
@@ -64,6 +65,7 @@ function HrPoliciesContent() {
         minFullDayHours: currentPolicy.minHoursForPresent ?? 8,
         defaultShiftStartTime: currentPolicy.defaultShiftStartTime || "09:00",
         defaultShiftEndTime: currentPolicy.defaultShiftEndTime || "18:00",
+        defaultBreakMinutes: currentPolicy.defaultBreakMinutes ?? 30,
         lateMarkGraceMinutes: currentPolicy.lateComingGraceMinutes ?? 15,
         allowAttendanceCorrection: currentPolicy.allowAttendanceCorrection ?? true
       });
@@ -77,6 +79,7 @@ function HrPoliciesContent() {
         minFullDayHours: 8,
         defaultShiftStartTime: "09:00",
         defaultShiftEndTime: "18:00",
+        defaultBreakMinutes: 30,
         lateMarkGraceMinutes: 15,
         allowAttendanceCorrection: true
       });
@@ -97,6 +100,7 @@ function HrPoliciesContent() {
         retirementAge: Number(form.retirementAge),
         defaultShiftStartTime: form.defaultShiftStartTime,
         defaultShiftEndTime: form.defaultShiftEndTime,
+        defaultBreakMinutes: Number(form.defaultBreakMinutes),
         probationPeriodDays: Number(form.probationMonths) * 30,
         defaultNoticePeriodDays: Number(form.noticePeriodDays),
         minHoursForHalfDay: Number(form.minHalfDayHours),
@@ -228,6 +232,16 @@ function HrPoliciesContent() {
                   disabled={!canUpdate}
                   value={form.defaultShiftEndTime}
                   onChange={e => setForm({ ...form, defaultShiftEndTime: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Default Break (Mins)</label>
+                <input
+                  type="number"
+                  disabled={!canUpdate}
+                  value={form.defaultBreakMinutes}
+                  onChange={e => setForm({ ...form, defaultBreakMinutes: e.target.value })}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
                 />
               </div>

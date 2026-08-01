@@ -10,9 +10,13 @@ import {
 } from "@/store/entities/attendanceSlice";
 import { Check, X, Clock, Calendar, AlertCircle, MessageSquare, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
+import { usePermissions } from "@/hooks/usePermissions";
+import { subscribeToSocketEvent, unsubscribeFromSocketEvent } from "@/lib/socket";
 
 export default function CorrectionsPage() {
   const dispatch = useDispatch();
+  const { hasPermission } = usePermissions();
+  const canOverride = hasPermission("attendance_regularization:override");
   const corrections = useSelector(selectCorrections) || [];
   const history = useSelector(selectRegularizationHistory) || { data: [], page: 1, totalPages: 1, totalCount: 0 };
   const isLoading = useSelector(selectAttendanceLoading);
@@ -38,7 +42,27 @@ export default function CorrectionsPage() {
     } else {
       fetchHistory();
     }
-  }, [activeTab, dispatch, page, limit, statusFilter, startDate, endDate, activeCompanyId]);
+  }, [activeTab, dispatch, page, limit, statusFilter, startDate, endDate, activeCompanyId, canOverride, user?.employeeId]);
+
+  useEffect(() => {
+    const handleRealtimeUpdate = () => {
+      if (activeTab === "PENDING") {
+        dispatch(fetchCorrections());
+      } else {
+        fetchHistory();
+      }
+    };
+
+    subscribeToSocketEvent("regularization-update", handleRealtimeUpdate);
+    subscribeToSocketEvent("attendance-update", handleRealtimeUpdate);
+    subscribeToSocketEvent("notification", handleRealtimeUpdate);
+
+    return () => {
+      unsubscribeFromSocketEvent("regularization-update", handleRealtimeUpdate);
+      unsubscribeFromSocketEvent("attendance-update", handleRealtimeUpdate);
+      unsubscribeFromSocketEvent("notification", handleRealtimeUpdate);
+    };
+  }, [activeTab, dispatch, canOverride, user?.employeeId, page, limit, statusFilter, startDate, endDate]);
 
   const fetchHistory = () => {
     dispatch(fetchRegularizationHistory({
@@ -47,7 +71,8 @@ export default function CorrectionsPage() {
       status: statusFilter,
       search: searchEmployee,
       startDate,
-      endDate
+      endDate,
+      ...(!canOverride && user?.employeeId ? { employeeId: user.employeeId } : {})
     }));
   };
 
@@ -57,19 +82,28 @@ export default function CorrectionsPage() {
     fetchHistory();
   };
 
-  const handleApprove = async (id) => {
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: null, // 'APPROVE' | 'REJECT'
+    id: null,
+  });
+
+  const openConfirmModal = (id, type) => {
     dispatch(clearAttendanceError());
-    if (confirm("Approve this regularization request?")) {
+    setConfirmModal({ isOpen: true, type, id });
+  };
+
+  const handleConfirmAction = async () => {
+    const { type, id } = confirmModal;
+    setConfirmModal({ isOpen: false, type: null, id: null });
+    if (!id || !type) return;
+
+    if (type === "APPROVE") {
       const res = await dispatch(approveCorrection({ id, data: { remarks: remarks[id] || "" } }));
       if (res.meta.requestStatus === "fulfilled") {
         dispatch(fetchCorrections());
       }
-    }
-  };
-
-  const handleReject = async (id) => {
-    dispatch(clearAttendanceError());
-    if (confirm("Reject this regularization request?")) {
+    } else if (type === "REJECT") {
       const res = await dispatch(rejectCorrection({ id, data: { remarks: remarks[id] || "" } }));
       if (res.meta.requestStatus === "fulfilled") {
         dispatch(fetchCorrections());
@@ -81,7 +115,10 @@ export default function CorrectionsPage() {
     setRemarks(prev => ({ ...prev, [id]: val }));
   };
 
-  const pendingCorrections = corrections.filter(c => c.status === 'PENDING');
+  const rawPendingCorrections = corrections.filter(c => c.status === 'PENDING');
+  const pendingCorrections = canOverride
+    ? rawPendingCorrections
+    : rawPendingCorrections.filter(c => user?.employeeId && c.employeeId === user.employeeId);
 
   return (
     <div className="p-4 md:p-8 max-w-[1400px] mx-auto min-h-screen bg-slate-50 font-sans text-slate-800">
@@ -192,34 +229,44 @@ export default function CorrectionsPage() {
 
                   {/* 5. Actions & Remarks */}
                   <div className="col-span-3 flex flex-col gap-2 w-full lg:ml-auto lg:max-w-xs">
-                    <div className="relative">
-                      <MessageSquare className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Add remarks..."
-                        value={remarks[correction.id] || ''}
-                        onChange={(e) => handleRemarksChange(correction.id, e.target.value)}
-                        disabled={isOwnRequest}
-                        className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-all disabled:opacity-50 text-slate-700"
-                      />
-                    </div>
+                    {canOverride ? (
+                      <>
+                        <div className="relative">
+                          <MessageSquare className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                          <input
+                            type="text"
+                            placeholder="Add remarks..."
+                            value={remarks[correction.id] || ''}
+                            onChange={(e) => handleRemarksChange(correction.id, e.target.value)}
+                            disabled={isOwnRequest}
+                            className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded bg-slate-50 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-all disabled:opacity-50 text-slate-700"
+                          />
+                        </div>
 
-                    <div className="flex flex-row gap-2">
-                      <button
-                        onClick={() => handleReject(correction.id)}
-                        disabled={isLoading || isOwnRequest}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <X className="w-3.5 h-3.5" /> Reject
-                      </button>
-                      <button
-                        onClick={() => handleApprove(correction.id)}
-                        disabled={isLoading || isOwnRequest}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded bg-blue-900 text-white font-medium text-sm hover:bg-blue-700 transition-colors shadow-sm disabled:cursor-not-allowed"
-                      >
-                        <Check className="w-3.5 h-3.5" /> Approve
-                      </button>
-                    </div>
+                        <div className="flex flex-row gap-2">
+                          <button
+                            onClick={() => openConfirmModal(correction.id, 'REJECT')}
+                            disabled={isLoading || isOwnRequest}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" /> Reject
+                          </button>
+                          <button
+                            onClick={() => openConfirmModal(correction.id, 'APPROVE')}
+                            disabled={isLoading || isOwnRequest}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded bg-blue-900 text-white font-medium text-sm hover:bg-blue-700 transition-colors shadow-sm disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5" /> Approve
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-right">
+                        <span className="inline-block text-xs text-slate-500 font-medium bg-slate-100 px-3 py-1.5 rounded border border-slate-200">
+                          Pending Approval (Read-only)
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                 </div>
@@ -310,36 +357,38 @@ export default function CorrectionsPage() {
               <tbody className="divide-y divide-slate-100">
                 {isLoading ? (
                   <tr><td colSpan="9" className="text-center py-8">Loading...</td></tr>
-                ) : history?.data?.length > 0 ? (
-                  history.data.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-3 font-medium text-slate-800">
-                        {item.employee?.user?.name || `Employee #${item.employeeId}`}
-                      </td>
-                      <td className="px-4 py-3">{item.metadata?.date || '-'}</td>
-                      <td className="px-4 py-3">{new Date(item.createdAt).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-xs">
-                        {item.metadata?.proposedCheckInTime ? new Date(item.metadata.proposedCheckInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-                        <br/><span className="text-slate-400">to</span><br/>
-                        {item.metadata?.proposedCheckOutTime ? new Date(item.metadata.proposedCheckOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-                      </td>
-                      <td className="px-4 py-3 text-xs">
-                        <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-medium">
-                          {item.type?.replace('_', ' ') || item.requestType?.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${item.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs">
-                        {item.approver?.user?.name || (item.approvedBy ? `Admin #${item.approvedBy}` : '-')}
-                      </td>
-                      <td className="px-4 py-3 text-xs">{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '-'}</td>
-                      <td className="px-4 py-3 text-xs max-w-[150px] truncate" title={item.remarks}>{item.remarks || '-'}</td>
-                    </tr>
-                  ))
+                ) : (history?.data || []).filter(item => canOverride || (user?.employeeId && item.employeeId === user.employeeId)).length > 0 ? (
+                  (history?.data || [])
+                    .filter(item => canOverride || (user?.employeeId && item.employeeId === user.employeeId))
+                    .map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/50">
+                        <td className="px-4 py-3 font-medium text-slate-800">
+                          {item.employee?.user?.name || `Employee #${item.employeeId}`}
+                        </td>
+                        <td className="px-4 py-3">{item.metadata?.date || '-'}</td>
+                        <td className="px-4 py-3">{new Date(item.createdAt).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 text-xs">
+                          {item.metadata?.proposedCheckInTime ? new Date(item.metadata.proposedCheckInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                          <br/><span className="text-slate-400">to</span><br/>
+                          {item.metadata?.proposedCheckOutTime ? new Date(item.metadata.proposedCheckOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-medium">
+                            {item.type?.replace('_', ' ') || item.requestType?.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${item.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {item.approver?.user?.name || (item.approvedBy ? `Admin #${item.approvedBy}` : '-')}
+                        </td>
+                        <td className="px-4 py-3 text-xs">{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '-'}</td>
+                        <td className="px-4 py-3 text-xs max-w-[150px] truncate" title={item.remarks}>{item.remarks || '-'}</td>
+                      </tr>
+                    ))
                 ) : (
                   <tr><td colSpan="9" className="text-center py-8 text-slate-500">No history found matching filters.</td></tr>
                 )}
@@ -371,6 +420,42 @@ export default function CorrectionsPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+      {/* Custom Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3">
+              <div className={`p-2.5 rounded-full shrink-0 ${confirmModal.type === 'APPROVE' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
+                {confirmModal.type === 'APPROVE' ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+              </div>
+              <div>
+                <h3 className="font-semibold text-slate-800 text-sm">
+                  {confirmModal.type === 'APPROVE' ? 'Approve Regularization' : 'Reject Regularization'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Are you sure you want to {confirmModal.type === 'APPROVE' ? 'approve' : 'reject'} this regularization request?
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setConfirmModal({ isOpen: false, type: null, id: null })}
+                className="px-3.5 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAction}
+                className={`px-4 py-1.5 text-xs font-medium text-white rounded-lg transition-colors shadow-sm cursor-pointer ${confirmModal.type === 'APPROVE' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}`}
+              >
+                {confirmModal.type === 'APPROVE' ? 'Yes, Approve' : 'Yes, Reject'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

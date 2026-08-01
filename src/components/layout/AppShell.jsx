@@ -9,7 +9,7 @@ import { Sidebar } from "./Sidebar";
 import CommandPalette from "@/components/CommandPalette";
 import FollowUpHeaderDrawer from "@/modules/follow-ups/components/FollowUpHeaderDrawer";
 import { connectSocket, disconnectSocket } from "@/lib/socket";
-import { handleSocketBatchUpdate } from "@/store/entities/attendanceSlice";
+import { handleSocketBatchUpdate, fetchCorrections } from "@/store/entities/attendanceSlice";
 import { fetchNotifications, addSocketNotification } from "@/store/slices/notificationsSlice";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
@@ -160,6 +160,11 @@ export default function AppShellClient({ children }) {
       console.log("[AppShell] Entity Type for invalidation:", entityType);
       if (entityType === 'TASK' || entityType.includes('TASK')) {
         queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
+      } else if (entityType.includes('LEAVE')) {
+        queryClient.invalidateQueries({ queryKey: ['leave-requests'] });
+        queryClient.invalidateQueries({ queryKey: ['leaves'] });
+      } else if (entityType.includes('ATTENDANCE')) {
+        queryClient.invalidateQueries({ queryKey: ['attendance'] });
       }
 
 
@@ -226,6 +231,7 @@ export default function AppShellClient({ children }) {
       "attendance-checkout",
       "attendance-update",
       "attendance-batch-update",
+      "regularization-update",
     ];
 
     events.forEach(event => {
@@ -233,8 +239,12 @@ export default function AppShellClient({ children }) {
       socket.on(event, (payload) => {
         if (event === "attendance-batch-update") {
           dispatch(handleSocketBatchUpdate(payload));
-        } else {
+        } else if (payload && typeof payload === 'object' && payload.id) {
           dispatch(handleSocketBatchUpdate([payload]));
+        }
+
+        if (event === "regularization-update" || event === "attendance-update") {
+          dispatch(fetchCorrections());
         }
       });
     });

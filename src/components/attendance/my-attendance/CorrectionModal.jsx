@@ -1,15 +1,17 @@
 import React from "react";
 import { AlertCircle, X } from "lucide-react";
 
-const parse24hTime = (timeStr) => {
-  if (!timeStr) return { hour: "", minute: "", period: "" };
+const parse24hTime = (timeStr, defaultPeriod = "AM") => {
+  if (!timeStr) return { hour: "", minute: "", period: defaultPeriod };
   const [hStr, mStr] = timeStr.split(":");
   let hour = parseInt(hStr, 10);
   const minute = mStr || "00";
-  let period = "AM";
+  let period = defaultPeriod;
   if (hour >= 12) {
     period = "PM";
     if (hour > 12) hour -= 12;
+  } else {
+    period = "AM";
   }
   if (hour === 0) {
     hour = 12;
@@ -25,14 +27,15 @@ const formatTo24hTime = (hour, minute, period) => {
   return `${String(h).padStart(2, "0")}:${minute}`;
 };
 
-function TimePicker12h({ value, onChange, disabled }) {
-  const { hour, minute, period } = parse24hTime(value);
+function TimePicker12h({ value, onChange, disabled, defaultPeriod = "AM" }) {
+  const { hour, minute, period } = parse24hTime(value, defaultPeriod);
+  const activePeriod = period || defaultPeriod;
 
   const handleHourChange = (newHour) => {
     if (newHour === "") {
       onChange("");
     } else {
-      onChange(formatTo24hTime(newHour, minute || "00", period || "AM"));
+      onChange(formatTo24hTime(newHour, minute || "00", activePeriod));
     }
   };
 
@@ -40,15 +43,7 @@ function TimePicker12h({ value, onChange, disabled }) {
     if (newMinute === "") {
       onChange("");
     } else {
-      onChange(formatTo24hTime(hour || "12", newMinute, period || "AM"));
-    }
-  };
-
-  const handlePeriodChange = (newPeriod) => {
-    if (newPeriod === "") {
-      onChange("");
-    } else {
-      onChange(formatTo24hTime(hour || "12", minute || "00", newPeriod));
+      onChange(formatTo24hTime(hour || "12", newMinute, activePeriod));
     }
   };
 
@@ -89,11 +84,15 @@ function TimePicker12h({ value, onChange, disabled }) {
       {/* AM/PM select */}
       <select
         disabled={disabled}
-        value={period}
-        onChange={(e) => handlePeriodChange(e.target.value)}
+        value={activePeriod}
+        onChange={(e) => {
+          const newP = e.target.value;
+          if (hour || minute) {
+            onChange(formatTo24hTime(hour || "12", minute || "00", newP));
+          }
+        }}
         className="bg-gray-50 border border-gray-200 text-gray-800 text-xs font-semibold rounded-md px-1.5 py-1 cursor-pointer outline-none focus:ring-0 ml-1"
       >
-        <option value="">--</option>
         <option value="AM">AM</option>
         <option value="PM">PM</option>
       </select>
@@ -155,6 +154,7 @@ export default function CorrectionModal({
               </label>
               <TimePicker12h
                 disabled={isLoading}
+                defaultPeriod="AM"
                 value={correctionForm.expectedCheckIn}
                 onChange={(val) =>
                   setCorrectionForm({
@@ -170,6 +170,7 @@ export default function CorrectionModal({
               </label>
               <TimePicker12h
                 disabled={isLoading}
+                defaultPeriod="PM"
                 value={correctionForm.expectedCheckOut}
                 onChange={(val) =>
                   setCorrectionForm({

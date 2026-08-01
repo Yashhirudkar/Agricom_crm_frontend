@@ -126,3 +126,5 @@ export function usePermissions() {
     hasAllPermissions
   };
 }
+
+export default usePermissions;

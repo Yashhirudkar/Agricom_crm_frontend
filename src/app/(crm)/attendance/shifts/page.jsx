@@ -22,7 +22,7 @@ export default function ShiftsPage() {
     name: "",
     startTime: "09:00",
     endTime: "18:00",
-    breakMinutes: 60,
+    breakMinutes: 30,
     gracePeriodMinutes: 15,
     isNightShift: false,
     weeklyOffDays: [0, 6] // Sun, Sat
@@ -50,7 +50,7 @@ export default function ShiftsPage() {
         name: "",
         startTime: "09:00",
         endTime: "18:00",
-        breakMinutes: 60,
+        breakMinutes: 30,
         gracePeriodMinutes: 15,
         isNightShift: false,
         weeklyOffDays: [0, 6]
