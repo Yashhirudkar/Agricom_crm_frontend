@@ -8,12 +8,13 @@ export const FOLLOW_UP_QUERY_KEYS = {
   header: () => [...FOLLOW_UP_QUERY_KEYS.all, "header"],
 };
 
-export const useFollowUpStatsQuery = () => {
+export const useFollowUpStatsQuery = (enabled = true) => {
   return useQuery({
     queryKey: FOLLOW_UP_QUERY_KEYS.stats(),
     queryFn: () => FollowUpsAPI.getStats(),
     staleTime: 1000 * 30, // 30 seconds
     refetchOnWindowFocus: false,
+    enabled,
   });
 };
 

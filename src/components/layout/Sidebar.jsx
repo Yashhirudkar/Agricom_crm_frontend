@@ -97,33 +97,7 @@ export function Sidebar() {
   const { hasPermission } = usePermissions();
   const hasFollowupPermission = hasPermission("partner:view");
 
-  // We use SidebarDynamicIcon inside JSX, so we don't need to pre-map components.
-  const formattedMenu = menuConfig.map((folder) => {
-    if (folder.name === "Sales" && hasFollowupPermission) {
-      const items = folder.items || [];
-      const hasFollowup = items.some((item) => item.route === "/follow-ups");
-      if (!hasFollowup) {
-        return {
-          ...folder,
-          items: [
-            ...items,
-            {
-              id: "item-follow-ups",
-              title: "Follow-ups",
-              name: "Follow-ups",
-              route: "/follow-ups",
-              href: "/follow-ups",
-              icon: "CalendarDays",
-              iconColor: "#007aff",
-              permission: "partner:view",
-              type: "item",
-            },
-          ],
-        };
-      }
-    }
-    return folder;
-  });
+  const formattedMenu = menuConfig;
 
   // Auto-expand active routes
   useEffect(() => {

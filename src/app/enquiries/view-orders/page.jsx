@@ -22,6 +22,10 @@ export default function CompletedEnquiriesListPage() {
 
   const [search, setSearch] = useState("");
   const [completedTab, setCompletedTab] = useState("CONFIRMED,COMPLETED");
+  const [toast, setToast] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [followUpPartner, setFollowUpPartner] = useState(null);
 
   const completedQuery = useEnquiries(activeCompanyId, completedTab, search);
 

@@ -42,7 +42,7 @@ export const ROUTE_MAPPERS = {
   /** Task assigned / updated / completed → task detail page */
   TASK: (notif) => {
     const id = notif.entityId;
-    return id ? `/tasks/${id}` : '/tasks';
+    return id ? `/tasks?preset=my_tasks&taskId=${id}` : '/tasks?preset=my_tasks';
   },
 
   // ── Holiday Notifications ─────────────────────────────────────────────────

@@ -46,7 +46,7 @@ export default function TaskDetailPage({ taskId }) {
       {/* Top Breadcrumb & Actions Header */}
       <div className="h-14 border-b border-gray-200 dark:border-gray-800 flex items-center px-6 shrink-0 bg-gray-50 dark:bg-gray-900/50">
         <Link 
-          href="/tasks" 
+          href="/tasks?preset=my_tasks" 
           className="flex items-center text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
         >
           <ArrowLeftIcon className="w-4 h-4 mr-2" />

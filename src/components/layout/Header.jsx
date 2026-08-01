@@ -21,12 +21,15 @@ import {
 } from "@/store/slices/notificationsSlice";
 import { createNotificationClickHandler } from "@/lib/notificationRouter";
 import { useFollowUpStatsQuery } from "@/modules/follow-ups/queries/follow-ups.query";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+  const { hasPermission } = usePermissions();
+  const canViewFollowUps = hasPermission("follow_up:read");
 
-  const { data: followUpStats } = useFollowUpStatsQuery();
+  const { data: followUpStats } = useFollowUpStatsQuery(canViewFollowUps);
   const totalFollowUpBadge = (followUpStats?.todayCount || 0) + (followUpStats?.overdueCount || 0);
 
   const dispatch = useDispatch();
@@ -312,18 +315,20 @@ export function Header() {
         {/* Right Side: Notifications Dropdown, Profile, Logout */}
         <div className="flex items-center gap-4">
           {/* Follow-up Center Trigger */}
-          <button
-            onClick={() => window.dispatchEvent(new Event("open-followups"))}
-            className="relative p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-xl transition-all cursor-pointer"
-            title="Follow-up Center"
-          >
-            <CalendarClock className="h-5 w-5" />
-            {totalFollowUpBadge > 0 && (
-              <span className="absolute top-1 right-1 bg-red-500 text-white text-[8px] font-black h-3.5 w-3.5 rounded-full flex items-center justify-center border border-white animate-pulse">
-                {totalFollowUpBadge}
-              </span>
-            )}
-          </button>
+          {canViewFollowUps && (
+            <button
+              onClick={() => window.dispatchEvent(new Event("open-followups"))}
+              className="relative p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-50 rounded-xl transition-all cursor-pointer"
+              title="Follow-up Center"
+            >
+              <CalendarClock className="h-5 w-5" />
+              {totalFollowUpBadge > 0 && (
+                <span className="absolute top-1 right-1 bg-red-500 text-white text-[8px] font-black h-3.5 w-3.5 rounded-full flex items-center justify-center border border-white animate-pulse">
+                  {totalFollowUpBadge}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Notifications */}
           <div

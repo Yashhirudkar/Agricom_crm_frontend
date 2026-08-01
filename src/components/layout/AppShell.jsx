@@ -22,6 +22,7 @@ import {
   setActiveCompany
 } from "@/store/slices/companyContextSlice";
 import { resolveNotificationUrl } from "@/lib/notificationRouter";
+import { toast } from "sonner";
 
 const PUBLIC_ROUTES = ["/login", "/accept-invitation", "/select-company"];
 
@@ -59,6 +60,13 @@ export default function AppShellClient({ children }) {
 
   // 2. Multi-Tenant Auto-Selection and Redux Synchronization
   useEffect(() => {
+    // Register Service Worker for Mobile push notifications
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js")
+        .then((reg) => console.log("[AppShell] Service Worker registered for notifications:", reg.scope))
+        .catch((err) => console.error("[AppShell] Service Worker registration failed:", err));
+    }
+
     if (isPublic || !user) return;
 
     if (user.type === "super_admin") {
@@ -135,43 +143,79 @@ export default function AppShellClient({ children }) {
     // socket.off("notification") with no callback, because that wipes ALL listeners
     // for the event (including those registered by individual pages like leave-approvals).
     const handleSocketNotification = (payload) => {
+      console.log("[AppShell] Received socket notification payload:", payload);
+
       // Step 1: Push into Redux — Header bell re-renders instantly
       dispatch(addSocketNotification(payload));
 
-      // Step 2: Entity-type-specific cache invalidation
-      // Each entityType maps to the correct cache layer so the relevant
-      // page updates in real-time without a browser refresh.
+      const bodyMessage = payload.payload?.message || (payload.payload?.taskName ? `${payload.payload.taskName} - ${payload.payload.status || ""}` : "");
+      console.log("[AppShell] Extracted body message:", bodyMessage);
+
+      // Step 2: Resolve canonical route BEFORE using it in toast
+      const targetUrl = resolveNotificationUrl(payload);
+      console.log("[AppShell] Resolved target URL:", targetUrl);
+
+      // Step 3: Entity-type-specific cache invalidation
       const entityType = (payload?.entityType || '').toUpperCase();
+      console.log("[AppShell] Entity Type for invalidation:", entityType);
       if (entityType === 'TASK') {
-        // Invalidate the tasks infinite-query list so TanStack Query refetches
-        // in the background. All recipients on the Tasks page will see the
-        // new / updated task appear immediately.
         queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
       }
 
-      // Step 3: Resolve canonical route
-      const targetUrl = resolveNotificationUrl(payload);
+      // Step 4: Show Desktop (OS) Notification
+      console.log("[AppShell] Checking window & Notification support:", {
+        hasWindow: typeof window !== "undefined",
+        hasNotification: typeof window !== "undefined" && "Notification" in window
+      });
 
-      // Step 4: Desktop notification (only when page is backgrounded or on a different route)
-      const isDifferentPage = window.location.pathname !== targetUrl;
-      const isBackgrounded = document.visibilityState === "hidden";
+      if (typeof window !== "undefined" && "Notification" in window) {
+        console.log("[AppShell] Current Notification.permission:", Notification.permission);
+        if (Notification.permission === "granted") {
+          console.log("[AppShell] Permission granted. Triggering new Notification...");
+          try {
+            if ("serviceWorker" in navigator) {
+              navigator.serviceWorker.ready.then((registration) => {
+                registration.showNotification(payload.title, {
+                  body: bodyMessage,
+                  icon: '/agri_logo.png',
+                  badge: '/maple-leaf.png',
+                  vibrate: [200, 100, 200],
+                  data: { url: targetUrl }
+                });
+                console.log("[AppShell] Notification sent via Service Worker");
+              }).catch(err => {
+                console.error("[AppShell] SW ready failed, falling back to Notification API", err);
+                fallbackNotification();
+              });
+            } else {
+              fallbackNotification();
+            }
 
-      if (isBackgrounded || isDifferentPage) {
-        if (typeof window !== "undefined" && "Notification" in window) {
-          if (Notification.permission === "granted") {
-            const bodyMessage = payload.payload?.message || (payload.payload?.taskName ? `${payload.payload.taskName} - ${payload.payload.status || ""}` : "");
-            const notif = new Notification(payload.title, {
-              body: bodyMessage,
-              icon: "/agri_logo.png",
-            });
-            // Use resolveNotificationUrl — single source of truth for all routing
-            notif.onclick = (e) => {
-              e.preventDefault();
-              window.focus();
-              routerRef.current.push(targetUrl);
-            };
+            function fallbackNotification() {
+              const osNotification = new Notification(payload.title, {
+                body: bodyMessage,
+                icon: '/agri_logo.png',
+                badge: '/maple-leaf.png',
+              });
+              console.log("[AppShell] osNotification created successfully:", osNotification);
+
+              osNotification.onclick = () => {
+                console.log("[AppShell] OS Notification clicked. Focusing window and navigating to:", targetUrl);
+                window.focus();
+                if (targetUrl && targetUrl !== "/") {
+                  routerRef.current.push(targetUrl);
+                }
+                osNotification.close();
+              };
+            }
+          } catch (err) {
+            console.error("[AppShell] Error creating Notification:", err);
           }
+        } else {
+          console.warn("[AppShell] Cannot show OS notification. Permission is not granted:", Notification.permission);
         }
+      } else {
+        console.warn("[AppShell] Window or Notification API is not available.");
       }
     };
     socket.on("notification", handleSocketNotification);
@@ -201,10 +245,10 @@ export default function AppShellClient({ children }) {
       socket.off("notification", handleSocketNotification);
       disconnectSocket();
     };
-  // NOTE: `router` is intentionally excluded from deps — it changes on every
-  // navigation and would cause the socket to disconnect/reconnect on every page
-  // change, losing in-flight events. routerRef keeps the handler up-to-date.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // NOTE: `router` is intentionally excluded from deps — it changes on every
+    // navigation and would cause the socket to disconnect/reconnect on every page
+    // change, losing in-flight events. routerRef keeps the handler up-to-date.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isPublic, dispatch, activeCompanyId]);
 
   if (isPublic) {
