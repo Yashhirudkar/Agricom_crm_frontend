@@ -156,9 +156,9 @@ export default function AppShellClient({ children }) {
       console.log("[AppShell] Resolved target URL:", targetUrl);
 
       // Step 3: Entity-type-specific cache invalidation
-      const entityType = (payload?.entityType || '').toUpperCase();
+      const entityType = (payload?.entityType || payload?.type || payload?.referenceType || '').toUpperCase();
       console.log("[AppShell] Entity Type for invalidation:", entityType);
-      if (entityType === 'TASK') {
+      if (entityType === 'TASK' || entityType.includes('TASK')) {
         queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
       }
 
