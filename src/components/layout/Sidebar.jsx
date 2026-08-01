@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import axiosInstance from "@/lib/axios";
 
 import { SidebarDynamicIcon } from "./sidebar-components/SidebarDynamicIcon";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export function Sidebar() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -93,8 +94,36 @@ export function Sidebar() {
     return () => window.removeEventListener("toggle-sidebar", handleToggle);
   }, []);
 
+  const { hasPermission } = usePermissions();
+  const hasFollowupPermission = hasPermission("partner:view");
+
   // We use SidebarDynamicIcon inside JSX, so we don't need to pre-map components.
-  const formattedMenu = menuConfig;
+  const formattedMenu = menuConfig.map((folder) => {
+    if (folder.name === "Sales" && hasFollowupPermission) {
+      const items = folder.items || [];
+      const hasFollowup = items.some((item) => item.route === "/follow-ups");
+      if (!hasFollowup) {
+        return {
+          ...folder,
+          items: [
+            ...items,
+            {
+              id: "item-follow-ups",
+              title: "Follow-ups",
+              name: "Follow-ups",
+              route: "/follow-ups",
+              href: "/follow-ups",
+              icon: "CalendarDays",
+              iconColor: "#007aff",
+              permission: "partner:view",
+              type: "item",
+            },
+          ],
+        };
+      }
+    }
+    return folder;
+  });
 
   // Auto-expand active routes
   useEffect(() => {

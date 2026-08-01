@@ -1,12 +1,13 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUser, fetchCurrentUser } from "@/store/slices/authSlice";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 import CommandPalette from "@/components/CommandPalette";
+import FollowUpHeaderDrawer from "@/modules/follow-ups/components/FollowUpHeaderDrawer";
 import { connectSocket, disconnectSocket } from "@/lib/socket";
 import { handleSocketBatchUpdate } from "@/store/entities/attendanceSlice";
 import { fetchNotifications, addSocketNotification } from "@/store/slices/notificationsSlice";
@@ -32,6 +33,13 @@ export default function AppShellClient({ children }) {
   const isPublic = PUBLIC_ROUTES.includes(pathname);
 
   const activeCompanyId = useSelector(selectActiveCompanyId);
+  const [isFollowUpsOpen, setIsFollowUpsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = () => setIsFollowUpsOpen(true);
+    window.addEventListener("open-followups", handleOpen);
+    return () => window.removeEventListener("open-followups", handleOpen);
+  }, []);
   const isSwitching = useSelector(selectCompanyContextLoading);
   const companies = useSelector(selectCompanies) || [];
   const queryClient = useQueryClient();
@@ -218,6 +226,7 @@ export default function AppShellClient({ children }) {
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
       <CommandPalette />
+      <FollowUpHeaderDrawer isOpen={isFollowUpsOpen} onClose={() => setIsFollowUpsOpen(false)} />
     </>
   );
 }
