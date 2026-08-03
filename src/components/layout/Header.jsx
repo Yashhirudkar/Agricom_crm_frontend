@@ -141,6 +141,19 @@ export function Header() {
     };
 
     fetchHolidays();
+
+    const handleUpdate = () => {
+      fetchHolidays();
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("holidays-updated", handleUpdate);
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("holidays-updated", handleUpdate);
+      }
+    };
   }, [user, activeCompanyId]);
 
   const handleDismissHoliday = () => {

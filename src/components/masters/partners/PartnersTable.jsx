@@ -28,10 +28,20 @@ export default function PartnersTable({
         <tbody className="divide-y divide-gray-100 text-xs">
           {partners.length > 0 ? (
             partners.map((item) => {
-              const today = new Date().toISOString().split('T')[0];
-              const dueTodayCount = item.followUps?.filter(f => f.nextFollowupDate && f.nextFollowupDate.startsWith(today) && f.status !== 'Closed' && f.status !== 'Deal Finalized').length || 0;
-              const upcomingCount = item.followUps?.filter(f => f.nextFollowupDate && f.nextFollowupDate > today && f.status !== 'Closed' && f.status !== 'Deal Finalized').length || 0;
-              const completedCount = item.followUps?.filter(f => f.status === 'Closed' || f.status === 'Deal Finalized' || f.status === 'Confirmed').length || 0;
+              const today = new Date().toLocaleDateString("en-CA");
+              const dueTodayCount = item.followUps?.filter(f => {
+                if (!f.nextFollowupDate) return false;
+                const localNextDate = new Date(f.nextFollowupDate).toLocaleDateString("en-CA");
+                return localNextDate <= today && !['Confirmed', 'Closed', 'Deal Finalized', 'Completed'].includes(f.status);
+              }).length || 0;
+              const upcomingCount = item.followUps?.filter(f => {
+                if (!f.nextFollowupDate) return false;
+                const localNextDate = new Date(f.nextFollowupDate).toLocaleDateString("en-CA");
+                return localNextDate > today && !['Confirmed', 'Closed', 'Deal Finalized', 'Completed'].includes(f.status);
+              }).length || 0;
+              const completedCount = item.followUps?.filter(f =>
+                ['Confirmed', 'Closed', 'Deal Finalized', 'Completed'].includes(f.status)
+              ).length || 0;
 
               return (
               <tr
@@ -92,7 +102,7 @@ export default function PartnersTable({
                     <Eye className="h-4 w-4 inline" />
                   </button>
 
-                  <HasPermission permission="partner:followup">
+                  <HasPermission permission="follow_up:create">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

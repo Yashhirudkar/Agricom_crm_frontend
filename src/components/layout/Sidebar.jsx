@@ -95,7 +95,7 @@ export function Sidebar() {
   }, []);
 
   const { hasPermission } = usePermissions();
-  const hasFollowupPermission = hasPermission("partner:view");
+  const hasFollowupPermission = hasPermission("follow_up:view");
 
   const formattedMenu = menuConfig;
 

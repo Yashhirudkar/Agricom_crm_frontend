@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Drawer from "@/components/common/Drawer";
 import axiosClient from "@/lib/axios";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function PartnerFollowUpDrawer({
   isOpen,
@@ -27,6 +28,7 @@ export default function PartnerFollowUpDrawer({
   partnerId,
   entityType,
 }) {
+  const queryClient = useQueryClient();
   const [followUps, setFollowUps] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -189,6 +191,10 @@ export default function PartnerFollowUpDrawer({
       // Mark as sending so the useEffect fires scroll AFTER the new message is in the DOM
       isSendingRef.current = true;
       await fetchFollowUps(false);
+      
+      // Invalidate React Query follow-up cache to update dashboard/header stats
+      queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
+      
       if (onSaveSuccess) onSaveSuccess();
     } catch (err) {
       console.error("Failed to save follow up", err);
