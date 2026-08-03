@@ -22,6 +22,7 @@ import {
 import { createNotificationClickHandler } from "@/lib/notificationRouter";
 import { useFollowUpStatsQuery } from "@/modules/follow-ups/queries/follow-ups.query";
 import { usePermissions } from "@/hooks/usePermissions";
+import BirthdayBalloon from "./BirthdayBalloon";
 
 export function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -95,6 +96,49 @@ export function Header() {
   }, [user, dispatch, companies.length]);
 
   const [holidayBanner, setHolidayBanner] = useState(null);
+  const [todayBirthdays, setTodayBirthdays] = useState([]);
+  const [dismissedBirthday, setDismissedBirthday] = useState(false);
+
+  useEffect(() => {
+    if (!user || !activeCompanyId) return;
+
+    const fetchBirthdays = async () => {
+      try {
+        const res = await axiosClient.get("/employees/today-birthdays");
+        setTodayBirthdays(res.data || []);
+      } catch (err) {
+        console.error("Failed to fetch today's birthdays:", err);
+      }
+    };
+
+    fetchBirthdays();
+
+    const handleEmployeesUpdated = () => {
+      fetchBirthdays();
+    };
+
+    window.addEventListener("employees-updated", handleEmployeesUpdated);
+    return () => {
+      window.removeEventListener("employees-updated", handleEmployeesUpdated);
+    };
+  }, [user, activeCompanyId]);
+
+  const myBirthdayEmp = todayBirthdays.find(
+    (emp) =>
+      (emp.userId && emp.userId === user?.id) ||
+      (emp.email && emp.email.toLowerCase() === user?.email?.toLowerCase())
+  );
+  const isMyBirthday = !!myBirthdayEmp;
+
+  const otherBirthdayNames = todayBirthdays
+    .filter(
+      (emp) =>
+        !(
+          (emp.userId && emp.userId === user?.id) ||
+          (emp.email && emp.email.toLowerCase() === user?.email?.toLowerCase())
+        )
+    )
+    .map((emp) => `${emp.firstName} ${emp.lastName}`);
 
   useEffect(() => {
     if (!user || !activeCompanyId) return;
@@ -343,6 +387,14 @@ export function Header() {
             </button>
           )}
 
+          {isMyBirthday && (
+            <BirthdayBalloon
+              employeeName={myBirthdayEmp.firstName}
+              maxPops={1}
+              userMetadata={user?.birthdayMetadata}
+            />
+          )}
+
           {/* Notifications */}
           <div
             className="relative"
@@ -509,6 +561,35 @@ export function Header() {
           <button
             onClick={handleDismissHoliday}
             className="text-white/90 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 py-0.5 rounded-lg transition-all cursor-pointer text-[10px]"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+      {todayBirthdays.length > 0 && !dismissedBirthday && (
+        <div className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white px-4 py-2 flex items-center justify-between text-xs font-semibold shadow-inner transition-all duration-300">
+          <div className="flex items-center gap-2 flex-1 w-0">
+            {isMyBirthday ? (
+              <marquee className="flex-1">
+                {[1, 2, 3].map((item) => (
+                  <span key={item} className="mr-[50vw] font-extrabold text-[12px] tracking-wide animate-pulse">
+                    💖 Happy Birthday {myBirthdayEmp.firstName}! Wish you a happy birthday to you! 🎈
+                  </span>
+                ))}
+              </marquee>
+            ) : (
+              <marquee className="flex-1">
+                {[1, 2, 3].map((item) => (
+                  <span key={item} className="mr-[50vw]">
+                    🎉 Today is {otherBirthdayNames.join(" & ")}'s Birthday! Wish them a very Happy Birthday! 🎂
+                  </span>
+                ))}
+              </marquee>
+            )}
+          </div>
+          <button
+            onClick={() => setDismissedBirthday(true)}
+            className="text-white/90 hover:text-white bg-white/10 hover:bg-white/20 px-2.5 py-0.5 rounded-lg transition-all cursor-pointer text-[10px] ml-4 self-center shrink-0"
           >
             Dismiss
           </button>

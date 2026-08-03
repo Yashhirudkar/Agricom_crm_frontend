@@ -155,6 +155,9 @@ export default function CreateEmployeePage() {
         }
       }
 
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("employees-updated"));
+      }
       showToast("Employee created successfully!");
       setTimeout(() => router.push("/employees"), 1500);
     } catch (err) {
