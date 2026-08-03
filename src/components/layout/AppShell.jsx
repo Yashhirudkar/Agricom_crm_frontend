@@ -23,6 +23,8 @@ import {
 } from "@/store/slices/companyContextSlice";
 import { resolveNotificationUrl } from "@/lib/notificationRouter";
 import { toast } from "sonner";
+import ChatSocketProvider from "@/modules/chat/components/ChatSocketProvider";
+import FloatingChatLauncher from "@/modules/chat/components/Common/FloatingChatLauncher";
 
 const PUBLIC_ROUTES = ["/login", "/accept-invitation", "/select-company"];
 
@@ -267,7 +269,7 @@ export default function AppShellClient({ children }) {
   }
 
   return (
-    <>
+    <ChatSocketProvider>
       {isSwitching && (
         <div className="fixed inset-0 z-[9999] bg-white/70 backdrop-blur-xs flex flex-col items-center justify-center animate-in fade-in duration-200">
           <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
@@ -276,12 +278,13 @@ export default function AppShellClient({ children }) {
         </div>
       )}
       <Header />
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden h-full">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 min-w-0 overflow-hidden h-full">{children}</main>
       </div>
       <CommandPalette />
       <FollowUpHeaderDrawer isOpen={isFollowUpsOpen} onClose={() => setIsFollowUpsOpen(false)} />
-    </>
+      <FloatingChatLauncher />
+    </ChatSocketProvider>
   );
 }

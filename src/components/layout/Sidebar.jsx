@@ -97,7 +97,21 @@ export function Sidebar() {
   const { hasPermission } = usePermissions();
   const hasFollowupPermission = hasPermission("follow_up:view");
 
-  const formattedMenu = menuConfig;
+  const formattedMenu = menuConfig
+    .map(section => {
+      if (section.items) {
+        return {
+          ...section,
+          items: section.items.filter(item => item.href !== "/chat")
+        };
+      }
+      return section;
+    })
+    .filter(section => {
+      if (section.type === "item" && section.href === "/chat") return false;
+      if (section.items && section.items.length === 0) return false;
+      return true;
+    });
 
   // Auto-expand active routes
   useEffect(() => {
@@ -166,17 +180,16 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`fixed md:relative top-16 md:top-0 bottom-0 left-0 h-[calc(100vh-64px)] md:h-full flex flex-col bg-white text-gray-500 border-r border-gray-200 flex-shrink-0 font-sans transition-all duration-300 z-40 ${
-        isSidebarCollapsed
+      className={`fixed md:relative top-16 md:top-0 bottom-0 left-0 h-[calc(100vh-64px)] md:h-full flex flex-col bg-white text-gray-500 border-r border-gray-200 flex-shrink-0 font-sans transition-all duration-300 z-40 ${isSidebarCollapsed
           ? "w-0 md:w-[80px] border-r-0 md:border-r"
           : "w-[260px] shadow-2xl md:shadow-none"
-      }`}
+        }`}
     >
       <button
         onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         className={`absolute top-5 bg-white border border-gray-200 text-[#007aff] rounded-full p-1 shadow-md hover:bg-gray-50 z-50 transition-all duration-300 ${isSidebarCollapsed
-            ? "left-full translate-x-2 md:translate-x-[-50%]"
-            : "left-full translate-x-[-50%]"
+          ? "left-full translate-x-2 md:translate-x-[-50%]"
+          : "left-full translate-x-[-50%]"
           }`}
       >
         {isSidebarCollapsed ? (

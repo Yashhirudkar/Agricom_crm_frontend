@@ -6,6 +6,7 @@ import usersReducer from "./slices/usersSlice";
 import clientsReducer from "./slices/clientsSlice";
 import notificationsReducer from "./slices/notificationsSlice";
 import companyContextReducer from "./slices/companyContextSlice";
+import chatReducer from "@/modules/chat/store/chatSlice";
 
 // Entity reducers
 import departmentsReducer from "./entities/departmentsSlice";
@@ -66,6 +67,7 @@ export const store = configureStore({
     clients: clientsReducer,
     notifications: notificationsReducer,
     entities: entitiesReducer,
+    chat: chatReducer,
   },
   devTools: process.env.NODE_ENV !== "production",
 });
