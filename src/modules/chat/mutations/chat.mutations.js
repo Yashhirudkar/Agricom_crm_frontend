@@ -96,9 +96,47 @@ export const useUnpinMessageMutation = () => {
   });
 };
 
+// Star/Bookmark message
+export const useStarMessageMutation = () => {
+  return useMutation({
+    mutationFn: (messageId) => ChatAPI.toggleStarMessage(messageId),
+  });
+};
+
+// Unstar message
+export const useUnstarMessageMutation = () => {
+  return useMutation({
+    mutationFn: (messageId) => ChatAPI.unstarMessage(messageId),
+  });
+};
+
 // Save local conversation draft to server (throttled/autosaved)
 export const useSaveDraftMutation = () => {
   return useMutation({
     mutationFn: ({ conversationId, draftContent }) => ChatAPI.saveDraft(conversationId, draftContent),
+  });
+};
+
+// Create a new poll
+export const useCreatePollMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ conversationId, dto }) => ChatAPI.createPoll(conversationId, dto),
+    onSuccess: (data, { conversationId }) => {
+      queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.messages(conversationId) });
+    },
+  });
+};
+
+// Close a poll
+export const useClosePollMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pollId }) => ChatAPI.closePoll(pollId),
+    onSuccess: (data, { conversationId }) => {
+      if (conversationId) {
+        queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.messages(conversationId) });
+      }
+    },
   });
 };

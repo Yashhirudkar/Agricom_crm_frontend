@@ -16,6 +16,13 @@ export const getBackendUrl = () => {
   return "http://localhost:5000";
 };
 
+export const getAvatarUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith("http") || url.startsWith("blob:") || url.startsWith("data:")) return url;
+  const baseUrl = getBackendUrl();
+  return `${baseUrl}${url.startsWith("/") ? url : "/" + url}`;
+};
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 const axiosClient = axios.create({

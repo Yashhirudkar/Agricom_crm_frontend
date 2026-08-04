@@ -13,7 +13,7 @@ import {
   Loader2 
 } from "lucide-react";
 import { toast } from "sonner";
-import axiosClient from "@/lib/axios";
+import axiosClient, { getAvatarUrl } from "@/lib/axios";
 import { useCreateConversationMutation } from "@/modules/chat/mutations/chat.mutations";
 import { setActiveConversationId } from "@/modules/chat/store/chatSlice";
 import usePermissions from "@/hooks/usePermissions";
@@ -401,7 +401,7 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
                         {/* Avatar */}
                         {emp.avatarUrl ? (
                           <img
-                            src={emp.avatarUrl}
+                            src={getAvatarUrl(emp.avatarUrl)}
                             alt={emp.name}
                             className="h-9 w-9 rounded-full object-cover border border-slate-200"
                           />
@@ -531,7 +531,7 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
                         {/* Avatar */}
                         {emp.avatarUrl ? (
                           <img
-                            src={emp.avatarUrl}
+                            src={getAvatarUrl(emp.avatarUrl)}
                             alt={emp.name}
                             className="h-8 w-8 rounded-full object-cover border border-slate-200"
                           />
@@ -675,7 +675,7 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
                         {/* Avatar */}
                         {emp.avatarUrl ? (
                           <img
-                            src={emp.avatarUrl}
+                            src={getAvatarUrl(emp.avatarUrl)}
                             alt={emp.name}
                             className="h-8 w-8 rounded-full object-cover border border-slate-200"
                           />

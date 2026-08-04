@@ -5,6 +5,15 @@ import { selectUserPermissions, selectUserType } from "@/store/slices/authSlice"
 const normalizePermission = (permKey) => {
   if (!permKey) return "";
   let perm = permKey.toLowerCase().trim();
+
+  // Normalize dot-separated permissions (e.g. chat.group.rename -> chat_group:rename)
+  if (perm.includes('.')) {
+    perm = perm.replace(/\./g, ':');
+  }
+  if (perm.startsWith('chat:group:')) {
+    perm = perm.replace('chat:group:', 'chat_group:');
+  }
+
   let [resource, action] = perm.split(':');
 
   if (resource === 'tasks') {
@@ -99,8 +108,6 @@ export function usePermissions() {
 
   /**
    * Check if the user has a specific permission (e.g., 'employees:create')
-   * Super Admins and Client Admins might bypass these checks depending on business logic,
-   * but typically we can allow Super Admin and Client Admin all access.
    */
   const hasPermission = (requiredPermission) => {
     if (!requiredPermission) return true;
@@ -127,11 +134,88 @@ export function usePermissions() {
     return requiredPermissions.every(p => normalizedUserPermissions.includes(normalizePermission(p)));
   };
 
+  /**
+   * Multi-layer validation for chat group actions
+   * combines: general RBAC + conversation membership + conversation states + group role hierarchy
+   */
+  const checkGroupPermission = (action, conversation, currentUser) => {
+    if (!conversation) return false;
+
+    // Super/Client Admins bypass restrictions
+    if (checkIsAdmin()) return true;
+
+    // Check 1: User has general RBAC permission
+    const permissionKey = action.includes(':') || action.includes('.')
+      ? action
+      : `chat_group:${action}`;
+
+    if (!hasPermission(permissionKey)) return false;
+
+    // DMs bypass group membership role rules, only check general RBAC
+    if (conversation.type === "DIRECT") return true;
+
+    // Check 2: Check if user is a member of the conversation group
+    const members = conversation.members || [];
+    const currentUserId = currentUser?.id || currentUser?.userId;
+    const memberObj = members.find(m => {
+      const mId = m.userId || m.user?.id;
+      return Number(mId) === Number(currentUserId);
+    });
+    if (!memberObj) return false;
+
+    // Check 3: Check conversation policies (frozen/archived status)
+    const isFrozen = conversation.isLocked || conversation.isFrozen;
+    const isArchived = conversation.isArchived;
+    if ((isFrozen || isArchived) && [
+      'rename', 'change_photo', 'change_description', 'add_members',
+      'remove_members', 'promote_admin', 'demote_admin', 'delete',
+      'manage_permissions', 'manage_invite_link'
+    ].includes(action)) {
+      const userRole = memberObj.role;
+      if (userRole !== 'OWNER' && userRole !== 'ADMIN') {
+        return false;
+      }
+    }
+
+    // Check 4: Check group role permission level (Owner, Admin, Moderator, Member, Guest)
+    const userRole = memberObj.role || 'MEMBER';
+    if (userRole === 'OWNER') return true;
+
+    if (userRole === 'ADMIN') {
+      if (action === 'delete') return false; // Only Owner can delete the entire group
+      return true;
+    }
+
+    if (userRole === 'MODERATOR') {
+      // Moderators can edit details, invite users, and remove members
+      if ([
+        'rename', 'change_photo', 'change_description',
+        'add_members', 'remove_members', 'manage_invite_link'
+      ].includes(action)) {
+        return true;
+      }
+      return false;
+    }
+
+    if (userRole === 'MEMBER') {
+      // Normal members can only leave the group
+      if (action === 'leave') return true;
+      return false;
+    }
+
+    if (userRole === 'GUEST') {
+      return false; // Guests cannot perform any group edits or leave/add
+    }
+
+    return false;
+  };
+
   return {
     permissions,
     hasPermission,
     hasAnyPermission,
-    hasAllPermissions
+    hasAllPermissions,
+    checkGroupPermission
   };
 }
 

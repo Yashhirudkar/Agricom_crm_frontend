@@ -12,7 +12,6 @@ export default function AdminSettingsPanel({ companyId, onClose }) {
   const policy = policyData?.data || {
     allowVoice: true,
     allowVideo: true,
-    allowGif: true,
     allowPoll: true,
     allowExport: true,
     maxUploadSize: 104857600,

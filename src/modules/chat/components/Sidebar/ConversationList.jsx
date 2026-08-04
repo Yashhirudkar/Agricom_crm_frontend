@@ -2,31 +2,51 @@
 
 import React, { useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { 
-  Pin, 
-  Star, 
-  VolumeX, 
-  Hash, 
-  Users, 
-  User 
+import {
+  Pin,
+  Star,
+  VolumeX,
+  Hash,
+  Users
 } from "lucide-react";
-import { 
-  setActiveConversationId, 
+import {
+  setActiveConversationId,
   selectActiveConversationId,
-  selectTypingState
+  selectTypingState,
+  selectComposerDrafts
 } from "@/modules/chat/store/chatSlice";
 import { getConversationDisplay } from "@/modules/chat/utils/getConversationDisplay";
+import Avatar from "../Timeline/Avatar";
 
-export default function ConversationList({ 
-  conversations, 
-  filterType, 
-  searchQuery, 
-  currentUser, 
-  presenceMap = {} 
+const formatLastMessageTime = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const now = new Date();
+
+  if (d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) {
+    return "Yesterday";
+  }
+
+  return d.toLocaleDateString([], { month: '2-digit', day: '2-digit' });
+};
+
+export default function ConversationList({
+  conversations,
+  filterType,
+  searchQuery,
+  currentUser,
+  presenceMap = {}
 }) {
   const dispatch = useDispatch();
   const activeId = useSelector(selectActiveConversationId);
   const typingState = useSelector(selectTypingState);
+  const drafts = useSelector(selectComposerDrafts) || {};
 
   // Filter and sort conversations
   const filteredList = useMemo(() => {
@@ -34,7 +54,7 @@ export default function ConversationList({
       .filter((c) => {
         const details = getConversationDisplay(c, currentUser, presenceMap, typingState);
         const query = searchQuery.trim().toLowerCase();
-        
+
         if (!query) {
           // Category filter matching
           if (filterType === "CHANNELS") return c.type === "CHANNEL";
@@ -43,7 +63,7 @@ export default function ConversationList({
           return true;
         }
 
-        const matchesSearch = 
+        const matchesSearch =
           details.title?.toLowerCase().includes(query) ||
           details.subtitle?.toLowerCase().includes(query) ||
           details.department?.toLowerCase().includes(query) ||
@@ -78,27 +98,14 @@ export default function ConversationList({
       });
   }, [conversations, filterType, searchQuery, currentUser, presenceMap, typingState]);
 
-  const getPresenceColor = (presence) => {
-    switch (presence) {
-      case "ONLINE":
-        return "bg-emerald-500 border-white";
-      case "AWAY":
-        return "bg-amber-500 border-white";
-      case "BUSY":
-        return "bg-red-500 border-white";
-      default:
-        return "bg-slate-400 border-white";
-    }
-  };
-
   return (
-    <div className="flex-1 overflow-y-auto space-y-4">
+    <div className="flex-1 overflow-y-auto space-y-2 pr-1 select-none">
       {filteredList.length === 0 ? (
-        <div className="text-center text-xs text-slate-500 py-6">
+        <div className="text-center text-xs text-slate-400 py-8">
           No conversations found.
         </div>
       ) : (
-        <ul className="space-y-0.5">
+        <ul className="space-y-[3px]">
           {filteredList.map((c) => {
             const isActive = activeId === c.id;
             const currentUserMembership = c.members?.find((m) => m.userId === currentUser?.id) || {};
@@ -109,76 +116,97 @@ export default function ConversationList({
 
             const details = getConversationDisplay(c, currentUser, presenceMap, typingState);
 
+            // Construct virtual sender details for DM avatar rendering
+            const senderDetails = {
+              name: details.title,
+              avatarUrl: details.avatar
+            };
+
+            const hasLastMessage = !!c.lastMessage;
+
+            // Draft prefix check
+            const draft = drafts[c.id];
+            const hasDraft = draft && draft.trim().length > 0;
+
+            const lastMsgContent = hasDraft ? (
+              <span className={isActive ? "text-orange-700 font-medium" : "text-orange-600 font-semibold"}>
+                <span className="italic">Draft: </span>{draft}
+              </span>
+            ) : hasLastMessage
+              ? c.lastMessage.type === "FILE"
+                ? "📎 File"
+                : c.lastMessage.type === "VOICE"
+                  ? "🎤 Voice message"
+                  : c.lastMessage.content
+              : details.subtitle;
+
+            const lastMsgTime = hasLastMessage
+              ? formatLastMessageTime(c.lastMessage.createdAt)
+              : formatLastMessageTime(c.updatedAt);
+
             return (
-              <li key={c.id}>
+              <li key={c.id} className="list-none">
                 <button
                   onClick={() => dispatch(setActiveConversationId(c.id))}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-all ${
-                    isActive 
-                      ? "bg-blue-600 text-white font-medium shadow-sm animate-in fade-in-50 duration-150" 
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                  }`}
+                  className={`w-full flex items-center h-[58px] pr-3 rounded-r-lg rounded-l-none text-xs transition-all duration-100 cursor-pointer text-slate-700
+                    ${isActive
+                      ? "bg-slate-100/90 border-l-[3.5px] border-blue-600 pl-[8.5px] font-semibold shadow-xs"
+                      : "border-l-[3.5px] border-transparent pl-[8.5px] hover:bg-slate-100/50 hover:text-slate-900"
+                    }`}
                 >
-                  <div className="flex items-center gap-3 truncate flex-1 mr-2">
-                    
-                    {/* Avatar with Presence Indicator */}
+                  <div className="flex items-center gap-2.5 truncate flex-1 min-w-0 h-full">
+                    {/* Avatar presence rendering */}
                     <div className="relative flex-shrink-0">
                       {c.type === "DIRECT" ? (
-                        <>
-                          {details.avatar ? (
-                            <img
-                              src={details.avatar}
-                              alt={details.title}
-                              className="h-8 w-8 rounded-full object-cover border border-slate-200/80"
-                            />
-                          ) : (
-                            <div className={`h-8 w-8 rounded-full border flex items-center justify-center text-[10px] font-bold ${details.avatarClass}`}>
-                              {details.initials}
-                            </div>
-                          )}
-                          {/* Real-time Presence Dot */}
-                          <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 ${getPresenceColor(details.presence)}`} />
-                        </>
+                        <Avatar sender={senderDetails} presence={details.presence} size="md" />
                       ) : (
-                        <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200/50">
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center border transition-colors ${isActive
+                            ? "bg-blue-50 border-blue-200 text-blue-600"
+                            : "bg-slate-200/50 border-slate-200/20 text-slate-500"
+                          }`}>
                           {c.type === "CHANNEL" ? (
-                            <Hash className={`h-4 w-4 ${isActive ? "text-blue-200" : "text-slate-400"}`} />
+                            <Hash className="h-5.5 w-5.5" />
                           ) : (
-                            <Users className={`h-4 w-4 ${isActive ? "text-blue-200" : "text-slate-400"}`} />
+                            <Users className="h-5.5 w-5.5" />
                           )}
                         </div>
                       )}
                     </div>
 
-                    {/* Metadata Content */}
-                    <div className="flex flex-col items-start truncate text-left">
-                      <span className={`truncate text-xs ${isActive ? "text-white font-bold" : "text-slate-900 font-semibold"}`}>
-                        {details.title}
-                      </span>
-                      {details.isTyping ? (
-                        <span className={`text-[10px] font-medium animate-pulse ${isActive ? "text-emerald-200" : "text-emerald-600"}`}>
-                          typing...
+                    {/* Meta info columns */}
+                    <div className="flex flex-col items-start truncate flex-grow text-left">
+                      <div className="flex items-center justify-between w-full">
+                        <span className={`truncate text-[13px] leading-tight ${isActive ? "text-slate-900 font-bold" : "text-slate-800 font-semibold"}`}>
+                          {details.title}
                         </span>
-                      ) : (
-                        details.subtitle && (
-                          <span className={`text-[9px] truncate max-w-[170px] ${isActive ? "text-slate-200" : "text-slate-400"}`}>
-                            {details.subtitle}
-                          </span>
-                        )
-                      )}
-                    </div>
-                  </div>
+                        <span className={`text-[10px] shrink-0 ml-2 ${isActive ? "text-slate-600 font-semibold" : "text-slate-400"}`}>
+                          {lastMsgTime}
+                        </span>
+                      </div>
 
-                  {/* Actions & Alerts */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {isPinned && <Pin className="h-3 w-3 text-blue-400 rotate-45" />}
-                    {isFavorite && <Star className="h-3 w-3 text-amber-400 fill-amber-400" />}
-                    {isMuted && <VolumeX className="h-3 w-3 text-slate-400" />}
-                    {unreadCount > 0 && !isActive && (
-                      <span className="px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full">
-                        {unreadCount}
-                      </span>
-                    )}
+                      <div className="flex items-center justify-between w-full mt-0.5">
+                        {details.isTyping ? (
+                          <span className={`text-[10.5px] font-semibold animate-pulse ${isActive ? "text-blue-700" : "text-emerald-600"}`}>
+                            typing...
+                          </span>
+                        ) : (
+                          <span className={`text-[11.5px] truncate max-w-[160px] sm:max-w-[180px] leading-tight ${isActive ? "text-slate-700 font-medium" : "text-slate-500"}`}>
+                            {lastMsgContent}
+                          </span>
+                        )}
+
+                        <div className="flex items-center gap-1 shrink-0 ml-2 select-none">
+                          {isPinned && <Pin className={`h-3 w-3 rotate-45 ${isActive ? "text-blue-600" : "text-blue-500"}`} />}
+                          {isFavorite && <Star className={`h-3 w-3 ${isActive ? "text-amber-500 fill-amber-500" : "text-amber-500 fill-amber-500"}`} />}
+                          {isMuted && <VolumeX className={`h-3 w-3 ${isActive ? "text-slate-500" : "text-slate-450 text-slate-400"}`} />}
+                          {unreadCount > 0 && !isActive && (
+                            <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[9.5px] font-bold rounded-full leading-none min-w-[16px] text-center">
+                              {unreadCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </button>
               </li>

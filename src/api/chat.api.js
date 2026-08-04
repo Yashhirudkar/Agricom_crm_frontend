@@ -135,12 +135,27 @@ export const ChatAPI = {
   },
 
   unpinMessage: async (conversationId, messageId) => {
-    const res = await axiosClient.post(`/chat/conversations/${conversationId}/messages/${messageId}/unpin`);
+    const res = await axiosClient.delete(`/chat/conversations/${conversationId}/messages/${messageId}/pin`);
+    return res.data;
+  },
+
+  getPinnedMessages: async (conversationId) => {
+    const res = await axiosClient.get(`/chat/conversations/${conversationId}/pins`);
+    return res.data;
+  },
+
+  getStarredMessages: async () => {
+    const res = await axiosClient.get("/chat/starred-messages");
     return res.data;
   },
 
   toggleStarMessage: async (messageId) => {
     const res = await axiosClient.post(`/chat/messages/${messageId}/star`);
+    return res.data;
+  },
+
+  unstarMessage: async (messageId) => {
+    const res = await axiosClient.delete(`/chat/messages/${messageId}/star`);
     return res.data;
   },
 
