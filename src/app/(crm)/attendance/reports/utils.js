@@ -19,7 +19,7 @@ const getSecondsFromMidnight = (timeData) => {
 };
 
 // Safe time percentage calculator relative to shift duration
-export const calculateTimePercent = (timeData, shiftStart = "09:30", shiftEnd = "18:00") => {
+export const calculateTimePercent = (timeData, shiftStart, shiftEnd) => {
   if (!timeData) return 0;
   
   const startSecs = getSecondsFromMidnight(shiftStart);

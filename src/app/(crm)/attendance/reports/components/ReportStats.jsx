@@ -24,12 +24,12 @@ export default function ReportStats({ stats }) {
           <div className="text-md font-black text-gray-900">{safeStats.absent}</div>
         </div>
 
-        {/* Late */}
+        {/* Late Count */}
         <div className="flex items-center justify-right gap-6 w-[48%] md:flex-1 md:px-2">
           <div className="text-[11px] font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
-            <AlertTriangle className="w-3.5 h-3.5" /> Late
+            <AlertTriangle className="w-3.5 h-3.5" /> Late Count
           </div>
-          <div className="text-md font-black text-gray-900">{safeStats.late}</div>
+          <div className="text-md font-black text-gray-900">{safeStats.lateCount ?? safeStats.late ?? 0}</div>
         </div>
 
         {/* Half Day */}

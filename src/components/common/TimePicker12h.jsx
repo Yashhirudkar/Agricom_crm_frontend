@@ -3,16 +3,16 @@
 import React from "react";
 
 /**
- * Utility to convert "13:00" / "09:30" 24-hour string to 12-hour parts { h, m, period }
+ * Utility to convert 24-hour string to 12-hour parts { h, m, period }
  */
 export const parse24to12 = (time24) => {
-  if (!time24) return { h: "09", m: "00", period: "AM" };
+  if (!time24) return { h: "12", m: "00", period: "AM" };
 
   if (typeof time24 === "string" && (time24.toLowerCase().includes("am") || time24.toLowerCase().includes("pm"))) {
     const parts = time24.trim().split(" ");
     const [h, m] = parts[0].split(":");
     return {
-      h: String(parseInt(h || "9", 10)).padStart(2, "0"),
+      h: String(parseInt(h || "12", 10)).padStart(2, "0"),
       m: String(parseInt(m || "0", 10)).padStart(2, "0"),
       period: (parts[1] || "AM").toUpperCase(),
     };
@@ -20,7 +20,7 @@ export const parse24to12 = (time24) => {
 
   if (typeof time24 === "string" && time24.includes(":")) {
     const [hStr, mStr] = time24.split(":");
-    let h = parseInt(hStr || "9", 10);
+    let h = parseInt(hStr || "12", 10);
     const m = parseInt(mStr || "0", 10);
     const period = h >= 12 ? "PM" : "AM";
     h = h % 12;
@@ -32,7 +32,7 @@ export const parse24to12 = (time24) => {
     };
   }
 
-  return { h: "09", m: "00", period: "AM" };
+  return { h: "12", m: "00", period: "AM" };
 };
 
 /**

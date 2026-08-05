@@ -1,4 +1,6 @@
 import React from "react";
+import { useSelector } from "react-redux";
+import { selectCurrentHrPolicy } from "@/store/entities/companyHrPoliciesSlice";
 import { MapPin } from "lucide-react";
 import VisualAttendanceTimeline from "@/components/attendance/VisualAttendanceTimeline";
 
@@ -6,6 +8,12 @@ export default function TodayTimeline({ activityLogs, getTimelineStyles, todayRe
   const checkIn = todayRecord?.checkInTime || (activityLogs?.find(l => l.actionType === "CHECK_IN")?.timestamp);
   const checkOut = todayRecord?.checkOutTime;
   const isWorking = todayRecord?.attendanceState === "WORKING";
+
+  const hrPolicy = useSelector(selectCurrentHrPolicy);
+  const defaultShiftStart = hrPolicy?.defaultShiftStartTime;
+  const defaultShiftEnd = hrPolicy?.defaultShiftEndTime;
+  const defaultBreakStart = hrPolicy?.defaultBreakStartTime;
+  const defaultBreakEnd = hrPolicy?.defaultBreakEndTime;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
@@ -21,10 +29,10 @@ export default function TodayTimeline({ activityLogs, getTimelineStyles, todayRe
             checkOut={checkOut}
             logs={activityLogs}
             isWorking={isWorking}
-            shiftStart={todayRecord?.shift?.startTime || "09:30"}
-            shiftEnd={todayRecord?.shift?.endTime || "18:00"}
-            breakStart={todayRecord?.shift?.breakStartTime || "13:00"}
-            breakEnd={todayRecord?.shift?.breakEndTime || "13:30"}
+            shiftStart={todayRecord?.shift?.startTime || defaultShiftStart}
+            shiftEnd={todayRecord?.shift?.endTime || defaultShiftEnd}
+            breakStart={todayRecord?.shift?.breakStartTime || defaultBreakStart}
+            breakEnd={todayRecord?.shift?.breakEndTime || defaultBreakEnd}
             showLabels={true}
           />
         </div>

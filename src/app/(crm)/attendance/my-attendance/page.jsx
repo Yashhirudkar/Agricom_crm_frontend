@@ -15,6 +15,10 @@ import {
   selectAttendanceSuccess,
 } from "@/store/entities/attendanceSlice";
 import { fetchShifts, selectAllShifts } from "@/store/entities/shiftsSlice";
+import {
+  fetchCompanyHrPolicies,
+  selectCurrentHrPolicy,
+} from "@/store/entities/companyHrPoliciesSlice";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { getFriendlyError } from "@/lib/errorMessages";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
@@ -65,6 +69,7 @@ export default function MyAttendancePage() {
   const dispatch = useDispatch();
   const myAttendance = useSelector(selectMyAttendance) || [];
   const shifts = useSelector(selectAllShifts) || [];
+  const hrPolicy = useSelector(selectCurrentHrPolicy);
   const isLoading = useSelector(selectAttendanceLoading);
   const error = useSelector(selectAttendanceError);
   const success = useSelector(selectAttendanceSuccess);
@@ -83,6 +88,7 @@ export default function MyAttendancePage() {
 
   useEffect(() => {
     dispatch(fetchShifts());
+    dispatch(fetchCompanyHrPolicies());
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 30);
     dispatch(
@@ -106,14 +112,28 @@ export default function MyAttendancePage() {
     }
   }, [error, success, dispatch]);
 
+  const format12h = (time24) => {
+    if (!time24) return "";
+    const [hStr, mStr] = time24.split(":");
+    let h = parseInt(hStr, 10);
+    const period = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return `${String(h).padStart(2, "0")}:${mStr || "00"} ${period}`;
+  };
+
+  const defaultStartTime = hrPolicy?.defaultShiftStartTime ? format12h(hrPolicy.defaultShiftStartTime) : "";
+  const defaultEndTime = hrPolicy?.defaultShiftEndTime ? format12h(hrPolicy.defaultShiftEndTime) : "";
+
   const todayStr = new Date().toLocaleDateString("en-CA");
   const todayRecord = myAttendance.find((r) => r.date === todayStr);
-  const currentShift = todayRecord?.shiftId
+  const currentShift = todayRecord?.shift
+    ? todayRecord.shift
+    : todayRecord?.shiftId
     ? shifts.find((s) => s.id === todayRecord.shiftId)
-    : shifts[0] || {
+    : {
       name: "General Shift",
-      startTime: "09:30 AM",
-      endTime: "06:30 PM",
+      startTime: defaultStartTime,
+      endTime: defaultEndTime,
     };
 
   const handleAction = async (actionStr, type) => {

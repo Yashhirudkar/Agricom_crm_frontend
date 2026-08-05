@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
+import { selectCurrentHrPolicy } from "@/store/entities/companyHrPoliciesSlice";
 import { Coffee, Briefcase, Clock } from "lucide-react";
 
 /**
@@ -65,15 +67,21 @@ export default function VisualAttendanceTimeline({
   checkIn,
   checkOut,
   logs = [],
-  shiftStart = "09:30",
-  shiftEnd = "18:30",
-  breakStart = "13:00",
-  breakEnd = "13:30",
+  shiftStart,
+  shiftEnd,
+  breakStart,
+  breakEnd,
   isWorking = false,
   compact = false,
   showLabels = true,
 }) {
   const [activeTooltip, setActiveTooltip] = useState(null);
+  const hrPolicy = useSelector(selectCurrentHrPolicy);
+
+  const effectiveShiftStart = shiftStart || hrPolicy?.defaultShiftStartTime;
+  const effectiveShiftEnd = shiftEnd || hrPolicy?.defaultShiftEndTime;
+  const effectiveBreakStart = breakStart || hrPolicy?.defaultBreakStartTime;
+  const effectiveBreakEnd = breakEnd || hrPolicy?.defaultBreakEndTime;
 
   const checkInMins = getMinutesFromTime(checkIn);
   let checkOutMins = getMinutesFromTime(checkOut);
@@ -91,13 +99,13 @@ export default function VisualAttendanceTimeline({
     );
   }
 
-  // Shift Window bounds (e.g., 09:30 AM to 06:30 PM)
-  const defaultStart = getMinutesFromTime(shiftStart) ?? (9 * 60 + 30); // 09:30 AM
-  const defaultEnd = getMinutesFromTime(shiftEnd) ?? (18 * 60 + 30);   // 06:30 PM
+  // Dynamic shift window bounds derived from props or HR Policy
+  const defaultStart = getMinutesFromTime(effectiveShiftStart);
+  const defaultEnd = getMinutesFromTime(effectiveShiftEnd);
 
-  const effectiveOut = checkOutMins !== null ? checkOutMins : Math.max(checkInMins + 1, defaultStart + 60);
-  const windowStart = Math.min(defaultStart, checkInMins);
-  const windowEnd = Math.max(defaultEnd, effectiveOut);
+  const effectiveOut = checkOutMins !== null ? checkOutMins : Math.max(checkInMins + 1, (defaultStart !== null ? defaultStart + 60 : checkInMins + 60));
+  const windowStart = defaultStart !== null ? Math.min(defaultStart, checkInMins) : checkInMins;
+  const windowEnd = defaultEnd !== null ? Math.max(defaultEnd, effectiveOut) : effectiveOut;
   const totalWindowSpan = Math.max(windowEnd - windowStart, 1);
 
   const getPercent = (timeMins) => {
@@ -129,11 +137,12 @@ export default function VisualAttendanceTimeline({
 
   // Dynamic lunch break interval from policy / shift if no explicit break logs exist
   if (rawBreaks.length === 0) {
-    const defaultLunchStart = getMinutesFromTime(breakStart) ?? (13 * 60);
-    const defaultLunchEnd = getMinutesFromTime(breakEnd) ?? (13 * 60 + 30);
-    // Only apply default break if check-in was at/before break start and work span overlaps break start
-    if (checkInMins <= defaultLunchStart && effectiveOut > defaultLunchStart) {
-      rawBreaks.push({ start: defaultLunchStart, end: Math.min(defaultLunchEnd, effectiveOut), isDefault: true });
+    const defaultLunchStart = getMinutesFromTime(effectiveBreakStart);
+    const defaultLunchEnd = getMinutesFromTime(effectiveBreakEnd);
+    if (defaultLunchStart !== null && defaultLunchEnd !== null) {
+      if (checkInMins <= defaultLunchStart && effectiveOut > defaultLunchStart) {
+        rawBreaks.push({ start: defaultLunchStart, end: Math.min(defaultLunchEnd, effectiveOut), isDefault: true });
+      }
     }
   }
 

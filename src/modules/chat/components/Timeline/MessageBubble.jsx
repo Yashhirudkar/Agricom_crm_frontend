@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from "react";
-import { Pin } from "lucide-react";
+import { Pin, Ban } from "lucide-react";
 import Avatar from "./Avatar";
 import MessageStatus from "./MessageStatus";
 import MessageActionsMenu from "./MessageActionsMenu";
@@ -160,7 +160,7 @@ const MessageBubble = React.memo(({
       {/* Bubble Content column */}
       <div className={`flex flex-col max-w-[72%] w-fit ${isOutgoing ? "items-end" : "items-start"}`}>
         <div className="relative">
-          {hovered && (
+          {hovered && !msg.isDeleted && (
             <MessageActionsMenu
               msg={msg}
               isOutgoing={isOutgoing}
@@ -198,7 +198,7 @@ const MessageBubble = React.memo(({
             )}
 
             {/* Telegram style Reply Preview */}
-            {msg.parentMessage && (
+            {msg.parentMessage && !msg.isDeleted && (
               <div
                 className={`mb-1 px-2 py-0.5 rounded-sm border-l-[3px] text-left overflow-hidden select-none
                   ${isOutgoing
@@ -215,7 +215,7 @@ const MessageBubble = React.memo(({
               </div>
             )}
 
-            {isPinned && (
+            {isPinned && !msg.isDeleted && (
               <div className="flex items-center gap-1 mb-0.5 opacity-70">
                 <Pin className={`h-2.5 w-2.5 ${isOutgoing ? "text-blue-100" : "text-amber-600"}`} />
                 <span className={`text-[8px] font-bold uppercase tracking-wider ${isOutgoing ? "text-blue-100" : "text-amber-600"}`}>Pinned</span>
@@ -224,11 +224,20 @@ const MessageBubble = React.memo(({
 
             {/* Message Content Body */}
             <div className="text-[13.5px] leading-[1.5] break-words pr-4 text-slate-850 select-text">
-              <MessageRenderer
-                msg={msg}
-                conversation={conversation}
-                currentUser={currentUser}
-              />
+              {msg.isDeleted ? (
+                <div className={`flex items-center gap-1.5 py-0.5 select-none italic text-[12.5px] ${
+                  isOutgoing ? "text-white/80" : "text-slate-500"
+                }`}>
+                  <Ban className="h-3.5 w-3.5 opacity-80 flex-shrink-0" />
+                  <span>{isOutgoing ? "You deleted this message" : "This message was deleted"}</span>
+                </div>
+              ) : (
+                <MessageRenderer
+                  msg={msg}
+                  conversation={conversation}
+                  currentUser={currentUser}
+                />
+              )}
             </div>
 
             {/* Absolute Telegram-style inline bottom-right timestamp */}

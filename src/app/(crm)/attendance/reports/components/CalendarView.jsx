@@ -79,7 +79,7 @@ export default function CalendarView({ referenceDate, records }) {
             switch (record.status) {
               case 'PRESENT':
                 pillStyle = "bg-[#e8f5e9] border border-[#c8e6c9] border-l-[3px] border-l-[#4caf50] text-[#1b5e20]";
-                statusLabel = "Present";
+                statusLabel = (record.isLate || record.lateMinutes > 0) ? "Present (Late)" : "Present";
                 break;
               case 'ABSENT':
                 pillStyle = "bg-[#ffebee] border border-[#ffcdd2] border-l-[3px] border-l-[#f44336] text-[#b71c1c]";
@@ -94,8 +94,8 @@ export default function CalendarView({ referenceDate, records }) {
                 statusLabel = "Half Day";
                 break;
               case 'LATE':
-                pillStyle = "bg-[#fff8e1] border border-[#ffecb3] border-l-[3px] border-l-[#ffc107] text-[#f57f17]";
-                statusLabel = "Late";
+                pillStyle = "bg-[#e8f5e9] border border-[#c8e6c9] border-l-[3px] border-l-[#4caf50] text-[#1b5e20]";
+                statusLabel = "Present (Late)";
                 break;
               case 'WEEK_OFF':
                 pillStyle = "bg-gray-50 border border-gray-200 border-l-[3px] border-l-gray-400 text-gray-700";

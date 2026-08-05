@@ -6,30 +6,41 @@ import {
   fetchShifts, createShift, updateShift, deleteShift, 
   selectAllShifts, selectShiftsLoading 
 } from "@/store/entities/shiftsSlice";
+import {
+  fetchCompanyHrPolicies,
+  selectCurrentHrPolicy,
+} from "@/store/entities/companyHrPoliciesSlice";
 import { Plus, Edit2, Trash2, Clock, Calendar } from "lucide-react";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 
 export default function ShiftsPage() {
   const dispatch = useDispatch();
   const shifts = useSelector(selectAllShifts) || [];
+  const hrPolicy = useSelector(selectCurrentHrPolicy);
   const isLoading = useSelector(selectShiftsLoading);
   const activeCompanyId = useSelector(selectActiveCompanyId);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingShift, setEditingShift] = useState(null);
   
+  const defaultStartTime = hrPolicy?.defaultShiftStartTime || "";
+  const defaultEndTime = hrPolicy?.defaultShiftEndTime || "";
+  const defaultBreakMins = hrPolicy?.defaultBreakMinutes ?? 30;
+  const defaultGraceMins = hrPolicy?.lateComingGraceMinutes ?? 5;
+
   const [formData, setFormData] = useState({
     name: "",
-    startTime: "09:00",
-    endTime: "18:00",
-    breakMinutes: 30,
-    gracePeriodMinutes: 15,
+    startTime: defaultStartTime,
+    endTime: defaultEndTime,
+    breakMinutes: defaultBreakMins,
+    gracePeriodMinutes: defaultGraceMins,
     isNightShift: false,
     weeklyOffDays: [0, 6] // Sun, Sat
   });
 
   useEffect(() => {
     dispatch(fetchShifts());
+    dispatch(fetchCompanyHrPolicies());
   }, [dispatch, activeCompanyId]);
 
   const openModal = (shift = null) => {
@@ -48,10 +59,10 @@ export default function ShiftsPage() {
       setEditingShift(null);
       setFormData({
         name: "",
-        startTime: "09:00",
-        endTime: "18:00",
-        breakMinutes: 30,
-        gracePeriodMinutes: 15,
+        startTime: hrPolicy?.defaultShiftStartTime || "",
+        endTime: hrPolicy?.defaultShiftEndTime || "",
+        breakMinutes: hrPolicy?.defaultBreakMinutes ?? 30,
+        gracePeriodMinutes: hrPolicy?.lateComingGraceMinutes ?? 5,
         isNightShift: false,
         weeklyOffDays: [0, 6]
       });

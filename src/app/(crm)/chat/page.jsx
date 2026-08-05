@@ -429,6 +429,12 @@ export default function ChatPage() {
       }
     };
 
+    const handleMessageReacted = (payload) => {
+      if (payload?.conversationId) {
+        queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.messages(payload.conversationId) });
+      }
+    };
+
     const handleConversationUpdated = (payload) => {
       if (payload?.conversationId) {
         queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations() });
@@ -450,6 +456,7 @@ export default function ChatPage() {
     subscribeToSocketEvent("message_created", handleMessageCreated);
     subscribeToSocketEvent("message_updated", handleMessageUpdated);
     subscribeToSocketEvent("message_deleted", handleMessageDeleted);
+    subscribeToSocketEvent("message_reacted", handleMessageReacted);
     subscribeToSocketEvent("message_pinned", handleMessagePinned);
     subscribeToSocketEvent("presence_changed", handlePresenceChanged);
     subscribeToSocketEvent("typing", handleTyping);
@@ -463,6 +470,7 @@ export default function ChatPage() {
       unsubscribeFromSocketEvent("message_created", handleMessageCreated);
       unsubscribeFromSocketEvent("message_updated", handleMessageUpdated);
       unsubscribeFromSocketEvent("message_deleted", handleMessageDeleted);
+      unsubscribeFromSocketEvent("message_reacted", handleMessageReacted);
       unsubscribeFromSocketEvent("message_pinned", handleMessagePinned);
       unsubscribeFromSocketEvent("presence_changed", handlePresenceChanged);
       unsubscribeFromSocketEvent("typing", handleTyping);

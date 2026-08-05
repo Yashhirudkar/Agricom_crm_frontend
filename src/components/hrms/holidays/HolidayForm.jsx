@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import { selectCurrentHrPolicy } from "@/store/entities/companyHrPoliciesSlice";
 import { createHoliday, updateHoliday, createRecurringHolidays } from "../../../lib/api/holidays";
 import axiosClient from "../../../lib/axios";
 
@@ -10,6 +12,8 @@ import HolidayScopeForm from "./HolidayScopeForm";
 
 export default function HolidayForm({ holiday, onSave, onCancel }) {
   const currentYear = new Date().getFullYear();
+  const hrPolicy = useSelector(selectCurrentHrPolicy);
+  const defaultStartTime = hrPolicy?.defaultShiftStartTime || "";
 
   const [formData, setFormData] = useState({
     title: "",
@@ -26,7 +30,7 @@ export default function HolidayForm({ holiday, onSave, onCancel }) {
     selectedWeeks: [1, 2, 3, 4, 5], // Default all weeks
     // Half Day options
     isHalfDay: false,
-    startTime: "09:30",
+    startTime: defaultStartTime,
     endTime: "15:00",
   });
 
@@ -67,11 +71,11 @@ export default function HolidayForm({ holiday, onSave, onCancel }) {
         selectedDays: [0],
         selectedWeeks: [1, 2, 3, 4, 5],
         isHalfDay: holiday.isHalfDay || false,
-        startTime: holiday.halfDayStart || "09:30",
+        startTime: holiday.halfDayStart || defaultStartTime,
         endTime: holiday.halfDayEnd || "15:00",
       });
     }
-  }, [holiday, currentYear]);
+  }, [holiday, currentYear, defaultStartTime]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

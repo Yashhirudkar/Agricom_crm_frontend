@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import { selectCurrentHrPolicy } from "@/store/entities/companyHrPoliciesSlice";
 import { calculateTimePercent, formatDisplayTime, formatDateString } from "../utils";
 import VisualAttendanceTimeline from "@/components/attendance/VisualAttendanceTimeline";
 
 export default function ListView({ daysInView, records }) {
   const [now, setNow] = useState(new Date());
+  const hrPolicy = useSelector(selectCurrentHrPolicy);
+
+  const defaultShiftStart = hrPolicy?.defaultShiftStartTime;
+  const defaultShiftEnd = hrPolicy?.defaultShiftEndTime;
+  const defaultBreakStart = hrPolicy?.defaultBreakStartTime;
+  const defaultBreakEnd = hrPolicy?.defaultBreakEndTime;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -102,10 +110,10 @@ export default function ListView({ daysInView, records }) {
                     checkOut={record.checkOut}
                     logs={record.logs}
                     isWorking={record.attendanceState === "WORKING" && isToday}
-                    shiftStart={record.shift?.startTime || "09:30"}
-                    shiftEnd={record.shift?.endTime || "18:00"}
-                    breakStart={record.shift?.breakStartTime || "13:00"}
-                    breakEnd={record.shift?.breakEndTime || "13:30"}
+                    shiftStart={record.shift?.startTime || defaultShiftStart}
+                    shiftEnd={record.shift?.endTime || defaultShiftEnd}
+                    breakStart={record.shift?.breakStartTime || defaultBreakStart}
+                    breakEnd={record.shift?.breakEndTime || defaultBreakEnd}
                     showLabels={false}
                     compact={true}
                   />
@@ -135,6 +143,11 @@ export default function ListView({ daysInView, records }) {
                 {isNonWorking && !record?.checkIn ? "00:00" : totalHoursStr}
               </span>
               <span className="text-[9px] md:text-[10px] text-gray-500">Hrs worked</span>
+              {(record?.isLate || record?.lateMinutes > 0) && (
+                <span className="mt-1 inline-block text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 self-end">
+                  Late
+                </span>
+              )}
               {record?.isConflict && (
                 <span className="mt-1 inline-block text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded px-1 self-end">
                   Conflict: Yes
