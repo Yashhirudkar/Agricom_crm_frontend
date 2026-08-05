@@ -1,15 +1,18 @@
 import React, { useState } from "react";
 import { FileText, Eye, Download } from "lucide-react";
 import MediaViewer from "./MediaViewer";
+import { getAvatarUrl } from "@/lib/axios";
 
 const PdfBubble = React.memo(({ msg }) => {
   const [showViewer, setShowViewer] = useState(false);
 
   const attachment = msg.attachments?.[0] || msg.attachment || {};
-  const src = attachment.filePath || "";
-  const name = attachment.fileName || "document.pdf";
-  const size = attachment.fileSize
-    ? `${(attachment.fileSize / 1024).toFixed(1)} KB`
+  const rawSrc = attachment.filePath || msg.payload?.filePath || "";
+  const src = rawSrc ? getAvatarUrl(rawSrc) : "";
+  const name = attachment.fileName || msg.payload?.fileName || "document.pdf";
+  const sizeVal = attachment.fileSize || msg.payload?.fileSize;
+  const size = sizeVal
+    ? `${(sizeVal / 1024).toFixed(1)} KB`
     : "PDF Document";
 
   return (

@@ -24,6 +24,16 @@ import {
 } from "lucide-react";
 import TimePicker12h from "@/components/common/TimePicker12h";
 
+const DAYS_OF_WEEK = [
+  { label: "Sunday", value: 0 },
+  { label: "Monday", value: 1 },
+  { label: "Tuesday", value: 2 },
+  { label: "Wednesday", value: 3 },
+  { label: "Thursday", value: 4 },
+  { label: "Friday", value: 5 },
+  { label: "Saturday", value: 6 }
+];
+
 function HrPoliciesContent() {
   const dispatch = useDispatch();
   const { hasPermission } = usePermissions();
@@ -55,7 +65,8 @@ function HrPoliciesContent() {
     defaultBreakEndTime: "13:30",
     defaultBreakMinutes: 30,
     lateMarkGraceMinutes: 15,
-    allowAttendanceCorrection: true
+    allowAttendanceCorrection: true,
+    weeklyOffDays: [0, 6]
   });
 
   useEffect(() => {
@@ -72,7 +83,8 @@ function HrPoliciesContent() {
         defaultBreakEndTime: currentPolicy.defaultBreakEndTime || "13:30",
         defaultBreakMinutes: currentPolicy.defaultBreakMinutes ?? 30,
         lateMarkGraceMinutes: currentPolicy.lateComingGraceMinutes ?? 15,
-        allowAttendanceCorrection: currentPolicy.allowAttendanceCorrection ?? true
+        allowAttendanceCorrection: currentPolicy.allowAttendanceCorrection ?? true,
+        weeklyOffDays: currentPolicy.weeklyOffDays ?? [0, 6]
       });
     } else {
       // Defaults
@@ -88,7 +100,8 @@ function HrPoliciesContent() {
         defaultBreakEndTime: "13:30",
         defaultBreakMinutes: 30,
         lateMarkGraceMinutes: 15,
-        allowAttendanceCorrection: true
+        allowAttendanceCorrection: true,
+        weeklyOffDays: [0, 6]
       });
     }
   }, [currentPolicy]);
@@ -98,6 +111,18 @@ function HrPoliciesContent() {
       dispatch(fetchCompanyHrPolicies());
     }
   }, [dispatch, activeCompanyId]);
+
+  const toggleWeeklyOffDay = (dayValue) => {
+    if (!canUpdate) return;
+    const currentOffs = form.weeklyOffDays || [];
+    let updated;
+    if (currentOffs.includes(dayValue)) {
+      updated = currentOffs.filter(d => d !== dayValue);
+    } else {
+      updated = [...currentOffs, dayValue].sort();
+    }
+    setForm({ ...form, weeklyOffDays: updated });
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -115,7 +140,8 @@ function HrPoliciesContent() {
         minHoursForHalfDay: Number(form.minHalfDayHours),
         minHoursForPresent: Number(form.minFullDayHours),
         lateComingGraceMinutes: Number(form.lateMarkGraceMinutes),
-        allowAttendanceCorrection: Boolean(form.allowAttendanceCorrection)
+        allowAttendanceCorrection: Boolean(form.allowAttendanceCorrection),
+        weeklyOffDays: form.weeklyOffDays
       };
       await dispatch(upsertCompanyHrPolicies(payload)).unwrap();
       showToast("Company HR Policies updated successfully");
@@ -136,7 +162,7 @@ function HrPoliciesContent() {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-[1200px] mx-auto space-y-6">
+    <div className="p-6 md:p-8 max-w-[1200px] mx-auto space-y-6 pb-16">
       {toast && (
         <div className={`fixed top-5 right-5 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === "error" ? "bg-red-500" : "bg-green-500"}`}>
           {toast.type === "error" ? <AlertCircle className="h-4 w-4" /> : <Check className="h-4 w-4" />}
@@ -303,6 +329,38 @@ function HrPoliciesContent() {
                 <option value="true">Allowed</option>
                 <option value="false">Not Allowed</option>
               </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+          <div className="p-5 border-b border-gray-50 bg-gray-50/20 flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-gray-400" />
+            <h2 className="text-sm font-bold text-gray-800">Weekly Off Days</h2>
+          </div>
+          <div className="p-6">
+            <p className="text-xs text-gray-400 font-medium mb-4">
+              Select the days of the week that are designated as weekly offs for your organization.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {DAYS_OF_WEEK.map((day) => {
+                const isSelected = (form.weeklyOffDays || []).includes(day.value);
+                return (
+                  <button
+                    key={day.value}
+                    type="button"
+                    disabled={!canUpdate}
+                    onClick={() => toggleWeeklyOffDay(day.value)}
+                    className={`px-4 py-2 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-blue-50 text-[#007aff] border-blue-200 hover:bg-blue-100"
+                        : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 disabled:hover:bg-gray-50"
+                    } disabled:cursor-not-allowed`}
+                  >
+                    {day.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

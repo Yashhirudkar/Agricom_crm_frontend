@@ -102,7 +102,7 @@ export function getConversationDisplay(
     return {
       title,
       subtitle: conversation.description || "No description set",
-      avatar: null,
+      avatar: conversation.avatarUrl || conversation.photoUrl || null,
       initials: getInitials(conversation.name),
       avatarClass: getAvatarStyle(conversation.name),
       presence: "OFFLINE",

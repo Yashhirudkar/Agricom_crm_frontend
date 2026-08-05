@@ -28,15 +28,16 @@ function AdminLeavesContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Filters state
+  // Filters state - using parameter names matching backend GetLeaveRequestsFilterDto
   const [filters, setFilters] = useState({
+    search: "",
     employeeId: "",
     branchId: "",
     departmentId: "",
     status: "",
     leaveTypeId: "",
-    fromDate: "",
-    toDate: "",
+    startDate: "",
+    endDate: "",
     month: ""
   });
 
@@ -45,20 +46,23 @@ function AdminLeavesContent() {
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [selectedDept, setSelectedDept] = useState(null);
 
+  // Trigger state to force re-fetch when filters are applied
+  const [fetchTrigger, setFetchTrigger] = useState(0);
+
   useEffect(() => {
     if (activeCompanyId) {
       dispatch(fetchLeaveTypes({}));
-      loadLeaves();
     }
-  }, [dispatch, activeCompanyId, currentPage]);
+  }, [dispatch, activeCompanyId]);
 
-  const loadLeaves = () => {
+  useEffect(() => {
+    if (!activeCompanyId) return;
     const query = { page: currentPage, limit: itemsPerPage };
     Object.entries(filters).forEach(([key, val]) => {
       if (val) query[key] = val;
     });
     dispatch(fetchLeaveRequests(query));
-  };
+  }, [dispatch, activeCompanyId, currentPage, fetchTrigger]);
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
@@ -66,30 +70,49 @@ function AdminLeavesContent() {
 
   const applyFilters = () => {
     setCurrentPage(1);
-    loadLeaves();
+    setFetchTrigger(prev => prev + 1);
+    setIsFilterOpen(false);
   };
 
   const resetFilters = () => {
     setFilters({
+      search: "",
       employeeId: "",
       branchId: "",
       departmentId: "",
       status: "",
       leaveTypeId: "",
-      fromDate: "",
-      toDate: "",
+      startDate: "",
+      endDate: "",
       month: ""
     });
     setSelectedEmp(null);
     setSelectedBranch(null);
     setSelectedDept(null);
     setCurrentPage(1);
-    setTimeout(() => {
-      dispatch(fetchLeaveRequests({ page: 1, limit: itemsPerPage }));
-    }, 0);
+    setFetchTrigger(prev => prev + 1);
   };
 
-  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  // Exclude 'search' from the count of active advanced filters
+  const activeFilterCount = Object.entries(filters).filter(([key, val]) => key !== "search" && Boolean(val)).length;
+
+  // Helper to build page numbers with ellipsis
+  const getPageNumbers = () => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages = [];
+    pages.push(1);
+    if (currentPage > 4) pages.push("...");
+    
+    const start = Math.max(2, currentPage - 2);
+    const end = Math.min(totalPages - 1, currentPage + 2);
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    
+    if (currentPage < totalPages - 3) pages.push("...");
+    pages.push(totalPages);
+    return pages;
+  };
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6">
@@ -103,10 +126,38 @@ function AdminLeavesContent() {
             Monitor and manage all employee leave requests across the company.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  applyFilters();
+                }
+              }}
+              placeholder="Search by employee name or code..."
+              className="w-full pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#007aff] text-gray-700 transition-colors shadow-xs"
+            />
+            {filters.search && (
+              <button
+                onClick={() => {
+                  setFilters(prev => ({ ...prev, search: "" }));
+                  setCurrentPage(1);
+                  setFetchTrigger(prev => prev + 1);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm transition-colors ${isFilterOpen || activeFilterCount > 0 ? "bg-[#007aff] text-white" : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"}`}
+            className={`px-4 py-2 rounded-xl flex items-center justify-center gap-2 text-xs font-semibold shadow-sm transition-colors cursor-pointer shrink-0 ${isFilterOpen || activeFilterCount > 0 ? "bg-[#007aff] text-white" : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"}`}
           >
             <Filter className="h-4 w-4" /> Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
           </button>
@@ -121,7 +172,7 @@ function AdminLeavesContent() {
                 <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                   <Filter className="h-4 w-4 text-gray-400" /> Advanced Filters
                 </h3>
-                <button onClick={() => setIsFilterOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setIsFilterOpen(false)} className="text-gray-400 hover:text-gray-600 cursor-pointer">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -184,11 +235,11 @@ function AdminLeavesContent() {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">From Date</label>
-                  <input type="date" name="fromDate" value={filters.fromDate} onChange={handleFilterChange} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#007aff] text-gray-700" />
+                  <input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#007aff] text-gray-700" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">To Date</label>
-                  <input type="date" name="toDate" value={filters.toDate} onChange={handleFilterChange} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#007aff] text-gray-700" />
+                  <input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-[#007aff] text-gray-700" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Month</label>
@@ -197,10 +248,10 @@ function AdminLeavesContent() {
               </div>
 
               <div className="mt-4 flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button onClick={resetFilters} className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
+                <button onClick={resetFilters} className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer">
                   Reset Filters
                 </button>
-                <button onClick={applyFilters} className="px-5 py-2 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl shadow-sm shadow-blue-500/20 transition-colors">
+                <button onClick={applyFilters} className="px-5 py-2 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl shadow-sm shadow-blue-500/20 transition-colors cursor-pointer">
                   Apply Filters
                 </button>
               </div>
@@ -212,6 +263,12 @@ function AdminLeavesContent() {
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                 Total {total} Leave Requests
               </div>
+              {isLoading && (
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <div className="h-4 w-4 rounded-full border-2 border-[#007aff] border-t-transparent animate-spin" />
+                  Loading...
+                </div>
+              )}
             </div>
 
             <div className="overflow-x-auto">
@@ -259,6 +316,8 @@ function AdminLeavesContent() {
                               <span>{leave.approver.firstName} {leave.approver.lastName}</span>
                               {leave.remarks && <span className="text-[10px] text-gray-400 italic mt-0.5 max-w-[150px] truncate" title={leave.remarks}>"{leave.remarks}"</span>}
                             </div>
+                          ) : leave.approverName ? (
+                            <span>{leave.approverName}</span>
                           ) : "-"}
                         </td>
                       </tr>
@@ -266,7 +325,7 @@ function AdminLeavesContent() {
                   ) : (
                     <tr>
                       <td colSpan="5" className="px-6 py-12 text-center text-gray-400 font-semibold">
-                        No leave requests found matching the current filters.
+                        {isLoading ? "Loading leave requests..." : "No leave requests found matching the current filters."}
                       </td>
                     </tr>
                   )}
@@ -274,23 +333,47 @@ function AdminLeavesContent() {
               </table>
             </div>
 
+            {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="p-4 border-t border-gray-50 bg-gray-50/20 flex items-center justify-between text-xs font-semibold text-gray-500">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-opacity cursor-pointer"
-                >
-                  Previous
-                </button>
-                <span>Page {page} of {totalPages}</span>
-                <button
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-opacity cursor-pointer"
-                >
-                  Next
-                </button>
+              <div className="p-4 border-t border-gray-100 bg-gray-50/20 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <span className="text-[11px] text-gray-400 font-medium">
+                  Showing {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, total)} of {total} results
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    className="px-3 py-1.5 text-xs font-semibold bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  >
+                    ← Prev
+                  </button>
+
+                  {getPageNumbers().map((pg, i) =>
+                    pg === "..." ? (
+                      <span key={`ellipsis-${i}`} className="px-2 py-1.5 text-xs text-gray-400 select-none">…</span>
+                    ) : (
+                      <button
+                        key={pg}
+                        onClick={() => setCurrentPage(pg)}
+                        className={`min-w-[32px] px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
+                          currentPage === pg
+                            ? "bg-[#007aff] text-white border-[#007aff] shadow-sm shadow-blue-300"
+                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        {pg}
+                      </button>
+                    )
+                  )}
+
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                    className="px-3 py-1.5 text-xs font-semibold bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                  >
+                    Next →
+                  </button>
+                </div>
               </div>
             )}
           </div>

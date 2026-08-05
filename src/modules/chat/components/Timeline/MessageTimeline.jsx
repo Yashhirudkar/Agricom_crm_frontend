@@ -162,6 +162,23 @@ export default function MessageTimeline({
   const [unreadIncomingCount, setUnreadIncomingCount] = useState(0);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
 
+  // WhatsApp/Telegram style: divider auto-dismiss after user views the chat
+  const [dismissedUnread, setDismissedUnread] = useState(false);
+
+  // Reset dismissed state whenever the active conversation changes
+  useEffect(() => {
+    setDismissedUnread(false);
+  }, [activeConversationId]);
+
+  // Auto-dismiss divider after a short delay (user has seen the new messages)
+  useEffect(() => {
+    if (dismissedUnread) return;
+    const timer = setTimeout(() => {
+      setDismissedUnread(true);
+    }, 2000); // 2 seconds after mounting/switching, divider disappears
+    return () => clearTimeout(timer);
+  }, [activeConversationId, dismissedUnread]);
+
   // Unified Rendering Pipeline
   const pipelineItems = useMemo(() => {
     const items = [];
@@ -186,8 +203,9 @@ export default function MessageTimeline({
         });
       }
 
-      // 2. Unread Divider
+      // 2. Unread Divider — only show if not yet dismissed
       if (
+        !dismissedUnread &&
         lastReadMessageId &&
         !unreadDividerInserted &&
         Number(msg.id) > Number(lastReadMessageId) &&
@@ -252,7 +270,7 @@ export default function MessageTimeline({
     }
 
     return items;
-  }, [messages, currentUser, conversation, typingUsers]);
+  }, [messages, currentUser, conversation, typingUsers, dismissedUnread]);
 
   // ─── Virtualization setup ──────────────────────────────────────────────────
 

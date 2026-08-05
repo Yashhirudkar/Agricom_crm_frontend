@@ -1,12 +1,15 @@
 import React from "react";
 import { Paperclip, Download } from "lucide-react";
+import { getAvatarUrl } from "@/lib/axios";
 
 const FileBubble = React.memo(({ msg }) => {
   const attachment = msg.attachments?.[0] || msg.attachment || {};
-  const src = attachment.filePath || "";
-  const name = attachment.fileName || "attachment.bin";
-  const size = attachment.fileSize
-    ? `${(attachment.fileSize / 1024).toFixed(1)} KB`
+  const rawSrc = attachment.filePath || msg.payload?.filePath || "";
+  const src = rawSrc ? getAvatarUrl(rawSrc) : "";
+  const name = attachment.fileName || msg.payload?.fileName || "attachment.bin";
+  const sizeVal = attachment.fileSize || msg.payload?.fileSize;
+  const size = sizeVal
+    ? `${(sizeVal / 1024).toFixed(1)} KB`
     : "Generic File";
 
   return (

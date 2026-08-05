@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback, useState } from "react";
 import { Vote, Lock, Users, Check } from "lucide-react";
 import { useVotePollMutation, useClosePollMutation } from "../../mutations/chat.mutations";
 
@@ -10,7 +10,7 @@ class PollErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-3 bg-red-50 text-red-650 text-xs border border-red-200 rounded-lg">
+        <div className="p-3 bg-red-50 text-red-655 text-xs border border-red-200 rounded-lg">
           Failed to load interactive poll.
         </div>
       );
@@ -26,6 +26,9 @@ const PollCardInner = React.memo(({ msg, conversation, currentUser }) => {
   const currentUserId = currentUser?.id || currentUser?.userId;
   const isCreator = Number(msg.senderId) === Number(currentUserId);
   const isClosed = !!poll.isClosed;
+
+  // Confirmation modal state
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // React Query mutations
   const voteMutation = useVotePollMutation();
@@ -69,13 +72,15 @@ const PollCardInner = React.memo(({ msg, conversation, currentUser }) => {
   }, [poll.id, poll.allowMultiple, mySelectedOptionIds, isClosed, voteMutation, msg.conversationId]);
 
   const handleClose = useCallback(() => {
-    if (window.confirm("Are you sure you want to close this poll? Nobody else will be able to vote.")) {
-      closeMutation.mutate({
-        pollId: poll.id,
-        conversationId: msg.conversationId,
-      });
-    }
-  }, [poll.id, closeMutation, msg.conversationId]);
+    setConfirmOpen(true);
+  }, []);
+
+  const handleConfirmClose = () => {
+    closeMutation.mutate({
+      pollId: poll.id,
+      conversationId: msg.conversationId,
+    });
+  };
 
   return (
     <div className="w-80 bg-white border border-slate-100 rounded-xl shadow-[0_4px_16px_rgba(0,0,0,0.03)] p-4 select-none">
@@ -167,6 +172,19 @@ const PollCardInner = React.memo(({ msg, conversation, currentUser }) => {
         </span>
         <span>Total Votes: {totalVotesCount}</span>
       </div>
+
+      {confirmOpen && (
+        <ConfirmModal
+          isOpen={confirmOpen}
+          onClose={() => setConfirmOpen(false)}
+          title="Close Interactive Poll"
+          message="Are you sure you want to close this poll? Nobody else will be able to vote after it is closed."
+          confirmLabel="Close Poll"
+          cancelLabel="Cancel"
+          isDestructive={true}
+          onConfirm={handleConfirmClose}
+        />
+      )}
     </div>
   );
 }, (prev, next) => {
@@ -186,5 +204,42 @@ export default function PollCard(props) {
     <PollErrorBoundary>
       <PollCardInner {...props} />
     </PollErrorBoundary>
+  );
+}
+
+// ── Custom Confirmation Modal ──
+function ConfirmModal({ isOpen, onClose, title, message, confirmLabel, cancelLabel, onConfirm, isDestructive }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px] animate-in fade-in duration-200">
+      <div className="bg-white border border-slate-200/80 shadow-2xl rounded-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 text-left">
+        <div className="p-5">
+          <h3 className="text-slate-900 font-bold text-[13px] mb-1.5">{title}</h3>
+          <p className="text-slate-500 text-[11px] leading-relaxed">{message}</p>
+        </div>
+        <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-350 text-slate-700 rounded-lg text-[10.5px] font-bold cursor-pointer transition-colors"
+          >
+            {cancelLabel || "Cancel"}
+          </button>
+          <button
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className={`px-3 py-1.5 rounded-lg text-[10.5px] font-bold cursor-pointer transition-colors text-white
+              ${isDestructive
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-blue-600 hover:bg-blue-700"
+              }`}
+          >
+            {confirmLabel || "Confirm"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

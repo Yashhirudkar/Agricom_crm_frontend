@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useSelector } from "react-redux";
 import { selectUserPermissions, selectUserType } from "@/store/slices/authSlice";
+import { canUserPost } from "@/modules/chat/utils/channelPosting";
 
 const normalizePermission = (permKey) => {
   if (!permKey) return "";
@@ -210,12 +211,24 @@ export function usePermissions() {
     return false;
   };
 
+  /**
+   * Check if the current user can post in a channel conversation.
+   * Dual-layer: global RBAC (chat:create) + channel postingPolicy.
+   *
+   * @param {object} conversation — active conversation object
+   * @returns {boolean}
+   */
+  const checkChannelPostPermission = (conversation) => {
+    return canUserPost(conversation, user, hasPermission);
+  };
+
   return {
     permissions,
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
-    checkGroupPermission
+    checkGroupPermission,
+    checkChannelPostPermission,
   };
 }
 

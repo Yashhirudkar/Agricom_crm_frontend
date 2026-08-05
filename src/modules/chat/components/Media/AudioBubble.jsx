@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause } from "lucide-react";
+import { getAvatarUrl } from "@/lib/axios";
 
 const AudioBubble = React.memo(({ msg }) => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -12,7 +13,8 @@ const AudioBubble = React.memo(({ msg }) => {
   const canvasRef = useRef(null);
 
   const attachment = msg.attachments?.[0] || msg.attachment || {};
-  const src = attachment.filePath || msg.payload?.filePath || "";
+  const rawSrc = attachment.filePath || msg.payload?.filePath || "";
+  const src = rawSrc ? getAvatarUrl(rawSrc) : "";
 
   // Initialize and track audio metadata
   useEffect(() => {

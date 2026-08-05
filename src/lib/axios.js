@@ -15,12 +15,22 @@ export const getBackendUrl = () => {
   }
   return "http://localhost:5000";
 };
-
 export const getAvatarUrl = (url) => {
   if (!url) return null;
   if (url.startsWith("http") || url.startsWith("blob:") || url.startsWith("data:")) return url;
   const baseUrl = getBackendUrl();
-  return `${baseUrl}${url.startsWith("/") ? url : "/" + url}`;
+  let path = url.startsWith("/") ? url : "/" + url;
+  if (path.startsWith("/attachments/") && !path.startsWith("/api/")) {
+    path = "/api" + path;
+  }
+  if (path.includes("/attachments/")) {
+    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+    if (token) {
+      const separator = path.includes("?") ? "&" : "?";
+      path = `${path}${separator}token=${encodeURIComponent(token)}`;
+    }
+  }
+  return `${baseUrl}${path}`;
 };
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
@@ -56,11 +66,11 @@ axiosClient.interceptors.request.use(
       }
 
       let activeCompanyId = null;
-      if (store) {
-        activeCompanyId = store.getState().companyContext?.activeCompanyId;
-      }
-      if (!activeCompanyId) {
+      if (typeof window !== "undefined") {
         activeCompanyId = localStorage.getItem("activeCompanyId");
+      }
+      if (!activeCompanyId && store) {
+        activeCompanyId = store.getState().companyContext?.activeCompanyId;
       }
 
       if (store) {
@@ -134,7 +144,11 @@ axiosClient.interceptors.response.use(
       !originalRequest?.url?.includes("/auth/refresh");
 
     if (!isRefreshable401) {
-      console.error("[Axios Error]", originalRequest?.url, error.response?.status, error.response?.data);
+      if (error.response) {
+        console.error("[Axios Error]", originalRequest?.url, error.response.status, error.response.data);
+      } else if (!axios.isCancel(error)) {
+        console.error("[Axios Error]", originalRequest?.url, error.message || error);
+      }
     }
 
     if (typeof window !== "undefined") {

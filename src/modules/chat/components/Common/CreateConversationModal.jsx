@@ -76,18 +76,25 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
           const deptMap = Object.fromEntries(depts.map(d => [d.value, d.label]));
           const desigMap = Object.fromEntries(desigs.map(d => [d.value, d.label]));
           
-          const mappedFallback = assignableList.map(emp => {
-            const userObj = emp.user || {};
-            return {
-              id: emp.id,
-              userId: emp.userId,
-              name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || userObj.name || emp.email,
-              email: emp.email || userObj.email,
-              department: deptMap[emp.departmentId] || "Staff",
-              designation: desigMap[emp.designationId] || "Employee",
-              avatarUrl: userObj.avatarUrl || null
-            };
-          }).filter(e => e.userId && e.userId !== currentUser?.id);
+          const mappedFallback = assignableList
+            .filter(emp => {
+              const deptName = emp.departmentId ? deptMap[emp.departmentId] : null;
+              const desigName = emp.designationId ? desigMap[emp.designationId] : null;
+              return Boolean(deptName && desigName);
+            })
+            .map(emp => {
+              const userObj = emp.user || {};
+              return {
+                id: emp.id,
+                userId: emp.userId,
+                name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || userObj.name || emp.email,
+                email: emp.email || userObj.email,
+                department: deptMap[emp.departmentId],
+                designation: desigMap[emp.designationId],
+                avatarUrl: userObj.avatarUrl || null
+              };
+            })
+            .filter(e => e.userId && e.userId !== currentUser?.id);
           
           setEmployees(mappedFallback);
         } catch (fallbackErr) {
@@ -104,16 +111,23 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
         const res = await axiosClient.get("/employees", { params: { limit: 500 } });
         const list = res.data?.data || res.data || [];
         
-        // Map and filter (ensure they have userId, and are not the current user)
-        const mapped = list.map(emp => ({
-          id: emp.id,
-          userId: emp.userId,
-          name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || emp.email,
-          email: emp.email,
-          department: emp.department?.name || "Staff",
-          designation: emp.designation?.name || "Employee",
-          avatarUrl: emp.avatarUrl || null
-        })).filter(e => e.userId && e.userId !== currentUser?.id);
+        // Map and filter (ensure they have assigned department & designation/role, have userId, and are not the current user)
+        const mapped = list
+          .filter(emp => {
+            const hasDept = Boolean((emp.departmentId || emp.department) && emp.department?.name);
+            const hasDesig = Boolean((emp.designationId || emp.designation) && emp.designation?.name);
+            return hasDept && hasDesig;
+          })
+          .map(emp => ({
+            id: emp.id,
+            userId: emp.userId,
+            name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || emp.email,
+            email: emp.email,
+            department: emp.department?.name,
+            designation: emp.designation?.name,
+            avatarUrl: emp.avatarUrl || null
+          }))
+          .filter(e => e.userId && e.userId !== currentUser?.id);
         
         setEmployees(mapped);
       } catch (err) {
@@ -142,18 +156,25 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
           const deptMap = Object.fromEntries(depts.map(d => [d.value, d.label]));
           const desigMap = Object.fromEntries(desigs.map(d => [d.value, d.label]));
           
-          const mappedFallback = assignableList.map(emp => {
-            const userObj = emp.user || {};
-            return {
-              id: emp.id,
-              userId: emp.userId,
-              name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || userObj.name || emp.email,
-              email: emp.email || userObj.email,
-              department: deptMap[emp.departmentId] || "Staff",
-              designation: desigMap[emp.designationId] || "Employee",
-              avatarUrl: userObj.avatarUrl || null
-            };
-          }).filter(e => e.userId && e.userId !== currentUser?.id);
+          const mappedFallback = assignableList
+            .filter(emp => {
+              const deptName = emp.departmentId ? deptMap[emp.departmentId] : null;
+              const desigName = emp.designationId ? desigMap[emp.designationId] : null;
+              return Boolean(deptName && desigName);
+            })
+            .map(emp => {
+              const userObj = emp.user || {};
+              return {
+                id: emp.id,
+                userId: emp.userId,
+                name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || userObj.name || emp.email,
+                email: emp.email || userObj.email,
+                department: deptMap[emp.departmentId],
+                designation: desigMap[emp.designationId],
+                avatarUrl: userObj.avatarUrl || null
+              };
+            })
+            .filter(e => e.userId && e.userId !== currentUser?.id);
           
           setEmployees(mappedFallback);
         } catch (fallbackErr) {

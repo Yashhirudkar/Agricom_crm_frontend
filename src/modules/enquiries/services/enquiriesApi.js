@@ -11,7 +11,7 @@ export const mastersApi = {
   getPartnerRoles: (params) =>
     axiosClient.get("/masters/partner-roles/options", { params }),
   getPartners: (params) =>
-    axiosClient.get("/masters/partners", { params }),
+    axiosClient.get("/masters/partners/options", { params }),
   getProducts: (params) =>
     axiosClient.get("/masters/products/options", { params }),
   getCountries: (params) =>

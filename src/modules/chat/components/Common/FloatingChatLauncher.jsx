@@ -25,9 +25,10 @@ export default function FloatingChatLauncher() {
     const fetchUnread = async () => {
       try {
         const res = await axiosClient.get("/chat/unread/total");
-        setUnreadCount(res.data?.total || 0);
+        const count = res.data?.total ?? res.data?.totalUnreadMessages ?? 0;
+        setUnreadCount(count);
       } catch (err) {
-        console.error("Failed to fetch unread total:", err);
+        console.warn("Failed to fetch unread total:", err?.message || err);
       }
     };
 

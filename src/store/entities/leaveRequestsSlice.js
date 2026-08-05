@@ -46,7 +46,7 @@ export const fetchLeaveDashboardSummary = createAsyncThunk("entities/leaveReques
 export const approveLeave = createAsyncThunk("entities/leaveRequests/approve", async ({ id, remarks }, { rejectWithValue }) => {
   try {
     const res = await axiosClient.put(`/leave-requests/${id}/approve`, { remarks });
-    return res.data;
+    return { id, ...res.data };
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to approve leave");
   }
@@ -55,7 +55,7 @@ export const approveLeave = createAsyncThunk("entities/leaveRequests/approve", a
 export const rejectLeave = createAsyncThunk("entities/leaveRequests/reject", async ({ id, remarks }, { rejectWithValue }) => {
   try {
     const res = await axiosClient.put(`/leave-requests/${id}/reject`, { reason: remarks });
-    return res.data;
+    return { id, ...res.data };
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to reject leave");
   }
@@ -64,7 +64,7 @@ export const rejectLeave = createAsyncThunk("entities/leaveRequests/reject", asy
 export const cancelLeave = createAsyncThunk("entities/leaveRequests/cancel", async ({ id, reason }, { rejectWithValue }) => {
   try {
     const res = await axiosClient.put(`/leave-requests/${id}/cancel`, { reason });
-    return res.data;
+    return { id, ...res.data };
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to cancel leave");
   }
@@ -90,11 +90,14 @@ const leaveRequestsSlice = createSlice({
       .addCase(fetchLeaveRequests.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchLeaveRequests.fulfilled, (state, action) => { 
         state.isLoading = false; 
-        leaveRequestsAdapter.setAll(state, action.payload.data || action.payload);
-        state.total = action.payload.total || action.payload.length;
-        state.page = action.payload.page || 1;
-        state.limit = action.payload.limit || 10;
-        state.totalPages = action.payload.totalPages || 1;
+        const payload = action.payload;
+        const data = payload.data || payload;
+        const meta = payload.meta || {};
+        leaveRequestsAdapter.setAll(state, data);
+        state.total = meta.total ?? payload.total ?? (Array.isArray(data) ? data.length : 0);
+        state.page = meta.page ?? payload.page ?? 1;
+        state.limit = meta.limit ?? payload.limit ?? 10;
+        state.totalPages = meta.totalPages ?? payload.totalPages ?? 1;
       })
       .addCase(fetchLeaveRequests.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
 
@@ -102,11 +105,14 @@ const leaveRequestsSlice = createSlice({
       .addCase(fetchMyLeaves.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchMyLeaves.fulfilled, (state, action) => { 
         state.isLoading = false; 
-        leaveRequestsAdapter.setAll(state, action.payload.data || action.payload);
-        state.total = action.payload.total || action.payload.length;
-        state.page = action.payload.page || 1;
-        state.limit = action.payload.limit || 10;
-        state.totalPages = action.payload.totalPages || 1;
+        const payload = action.payload;
+        const data = payload.data || payload;
+        const meta = payload.meta || {};
+        leaveRequestsAdapter.setAll(state, data);
+        state.total = meta.total ?? payload.total ?? (Array.isArray(data) ? data.length : 0);
+        state.page = meta.page ?? payload.page ?? 1;
+        state.limit = meta.limit ?? payload.limit ?? 10;
+        state.totalPages = meta.totalPages ?? payload.totalPages ?? 1;
       })
       .addCase(fetchMyLeaves.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
 
@@ -122,14 +128,29 @@ const leaveRequestsSlice = createSlice({
       })
 
       // Status updates (Approve, Reject, Cancel)
+      // Backend may return { message: '...' } instead of full entity.
+      // Guard: only upsert if the payload has a valid id (i.e. it's the full entity).
+      // Otherwise, remove the stale entity so it doesn't render with undefined dates.
       .addCase(approveLeave.fulfilled, (state, action) => {
-        leaveRequestsAdapter.upsertOne(state, action.payload);
+        if (action.payload?.id) {
+          leaveRequestsAdapter.upsertOne(state, action.payload);
+        } else {
+          leaveRequestsAdapter.removeOne(state, action.meta.arg.id);
+        }
       })
       .addCase(rejectLeave.fulfilled, (state, action) => {
-        leaveRequestsAdapter.upsertOne(state, action.payload);
+        if (action.payload?.id) {
+          leaveRequestsAdapter.upsertOne(state, action.payload);
+        } else {
+          leaveRequestsAdapter.removeOne(state, action.meta.arg.id);
+        }
       })
       .addCase(cancelLeave.fulfilled, (state, action) => {
-        leaveRequestsAdapter.upsertOne(state, action.payload);
+        if (action.payload?.id) {
+          leaveRequestsAdapter.upsertOne(state, action.payload);
+        } else {
+          leaveRequestsAdapter.removeOne(state, action.meta.arg.id);
+        }
       });
   },
 });

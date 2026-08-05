@@ -4,24 +4,6 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import {
-  MessageSquare,
-  Search,
-  Users,
-  Settings,
-  MoreVertical,
-  Plus,
-  X,
-  FileText,
-  Link as LinkIcon,
-  Sparkles,
-  Lock,
-  Paperclip,
-  Phone,
-  Video,
-  Pin,
-  Star
-} from "lucide-react";
 import { toast } from "sonner";
 import { ChatAPI } from "@/api/chat.api";
 import { getSocketInstance, subscribeToSocketEvent, unsubscribeFromSocketEvent } from "@/lib/socket";
@@ -66,20 +48,16 @@ import {
   selectSocketStatus,
 } from "@/modules/chat/store/chatSlice";
 
-// Components
-import ConversationList from "@/modules/chat/components/Sidebar/ConversationList";
-import RichComposer from "@/modules/chat/components/Composer/RichComposer";
-import MessageTimeline from "@/modules/chat/components/Timeline/MessageTimeline";
-import VoiceRecorder from "@/modules/chat/components/Voice/VoiceRecorder";
-import AdminSettingsPanel from "@/modules/chat/components/Admin/AdminSettingsPanel";
-import GroupSettingsPanel from "@/modules/chat/components/Admin/GroupSettingsPanel";
-import CreateConversationModal from "@/modules/chat/components/Common/CreateConversationModal";
 import axiosClient from "@/lib/axios";
 import { getConversationDisplay } from "@/modules/chat/utils/getConversationDisplay";
 import usePermissions from "@/hooks/usePermissions";
-import { ArrowLeft } from "lucide-react";
-import ErrorBoundary from "@/modules/chat/components/Common/ErrorBoundary";
-import { SidebarSkeleton, MessagesSkeleton, HeaderSkeleton } from "@/modules/chat/components/Common/SkeletonLoading";
+import CreateConversationModal from "@/modules/chat/components/Common/CreateConversationModal";
+import { getChannelHeaderSuffix } from "@/modules/chat/utils/channelPosting";
+
+// Sub-components (same chat folder)
+import ChatSidebar from "./ChatSidebar";
+import ChatMainPanel from "./ChatMainPanel";
+import ChatRightPanel from "./ChatRightPanel";
 
 export default function ChatPage() {
   const dispatch = useDispatch();
@@ -98,7 +76,7 @@ export default function ChatPage() {
 
   // Local state
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState("ALL"); // ALL, CHANNELS, DMS, GROUPS
+  const [filterType, setFilterType] = useState("ALL");
   const [composerInput, setComposerInput] = useState("");
   const [employeeLookup, setEmployeeLookup] = useState({});
   const [presenceMap, setPresenceMap] = useState({});
@@ -113,6 +91,11 @@ export default function ChatPage() {
   const [loadingPinned, setLoadingPinned] = useState(false);
   const [starredMessages, setStarredMessages] = useState([]);
   const [loadingStarred, setLoadingStarred] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [erpDetail, setErpDetail] = useState(null);
+  const [loadingErp, setLoadingErp] = useState(false);
+  // Sticky pinned banner — latest pinned message for the active conversation
+  const [activePinnedMessage, setActivePinnedMessage] = useState(null);
 
   // Sync mobile view on active chat changes
   useEffect(() => {
@@ -123,6 +106,14 @@ export default function ChatPage() {
     }
   }, [activeConversationId]);
 
+  // Clean up composer input, editing state, replying state, and right panel tab on conversation switch/deletion
+  useEffect(() => {
+    setComposerInput("");
+    setEditingMessage(null);
+    setReplyingToMessage(null);
+    dispatch(setRightPanelTab(null));
+  }, [activeConversationId, dispatch]);
+
   // Abort active uploads and typing timeouts on conversation switch/unmount
   useEffect(() => {
     return () => {
@@ -130,17 +121,14 @@ export default function ChatPage() {
         controller.abort();
       });
       activeUploadControllers.current.clear();
-      
+
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
     };
   }, [activeConversationId]);
 
-  // New channel dialog state
-  const [showCreateModal, setShowCreateModal] = useState(false);
-
-  // ESC keypress listener to close context windows/editing/replying states
+  // ESC keypress listener
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
@@ -153,7 +141,27 @@ export default function ChatPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [dispatch]);
 
-  // Fetch pinned messages when Pinned tab opens
+  // ── Fetch pinned banner message whenever the active conversation changes ──
+  // (separate from the right-panel pins list which loads on panel open)
+  const fetchActivePinned = async (convId) => {
+    if (!convId) { setActivePinnedMessage(null); return; }
+    try {
+      const res = await ChatAPI.getPinnedMessages(convId);
+      const pins = res || [];
+      // Show the most recently pinned message (last in array)
+      setActivePinnedMessage(pins.length > 0 ? pins[pins.length - 1] : null);
+    } catch (err) {
+      console.error("Failed to fetch active pinned message", err);
+      setActivePinnedMessage(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchActivePinned(activeConversationId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConversationId]);
+
+  // Fetch pinned messages when Pinned tab opens (right panel)
   useEffect(() => {
     if (rightPanelTab !== "PINNED_MESSAGES" || !activeConversationId) {
       setPinnedMessages([]);
@@ -193,21 +201,16 @@ export default function ChatPage() {
     loadStars();
   }, [rightPanelTab]);
 
-  // ERP Context Details lazy state
-  const [erpDetail, setErpDetail] = useState(null);
-  const [loadingErp, setLoadingErp] = useState(false);
-
-  // Check permissions to load full employee list vs fallback options
-  const { hasPermission } = usePermissions();
+  // Check permissions
+  const { hasPermission, checkChannelPostPermission } = usePermissions();
   const canReadEmployees = hasPermission("employees:read");
   const canReadDepartments = hasPermission("departments:read");
   const canReadDesignations = hasPermission("designations:read");
 
-  // Load employee details lookup for DM recipient display mapping
+  // Load employee details lookup
   useEffect(() => {
     const fetchLookup = async () => {
       if (!canReadEmployees) {
-        // Fallback: Fetch assignable list directly to avoid 403 console errors
         try {
           const assignableRes = await axiosClient.get("/v1/tasks/employees/assignable");
           const assignableList = assignableRes.data?.data || [];
@@ -218,13 +221,13 @@ export default function ChatPage() {
             try {
               const dRes = await axiosClient.get("/departments/options", { params: { limit: 250 } });
               depts = dRes.data?.data || dRes.data || [];
-            } catch (e) { }
+            } catch (e) {}
           }
           if (canReadDesignations) {
             try {
               const dsRes = await axiosClient.get("/designations/options", { params: { limit: 250 } });
               desigs = dsRes.data?.data || dsRes.data || [];
-            } catch (e) { }
+            } catch (e) {}
           }
 
           const deptMap = Object.fromEntries(depts.map(d => [d.value, d.label]));
@@ -273,13 +276,13 @@ export default function ChatPage() {
             try {
               const dRes = await axiosClient.get("/departments/options", { params: { limit: 250 } });
               depts = dRes.data?.data || dRes.data || [];
-            } catch (e) { }
+            } catch (e) {}
           }
           if (canReadDesignations) {
             try {
               const dsRes = await axiosClient.get("/designations/options", { params: { limit: 250 } });
               desigs = dsRes.data?.data || dsRes.data || [];
-            } catch (e) { }
+            } catch (e) {}
           }
 
           const deptMap = Object.fromEntries(depts.map(d => [d.value, d.label]));
@@ -301,13 +304,23 @@ export default function ChatPage() {
         }
       }
     };
-
     fetchLookup();
   }, [canReadEmployees, canReadDepartments, canReadDesignations]);
 
   useEffect(() => {
     employeeLookupRef.current = employeeLookup;
   }, [employeeLookup]);
+
+  const activeConversationIdRef = useRef(activeConversationId);
+  const userRef = useRef(user);
+
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // Real-time socket event listeners
   useEffect(() => {
@@ -353,8 +366,6 @@ export default function ChatPage() {
       const { conversationId, userId, isTyping } = payload;
       if (!conversationId || !userId) return;
 
-      // Compute the new typing list outside any state updater so we can
-      // dispatch to Redux and update local state as separate, safe operations.
       setTypingUsersMap(prev => {
         const list = prev[conversationId] || [];
         let newList = [...list];
@@ -367,8 +378,6 @@ export default function ChatPage() {
           newList = newList.filter(u => u.userId !== userId);
         }
 
-        // Dispatch AFTER computing — schedule it as a microtask so it runs
-        // outside the React state-updater function (avoids "setState in render").
         Promise.resolve().then(() => {
           dispatch(setTypingUsers({ conversationId, users: newList }));
         });
@@ -380,12 +389,75 @@ export default function ChatPage() {
       });
     };
 
+    const handleConversationCreated = (payload) => {
+      const newConv = payload?.conversation;
+      if (!newConv) return;
+
+      const currentUserId = userRef.current?.id || userRef.current?.userId;
+      const isMember = newConv.members?.some(m => Number(m.userId) === Number(currentUserId));
+      const isPublicChannel = newConv.type === "CHANNEL";
+
+      if (isMember || isPublicChannel) {
+        queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations() });
+      }
+    };
+
+    const handleMemberAdded = (payload) => {
+      const currentUserId = userRef.current?.id || userRef.current?.userId;
+      if (payload?.member?.userId && Number(payload.member.userId) === Number(currentUserId)) {
+        queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations() });
+      } else {
+        if (payload?.conversationId) {
+          queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversationDetail(Number(payload.conversationId)) });
+          queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations() });
+        }
+      }
+    };
+
+    const handleMemberRemoved = (payload) => {
+      const currentUserId = userRef.current?.id || userRef.current?.userId;
+      if (payload?.userId && Number(payload.userId) === Number(currentUserId)) {
+        queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations() });
+        if (Number(activeConversationIdRef.current) === Number(payload.conversationId)) {
+          dispatch(setActiveConversationId(null));
+        }
+      } else {
+        if (payload?.conversationId) {
+          queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversationDetail(Number(payload.conversationId)) });
+          queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations() });
+        }
+      }
+    };
+
+    const handleConversationUpdated = (payload) => {
+      if (payload?.conversationId) {
+        queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations() });
+        if (Number(activeConversationIdRef.current) === Number(payload.conversationId)) {
+          queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversationDetail(payload.conversationId) });
+        }
+      }
+    };
+
+    const handleConversationArchived = (payload) => {
+      if (payload?.conversationId) {
+        queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations() });
+        if (Number(activeConversationIdRef.current) === Number(payload.conversationId)) {
+          dispatch(setActiveConversationId(null));
+        }
+      }
+    };
+
     subscribeToSocketEvent("message_created", handleMessageCreated);
     subscribeToSocketEvent("message_updated", handleMessageUpdated);
     subscribeToSocketEvent("message_deleted", handleMessageDeleted);
     subscribeToSocketEvent("message_pinned", handleMessagePinned);
     subscribeToSocketEvent("presence_changed", handlePresenceChanged);
     subscribeToSocketEvent("typing", handleTyping);
+    subscribeToSocketEvent("conversation_created", handleConversationCreated);
+    subscribeToSocketEvent("member_added", handleMemberAdded);
+    subscribeToSocketEvent("member_removed", handleMemberRemoved);
+    subscribeToSocketEvent("conversation_updated", handleConversationUpdated);
+    subscribeToSocketEvent("conversation_archived", handleConversationArchived);
 
     return () => {
       unsubscribeFromSocketEvent("message_created", handleMessageCreated);
@@ -394,29 +466,38 @@ export default function ChatPage() {
       unsubscribeFromSocketEvent("message_pinned", handleMessagePinned);
       unsubscribeFromSocketEvent("presence_changed", handlePresenceChanged);
       unsubscribeFromSocketEvent("typing", handleTyping);
+      unsubscribeFromSocketEvent("conversation_created", handleConversationCreated);
+      unsubscribeFromSocketEvent("member_added", handleMemberAdded);
+      unsubscribeFromSocketEvent("member_removed", handleMemberRemoved);
+      unsubscribeFromSocketEvent("conversation_updated", handleConversationUpdated);
+      unsubscribeFromSocketEvent("conversation_archived", handleConversationArchived);
     };
   }, [dispatch, queryClient]);
 
   // Queries
+  const showArchived = filterType === "ARCHIVED";
   const { data: conversationsData, isLoading: isLoadingConversations } = useConversationsQuery({
     companyId,
+    archived: showArchived
   });
   const conversations = conversationsData?.data || [];
 
   const { data: activeConvDetail } = useConversationDetailQuery(activeConversationId);
-  const activeConversation = activeConvDetail?.data || conversations.find(c => c.id === activeConversationId);
+  const activeConversation = activeConvDetail?.data || activeConvDetail || conversations.find(c => c.id === activeConversationId);
 
-  // Subscribe/unsubscribe from active conversation socket room.
-  // Placed AFTER activeConversation is declared to avoid temporal dead zone ReferenceError.
-  // Also queries current presence for conversation members on open (catches users
-  // who were already online before we subscribed to presence_changed events).
+  // Channel posting permission
+  const canPost = useMemo(() => {
+    return checkChannelPostPermission(activeConversation);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConversation, user]);
+
+  // Subscribe to socket room
   useEffect(() => {
     const socket = getSocketInstance();
     if (!socket || !activeConversationId) return;
 
     socket.emit("subscribe", { conversationId: activeConversationId });
 
-    // Hydrate presence for members of this conversation
     if (activeConversation?.members?.length) {
       const memberUserIds = activeConversation.members
         .map(m => m.user?.id || m.userId)
@@ -442,7 +523,7 @@ export default function ChatPage() {
     };
   }, [activeConversationId, activeConversation]);
 
-  // Fetch ERP discussion context parameters only when the drawer is active
+  // ERP context
   useEffect(() => {
     if (rightPanelTab !== "INFO" || !activeConversation?.entityType || !activeConversation?.entityId) {
       setErpDetail(null);
@@ -466,7 +547,6 @@ export default function ChatPage() {
     loadErp();
   }, [rightPanelTab, activeConversation?.entityType, activeConversation?.entityId]);
 
-
   const {
     data: messagesData,
     fetchNextPage,
@@ -477,18 +557,13 @@ export default function ChatPage() {
 
   const messagesList = useMemo(() => {
     if (!messagesData) return [];
-    // Backend getHistory() already reverses to ASC (oldest → newest) before responding.
-    // Pages from useInfiniteQuery accumulate oldest-page-first (page[0]=oldest batch, page[N]=newest batch).
-    // flatMap preserves that chronological order — do NOT reverse again.
     return messagesData.pages.flatMap((page) => page.data || []);
   }, [messagesData]);
 
-  // Construct dynamic mergedMessagesList by merging server messages with Redux optimistic queue
   const mergedMessagesList = useMemo(() => {
     const dbMessages = messagesList;
     if (!activeConversationId) return dbMessages;
 
-    // Filter optimistic items for this conversation
     const activeOptimistic = Object.entries(optimisticQueue)
       .filter(([_, item]) => item.conversationId === activeConversationId)
       .map(([clientMessageId, item]) => ({
@@ -504,7 +579,7 @@ export default function ChatPage() {
         content: item.content,
         type: "TEXT",
         createdAt: item.createdAt || new Date().toISOString(),
-        status: item.status || "PENDING", // 'PENDING' | 'FAILED'
+        status: item.status || "PENDING",
         isOptimistic: true,
         parentId: item.parentId || null,
         parentMessage: item.parentMessage || null,
@@ -512,7 +587,6 @@ export default function ChatPage() {
 
     if (activeOptimistic.length === 0) return dbMessages;
 
-    // Deduplicate: check content equivalence, sender, and time proximity
     const filteredOptimistic = activeOptimistic.filter((opt) => {
       const isDuplicate = dbMessages.some((dbMsg) => {
         if (dbMsg.content !== opt.content) return false;
@@ -529,7 +603,6 @@ export default function ChatPage() {
     return [...dbMessages, ...filteredOptimistic];
   }, [messagesList, optimisticQueue, activeConversationId, user]);
 
-  // Resolve timeline header details for selected DM or channel
   const activeDetails = useMemo(() => {
     return getConversationDisplay(activeConversation, user, presenceMap, typingUsersMap);
   }, [activeConversation, user, presenceMap, typingUsersMap]);
@@ -552,11 +625,14 @@ export default function ChatPage() {
         }
         return m.user?.presence && ["ONLINE", "AWAY", "BUSY"].includes(m.user.presence.toUpperCase());
       }).length;
-      
+
       const parts = [];
-      if (totalCount > 0) parts.push(`${totalCount} ${totalCount === 1 ? 'member' : 'members'}`);
+      if (totalCount > 0) parts.push(`${totalCount} ${totalCount === 1 ? "member" : "members"}`);
       if (onlineCount > 0) parts.push(`${onlineCount} online`);
-      
+
+      const channelSuffix = getChannelHeaderSuffix(activeConversation);
+      if (channelSuffix) parts.push(channelSuffix);
+
       return parts.join(" • ") || activeDetails?.subtitle || "No description set";
     }
   }, [activeConversation, activeDetails, presenceMap]);
@@ -572,7 +648,8 @@ export default function ChatPage() {
   const starMessageMutation = useStarMessageMutation();
   const unstarMessageMutation = useUnstarMessageMutation();
 
-  // Send message handler with optimistic queueing or editing
+  // ── HANDLERS ──
+
   const handleSend = async (textToSend) => {
     if (!textToSend.trim() || !activeConversationId) return;
 
@@ -593,9 +670,8 @@ export default function ChatPage() {
     }
 
     const clientMsgId = `client-${Date.now()}`;
-    const currentReplyingTo = replyingToMessage; // capture current reply message
+    const currentReplyingTo = replyingToMessage;
 
-    // Add optimistically to Redux queue
     dispatch(addToOptimisticQueue({
       clientMessageId: clientMsgId,
       conversationId: activeConversationId,
@@ -604,14 +680,13 @@ export default function ChatPage() {
       parentMessage: currentReplyingTo || null,
     }));
 
-    // Clear replying state early for better responsiveness
     setReplyingToMessage(null);
 
     try {
       await sendMessageMutation.mutateAsync({
         conversationId: activeConversationId,
-        dto: { 
-          content: textToSend, 
+        dto: {
+          content: textToSend,
           type: "TEXT",
           parentId: currentReplyingTo?.id || undefined
         }
@@ -623,7 +698,6 @@ export default function ChatPage() {
     }
   };
 
-  // Real File Upload trigger supporting progress, type resolution, and abort controller
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -639,8 +713,7 @@ export default function ChatPage() {
 
     try {
       const activeCompanyId = companyId || 1;
-      // We target the general /api/attachments/upload route
-      const res = await axios.post("/api/attachments/upload", formData, {
+      const res = await axiosClient.post("/attachments/upload", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           "x-company-id": activeCompanyId,
@@ -654,7 +727,6 @@ export default function ChatPage() {
 
       dispatch(setUploadStatus({ fileId, status: "SUCCESS" }));
 
-      // Resolve message types based on MIME
       let type = "FILE";
       if (file.type.startsWith("image/")) type = "IMAGE";
       else if (file.type.startsWith("video/")) type = "VIDEO";
@@ -687,7 +759,6 @@ export default function ChatPage() {
     }
   };
 
-  // Voice recorder handler
   const handleSendVoice = (audioBlob) => {
     sendMessageMutation.mutate({
       conversationId: activeConversationId,
@@ -696,545 +767,187 @@ export default function ChatPage() {
     toast.success("Voice message sent.");
   };
 
+  const handleComposerChange = (val) => {
+    setComposerInput(val);
+    dispatch(setComposerDraft({ conversationId: activeConversationId, draft: val }));
+
+    const socket = getSocketInstance();
+    if (socket && socket.connected && activeConversationId) {
+      socket.emit("typing_start", { conversationId: activeConversationId });
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit("typing_stop", { conversationId: activeConversationId });
+      }, 3000);
+    }
+  };
+
+  const handleComposerSubmit = () => {
+    const socket = getSocketInstance();
+    if (socket && socket.connected && activeConversationId) {
+      socket.emit("typing_stop", { conversationId: activeConversationId });
+    }
+  };
+
+  const handleTogglePanel = (tab) => {
+    dispatch(setRightPanelTab(rightPanelTab === tab ? null : tab));
+  };
+
+  const handlePin = (messageId) => {
+    pinMessageMutation.mutate(
+      { conversationId: activeConversationId, messageId },
+      {
+        onSuccess: () => {
+          // Re-fetch so banner updates immediately after pinning
+          fetchActivePinned(activeConversationId);
+          // Also refresh right panel if open
+          if (rightPanelTab === "PINNED_MESSAGES") {
+            ChatAPI.getPinnedMessages(activeConversationId)
+              .then(res => setPinnedMessages(res || []))
+              .catch(() => {});
+          }
+        }
+      }
+    );
+  };
+
+  const handleUnpin = async (pin, m) => {
+    try {
+      await unpinMessageMutation.mutateAsync({ conversationId: activeConversationId, messageId: m.id });
+      setPinnedMessages(prev => prev.filter(p => p.id !== pin.id));
+      // Update banner
+      await fetchActivePinned(activeConversationId);
+      toast.success("Message unpinned.");
+      queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.messages(activeConversationId) });
+    } catch (e) {
+      toast.error("Failed to unpin message.");
+    }
+  };
+
+  // Unpin directly from banner (no pin object, just messageId)
+  const handleBannerUnpin = async (messageId) => {
+    try {
+      await unpinMessageMutation.mutateAsync({ conversationId: activeConversationId, messageId });
+      setPinnedMessages(prev => prev.filter(p => p.message?.id !== messageId));
+      await fetchActivePinned(activeConversationId);
+      toast.success("Message unpinned.");
+      queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.messages(activeConversationId) });
+    } catch (e) {
+      toast.error("Failed to unpin message.");
+    }
+  };
+
+  const handleUnstar = async (m) => {
+    try {
+      await unstarMessageMutation.mutateAsync(m.id);
+      setStarredMessages(prev => prev.filter(sm => sm.id !== m.id));
+      toast.success("Message unstarred.");
+      queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.messages(activeConversationId) });
+    } catch (e) {
+      toast.error("Failed to unstar message.");
+    }
+  };
+
+  // ── RENDER ──
   return (
     <div className="w-full h-full flex flex-row bg-white overflow-hidden shadow-2xl relative">
 
       {/* ── COLUMN 1: SIDEBAR ── */}
-      <aside className={`w-[270px] flex-shrink-0 flex flex-col bg-[#F7F8FA] text-slate-700 border-r border-slate-200/60 h-full overflow-hidden transition-all duration-200
-        ${showSidebarMobile ? "flex w-full md:w-[270px]" : "hidden md:flex"}`}
-      >
-        {/* Workspace Brand */}
-        <div className="h-[56px] px-3.5 border-b border-slate-200/70 flex items-center justify-between select-none">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-[#3B82F6] flex items-center justify-center text-white text-xs font-extrabold tracking-tight shadow-sm">
-              AG
-            </div>
-            <div>
-              <h2 className="font-bold text-slate-900 text-[13.5px] leading-none">Agricom CRM</h2>
-              <span className="text-[9.5px] text-slate-400 font-semibold uppercase tracking-wider">Enterprise Hub</span>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="p-1.5 hover:bg-slate-200/80 text-slate-500 hover:text-slate-800 rounded-lg transition-colors cursor-pointer"
-            title="Create Channel or Group"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-        </div>
-
-        {/* Global Search Bar */}
-        <div className="px-3 py-2 border-b border-slate-200/60">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-[7px] h-3 w-3 text-slate-400" />
-            <input
-              id="sidebar-search"
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-7 pr-3 py-1.5 bg-white border border-slate-200/80 text-[12px] text-slate-800 placeholder-slate-400 rounded-lg focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/10 transition-all"
-            />
-          </div>
-        </div>
-
-        {/* Dynamic Category filter toggles */}
-        <div className="px-3 pt-2 pb-1 flex gap-0.5 text-[10px] font-bold text-slate-500 select-none">
-          <button onClick={() => setFilterType("ALL")} className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors ${filterType === "ALL" ? "bg-blue-50 text-blue-700" : "hover:bg-slate-200/60"}`}>All</button>
-          <button onClick={() => setFilterType("GROUPS")} className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors ${filterType === "GROUPS" ? "bg-blue-50 text-blue-700" : "hover:bg-slate-200/60"}`}>Groups</button>
-          <button onClick={() => setFilterType("CHANNELS")} className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors ${filterType === "CHANNELS" ? "bg-blue-50 text-blue-700" : "hover:bg-slate-200/60"}`}>Channels</button>
-          <button onClick={() => setFilterType("DMS")} className={`px-2.5 py-1 rounded-md cursor-pointer transition-colors ${filterType === "DMS" ? "bg-blue-50 text-blue-700" : "hover:bg-slate-200/60"}`}>DMs</button>
-        </div>
-
-        {/* Scroll list */}
-        <div className="flex-1 overflow-y-auto p-2">
-          {isLoadingConversations ? (
-            <SidebarSkeleton />
-          ) : (
-            <ErrorBoundary title="Sidebar List Error">
-              <ConversationList
-                conversations={conversations}
-                filterType={filterType}
-                searchQuery={searchQuery}
-                currentUser={user}
-                presenceMap={presenceMap}
-              />
-            </ErrorBoundary>
-          )}
-        </div>
-
-        <div className="px-3.5 py-2.5 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-400 select-none">
-          <div className="flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-            <span className="font-medium">Connected</span>
-          </div>
-          <span>v1.2.0</span>
-        </div>
-      </aside>
+      <ChatSidebar
+        showSidebarMobile={showSidebarMobile}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        filterType={filterType}
+        setFilterType={setFilterType}
+        onCreateClick={() => setShowCreateModal(true)}
+        conversations={conversations}
+        isLoadingConversations={isLoadingConversations}
+        user={user}
+        presenceMap={presenceMap}
+      />
 
       {/* ── COLUMN 2: FEED TIMELINE & COMPOSER ── */}
-      <main className={`flex-1 min-w-0 flex flex-col h-full bg-white overflow-hidden transition-all duration-200
-        ${showSidebarMobile ? "hidden md:flex" : "flex w-full"}`}
-      >
-        {!activeConversationId ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 bg-white">
-            <div className="h-16 w-16 rounded-full bg-slate-50 flex items-center justify-center mb-4 border border-slate-100 shadow-xs">
-              <MessageSquare className="h-8 w-8 text-slate-400" />
-            </div>
-            <h3 className="font-bold text-slate-850 text-sm">No Chat Selected</h3>
-            <p className="text-xs text-slate-400 max-w-sm mt-1">
-              Select a public channel, private group, or direct message from the sidebar to begin.
-            </p>
-          </div>
-        ) : isLoadingMessages ? (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <HeaderSkeleton />
-            <MessagesSkeleton />
-          </div>
-        ) : (
-          <>
-            {/* Top Header */}
-            <header className="h-[60px] px-4 border-b border-slate-200/60 bg-white flex items-center justify-between flex-shrink-0 shadow-[0_1px_3px_rgba(0,0,0,0.01)] select-none">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                {/* Mobile Back button */}
-                <button
-                  onClick={() => setShowSidebarMobile(true)}
-                  className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg md:hidden transition-colors cursor-pointer mr-0.5"
-                  title="Back to list"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </button>
+      <ChatMainPanel
+        showSidebarMobile={showSidebarMobile}
+        activeConversationId={activeConversationId}
+        activeConversation={activeConversation}
+        activeDetails={activeDetails}
+        headerSubtitle={headerSubtitle}
+        rightPanelTab={rightPanelTab}
+        isLoadingMessages={isLoadingMessages}
+        mergedMessagesList={mergedMessagesList}
+        user={user}
+        typingUsersMap={typingUsersMap}
+        uploadQueue={uploadQueue}
+        composerInput={composerInput}
+        setComposerInput={setComposerInput}
+        employeeLookup={employeeLookup}
+        editingMessage={editingMessage}
+        setEditingMessage={setEditingMessage}
+        replyingToMessage={replyingToMessage}
+        setReplyingToMessage={setReplyingToMessage}
+        canPost={canPost}
+        presenceMap={presenceMap}
+        onSetShowSidebarMobile={setShowSidebarMobile}
+        onTogglePanel={handleTogglePanel}
+        onSend={handleSend}
+        onFileUpload={handleFileUpload}
+        onSendVoice={handleSendVoice}
+        onComposerChange={handleComposerChange}
+        onComposerSubmit={handleComposerSubmit}
+        onReact={(messageId, reaction) => reactMessageMutation.mutate({ conversationId: activeConversationId, messageId, reaction })}
+        onPin={handlePin}
+        onUnpin={(messageId) => unpinMessageMutation.mutate({ conversationId: activeConversationId, messageId })}
+        activePinnedMessage={activePinnedMessage}
+        onBannerUnpin={handleBannerUnpin}
+        onOpenPinnedPanel={() => handleTogglePanel("PINNED_MESSAGES")}
+        onStar={(messageId) => {
+          starMessageMutation.mutate(messageId, {
+            onSuccess: () => toast.success("Message starred/bookmarked."),
+            onError: () => toast.error("Failed to star message.")
+          });
+        }}
+        onDelete={(msgId) => {
+          deleteMessageMutation.mutate({ conversationId: activeConversationId, messageId: msgId, mode: "everyone" }, {
+            onSuccess: () => toast.success("Message deleted.")
+          });
+        }}
+        onReply={(msg) => {
+          setReplyingToMessage(msg);
+          setEditingMessage(null);
+        }}
+        fetchNextPage={fetchNextPage}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+      />
 
-                {activeConversation?.type !== "DIRECT" ? (
-                  <div className="relative flex-shrink-0">
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                      activeConversation?.type === "CHANNEL" 
-                        ? "bg-blue-50 text-blue-600 border border-blue-100" 
-                        : "bg-slate-100 text-slate-700 border border-slate-250"
-                    }`}>
-                      {activeConversation?.type === "CHANNEL" ? "#" : activeDetails?.initials || "G"}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="relative flex-shrink-0">
-                    {activeDetails?.avatar ? (
-                      <img
-                        src={activeDetails.avatar}
-                        alt={activeDetails.title}
-                        className="h-10 w-10 rounded-full object-cover border border-slate-200"
-                      />
-                    ) : (
-                      <div className={`h-10 w-10 rounded-full border flex items-center justify-center text-sm font-bold ${activeDetails?.avatarClass || "bg-slate-100 text-slate-700"}`}>
-                        {activeDetails?.initials}
-                      </div>
-                    )}
-                    <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${
-                      activeDetails?.presence === "ONLINE" ? "bg-emerald-500" :
-                      activeDetails?.presence === "AWAY" ? "bg-amber-500" :
-                      activeDetails?.presence === "BUSY" ? "bg-red-500" :
-                      "bg-slate-400"
-                    }`} />
-                  </div>
-                )}
-
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <h1 className="font-bold text-slate-900 text-sm md:text-[14.5px] truncate leading-none">{activeDetails?.title}</h1>
-                    {activeConversation?.isLocked && <Lock className="h-3 w-3 text-amber-500" />}
-                  </div>
-                  {activeDetails?.isTyping ? (
-                    <p className="text-[10px] text-emerald-600 font-semibold animate-pulse mt-1">{activeDetails.typingText}</p>
-                  ) : (
-                    <p className="text-[10.5px] text-slate-400 font-medium truncate max-w-[280px] md:max-w-[450px] mt-1 select-text">
-                      {headerSubtitle}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 flex-shrink-0 select-none">
-                <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors cursor-pointer" title="Search conversation">
-                  <Search className="h-4 w-4" />
-                </button>
-
-                <button
-                  onClick={() => dispatch(setRightPanelTab(rightPanelTab === "PINNED_MESSAGES" ? null : "PINNED_MESSAGES"))}
-                  className={`p-2 rounded-lg transition-colors cursor-pointer ${rightPanelTab === "PINNED_MESSAGES" ? "bg-slate-100 text-slate-900 font-bold" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}
-                  title="Pinned messages"
-                >
-                  <Pin className="h-4 w-4 rotate-45" />
-                </button>
-
-                <button
-                  onClick={() => dispatch(setRightPanelTab(rightPanelTab === "STARRED_MESSAGES" ? null : "STARRED_MESSAGES"))}
-                  className={`p-2 rounded-lg transition-colors cursor-pointer ${rightPanelTab === "STARRED_MESSAGES" ? "bg-slate-100 text-slate-900 font-bold" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}
-                  title="Starred messages"
-                >
-                  <Star className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => dispatch(setRightPanelTab(rightPanelTab === "INFO" ? null : "INFO"))}
-                  className={`p-2 rounded-lg transition-colors cursor-pointer ${rightPanelTab === "INFO" ? "bg-slate-100 text-slate-800" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}
-                  title="ERP Context Info"
-                >
-                  <LinkIcon className="h-4 w-4" />
-                </button>
-                {activeConversation?.type !== "DIRECT" ? (
-                  <button
-                    onClick={() => dispatch(setRightPanelTab(rightPanelTab === "GROUP_SETTINGS" ? null : "GROUP_SETTINGS"))}
-                    className={`p-2 rounded-lg transition-colors cursor-pointer ${rightPanelTab === "GROUP_SETTINGS" ? "bg-slate-100 text-slate-800 animate-in duration-100" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}
-                    title="Group Settings"
-                  >
-                    <Settings className="h-4 w-4 hover:rotate-45 transition-transform duration-200" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => dispatch(setRightPanelTab(rightPanelTab === "SETTINGS" ? null : "SETTINGS"))}
-                    className={`p-2 rounded-lg transition-colors cursor-pointer ${rightPanelTab === "SETTINGS" ? "bg-slate-100 text-slate-800" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}
-                    title="Governance Policies"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </button>
-                )}
-                <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors cursor-pointer" title="More options">
-                  <MoreVertical className="h-4 w-4" />
-                </button>
-              </div>
-            </header>
-
-            {/* Message timeline list */}
-            <ErrorBoundary title="Message Timeline Error">
-              <MessageTimeline
-                messages={mergedMessagesList}
-                currentUser={user}
-                conversation={activeConversation}
-                typingUsers={typingUsersMap[activeConversationId] || []}
-                activeConversationId={activeConversationId}
-                onReact={(messageId, reaction) => reactMessageMutation.mutate({ conversationId: activeConversationId, messageId, reaction })}
-                onPin={(messageId) => pinMessageMutation.mutate({ conversationId: activeConversationId, messageId })}
-                onUnpin={(messageId) => unpinMessageMutation.mutate({ conversationId: activeConversationId, messageId })}
-                onStar={(messageId) => {
-                  starMessageMutation.mutate(messageId, {
-                    onSuccess: () => {
-                      toast.success("Message starred/bookmarked.");
-                    },
-                    onError: () => {
-                      toast.error("Failed to star message.");
-                    }
-                  });
-                }}
-                onEdit={(msg) => {
-                  setEditingMessage(msg);
-                  setComposerInput(msg.content);
-                  setReplyingToMessage(null);
-                }}
-                onDelete={(msgId) => {
-                  deleteMessageMutation.mutate({ conversationId: activeConversationId, messageId: msgId, mode: "everyone" }, {
-                    onSuccess: () => {
-                      toast.success("Message deleted.");
-                    }
-                  });
-                }}
-                onReply={(msg) => {
-                  setReplyingToMessage(msg);
-                  setEditingMessage(null);
-                }}
-                fetchNextPage={fetchNextPage}
-                hasNextPage={hasNextPage}
-                isFetchingNextPage={isFetchingNextPage}
-                presenceMap={presenceMap}
-              />
-            </ErrorBoundary>
-
-            {/* Active upload progress overlays */}
-            {Object.entries(uploadQueue).map(([id, item]) => (
-              <div key={id} className="mx-6 my-2 p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center gap-3 max-w-sm shadow-md animate-in slide-in-from-bottom-2">
-                <FileText className="h-7 w-7 text-blue-500 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-semibold text-slate-800 truncate">{item.fileName}</p>
-                  <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden mt-1.5">
-                    <div className="bg-blue-600 h-full" style={{ width: `${item.progress}%` }}></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Tiptap-based Rich Text Composer Footer */}
-            <footer className="px-3 py-2 bg-white border-t border-slate-200/60 flex flex-col gap-1 flex-shrink-0">
-              {editingMessage && (
-                <div className="bg-blue-50/80 border-l-[3px] border-blue-500 rounded-md px-2.5 py-1.5 flex items-center justify-between text-[11px] animate-in slide-in-from-bottom-1 duration-100 mb-0.5 select-none">
-                  <div className="flex-1 min-w-0 pr-3">
-                    <div className="font-bold text-blue-700 text-[10px] leading-none mb-0.5">Editing message</div>
-                    <div className="text-slate-500 truncate text-[11px]">
-                      {editingMessage.content}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setEditingMessage(null);
-                      setComposerInput("");
-                    }}
-                    className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer shrink-0"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-              {replyingToMessage && (
-                <div className="bg-slate-50 border-l-[3px] border-blue-500 rounded-md px-2.5 py-1.5 flex items-center justify-between text-[11px] animate-in slide-in-from-bottom-1 duration-100 mb-0.5 select-none">
-                  <div className="flex-1 min-w-0 pr-3">
-                    <div className="font-bold text-blue-600 text-[10px] leading-none mb-0.5">
-                      Replying to {replyingToMessage.sender?.name || "Teammate"}
-                    </div>
-                    <div className="text-slate-500 truncate text-[11px]">
-                      {replyingToMessage.content}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setReplyingToMessage(null)}
-                    className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer shrink-0"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-              <ErrorBoundary title="Composer Input Error">
-                <RichComposer
-                  value={composerInput}
-                  employees={Object.entries(employeeLookup).map(([id, emp]) => ({ id, name: emp.name }))}
-                  onSendVoice={handleSendVoice}
-                  onSendFile={handleFileUpload}
-                  onChange={(val) => {
-                    setComposerInput(val);
-                    dispatch(setComposerDraft({ conversationId: activeConversationId, draft: val }));
-
-                    // Emit typing_start event to socket with auto-stop timer
-                    const socket = getSocketInstance();
-                    if (socket && socket.connected && activeConversationId) {
-                      socket.emit("typing_start", { conversationId: activeConversationId });
-
-                      if (typingTimeoutRef.current) {
-                        clearTimeout(typingTimeoutRef.current);
-                      }
-
-                      typingTimeoutRef.current = setTimeout(() => {
-                        socket.emit("typing_stop", { conversationId: activeConversationId });
-                      }, 3000);
-                    }
-                  }}
-                  placeholder="Type a message..."
-                  onSubmit={(text) => {
-                    handleSend(text);
-                    const socket = getSocketInstance();
-                    if (socket && socket.connected && activeConversationId) {
-                      socket.emit("typing_stop", { conversationId: activeConversationId });
-                    }
-                  }}
-                />
-              </ErrorBoundary>
-            </footer>
-          </>
-        )}
-      </main>
-
-      {/* ── COLUMN 3: RIGHT COLLAPSIBLE CONTEXT DRAWER ── */}
-      <aside className={`border-l border-slate-200 flex flex-col bg-white overflow-hidden transition-all duration-300 flex-shrink-0
-        ${rightPanelTab ? "w-full md:w-[360px] fixed md:relative right-0 top-0 bottom-0 h-full z-50 md:z-auto" : "w-0 border-l-0"}`}>
-        {rightPanelTab === "INFO" && (
-          <div className="w-full md:w-[360px] h-full flex flex-col text-slate-700">
-            <header className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 flex-shrink-0">
-              <h3 className="font-bold text-slate-900 text-xs flex items-center gap-2">
-                <LinkIcon className="h-4 w-4 text-blue-500" />
-                <span>ERP Context Discussions</span>
-              </h3>
-              <button onClick={() => dispatch(setRightPanelTab(null))} className="p-1 hover:bg-slate-200 rounded cursor-pointer">
-                <X className="h-4 w-4 text-slate-500" />
-              </button>
-            </header>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {loadingErp ? (
-                <div className="p-3 text-center text-xs text-slate-400 animate-pulse">
-                  Loading ERP context reference...
-                </div>
-              ) : erpDetail ? (
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col gap-2 animate-in fade-in duration-100">
-                  <span className="text-[9px] font-bold text-blue-600 uppercase tracking-widest block">
-                    Context Reference
-                  </span>
-                  <h4 className="font-bold text-slate-800 text-xs">
-                    [{activeConversation.entityType}] {erpDetail.entityName || erpDetail.title || "Linked Discussion"}
-                  </h4>
-                  <p className="text-[10px] text-slate-500 font-medium">
-                    Entity ID: #{activeConversation.entityId}
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-1 italic leading-relaxed">
-                    All messages in this channel are linked polymorphic entries associated with this active ERP document context.
-                  </p>
-                </div>
-              ) : (
-                <div className="p-3 text-center text-xs text-slate-400">
-                  No active ERP document linked to this conversation channel.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {rightPanelTab === "PINNED_MESSAGES" && (
-          <div className="w-full md:w-[360px] h-full flex flex-col text-slate-700">
-            <header className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 flex-shrink-0">
-              <h3 className="font-bold text-slate-900 text-xs flex items-center gap-2">
-                <Pin className="h-4 w-4 text-blue-500 rotate-45" />
-                <span>Pinned Messages</span>
-              </h3>
-              <button onClick={() => dispatch(setRightPanelTab(null))} className="p-1 hover:bg-slate-200 rounded cursor-pointer">
-                <X className="h-4 w-4 text-slate-500" />
-              </button>
-            </header>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#FAFBFD]">
-              {loadingPinned ? (
-                <div className="p-3 text-center text-xs text-slate-400 animate-pulse">
-                  Loading pinned messages...
-                </div>
-              ) : pinnedMessages.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
-                  <span className="text-2xl">📌</span>
-                  <span>No pinned messages in this chat.</span>
-                </div>
-              ) : (
-                pinnedMessages.map((pin) => {
-                  const m = pin.message;
-                  if (!m) return null;
-                  return (
-                    <div key={pin.id} className="p-3 bg-white border border-slate-200/80 rounded-xl shadow-xs flex flex-col gap-1.5 hover:border-slate-300 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-slate-800">
-                          {m.sender?.name || "Unknown"}
-                        </span>
-                        <span className="text-[9px] text-slate-400">
-                          {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <p className="text-[11.5px] text-slate-600 break-words leading-relaxed select-text">
-                        {m.content}
-                      </p>
-                      <div className="flex justify-end pt-1 border-t border-slate-50">
-                        <button
-                          onClick={async () => {
-                            try {
-                              await unpinMessageMutation.mutateAsync({ conversationId: activeConversationId, messageId: m.id });
-                              setPinnedMessages(prev => prev.filter(p => p.id !== pin.id));
-                              toast.success("Message unpinned.");
-                              // Invalidate queries so that timeline also updates
-                              queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.messages(activeConversationId) });
-                            } catch (e) {
-                              toast.error("Failed to unpin message.");
-                            }
-                          }}
-                          className="text-[9.5px] font-bold text-red-500 hover:text-red-700 flex items-center gap-1 cursor-pointer bg-red-50 px-2 py-1 rounded-md hover:bg-red-100 transition-colors"
-                        >
-                          Unpin
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        )}
-
-        {rightPanelTab === "STARRED_MESSAGES" && (
-          <div className="w-full md:w-[360px] h-full flex flex-col text-slate-700">
-            <header className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 flex-shrink-0">
-              <h3 className="font-bold text-slate-900 text-xs flex items-center gap-2">
-                <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                <span>Starred Messages</span>
-              </h3>
-              <button onClick={() => dispatch(setRightPanelTab(null))} className="p-1 hover:bg-slate-200 rounded cursor-pointer">
-                <X className="h-4 w-4 text-slate-500" />
-              </button>
-            </header>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#FAFBFD]">
-              {loadingStarred ? (
-                <div className="p-3 text-center text-xs text-slate-400 animate-pulse">
-                  Loading starred messages...
-                </div>
-              ) : starredMessages.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
-                  <span className="text-2xl">⭐</span>
-                  <span>No starred messages.</span>
-                </div>
-              ) : (
-                starredMessages.map((m) => {
-                  if (!m) return null;
-                  return (
-                    <div key={m.id} className="p-3 bg-white border border-slate-200/80 rounded-xl shadow-xs flex flex-col gap-1.5 hover:border-slate-300 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-slate-800">
-                          {m.sender?.name || "Unknown"}
-                        </span>
-                        <span className="text-[9px] text-slate-400">
-                          {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <p className="text-[11.5px] text-slate-600 break-words leading-relaxed select-text">
-                        {m.content}
-                      </p>
-                      <div className="flex justify-between items-center pt-1 border-t border-slate-50">
-                        <span className="text-[8px] font-medium text-slate-400 uppercase tracking-wider">
-                          In: {m.conversation?.name || "Chat"}
-                        </span>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await unstarMessageMutation.mutateAsync(m.id);
-                              setStarredMessages(prev => prev.filter(sm => sm.id !== m.id));
-                              toast.success("Message unstarred.");
-                              // Invalidate queries so that timeline also updates
-                              queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.messages(activeConversationId) });
-                            } catch (e) {
-                              toast.error("Failed to unstar message.");
-                            }
-                          }}
-                          className="text-[9.5px] font-bold text-slate-500 hover:text-red-650 flex items-center gap-1 cursor-pointer bg-slate-50 hover:bg-red-50 px-2 py-1 rounded-md transition-colors"
-                        >
-                          Unstar
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        )}
-
-        {rightPanelTab === "SETTINGS" && (
-          <ErrorBoundary title="Settings Panel Error">
-            <AdminSettingsPanel
-              companyId={companyId}
-              onClose={() => dispatch(setRightPanelTab(null))}
-            />
-          </ErrorBoundary>
-        )}
-
-        {rightPanelTab === "GROUP_SETTINGS" && (
-          <ErrorBoundary title="Group Settings Panel Error">
-            <GroupSettingsPanel
-              conversation={activeConversation}
-              currentUser={user}
-              onClose={() => dispatch(setRightPanelTab(null))}
-              onUpdateConversation={() => {
-                queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations() });
-              }}
-            />
-          </ErrorBoundary>
-        )}
-      </aside>
+      {/* ── COLUMN 3: RIGHT CONTEXT DRAWER ── */}
+      <ChatRightPanel
+        rightPanelTab={rightPanelTab}
+        onClose={() => dispatch(setRightPanelTab(null))}
+        loadingErp={loadingErp}
+        erpDetail={erpDetail}
+        activeConversation={activeConversation}
+        loadingPinned={loadingPinned}
+        pinnedMessages={pinnedMessages}
+        onUnpin={handleUnpin}
+        setPinnedMessages={setPinnedMessages}
+        loadingStarred={loadingStarred}
+        starredMessages={starredMessages}
+        onUnstar={handleUnstar}
+        setStarredMessages={setStarredMessages}
+        companyId={companyId}
+        user={user}
+        onUpdateConversation={(action) => {
+          queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations() });
+          if (action === "delete" || action === "leave" || action === "archive") {
+            dispatch(setActiveConversationId(null));
+          } else if (activeConversationId) {
+            queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversationDetail(Number(activeConversationId)) });
+          }
+        }}
+      />
 
       {/* ── CREATE CHANNEL DIALOG MODAL ── */}
       <CreateConversationModal
@@ -1243,7 +956,6 @@ export default function ChatPage() {
         currentUser={user}
         companyId={companyId}
       />
-
     </div>
   );
 }

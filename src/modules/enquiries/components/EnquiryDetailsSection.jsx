@@ -1,16 +1,16 @@
 "use client";
-import React from "react";
-import { Package, ChevronDown } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Package, ChevronDown, Search, X, Loader2 } from "lucide-react";
 import { PORTS_BY_COUNTRY } from "@/constants/portsData";
 import CountrySelect from "@/components/common/CountrySelect";
 import countriesLib from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
+import axiosClient from "@/lib/axios";
 
 countriesLib.registerLocale(enLocale);
 
 export default function EnquiryDetailsSection({ form, setForm, errors, masters = {}, isView }) {
   const {
-    partners = [],
     countries = [],
     partnerRoles = [],
     products = [],
@@ -22,10 +22,83 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
   const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
   const err = "text-[10px] text-red-500 mt-1";
 
-  // Filter partners based on selected role
-  const rolePartners = form.partnerRoleId
-    ? partners.filter(p => p.partnerRoleId === form.partnerRoleId)
-    : [];
+  // State for partner options dropdown
+  const [partnerOptions, setPartnerOptions] = useState([]);
+  const [partnerLoading, setPartnerLoading] = useState(false);
+  const [partnerSearch, setPartnerSearch] = useState("");
+  const [isPartnerOpen, setIsPartnerOpen] = useState(false);
+  const [selectedPartnerName, setSelectedPartnerName] = useState("");
+  const partnerDropdownRef = useRef(null);
+
+  // Fetch partners asynchronously based on role and search query
+  const fetchPartnerOptions = useCallback(async (roleId, search = "") => {
+    if (!roleId) {
+      setPartnerOptions([]);
+      return;
+    }
+    setPartnerLoading(true);
+    try {
+      const res = await axiosClient.get("/masters/partners/options", {
+        params: { partnerRoleId: roleId, search: search || undefined },
+      });
+      const data = res.data?.data || res.data || [];
+      setPartnerOptions(data);
+    } catch (e) {
+      console.error("Failed to fetch partner options", e);
+      setPartnerOptions([]);
+    } finally {
+      setPartnerLoading(false);
+    }
+  }, []);
+
+  // When partnerRoleId changes, refetch partner options and reset selected partner if needed
+  useEffect(() => {
+    if (form.partnerRoleId) {
+      fetchPartnerOptions(form.partnerRoleId, partnerSearch);
+    } else {
+      setPartnerOptions([]);
+      setSelectedPartnerName("");
+    }
+  }, [form.partnerRoleId, fetchPartnerOptions]);
+
+  // Handle debounced search input
+  useEffect(() => {
+    if (!form.partnerRoleId) return;
+    const timer = setTimeout(() => {
+      fetchPartnerOptions(form.partnerRoleId, partnerSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [partnerSearch, form.partnerRoleId, fetchPartnerOptions]);
+
+  // Sync selected partner entityName if partnerId changes
+  useEffect(() => {
+    if (form.partnerId) {
+      const found = partnerOptions.find((p) => p.id === form.partnerId);
+      if (found) {
+        setSelectedPartnerName(found.entityName);
+      } else if (!selectedPartnerName) {
+        // If partner is selected but not present in current search results, fetch single partner option
+        axiosClient.get(`/masters/partners/${form.partnerId}`).then((res) => {
+          if (res.data?.entityName) {
+            setSelectedPartnerName(res.data.entityName);
+          }
+        }).catch(() => {});
+      }
+    } else {
+      setSelectedPartnerName("");
+    }
+  }, [form.partnerId, partnerOptions]);
+
+  // Click outside to close partner dropdown
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (partnerDropdownRef.current && !partnerDropdownRef.current.contains(event.target)) {
+        setIsPartnerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Port logic based on Origin Country
   const originCode = form.originCountry ? (countriesLib.getAlpha2Code(form.originCountry, "en") || "") : "";
@@ -51,7 +124,12 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
           <div className="relative">
             <select
               value={form.partnerRoleId || ""}
-              onChange={e => setForm(f => ({ ...f, partnerRoleId: e.target.value ? Number(e.target.value) : "", partnerId: "" }))}
+              onChange={e => {
+                const newRoleId = e.target.value ? Number(e.target.value) : "";
+                setForm(f => ({ ...f, partnerRoleId: newRoleId, partnerId: "" }));
+                setSelectedPartnerName("");
+                setPartnerSearch("");
+              }}
               disabled={isView}
               className={`${inp} appearance-none pr-8 ${errors.partnerRoleId ? "border-red-300" : ""}`}
             >
@@ -65,23 +143,90 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
           {errors.partnerRoleId && <p className={err}>{errors.partnerRoleId}</p>}
         </div>
 
-        {/* Partner */}
-        <div>
+        {/* Partner (Searchable Custom Dropdown) */}
+        <div className="relative" ref={partnerDropdownRef}>
           <label className={lbl}>Partner <span className="text-red-500">*</span></label>
-          <div className="relative">
-            <select
-              value={form.partnerId || ""}
-              onChange={e => setForm(f => ({ ...f, partnerId: e.target.value ? Number(e.target.value) : "" }))}
-              disabled={isView || !form.partnerRoleId}
-              className={`${inp} appearance-none pr-8 disabled:opacity-60 ${errors.partnerId ? "border-red-300" : ""}`}
-            >
-              <option value="">{form.partnerRoleId ? "Select Partner" : "Select Role first"}</option>
-              {rolePartners.map(p => (
-                <option key={p.id} value={p.id}>{p.entityName}</option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-          </div>
+          {isView ? (
+            <div className={`${inp} bg-gray-50 text-gray-700 font-medium`}>
+              {selectedPartnerName || "—"}
+            </div>
+          ) : (
+            <div className="relative">
+              <button
+                type="button"
+                disabled={!form.partnerRoleId}
+                onClick={() => setIsPartnerOpen((prev) => !prev)}
+                className={`${inp} text-left flex items-center justify-between gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${errors.partnerId ? "border-red-300" : ""}`}
+              >
+                <span className={`truncate ${selectedPartnerName ? "text-gray-900 font-medium" : "text-gray-400"}`}>
+                  {!form.partnerRoleId
+                    ? "Select Role first"
+                    : selectedPartnerName || "Select Partner"}
+                </span>
+                <div className="flex items-center gap-1 shrink-0 text-gray-400">
+                  {partnerLoading && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
+                  <ChevronDown className="h-3 w-3" />
+                </div>
+              </button>
+
+              {isPartnerOpen && form.partnerRoleId && (
+                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg p-2 space-y-2">
+                  <div className="relative flex items-center">
+                    <Search className="absolute left-2.5 h-3.5 w-3.5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search partner by name..."
+                      value={partnerSearch}
+                      onChange={(e) => setPartnerSearch(e.target.value)}
+                      className="w-full pl-8 pr-7 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#007aff]"
+                      autoFocus
+                    />
+                    {partnerSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setPartnerSearch("")}
+                        className="absolute right-2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto space-y-0.5">
+                    {partnerLoading && partnerOptions.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                        Loading partners...
+                      </div>
+                    ) : partnerOptions.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-gray-400 font-medium">
+                        No partners found
+                      </div>
+                    ) : (
+                      partnerOptions.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setForm((f) => ({ ...f, partnerId: p.id }));
+                            setSelectedPartnerName(p.entityName);
+                            setIsPartnerOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${
+                            form.partnerId === p.id
+                              ? "bg-blue-50 text-blue-600 font-semibold"
+                              : "hover:bg-gray-50 text-gray-700"
+                          }`}
+                        >
+                          <span className="truncate">{p.entityName}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {errors.partnerId && <p className={err}>{errors.partnerId}</p>}
         </div>
 

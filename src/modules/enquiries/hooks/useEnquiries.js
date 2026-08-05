@@ -50,7 +50,7 @@ export function useEnquiries(companyId, status = "", externalSearch = null) {
 
 export function useEnquiriesMasters() {
   const [masters, setMasters] = useState({
-    partnerRoles: [], partners: [], products: [], packingTypes: [], countries: [], shipmentTypes: []
+    partnerRoles: [], products: [], packingTypes: [], countries: [], shipmentTypes: []
   });
   const [loading, setLoading] = useState(true);
 
@@ -60,9 +60,8 @@ export function useEnquiriesMasters() {
       try {
         const pNew = { limit: 100, status: "Active" };
         const pOld = { limit: 100, isActive: true };
-        const [rolesRes, partnersRes, prod, countries, pkt, st] = await Promise.all([
+        const [rolesRes, prod, countries, pkt, st] = await Promise.all([
           mastersApi.getPartnerRoles(pOld),
-          mastersApi.getPartners(pOld),
           mastersApi.getProducts(pOld),
           mastersApi.getCountries(pOld),
           mastersApi.getPackingTypes(),
@@ -71,7 +70,6 @@ export function useEnquiriesMasters() {
 
         setMasters({
           partnerRoles: rolesRes.data?.data || [],
-          partners: partnersRes.data?.data || [],
           products: prod.data?.data || [],
           countries: countries.data?.data || [],
           packingTypes: Array.isArray(pkt.data) ? pkt.data : (pkt.data?.data || []),

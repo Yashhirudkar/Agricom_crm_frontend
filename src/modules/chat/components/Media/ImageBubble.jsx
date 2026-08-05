@@ -1,14 +1,22 @@
 import React, { useState } from "react";
 import { Eye, Download } from "lucide-react";
 import MediaViewer from "./MediaViewer";
+import { getAvatarUrl } from "@/lib/axios";
 
 const ImageBubble = React.memo(({ msg }) => {
   const [showViewer, setShowViewer] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const attachment = msg.attachments?.[0] || msg.attachment || {};
-  const src = attachment.filePath || "/placeholder-image.png";
-  const name = attachment.fileName || "image.png";
+  const rawSrc = attachment.filePath || msg.payload?.filePath || "";
+  const src = rawSrc ? getAvatarUrl(rawSrc) : "/placeholder-image.png";
+  const name = attachment.fileName || msg.payload?.fileName || "image.png";
+
+  const isFilename = msg.content && (
+    msg.content === name ||
+    msg.content === attachment.originalName ||
+    msg.content === msg.payload?.fileName
+  );
 
   return (
     <div className="flex flex-col gap-1.5 select-none">
@@ -44,7 +52,7 @@ const ImageBubble = React.memo(({ msg }) => {
         </div>
       </div>
 
-      {msg.content && (
+      {msg.content && !isFilename && (
         <p className="text-[13px] text-slate-800 leading-normal pl-0.5 mt-0.5 whitespace-pre-wrap select-text">
           {msg.content}
         </p>

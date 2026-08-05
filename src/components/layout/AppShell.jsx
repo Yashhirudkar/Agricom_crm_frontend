@@ -280,7 +280,7 @@ export default function AppShellClient({ children }) {
       <Header />
       <div className="flex-1 flex overflow-hidden h-full">
         <Sidebar />
-        <main className="flex-1 min-w-0 overflow-hidden h-full">{children}</main>
+        <main className="flex-1 min-w-0 overflow-y-auto h-full">{children}</main>
       </div>
       <CommandPalette />
       <FollowUpHeaderDrawer isOpen={isFollowUpsOpen} onClose={() => setIsFollowUpsOpen(false)} />

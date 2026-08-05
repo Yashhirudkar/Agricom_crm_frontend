@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { Play } from "lucide-react";
 import MediaViewer from "./MediaViewer";
+import { getAvatarUrl } from "@/lib/axios";
 
 const VideoBubble = React.memo(({ msg }) => {
   const [showViewer, setShowViewer] = useState(false);
 
   const attachment = msg.attachments?.[0] || msg.attachment || {};
-  const src = attachment.filePath || "";
-  const name = attachment.fileName || "video.mp4";
+  const rawSrc = attachment.filePath || msg.payload?.filePath || "";
+  const src = rawSrc ? getAvatarUrl(rawSrc) : "";
+  const name = attachment.fileName || msg.payload?.fileName || "video.mp4";
 
   return (
     <div className="flex flex-col gap-1.5 select-none">

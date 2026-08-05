@@ -22,8 +22,37 @@ export const ChatAPI = {
     return res.data;
   },
 
-  archiveConversation: async (id) => {
+  /**
+   * Update the posting policy of a CHANNEL conversation.
+   * Requires: chat_channel:update_posting_policy permission on backend.
+   *
+   * dto shape:
+   *   {
+   *     postingPolicy: "EVERYONE" | "ADMINS" | "OWNER" | "SELECTED_ROLES" | "SELECTED_USERS",
+   *     allowedPosters?: number[],   // userIds for SELECTED_USERS
+   *     allowedRoles?: string[],     // role names for SELECTED_ROLES
+   *   }
+   */
+  updatePostingPolicy: async (conversationId, dto) => {
+    const res = await axiosClient.patch(
+      `/conversations/${conversationId}/posting-policy`,
+      dto
+    );
+    return res.data;
+  },
+
+  deleteConversation: async (id) => {
     const res = await axiosClient.delete(`/conversations/${id}`);
+    return res.data;
+  },
+
+  archiveConversation: async (id) => {
+    const res = await axiosClient.post(`/conversations/${id}/archive`);
+    return res.data;
+  },
+
+  unarchiveConversation: async (id) => {
+    const res = await axiosClient.post(`/conversations/${id}/unarchive`);
     return res.data;
   },
 
@@ -63,6 +92,32 @@ export const ChatAPI = {
     return res.data;
   },
 
+  pinConversation: async (conversationId, userId) => {
+    const res = await axiosClient.post(`/conversations/${conversationId}/members/${userId}/pin`);
+    return res.data;
+  },
+
+  unpinConversation: async (conversationId, userId) => {
+    const res = await axiosClient.delete(`/conversations/${conversationId}/members/${userId}/pin`);
+    return res.data;
+  },
+
+
+  muteConversationSelf: async (conversationId, userId, mute) => {
+    const res = await axiosClient.post(`/conversations/${conversationId}/members/${userId}/mute-self`, { mute });
+    return res.data;
+  },
+
+  favoriteConversation: async (conversationId, userId) => {
+    const res = await axiosClient.post(`/conversations/${conversationId}/members/${userId}/favorite`);
+    return res.data;
+  },
+
+  unfavoriteConversation: async (conversationId, userId) => {
+    const res = await axiosClient.delete(`/conversations/${conversationId}/members/${userId}/favorite`);
+    return res.data;
+  },
+
   // Messages & Editing & Deleting
   sendMessage: async (conversationId, dto) => {
     const res = await axiosClient.post(`/conversations/${conversationId}/messages`, dto);
@@ -78,6 +133,11 @@ export const ChatAPI = {
     const res = await axiosClient.delete(`/conversations/${conversationId}/messages/${messageId}`, {
       params: { mode },
     });
+    return res.data;
+  },
+
+  clearChat: async (conversationId) => {
+    const res = await axiosClient.delete(`/conversations/${conversationId}/messages/clear`);
     return res.data;
   },
 
