@@ -3,11 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchMonthlyReport, selectMonthlyReport, selectAttendanceLoading } from "@/store/entities/attendanceSlice";
-import { fetchCompanyHrPolicies } from "@/store/entities/companyHrPoliciesSlice";
-import { Calendar as CalendarIcon, Download, ChevronLeft, ChevronRight, LayoutList } from "lucide-react";
+import { fetchAttendancePolicy, selectCurrentHrPolicy } from "@/store/entities/companyHrPoliciesSlice";
+import { Calendar as CalendarIcon, Download, LayoutList, RefreshCw } from "lucide-react";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 
 import ReportStats from "./components/ReportStats";
+import PolicyInfoBar from "./components/PolicyInfoBar";
 import CalendarView from "./components/CalendarView";
 import ListView from "./components/ListView";
 
@@ -16,6 +17,7 @@ export default function ReportsPage() {
   const reportData = useSelector(selectMonthlyReport) || {};
   const isLoading = useSelector(selectAttendanceLoading);
   const activeCompanyId = useSelector(selectActiveCompanyId);
+  const hrPolicy = useSelector(selectCurrentHrPolicy);
 
   // States
   const [referenceDate, setReferenceDate] = useState(new Date()); // Current tracking date
@@ -23,7 +25,7 @@ export default function ReportsPage() {
   const [listRange, setListRange] = useState("week"); // 'week' | 'month'
 
   useEffect(() => {
-    dispatch(fetchCompanyHrPolicies());
+    dispatch(fetchAttendancePolicy());
   }, [dispatch, activeCompanyId]);
 
   useEffect(() => {
@@ -68,6 +70,15 @@ export default function ReportsPage() {
   const stats = currentReport?.summary || { present: 0, absent: 0, late: 0, halfDay: 0, overtime: 0 };
   const records = currentReport?.days || [];
 
+  // Derive filtered records matching visible dates in view (Weekly vs Monthly)
+  const visibleDateSet = new Set(daysInView.map(d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }));
+  const filteredRecords = records.filter(r => visibleDateSet.has(r.date));
+
   const handleExport = () => {
     if (records.length === 0) return;
     const headers = ["Date", "Status", "Live State", "Check In", "Check Out", "Work Hours", "Overtime", "Late Minutes", "Conflict"];
@@ -96,28 +107,60 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-[1400px] mx-auto space-y-8 bg-gray-50 min-h-screen">
+    <div className="p-4 md:p-8 max-w-[1400px] mx-auto space-y-6 bg-slate-50/50 min-h-screen">
 
-      {/* Top Header & Controls */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+      {/* Top Header & Zoho-style Controls Toolbar */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 md:p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Attendance Summary</h1>
-          <p className="text-gray-500 mt-1">Review your attendance timeline and overall summary.</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Attendance Summary</h1>
+          <p className="text-slate-500 text-xs mt-1 font-medium">Review your attendance timeline, policy rules and overall summary.</p>
         </div>
 
-        <div className="flex gap-3 mt-4 md:mt-0 items-center flex-wrap">
+        <div className="flex gap-2.5 items-center flex-wrap">
 
           {/* Main View Toggle (Calendar vs List) */}
-          <div className="flex items-center bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm p-1">
-            <button onClick={() => setViewMode('list')} className={`px-4 py-1.5 text-sm font-bold transition-all rounded-lg flex items-center gap-1.5 ${viewMode === 'list' ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}><LayoutList className="w-4 h-4" /> List</button>
-            <button onClick={() => setViewMode('calendar')} className={`px-4 py-1.5 text-sm font-bold transition-all rounded-lg flex items-center gap-1.5 ${viewMode === 'calendar' ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}><CalendarIcon className="w-4 h-4" /> Calendar</button>
+          <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/80">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-1.5 text-xs font-semibold transition-all rounded-lg flex items-center gap-1.5 ${viewMode === 'list'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                  : 'text-slate-500 hover:text-slate-700'
+                }`}
+            >
+              <LayoutList className="w-3.5 h-3.5" /> List
+            </button>
+            <button
+              onClick={() => setViewMode('calendar')}
+              className={`px-3 py-1.5 text-xs font-semibold transition-all rounded-lg flex items-center gap-1.5 ${viewMode === 'calendar'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                  : 'text-slate-500 hover:text-slate-700'
+                }`}
+            >
+              <CalendarIcon className="w-3.5 h-3.5" /> Calendar
+            </button>
           </div>
 
           {/* Sub Filter: Weekly vs Monthly (Only visible in List view) */}
           {viewMode === 'list' && (
-            <div className="flex items-center bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm p-1">
-              <button onClick={() => setListRange('week')} className={`px-4 py-1.5 text-sm font-bold transition-all rounded-lg flex items-center gap-1.5 ${listRange === 'week' ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:bg-gray-50'}`}>Weekly</button>
-              <button onClick={() => setListRange('month')} className={`px-4 py-1.5 text-sm font-bold transition-all rounded-lg flex items-center gap-1.5 ${listRange === 'month' ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:bg-gray-50'}`}>Monthly</button>
+            <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/80">
+              <button
+                onClick={() => setListRange('week')}
+                className={`px-3 py-1.5 text-xs font-semibold transition-all rounded-lg ${listRange === 'week'
+                    ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                    : 'text-slate-500 hover:text-slate-700'
+                  }`}
+              >
+                Weekly
+              </button>
+              <button
+                onClick={() => setListRange('month')}
+                className={`px-3 py-1.5 text-xs font-semibold transition-all rounded-lg ${listRange === 'month'
+                    ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                    : 'text-slate-500 hover:text-slate-700'
+                  }`}
+              >
+                Monthly
+              </button>
             </div>
           )}
 
@@ -131,36 +174,40 @@ export default function ReportsPage() {
                 setReferenceDate(new Date(y, m - 1, d));
               }
             }}
-            className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm bg-white"
+            className="h-9 border border-slate-200/80 rounded-xl px-3 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none shadow-2xs bg-white transition-all"
           />
 
+          {/* Export Button */}
           <button
             onClick={handleExport}
             disabled={records.length === 0}
-            className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-700 shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-9 flex items-center gap-1.5 bg-slate-900 text-white px-4 rounded-xl text-xs font-bold hover:bg-slate-800 shadow-2xs transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Download className="w-4 h-4" /> Export
+            <Download className="w-3.5 h-3.5" /> Export
           </button>
         </div>
       </div>
 
-      <div className="flex flex-col gap-0 border  border-gray-100 ">
-        {/* Summary Cards */}
-        <ReportStats stats={stats} />
+      {/* Dynamic Policy Info Ribbon Bar */}
+      <PolicyInfoBar hrPolicy={hrPolicy} />
 
-        <div className="bg-white  shadow-sm  overflow-hidden p-6 md:p-8 ">
+      {/* KPI Cards Summary Strip */}
+      <ReportStats stats={stats} records={filteredRecords} hrPolicy={hrPolicy} />
 
-          {isLoading ? (
-            <div className="h-64 flex items-center justify-center">
-              <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-            </div>
-          ) : viewMode === 'calendar' ? (
-            <CalendarView referenceDate={referenceDate} records={records} />
-          ) : (
-            <ListView daysInView={daysInView} records={records} />
-          )}
-        </div>
+      {/* Attendance Timeline / Main View Container */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden p-4 md:p-6">
+        {isLoading ? (
+          <div className="h-64 flex items-center justify-center gap-3">
+            <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+            <span className="text-xs font-semibold text-slate-500">Loading attendance summary...</span>
+          </div>
+        ) : viewMode === 'calendar' ? (
+          <CalendarView referenceDate={referenceDate} records={records} />
+        ) : (
+          <ListView daysInView={daysInView} records={records} />
+        )}
       </div>
+
     </div>
   );
 }

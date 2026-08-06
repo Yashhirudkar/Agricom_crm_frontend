@@ -7,7 +7,7 @@ import {
   selectAllShifts, selectShiftsLoading 
 } from "@/store/entities/shiftsSlice";
 import {
-  fetchCompanyHrPolicies,
+  fetchAttendancePolicy,
   selectCurrentHrPolicy,
 } from "@/store/entities/companyHrPoliciesSlice";
 import { Plus, Edit2, Trash2, Clock, Calendar } from "lucide-react";
@@ -40,7 +40,7 @@ export default function ShiftsPage() {
 
   useEffect(() => {
     dispatch(fetchShifts());
-    dispatch(fetchCompanyHrPolicies());
+    dispatch(fetchAttendancePolicy());
   }, [dispatch, activeCompanyId]);
 
   const openModal = (shift = null) => {

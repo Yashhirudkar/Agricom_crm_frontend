@@ -5,7 +5,7 @@ export default function Header({
   router,
   role,
   userType,
-  allCompanies,
+  allCompanies = [],
   selectedCompanyId,
   setSelectedCompanyId,
   hasConfig,
@@ -38,12 +38,12 @@ export default function Header({
 
       {/* Status context & Preview Button */}
       <div className="flex items-center gap-3">
-        {userType === "super_admin" && (
+        {userType === "super_admin" && allCompanies && allCompanies.length > 0 && (
           <select
             value={selectedCompanyId}
             onChange={(e) => {
               const val = e.target.value;
-              setSelectedCompanyId(val);
+              setSelectedCompanyId?.(val);
               if (val) {
                 localStorage.setItem("activeCompanyId", val);
               } else {

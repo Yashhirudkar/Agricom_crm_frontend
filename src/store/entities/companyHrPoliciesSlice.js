@@ -12,6 +12,15 @@ export const fetchCompanyHrPolicies = createAsyncThunk("entities/companyHrPolici
   }
 });
 
+export const fetchAttendancePolicy = createAsyncThunk("entities/companyHrPolicies/fetchAttendancePolicy", async (_, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.get("/attendance/policy");
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to fetch attendance policy");
+  }
+});
+
 export const fetchCompanyHrPolicyPreview = createAsyncThunk("entities/companyHrPolicies/fetchPreview", async (formData, { rejectWithValue }) => {
   try {
     const res = await axiosClient.post("/company/hr-policies/preview", formData);
@@ -72,6 +81,16 @@ const companyHrPoliciesSlice = createSlice({
         }
       })
       .addCase(fetchCompanyHrPolicies.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
+
+      .addCase(fetchAttendancePolicy.pending, (state) => { state.isLoading = true; state.error = null; })
+      .addCase(fetchAttendancePolicy.fulfilled, (state, action) => { 
+        state.isLoading = false; 
+        state.currentPolicy = action.payload;
+        if (action.payload?.id) {
+          companyHrPoliciesAdapter.upsertOne(state, action.payload);
+        }
+      })
+      .addCase(fetchAttendancePolicy.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
 
       .addCase(fetchCompanyHrPolicyPreview.fulfilled, (state, action) => {
         state.preview = action.payload;

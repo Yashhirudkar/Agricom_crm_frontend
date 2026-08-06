@@ -16,7 +16,7 @@ import {
 } from "@/store/entities/attendanceSlice";
 import { fetchShifts, selectAllShifts } from "@/store/entities/shiftsSlice";
 import {
-  fetchCompanyHrPolicies,
+  fetchAttendancePolicy,
   selectCurrentHrPolicy,
 } from "@/store/entities/companyHrPoliciesSlice";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
@@ -25,7 +25,6 @@ import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 
 import TodayAttendanceCard from "@/components/attendance/my-attendance/TodayAttendanceCard";
 import ThisWeekOverview from "@/components/attendance/my-attendance/ThisWeekOverview";
-import TodaySummary from "@/components/attendance/my-attendance/TodaySummary";
 import TodayTimeline from "@/components/attendance/my-attendance/TodayTimeline";
 import CorrectionModal from "@/components/attendance/my-attendance/CorrectionModal";
 
@@ -88,7 +87,7 @@ export default function MyAttendancePage() {
 
   useEffect(() => {
     dispatch(fetchShifts());
-    dispatch(fetchCompanyHrPolicies());
+    dispatch(fetchAttendancePolicy());
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 30);
     dispatch(
@@ -334,47 +333,33 @@ export default function MyAttendancePage() {
 
           <ThisWeekOverview myAttendance={myAttendance} />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 flex flex-col justify-between shadow-xs">
-              <div>
-                <h4 className="text-gray-900 font-bold mb-1">
-                  Forgot to punch?
-                </h4>
-                <p className="text-xs text-gray-500 mb-4 font-medium">
-                  Request for regularization if you forgot to check-in or
-                  check-out.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowCorrectionModal(true)}
-                className="self-end px-4 py-2 border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-              >
-                Request Regularization
-              </button>
-            </div>
-
-            <div className="bg-[#007aff]/5 rounded-2xl border border-[#007aff]/10 p-6 flex flex-col justify-between">
-              <div>
-                <h4 className="text-[#007aff] font-bold mb-1">Need help?</h4>
-                <p className="text-xs text-blue-900/60 mb-4 font-medium">
-                  Contact your HR or Manager for any attendance related issues.
-                </p>
-              </div>
-              <button className="self-end px-4 py-2 bg-white text-[#007aff] hover:bg-blue-50 rounded-xl text-xs font-bold transition-colors shadow-sm cursor-pointer border border-[#007aff]/20">
-                Contact HR
-              </button>
-            </div>
-          </div>
         </div>
 
         <div className="w-full lg:w-[400px] space-y-6">
-          <TodaySummary timeObj={timeObj} todayRecord={todayRecord} />
-
           <TodayTimeline
             activityLogs={activityLogs}
             getTimelineStyles={getTimelineStyles}
             todayRecord={todayRecord}
           />
+
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 flex flex-col justify-between shadow-xs">
+            <div>
+              <h4 className="text-gray-900 font-bold mb-1">
+                Forgot to punch?
+              </h4>
+              <p className="text-xs text-gray-500 mb-4 font-medium">
+                Request for regularization if you forgot to check-in or check-out.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowCorrectionModal(true)}
+              className="self-start px-4 py-2 border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+            >
+              Request Regularization
+            </button>
+          </div>
+
+
         </div>
       </div>
 

@@ -9,17 +9,9 @@ const DEFAULT_FORCE_MAJEURE = {
     {
       type: 'paragraph',
       content: [
-        { type: 'text', text: 'Neither party shall be liable for any delay or failure in performance under this contract resulting from acts of God, war, civil unrest, pandemic, government regulations, port closures, or other causes beyond their reasonable control (' },
-        { type: 'text', marks: [{ type: 'bold' }], text: 'Force Majeure' },
-        { type: 'text', text: ').' }
+        { type: 'text', text: 'AS PER CLAUSE 18 OF THE GAFTA CONTRACT NO. 120 WITH LOGICAL CHANGES NEITHER PARTY SHALL BEAR RESPONSIBILITY FOR THE COMPLETE OR PARTIAL NON-PERFORMANCE OF ANY OF ITS OBLIGATIONS, IF THE NON-PERFORMANCE RESULTS FROM SUCH CIRCUMSTANCES AS FLOOD, FIRE, EARTHQUAKE AND OTHER ACTS OF GOD AS WELL AS WAR, MILITARY OPERATIONS, BLOCKADE, ACTS OR ACTIONS OF STATE AUTHORITIES OR ANY OTHER CIRCUMSTANCES BEYOND PARTIES CONTROL THAT HAVE ARISEN AFTER THE CONCLUSION OF THE CONTRACT. IN THIS CASE THE TIME STIPULATED FOR THE PERFORMANCE OF AN OBLIGATION UNDER CONTRACT IS EXTENDED CORRESPONDINGLY THE PERIOD OF TIME OF ACTION OF THESE CIRCUMSTANCES AND THEIR CONSEQUENCES. THE PARTY FOR WHICH THE PERFORMANCE OF OBLIGATION BECAME IMPOSSIBLE SHALL IMMEDIATELY NOTIFY IN WRITTEN FORM THE OTHER PARTY OF THE BEGINNING, EXPECTED TIME OF DURATION AND CESSATION OF ABOVE CIRCUMSTANCES. CERTIFICATE OF A CHAMBER OF COMMERCE AN INDUSTRY OR OTHER COMPETENT AUTHORITY SHALL BE A SUFFICIENT PROOF OF COMMENCEMENT AND CESSATION OF THE ABOVE CIRCUMSTANCES.' },
       ]
     },
-    {
-      type: 'paragraph',
-      content: [
-        { type: 'text', text: 'The affected party shall promptly notify the other party in writing, providing evidence of the Force Majeure event.' }
-      ]
-    }
   ]
 };
 
@@ -40,7 +32,7 @@ export default function ForceMajeureSection({ form, setForm, isView }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
       {/* Header */}
-      <div 
+      <div
         className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -55,7 +47,7 @@ export default function ForceMajeureSection({ form, setForm, isView }) {
               : "Set Force Majeure conditions (Act of God, War, Pandemic)"}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
         </div>
@@ -65,22 +57,22 @@ export default function ForceMajeureSection({ form, setForm, isView }) {
         <div className="p-5">
           {!isView && (
             <div className="flex justify-end gap-2 mb-3">
-               <button 
+              <button
                 onClick={handleReset}
                 className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                 title="Reset to Company Default Template"
-               >
-                 <RotateCcw className="h-3 w-3" /> Default Template
-               </button>
+              >
+                <RotateCcw className="h-3 w-3" /> Default Template
+              </button>
             </div>
           )}
 
-          <RichTextEditor 
-            value={value} 
-            onChange={handleChange} 
-            editable={!isView} 
+          <RichTextEditor
+            value={value}
+            onChange={handleChange}
+            editable={!isView}
             outputFormat="json"
-            placeholder="Type your force majeure clause here..." 
+            placeholder="Type your force majeure clause here..."
           />
         </div>
       )}

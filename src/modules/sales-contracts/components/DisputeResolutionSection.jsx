@@ -9,17 +9,11 @@ const DEFAULT_DISPUTE_RESOLUTION = {
     {
       type: 'paragraph',
       content: [
-        { type: 'text', text: 'Any dispute, controversy or claim arising out of or relating to this contract, or the breach, termination or invalidity thereof, shall be settled by arbitration in accordance with the ' },
-        { type: 'text', marks: [{ type: 'bold' }], text: 'GAFTA/FOSFA Arbitration Rules' },
-        { type: 'text', text: ' currently in force.' }
+        {
+          type: 'text', text: 'ALL DISPUTES AND DISAGREEMENTS ARISING BETWEEN THE PARTIES IN CONNECTION WITH THIS CONTRACT SHALL BE RESOLVED THROUGH MUTUAL NEGOTIATIONS. IF A MUTUALLY ACCEPTABLE RESOLUTION CANNOT BE REACHED THEN SHALL BE REFERRED TO AND RESOLVED BY ARBITRATION IN ACCORDANCE WITH THE ARBITRATION RULES OF THE GRAIN AND FEED TRADE ASSOCIATION (GAFTA), IN FORCE AT THE DATE OF THIS CONTRACT. THE SEAT OF ARBITRATION SHALL BE LONDON, ENGLAND. THE LANGUAGE OF ARBITRATION SHALL BE ENGLISH. THE DECISION OF THE ARBITRATORS SHALL BE FINAL AND BINDING ON THE PARTIES OR PARTY RESERVES THE RIGHT TO SUBMIT THE MATTER FOR RESOLUTION TO THE APPROPRIATE JUDICIAL AUTHORITIES AT THE SELLERS LOCATION'
+        }
       ]
     },
-    {
-      type: 'paragraph',
-      content: [
-        { type: 'text', text: 'The seat of arbitration shall be London, United Kingdom. The language to be used in the arbitral proceedings shall be English.' }
-      ]
-    }
   ]
 };
 
@@ -40,7 +34,7 @@ export default function DisputeResolutionSection({ form, setForm, isView }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
       {/* Header */}
-      <div 
+      <div
         className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -55,7 +49,7 @@ export default function DisputeResolutionSection({ form, setForm, isView }) {
               : "Set Arbitration, Jurisdiction, and Applicable Law"}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
         </div>
@@ -65,22 +59,22 @@ export default function DisputeResolutionSection({ form, setForm, isView }) {
         <div className="p-5">
           {!isView && (
             <div className="flex justify-end gap-2 mb-3">
-               <button 
+              <button
                 onClick={handleReset}
                 className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                 title="Reset to Company Default Template"
-               >
-                 <RotateCcw className="h-3 w-3" /> Default Template
-               </button>
+              >
+                <RotateCcw className="h-3 w-3" /> Default Template
+              </button>
             </div>
           )}
 
-          <RichTextEditor 
-            value={value} 
-            onChange={handleChange} 
-            editable={!isView} 
+          <RichTextEditor
+            value={value}
+            onChange={handleChange}
+            editable={!isView}
             outputFormat="json"
-            placeholder="Type your dispute resolution and arbitration clauses here..." 
+            placeholder="Type your dispute resolution and arbitration clauses here..."
           />
         </div>
       )}

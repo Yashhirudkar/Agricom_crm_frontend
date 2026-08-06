@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useRouter } from "next/navigation";
 import { selectUserType } from "@/store/slices/authSlice";
 import { usePermissions } from "@/hooks/usePermissions";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
@@ -73,8 +74,14 @@ function ToggleSwitch({ enabled, onChange, disabled }) {
 
 function HrPoliciesContent() {
   const dispatch = useDispatch();
+  const router = useRouter();
+  const userType = useSelector(selectUserType);
   const { hasPermission } = usePermissions();
+
+  const isSuperAdmin = userType === "super_admin" || userType === "client_admin";
+  const canRead = hasPermission("hrpolicy:read") || hasPermission("hrpolicy:view");
   const canUpdate = hasPermission("hrpolicy:update");
+  const hasAccess = isSuperAdmin || canRead;
 
   const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
@@ -138,12 +145,12 @@ function HrPoliciesContent() {
             ? String(Number(currentPolicy.defaultNoticePeriodDays))
             : "",
         minHalfDayHours:
-          currentPolicy.minHoursForHalfDay != null
-            ? String(Number(currentPolicy.minHoursForHalfDay))
+          currentPolicy.minHalfDayHours != null
+            ? String(Number(currentPolicy.minHalfDayHours))
             : "",
         minFullDayHours:
-          currentPolicy.minHoursForPresent != null
-            ? String(Number(currentPolicy.minHoursForPresent))
+          currentPolicy.minFullDayHours != null
+            ? String(Number(currentPolicy.minFullDayHours))
             : "",
         defaultShiftStartTime: currentPolicy.defaultShiftStartTime || "",
         defaultShiftEndTime: currentPolicy.defaultShiftEndTime || "",
@@ -154,8 +161,8 @@ function HrPoliciesContent() {
             ? String(Number(currentPolicy.defaultBreakMinutes))
             : "",
         lateMarkGraceMinutes:
-          currentPolicy.lateComingGraceMinutes != null
-            ? String(Number(currentPolicy.lateComingGraceMinutes))
+          currentPolicy.lateMarkGraceMinutes != null
+            ? String(Number(currentPolicy.lateMarkGraceMinutes))
             : "",
         monthlyLateThreshold:
           currentPolicy.monthlyLateThreshold != null
@@ -167,8 +174,11 @@ function HrPoliciesContent() {
           currentPolicy.checkoutGraceMinutes != null
             ? String(Number(currentPolicy.checkoutGraceMinutes))
             : "",
-        allowAttendanceCorrection: currentPolicy.allowAttendanceCorrection ?? true,
-        weeklyOffDays: currentPolicy.weeklyOffDays ?? [0, 6],
+        allowAttendanceCorrection:
+          currentPolicy.allowAttendanceCorrection ?? true,
+        weeklyOffDays: Array.isArray(currentPolicy.weeklyOffDays)
+          ? currentPolicy.weeklyOffDays.map(Number)
+          : [0, 6],
         autoCheckoutTime: currentPolicy.autoCheckoutTime || "",
         overtimeStartAfter:
           currentPolicy.overtimeStartAfter != null
@@ -221,12 +231,32 @@ function HrPoliciesContent() {
   }, [currentPolicy]);
 
   useEffect(() => {
-    if (activeCompanyId) {
+    if (activeCompanyId && hasAccess) {
       dispatch(fetchCompanyHrPolicies());
       dispatch(fetchCompanyHrPolicyHistory());
       dispatch(fetchCompanyHrPolicyImpact());
     }
-  }, [dispatch, activeCompanyId]);
+  }, [dispatch, activeCompanyId, hasAccess]);
+
+  if (!hasAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm max-w-lg mx-auto my-12">
+        <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 mb-4">
+          <Lock className="w-6 h-6" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">Access Denied</h2>
+        <p className="text-sm text-slate-500 max-w-sm mb-6">
+          You do not have permission (<code className="font-semibold text-rose-600">hrpolicy:read</code>) to access the HR Policy Management page.
+        </p>
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-xl transition-all cursor-pointer"
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
 
   // Request backend AttendancePolicyEngineService to evaluate preview DTO whenever form draft changes!
   useEffect(() => {

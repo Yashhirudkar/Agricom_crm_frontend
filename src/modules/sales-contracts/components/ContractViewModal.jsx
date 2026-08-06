@@ -168,6 +168,9 @@ export default function ContractViewModal({ contractId, onClose }) {
 
       {/* Print page rules */}
       <style jsx global>{`
+        #contract-print-area, #contract-print-area * {
+          font-family: "Times New Roman", Times, serif !important;
+        }
         @media print {
           @page { size: A4; margin: 12mm 12mm 0mm 12mm; }
           html, body {
@@ -179,6 +182,7 @@ export default function ContractViewModal({ contractId, onClose }) {
           body * { visibility: hidden; }
           #contract-print-area, #contract-print-area * {
             visibility: visible;
+            font-family: "Times New Roman", Times, serif !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -260,6 +264,7 @@ export default function ContractViewModal({ contractId, onClose }) {
       {/* A4 Paper */}
       <div
         id="contract-print-area"
+        style={{ fontFamily: "'Times New Roman', Times, serif" }}
         className="my-8 bg-white w-full max-w-[1024px] h-fit rounded-2xl shadow-2xl print:my-0 print:shadow-none print:max-w-none print:w-full"
       >
         {/*
@@ -360,7 +365,7 @@ export default function ContractViewModal({ contractId, onClose }) {
 
                   {/* Website footer line */}
                   <div className="mx-8 md:mx-10 mt-3 mb-4 pt-2 border-t-2 border-[#8dc63f] text-center print:mx-0">
-                    <p className="text-[11px] text-gray-500 font-medium font-sans">www.agricomimpex.com</p>
+                    <p className="text-[11px] text-gray-500 font-medium">www.agricomimpex.com</p>
                   </div>
                 </div>
               </td>
@@ -370,15 +375,15 @@ export default function ContractViewModal({ contractId, onClose }) {
           <tbody>
             <tr>
               <td>
-                <div className="p-8 md:p-10 print:p-0 text-slate-900 font-sans">
+                <div className="p-8 md:p-10 print:p-0 text-slate-900">
 
                   {/* ── LETTERHEAD ───────────────────────────────────────── */}
                   <div className="flex justify-between items-center print-avoid-break">
                     <div>
                       <img src="/agri_logo.png" alt="Agricom Impex" className="h-32 object-contain" />
                     </div>
-                    <div className="text-right text-[10px] text-gray-600 leading-tight">
-                      <h1 className="text-base font-bold text-gray-500 uppercase mb-0.5">Agricom Impex</h1>
+                    <div className="text-right text-[10px] text-gray-900 leading-tight">
+                      <h1 className="text-base font-bold text-gray-900 uppercase mb-0.5 ">Agricom Impex</h1>
                       <p>202, Amaltas apartment, Rajnagar</p>
                       <p>Nagpur (MH), India 440013</p>
                       <p>+91 712 2591130 / 34</p>
@@ -399,25 +404,25 @@ export default function ContractViewModal({ contractId, onClose }) {
                       <table className="ml-auto">
                         <tbody>
                           <tr>
-                            <td className="pr-2 text-slate-500 font-semibold uppercase">Reference No:</td>
-                            <td className="font-bold text-slate-900 uppercase">{contract.contractNumber || "—"}</td>
+                            <td className="pr-2 text-slate-900 font-semibold uppercase">Reference No :</td>
+                            <td className="font-bold text-slate-900 uppercase text-left">{contract.contractNumber || "—"}</td>
                           </tr>
                           <tr>
-                            <td className="pr-2 text-slate-500 font-semibold uppercase">Contract Date:</td>
-                            <td className="font-bold text-slate-900">{formatDate(contract.contractDate)}</td>
+                            <td className="pr-2 text-slate-900 font-semibold uppercase">Contract Date :</td>
+                            <td className="font-bold text-slate-900 text-left">{formatDate(contract.contractDate)}</td>
                           </tr>
                           <tr>
-                            <td className="pr-2 text-slate-500 font-semibold uppercase">Financial Year:</td>
-                            <td className="font-bold text-slate-900 uppercase">{contract.financialYear || "—"}</td>
+                            <td className="pr-2 text-slate-900 font-semibold uppercase">Financial Year :</td>
+                            <td className="font-bold text-slate-900 uppercase text-left">{contract.financialYear || "—"}</td>
                           </tr>
                           <tr>
-                            <td className="pr-2 text-slate-500 font-semibold uppercase">Created On:</td>
-                            <td className="font-bold text-slate-900">{formatDate(contract.createdAt)}</td>
+                            <td className="pr-2 text-slate-900 font-semibold uppercase">Created On :</td>
+                            <td className="font-bold text-slate-900 text-left">{formatDate(contract.createdAt)}</td>
                           </tr>
                           {contract.status && (
                             <tr>
-                              <td className="pr-2 text-slate-500 font-semibold uppercase">Status:</td>
-                              <td className="font-bold text-slate-900 uppercase">{contract.status}</td>
+                              <td className="pr-2 text-slate-900 font-semibold uppercase">Status :</td>
+                              <td className="font-bold text-slate-900 uppercase text-left">{contract.status}</td>
                             </tr>
                           )}
                         </tbody>
@@ -456,16 +461,32 @@ export default function ContractViewModal({ contractId, onClose }) {
                     <div className={hasBroker ? "" : "mb-4"} />
 
                     {/* ORIGIN */}
-                    {(contract.originLocationName || contract.portOfLoading) && (
+                    {(contract.originLocationName || contract.portOfLoading || contract.originCountry) && (
                       <Row label="Origin Port">
-                        {renderValue("originPort", `${(contract.originLocationName || contract.portOfLoading || "").toUpperCase()}${contract.originCountry?.name ? `   ${contract.originCountry.name.toUpperCase()}` : ""}`)}
+                        {renderValue(
+                          "originPort",
+                          [
+                            (contract.originLocationName || contract.portOfLoading || "").trim().toUpperCase(),
+                            (typeof contract.originCountry === "object" ? contract.originCountry?.name : contract.originCountry)?.trim().toUpperCase(),
+                          ]
+                            .filter(Boolean)
+                            .join(", ")
+                        )}
                       </Row>
                     )}
 
                     {/* DESTINATION */}
-                    {(contract.destinationLocationName || contract.portOfDischarge) && (
+                    {(contract.destinationLocationName || contract.portOfDischarge || contract.destinationCountry) && (
                       <Row label="Dest. Port">
-                        {renderValue("destPort", `${(contract.destinationLocationName || contract.portOfDischarge || "").toUpperCase()}${contract.destinationCountry?.name ? ` ${contract.destinationCountry.name.toUpperCase()}` : ""}`)}
+                        {renderValue(
+                          "destPort",
+                          [
+                            (contract.destinationLocationName || contract.portOfDischarge || "").trim().toUpperCase(),
+                            (typeof contract.destinationCountry === "object" ? contract.destinationCountry?.name : contract.destinationCountry)?.trim().toUpperCase(),
+                          ]
+                            .filter(Boolean)
+                            .join(", ")
+                        )}
                       </Row>
                     )}
 
@@ -670,7 +691,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                       </div>
                     )}
                     <div className="mt-6 pt-2 border-t-2 border-[#8dc63f] text-center">
-                      <p className="text-[11px] text-gray-500 font-medium font-sans">www.agricomimpex.com</p>
+                      <p className="text-[11px] text-gray-500 font-medium">www.agricomimpex.com</p>
                     </div>
                   </div>
 

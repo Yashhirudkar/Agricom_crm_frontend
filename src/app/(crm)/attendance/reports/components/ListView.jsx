@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { selectCurrentHrPolicy } from "@/store/entities/companyHrPoliciesSlice";
-import { calculateTimePercent, formatDisplayTime, formatDateString } from "../utils";
+import { formatDisplayTime, formatDateString } from "../utils";
 import VisualAttendanceTimeline from "@/components/attendance/VisualAttendanceTimeline";
 
 export default function ListView({ daysInView, records }) {
@@ -25,27 +25,22 @@ export default function ListView({ daysInView, records }) {
     return records.find((r) => r.date === dateStr);
   };
 
-
   return (
-    <div className="flex flex-col bg-white -mx-4 -my-4 sm:m-0 sm:border sm:border-gray-100 sm:rounded-2xl sm:overflow-hidden">
+    <div className="flex flex-col bg-white rounded-xl border border-slate-200/80 overflow-hidden">
       {daysInView.map((dateObj, index) => {
         const record = getRecordForDate(dateObj);
         const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
         const dayNum = String(dateObj.getDate()).padStart(2, "0");
         const isToday = new Date().toDateString() === dateObj.toDateString();
 
-
         const checkInTime = formatDisplayTime(record?.checkIn);
         let checkOutTime = formatDisplayTime(record?.checkOut);
-        let workHrs = record?.workHours || 0;
-
         if (!record?.checkOut && isToday && record?.attendanceState === "WORKING") {
           checkOutTime = formatDisplayTime(now, true);
-          const checkInMs = new Date(record.checkIn).getTime();
-          workHrs = Math.max(0, (now.getTime() - checkInMs) / (1000 * 60 * 60));
         }
 
         const hasPunch = Boolean(record?.checkIn || record?.checkOut);
+        const workHrs = record?.workHours || 0;
         const hours = Math.floor(workHrs);
         const mins = Math.round((workHrs - hours) * 60);
         const totalHoursStr = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
@@ -56,31 +51,31 @@ export default function ListView({ daysInView, records }) {
             label: "Absent",
             textColor: "text-rose-600",
             lineColor: "bg-rose-100",
-            borderColor: "border-rose-100",
+            borderColor: "border-rose-200/60",
           },
           ON_LEAVE: {
             label: "On Leave",
             textColor: "text-purple-600",
             lineColor: "bg-purple-100",
-            borderColor: "border-purple-100",
+            borderColor: "border-purple-200/60",
           },
           WEEK_OFF: {
             label: "Weekend",
-            textColor: "text-gray-600",
-            lineColor: "bg-amber-100",
-            borderColor: "border-amber-100",
+            textColor: "text-slate-500",
+            lineColor: "bg-amber-100/60",
+            borderColor: "border-amber-200/50",
           },
           HOLIDAY: {
             label: "Holiday",
             textColor: "text-indigo-600",
             lineColor: "bg-indigo-100",
-            borderColor: "border-indigo-100",
+            borderColor: "border-indigo-200/60",
           },
         };
 
         const st = statusMap[record?.status] || {
           label: "",
-          textColor: "text-gray-400",
+          textColor: "text-slate-400",
           lineColor: "bg-transparent",
           borderColor: "border-transparent",
         };
@@ -90,13 +85,14 @@ export default function ListView({ daysInView, records }) {
         return (
           <div
             key={index}
-            className={`flex items-center px-4 md:px-6 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${isToday ? "bg-blue-50/20" : "bg-white"
-              }`}
+            className={`flex items-center px-4 md:px-6 py-3.5 border-b border-slate-100 hover:bg-slate-50/70 transition-colors ${
+              isToday ? "bg-blue-50/30" : "bg-white"
+            }`}
           >
             {/* Day & Date */}
             <div className="w-12 md:w-16 flex flex-col items-center justify-center flex-shrink-0">
-              <span className="text-[10px] md:text-[11px] font-bold text-gray-400 uppercase">{dayName}</span>
-              <span className={`text-sm md:text-base font-bold ${isToday ? "text-blue-600" : "text-gray-700"}`}>
+              <span className="text-[10px] md:text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{dayName}</span>
+              <span className={`text-sm md:text-base font-bold ${isToday ? "text-blue-600" : "text-slate-800"}`}>
                 {dayNum}
               </span>
             </div>
@@ -119,58 +115,65 @@ export default function ListView({ daysInView, records }) {
                   />
                 ) : isNonWorking && st.label ? (
                   <div className="w-full flex items-center justify-center relative py-1">
-                    <div className={`absolute w-full h-[2px] ${st.lineColor}`}></div>
+                    <div className={`absolute w-full h-[1.5px] ${st.lineColor}`}></div>
                     <div
-                      className={`relative z-10 px-2 py-0.5 rounded text-[10px] md:text-[11px] font-bold bg-white border ${st.borderColor} ${st.textColor}`}
+                      className={`relative z-10 px-2.5 py-0.5 rounded-full text-[10px] md:text-[11px] font-medium bg-white border ${st.borderColor} ${st.textColor} shadow-2xs`}
                     >
                       {st.label}
                     </div>
                   </div>
-                ) : record?.status === "UPCOMING" ? (
-                  <div className="w-full flex items-center justify-center text-[12px] text-gray-400 font-bold py-1">
-                    -
+                ) : record?.status === "UPCOMING" || !record ? (
+                  <div className="w-full flex items-center justify-center text-[11px] text-slate-400/60 font-medium py-1 select-none">
+                    No Activity
                   </div>
-                ) : null}
+                ) : (
+                  <div className="w-full flex items-center justify-center text-[11px] text-slate-400/60 font-medium py-1 select-none">
+                    No Attendance
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Total Hours */}
-            <div className="w-20 md:w-24 text-right flex flex-col justify-center flex-shrink-0">
+            {/* Total Hours & Right Side Status Badges */}
+            <div className="w-24 md:w-28 text-right flex flex-col justify-center flex-shrink-0 items-end">
               <span
-                className={`text-[12px] md:text-[13px] font-bold ${isNonWorking && !record?.checkIn ? "text-gray-400" : "text-gray-800"
-                  }`}
+                className={`text-[12px] md:text-[13px] font-bold ${
+                  isNonWorking && !record?.checkIn ? "text-slate-400/70" : "text-slate-800"
+                }`}
               >
                 {isNonWorking && !record?.checkIn ? "00:00" : totalHoursStr}
               </span>
-              <span className="text-[9px] md:text-[10px] text-gray-500">Hrs worked</span>
+              <span className="text-[9px] md:text-[10px] text-slate-400 font-medium">Hrs worked</span>
+              
+              {/* Clean Enterprise Badges */}
               {record?.status === "PRESENT" && (
-                <span className="mt-1 inline-block text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1 self-end">
+                <span className="mt-1 inline-block text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 rounded-full px-2 py-0.5">
                   Present
                 </span>
               )}
               {record?.status === "HALF_DAY" && (
-                <span className="mt-1 inline-block text-[9px] font-bold text-orange-700 bg-orange-50 border border-orange-200 rounded px-1 self-end">
+                <span className="mt-1 inline-block text-[10px] font-semibold text-orange-700 bg-orange-50 border border-orange-200/60 rounded-full px-2 py-0.5">
                   Half Day
                 </span>
               )}
               {record?.status === "ABSENT" && (
-                <span className="mt-1 inline-block text-[9px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded px-1 self-end">
+                <span className="mt-1 inline-block text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200/60 rounded-full px-2 py-0.5">
                   Absent
                 </span>
               )}
               {(record?.isLate || record?.lateMinutes > 0) && record?.status !== 'PRESENT' && (
-                <span className="mt-1 inline-block text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 self-end">
+                <span className="mt-1 inline-block text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/60 rounded-full px-2 py-0.5">
                   Late
                 </span>
               )}
               {record?.isConflict && (
-                <span className="mt-1 inline-block text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded px-1 self-end">
-                  Conflict: Yes
+                <span className="mt-1 inline-block text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200/60 rounded-full px-2 py-0.5">
+                  Conflict
                 </span>
               )}
               {record?.isIgnored && (
-                <span className="mt-1 inline-block text-[9px] font-bold text-gray-500 bg-gray-50 border border-gray-200 rounded px-1 self-end">
-                  Ignored: Leave
+                <span className="mt-1 inline-block text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200/60 rounded-full px-2 py-0.5">
+                  Ignored
                 </span>
               )}
             </div>

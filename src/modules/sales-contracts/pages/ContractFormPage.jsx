@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Save, Loader2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import { useSalesMasters } from "../hooks/useSalesContracts";
 import { salesContractApi } from "../services/salesContractApi";
 import { enquiryApi } from "@/modules/enquiries/services/enquiryApi";
@@ -14,7 +15,7 @@ import ShipmentTable from "../components/ShipmentTable";
 import DocumentSection from "../components/DocumentSection";
 import RemarksSection from "../components/RemarksSection";
 import TermsSection from "../components/TermsSection";
-import OtherConditionsSection from "../components/OtherConditionsSection";
+import OtherConditionsSection, { DEFAULT_OTHER_CONDITIONS } from "../components/OtherConditionsSection";
 import DisputeResolutionSection from "../components/DisputeResolutionSection";
 import ForceMajeureSection from "../components/ForceMajeureSection";
 import ContractAcceptanceSection from "../components/ContractAcceptanceSection";
@@ -30,8 +31,8 @@ const defaultForm = () => ({
   currencyCode: "",
   shipmentTypeId: "",
   paymentTermId: "",
-  originCountryId: "",
-  destinationCountryId: "",
+  originCountry: "",
+  destinationCountry: "",
   // Multi-Modal Transport Routing
   originTransportMode: "sea",
   destinationTransportMode: "sea",
@@ -48,7 +49,7 @@ const defaultForm = () => ({
     "Quality disputes must be reported within agreed timeline.",
     "All export documents shall be issued after payment compliance.",
   ],
-  otherConditions: [],
+  otherConditions: [...DEFAULT_OTHER_CONDITIONS],
   disputeResolution: null,
   forceMajeure: null,
   sellerCompanyName: "",
@@ -75,8 +76,8 @@ function validate(form) {
   if (!form.currencyCode) e.currencyCode = "Currency is required";
   if (!form.shipmentTypeId) e.shipmentTypeId = "Shipment Type is required";
   if (!form.paymentTermId) e.paymentTermId = "Payment Terms are required";
-  if (!form.originCountryId) e.originCountryId = "Origin country is required";
-  if (!form.destinationCountryId) e.destinationCountryId = "Destination country is required";
+  if (!form.originCountry?.trim()) e.originCountry = "Origin country is required";
+  if (!form.destinationCountry?.trim()) e.destinationCountry = "Destination country is required";
 
   // Transport-mode-aware location validation
   const modeLabels = {
@@ -156,8 +157,8 @@ export default function ContractFormPage({ editId, viewId }) {
           currencyCode: c.currencyCode || "",
           shipmentTypeId: c.shipmentTypeId || "",
           paymentTermId: c.paymentTermId || "",
-          originCountryId: c.originCountryId || "",
-          destinationCountryId: c.destinationCountryId || "",
+          originCountry: c.originCountry || "",
+          destinationCountry: c.destinationCountry || "",
           // Multi-Modal Transport Routing
           originTransportMode: c.originTransportMode || c.transportMode || "sea",
           destinationTransportMode: c.destinationTransportMode || c.transportMode || "sea",
@@ -260,8 +261,8 @@ export default function ContractFormPage({ editId, viewId }) {
           currencyCode: "USD",
           shipmentTypeId: shipmentTypeId,
           paymentTermId: "",
-          originCountryId: eq.originCountryId || "",
-          destinationCountryId: "",
+          originCountry: eq.originCountry || "",
+          destinationCountry: eq.destinationCountry || "",
           // Multi-Modal Transport defaults for new contracts from enquiry
           originTransportMode: "sea",
           destinationTransportMode: "sea",
@@ -270,7 +271,7 @@ export default function ContractFormPage({ editId, viewId }) {
           portOfLoading: "",
           portOfDischarge: eq.podPort || "",
           remarks: `Created from Enquiry ${eq.enquiryNo || ""}`,
-          otherConditions: [],
+          otherConditions: [...DEFAULT_OTHER_CONDITIONS],
           disputeResolution: null,
           forceMajeure: null,
           sellerCompanyName: "",
@@ -345,8 +346,8 @@ export default function ContractFormPage({ editId, viewId }) {
       currencyCode: form.currencyCode,
       shipmentTypeId: Number(form.shipmentTypeId),
       paymentTermId: Number(form.paymentTermId),
-      originCountryId: Number(form.originCountryId),
-      destinationCountryId: Number(form.destinationCountryId),
+      originCountry: form.originCountry,
+      destinationCountry: form.destinationCountry,
       // Multi-Modal Transport fields
       originTransportMode: form.originTransportMode || "sea",
       destinationTransportMode: form.destinationTransportMode || "sea",
@@ -389,6 +390,11 @@ export default function ContractFormPage({ editId, viewId }) {
       shipments: validShipments.map(s => ({
         shipmentDate: s.shipmentDate,
         quantity: parseFloat(s.quantity) || 0,
+        noOfContainers: s.noOfContainers !== "" && s.noOfContainers !== null && s.noOfContainers !== undefined ? parseInt(s.noOfContainers, 10) : null,
+        ratePerMt: s.ratePerMt !== "" && s.ratePerMt !== null && s.ratePerMt !== undefined ? parseFloat(s.ratePerMt) : null,
+        purchaseRate: s.purchaseRate !== "" && s.purchaseRate !== null && s.purchaseRate !== undefined ? parseFloat(s.purchaseRate) : null,
+        forex: s.forex !== "" && s.forex !== null && s.forex !== undefined ? parseFloat(s.forex) : null,
+        freight: s.freight !== "" && s.freight !== null && s.freight !== undefined ? parseFloat(s.freight) : null,
         remarks: s.remarks || null,
       })),
       documents: (form.documents || []).map(d => ({
@@ -415,10 +421,20 @@ export default function ContractFormPage({ editId, viewId }) {
         }
       }
     } catch (err) {
-      if (err.response?.data?.message && err.response.data.message.includes("Cannot activate contract")) {
-        setErrors({ activation: err.response.data.message });
-        window.scrollTo({ top: 0, behavior: "smooth" });
+      console.error("Save Contract Error:", err);
+      const rawMsg = err.response?.data?.message;
+      let serverMsg = "Failed to save contract.";
+      if (Array.isArray(rawMsg)) {
+        serverMsg = rawMsg.join(" · ");
+      } else if (typeof rawMsg === "string") {
+        serverMsg = rawMsg;
+      } else if (err.message) {
+        serverMsg = err.message;
       }
+
+      setErrors({ apiError: serverMsg });
+      toast.error(serverMsg);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSaving(false);
     }
@@ -503,7 +519,7 @@ export default function ContractFormPage({ editId, viewId }) {
             <ul className="mt-1 space-y-0.5">
               {Object.entries(errors).map(([key, msg], i) => (
                 <li key={i} className="text-[11px] text-red-600">
-                  {key === "activation" ? <pre className="font-sans whitespace-pre-wrap">{msg}</pre> : `• ${msg}`}
+                  {key === "activation" || key === "apiError" ? <pre className="font-sans whitespace-pre-wrap">{msg}</pre> : `• ${msg}`}
                 </li>
               ))}
             </ul>

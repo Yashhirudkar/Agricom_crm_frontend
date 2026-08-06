@@ -94,9 +94,11 @@ export function useSalesMasters() {
           : Object.values(currencies);
 
         const roles = rolesRes.data?.data || [];
-        const buyerRole = roles.find(r => r.name?.toLowerCase() === "buyer");
-        const sellerRole = roles.find(r => r.name?.toLowerCase() === "seller");
-        const brokerRole = roles.find(r => r.name?.toLowerCase() === "broker");
+        const buyerRole = roles.find(r => r.name?.toLowerCase() === "buyer") ||
+                          roles.find(r => r.name?.toLowerCase() === "importer");
+        const sellerRole = roles.find(r => r.name?.toLowerCase() === "seller") ||
+                           roles.find(r => r.name?.toLowerCase() === "exporter");
+        const brokerRole = roles.find(r => r.name?.toLowerCase() === "broker" || r.name?.toLowerCase().includes("broker") || r.name?.toLowerCase() === "agent");
 
         const [buyersRes, sellersRes, brokersRes] = await Promise.all([
           buyerRole ? mastersApi.getPartners({ partnerRoleId: buyerRole.id, limit: 100, isActive: true }) : Promise.resolve({ data: { data: [] } }),
@@ -112,6 +114,9 @@ export function useSalesMasters() {
           shipmentTypes: st.data.data || [],
           paymentTerms: pt.data.data || [],
           tradeDocuments: td.data.data || [],
+          buyerRoleId: buyerRole?.id,
+          sellerRoleId: sellerRole?.id,
+          brokerRoleId: brokerRole?.id,
           buyers: buyersRes.data?.data || [],
           sellers: sellersRes.data?.data || [],
           brokers: brokersRes.data?.data || [],
