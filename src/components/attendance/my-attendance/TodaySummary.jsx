@@ -52,16 +52,18 @@ export default function TodaySummary({ timeObj, todayRecord }) {
           </div>
           <div className="font-bold text-gray-900 text-sm">{getBreakDuration()}</div>
         </div>
-        <div className="flex justify-between items-center py-2 border-b border-gray-50">
-          <div className="flex items-center gap-3 text-gray-600 font-medium text-sm">
-            <AlertCircle className="w-5 h-5 text-red-400" /> Late By
+        {todayRecord?.attendanceStatus !== 'PRESENT' && (
+          <div className="flex justify-between items-center py-2 border-b border-gray-50">
+            <div className="flex items-center gap-3 text-gray-600 font-medium text-sm">
+              <AlertCircle className="w-5 h-5 text-red-400" /> Late By
+            </div>
+            <div className="font-bold text-red-500 text-sm">
+              {todayRecord?.lateMinutes > 0
+                ? `${todayRecord.lateMinutes}m`
+                : "00h 00m"}
+            </div>
           </div>
-          <div className="font-bold text-red-500 text-sm">
-            {todayRecord?.lateMinutes > 0
-              ? `${todayRecord.lateMinutes}m`
-              : "00h 00m"}
-          </div>
-        </div>
+        )}
         <div className="flex justify-between items-center py-2">
           <div className="flex items-center gap-3 text-gray-600 font-medium text-sm">
             <Clock className="w-5 h-5 text-gray-400" /> Overtime

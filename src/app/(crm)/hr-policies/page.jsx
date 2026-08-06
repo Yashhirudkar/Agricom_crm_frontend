@@ -98,7 +98,6 @@ function HrPoliciesContent() {
   const [form, setForm] = useState({
     probationMonths: "",
     noticePeriodDays: "",
-    retirementAge: "",
     minHalfDayHours: "",
     minFullDayHours: "",
     defaultShiftStartTime: "",
@@ -137,10 +136,6 @@ function HrPoliciesContent() {
         noticePeriodDays:
           currentPolicy.defaultNoticePeriodDays != null
             ? String(Number(currentPolicy.defaultNoticePeriodDays))
-            : "",
-        retirementAge:
-          currentPolicy.retirementAge != null
-            ? String(Number(currentPolicy.retirementAge))
             : "",
         minHalfDayHours:
           currentPolicy.minHoursForHalfDay != null
@@ -196,7 +191,6 @@ function HrPoliciesContent() {
       setForm({
         probationMonths: "",
         noticePeriodDays: "",
-        retirementAge: "",
         minHalfDayHours: "",
         minFullDayHours: "",
         defaultShiftStartTime: "",
@@ -332,7 +326,6 @@ function HrPoliciesContent() {
         currentPolicy.probationPeriodDays != null ? Math.floor(currentPolicy.probationPeriodDays / 30) : null
       ) ||
       isNumDiff(form.noticePeriodDays, currentPolicy.defaultNoticePeriodDays) ||
-      isNumDiff(form.retirementAge, currentPolicy.retirementAge) ||
       isNumDiff(form.minHalfDayHours, currentPolicy.minHoursForHalfDay) ||
       isNumDiff(form.minFullDayHours, currentPolicy.minHoursForPresent) ||
       form.defaultShiftStartTime !== (currentPolicy.defaultShiftStartTime || "") ||
@@ -371,10 +364,6 @@ function HrPoliciesContent() {
         noticePeriodDays:
           currentPolicy.defaultNoticePeriodDays != null
             ? String(Number(currentPolicy.defaultNoticePeriodDays))
-            : "",
-        retirementAge:
-          currentPolicy.retirementAge != null
-            ? String(Number(currentPolicy.retirementAge))
             : "",
         minHalfDayHours:
           currentPolicy.minHoursForHalfDay != null
@@ -466,7 +455,6 @@ function HrPoliciesContent() {
     setIsSaving(true);
     try {
       const payload = {
-        retirementAge: form.retirementAge ? Number(form.retirementAge) : undefined,
         defaultShiftStartTime: form.defaultShiftStartTime || undefined,
         defaultShiftEndTime: form.defaultShiftEndTime || undefined,
         defaultBreakStartTime: form.defaultBreakStartTime || undefined,
@@ -616,7 +604,7 @@ function HrPoliciesContent() {
               </div>
               <span className="text-[11px] text-gray-400 font-medium">Core Tenure Limits</span>
             </div>
-            <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
                 <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
                   Probation Period (Months)
@@ -655,24 +643,7 @@ function HrPoliciesContent() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
-                  Retirement Age
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    disabled={!canUpdate}
-                    placeholder="e.g. 60"
-                    value={form.retirementAge}
-                    onChange={(e) => setForm((prev) => ({ ...prev, retirementAge: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:ring-2 focus:ring-blue-100 focus:border-[#007aff] outline-none text-gray-800 disabled:bg-gray-50"
-                  />
-                  <span className="absolute right-3 top-2.5 text-[11px] font-bold text-gray-400">
-                    Years
-                  </span>
-                </div>
-              </div>
+
             </div>
           </div>
 
@@ -1231,7 +1202,6 @@ function HrPoliciesContent() {
                 ? String(Math.floor(configSnapshot.probationPeriodDays / 30))
                 : "",
               noticePeriodDays: configSnapshot.defaultNoticePeriodDays ?? "",
-              retirementAge: configSnapshot.retirementAge ?? "",
               weeklyOffDays: configSnapshot.weeklyOffDays ?? [0, 6],
             }));
             showToast("Restored selected audit snapshot into form draft", "info");

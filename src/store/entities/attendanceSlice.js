@@ -154,6 +154,7 @@ const attendanceSlice = createSlice({
   initialState: attendanceAdapter.getInitialState({
     myAttendance: [],
     companyAttendance: [],
+    companySummary: null,
     corrections: [],
     conflicts: [],
     history: { data: [], page: 1, totalPages: 1, totalCount: 0 },
@@ -174,10 +175,15 @@ const attendanceSlice = createSlice({
       if (!Array.isArray(updates)) return;
 
       updates.forEach(payload => {
-        const { id, employeeId, date, attendanceState, attendanceStatus, checkInTime, checkOutTime, totalHours, overtimeHours, action: payloadAction } = payload;
+        const item = payload.version === 1 ? payload.record : payload;
+        const summary = payload.version === 1 ? payload.summary : null;
+        const payloadAction = payload.action;
+
+        if (!item) return;
+
+        const { id, employeeId, date, attendanceState, attendanceStatus, checkInTime, checkOutTime, totalHours, overtimeHours } = item;
 
         // 1. Update myAttendance
-        // Use payload.id for finding, as date is not unique for all attendance records (e.g. for multiple checkin/checkout on a day)
         const myIdx = state.myAttendance.findIndex(r => r.id === id); 
         if (myIdx >= 0) {
           const currentRecord = state.myAttendance[myIdx];
@@ -214,22 +220,20 @@ const attendanceSlice = createSlice({
           } else if (payloadAction === 'regularization_approved') {
             // Reconstruct logs so the timeline updates instantly
             state.myAttendance[myIdx].logs = [];
-            if (payload.checkInTime) {
+            if (item.checkInTime) {
                state.myAttendance[myIdx].logs.push({
                  actionType: 'CHECK_IN',
-                 timestamp: payload.checkInTime,
+                 timestamp: item.checkInTime,
                });
             }
-            if (payload.checkOutTime) {
+            if (item.checkOutTime) {
                state.myAttendance[myIdx].logs.push({
                  actionType: 'CHECK_OUT',
-                 timestamp: payload.checkOutTime,
+                 timestamp: item.checkOutTime,
                });
             }
           }
         } else {
-            // If the record doesn't exist in myAttendance, add it. This handles cases where a new record is created
-            // and the websocket pushes it before a full refetch occurs.
             state.myAttendance.push({
                 id,
                 employeeId,
@@ -245,7 +249,6 @@ const attendanceSlice = createSlice({
 
 
         // 2. Update companyAttendance
-        // Use payload.id for finding
         const compIdx = state.companyAttendance.findIndex(r => r.id === id);
         if (compIdx >= 0) {
           const currentRecord = state.companyAttendance[compIdx];
@@ -259,7 +262,6 @@ const attendanceSlice = createSlice({
             overtimeHours: overtimeHours !== undefined ? overtimeHours : currentRecord.overtimeHours,
           };
         } else {
-            // If the record doesn't exist in companyAttendance, add it.
             state.companyAttendance.push({
                 id,
                 employeeId,
@@ -270,7 +272,7 @@ const attendanceSlice = createSlice({
                 attendanceStatus,
                 totalHours,
                 overtimeHours,
-                employee: payload.employee,
+                employee: item.employee,
             });
         }
 
@@ -291,12 +293,8 @@ const attendanceSlice = createSlice({
                   overtimeHours: overtimeHours !== undefined ? overtimeHours : dayRecord.overtimeHours,
                 };
                 
-                // Recalculate summary dynamically
-                if (report.summary && report.days) {
-                  report.summary.present = report.days.filter(d => d.status === 'PRESENT' || d.status === 'HALF_DAY').length;
-                  report.summary.absent = report.days.filter(d => d.status === 'ABSENT').length;
-                  report.summary.late = report.days.filter(d => d.status === 'LATE').length;
-                  report.summary.halfDay = report.days.filter(d => d.status === 'HALF_DAY').length;
+                if (summary) {
+                  report.summary = summary;
                 }
               }
             }
@@ -311,7 +309,6 @@ const attendanceSlice = createSlice({
       .addCase(checkIn.fulfilled, (state, action) => {
         state.isLoading = false;
         state.successMessage = "Checked in successfully";
-        // Optimistically update today's record in myAttendance
         if (action.payload) {
           const idx = state.myAttendance.findIndex(r => r.id === action.payload.id || r.date === action.payload.date);
           if (idx >= 0) state.myAttendance[idx] = action.payload;
@@ -324,7 +321,6 @@ const attendanceSlice = createSlice({
       .addCase(checkOut.fulfilled, (state, action) => {
         state.isLoading = false;
         state.successMessage = "Checked out successfully";
-        // Optimistically update today's record in myAttendance
         if (action.payload) {
           const idx = state.myAttendance.findIndex(r => r.id === action.payload.id || r.date === action.payload.date);
           if (idx >= 0) state.myAttendance[idx] = action.payload;
@@ -332,45 +328,46 @@ const attendanceSlice = createSlice({
         }
       })
       .addCase(checkOut.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
-
-
-
+ 
       .addCase(fetchMyAttendance.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchMyAttendance.fulfilled, (state, action) => {
         state.isLoading = false;
-        // Handle both array and paginated { data: [] } shapes
         state.myAttendance = Array.isArray(action.payload) ? action.payload : (action.payload?.data || []);
       })
       .addCase(fetchMyAttendance.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
-
+ 
       .addCase(fetchCompanyAttendance.pending, (state) => { state.isLoading = true; state.error = null; })
-      .addCase(fetchCompanyAttendance.fulfilled, (state, action) => { state.isLoading = false; state.companyAttendance = action.payload; })
+      .addCase(fetchCompanyAttendance.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.companyAttendance = action.payload?.records || [];
+        state.companySummary = action.payload?.summary || null;
+      })
       .addCase(fetchCompanyAttendance.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
-
+ 
       .addCase(fetchCorrections.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchCorrections.fulfilled, (state, action) => { state.isLoading = false; state.corrections = action.payload; })
       .addCase(fetchCorrections.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
-
+ 
       .addCase(fetchRegularizationHistory.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchRegularizationHistory.fulfilled, (state, action) => { state.isLoading = false; state.history = action.payload; })
       .addCase(fetchRegularizationHistory.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
-
+ 
       .addCase(requestCorrection.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(requestCorrection.fulfilled, (state, action) => { state.isLoading = false; state.successMessage = "Correction requested successfully"; })
       .addCase(requestCorrection.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
-
+ 
       .addCase(approveCorrection.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(approveCorrection.fulfilled, (state, action) => { state.isLoading = false; state.successMessage = "Correction approved"; })
       .addCase(approveCorrection.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
-
+ 
       .addCase(rejectCorrection.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(rejectCorrection.fulfilled, (state, action) => { state.isLoading = false; state.successMessage = "Correction rejected"; })
       .addCase(rejectCorrection.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
-
+ 
       .addCase(fetchMonthlyReport.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchMonthlyReport.fulfilled, (state, action) => { state.isLoading = false; state.monthlyReport = action.payload; })
       .addCase(fetchMonthlyReport.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
-
+ 
       .addCase(overrideAttendance.fulfilled, (state, action) => { state.successMessage = "Attendance overridden successfully"; })
       .addCase(overrideAttendance.rejected, (state, action) => { state.error = action.payload; })
       
@@ -384,14 +381,14 @@ const attendanceSlice = createSlice({
       .addCase(fetchConflicts.pending, (state) => { state.isLoading = true; state.error = null; })
       .addCase(fetchConflicts.fulfilled, (state, action) => { state.isLoading = false; state.conflicts = action.payload; })
       .addCase(fetchConflicts.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
-
+ 
       .addCase(startReviewConflict.fulfilled, (state, action) => {
         state.successMessage = "Review started successfully";
         const idx = state.conflicts.findIndex(c => c.id === action.payload.id);
         if (idx >= 0) state.conflicts[idx] = action.payload;
       })
       .addCase(startReviewConflict.rejected, (state, action) => { state.error = action.payload; })
-
+ 
       .addCase(resolveConflict.fulfilled, (state, action) => {
         state.successMessage = "Conflict resolved successfully";
         const idx = state.conflicts.findIndex(c => c.id === action.payload.id);
@@ -405,6 +402,7 @@ export const { clearAttendanceError, clearAttendanceSuccessMessage, handleSocket
 
 export const selectMyAttendance = (state) => state.entities.attendance.myAttendance;
 export const selectCompanyAttendance = (state) => state.entities.attendance.companyAttendance;
+export const selectCompanySummary = (state) => state.entities.attendance.companySummary;
 export const selectCorrections = (state) => state.entities.attendance.corrections;
 export const selectConflicts = (state) => state.entities.attendance.conflicts;
 export const selectRegularizationHistory = (state) => state.entities.attendance.history;

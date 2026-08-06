@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchMonthlyReport, selectMonthlyReport, selectAttendanceLoading } from "@/store/entities/attendanceSlice";
+import { fetchCompanyHrPolicies } from "@/store/entities/companyHrPoliciesSlice";
 import { Calendar as CalendarIcon, Download, ChevronLeft, ChevronRight, LayoutList } from "lucide-react";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 
@@ -20,6 +21,10 @@ export default function ReportsPage() {
   const [referenceDate, setReferenceDate] = useState(new Date()); // Current tracking date
   const [viewMode, setViewMode] = useState("list"); // 'calendar' | 'list'
   const [listRange, setListRange] = useState("week"); // 'week' | 'month'
+
+  useEffect(() => {
+    dispatch(fetchCompanyHrPolicies());
+  }, [dispatch, activeCompanyId]);
 
   useEffect(() => {
     // Fetch monthly report whenever the month of referenceDate changes

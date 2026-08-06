@@ -242,7 +242,15 @@ export default function MyAttendancePage() {
 
   const totalSeconds =
     Number(timeObj.h) * 3600 + Number(timeObj.m) * 60 + Number(timeObj.s);
-  const maxWorkSeconds = 9 * 60 * 60; // 9 hours
+  const maxWorkSeconds = (() => {
+    if (hrPolicy?.defaultShiftStartTime && hrPolicy?.defaultShiftEndTime) {
+      const [sH, sM] = hrPolicy.defaultShiftStartTime.split(":").map(Number);
+      const [eH, eM] = hrPolicy.defaultShiftEndTime.split(":").map(Number);
+      const diffMins = eH * 60 + eM - (sH * 60 + sM);
+      return Math.max(diffMins, 60) * 60; // at least 1h to avoid division by zero
+    }
+    return 9 * 60 * 60; // safe fallback only when policy not yet loaded
+  })();
   const progress = Math.min(totalSeconds / maxWorkSeconds, 1);
 
   const dashOffset = 289 - progress * 289;

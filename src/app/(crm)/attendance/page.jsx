@@ -11,7 +11,8 @@ import {
   fetchConflicts,
   startReviewConflict,
   resolveConflict,
-  selectConflicts
+  selectConflicts,
+  selectCompanySummary
 } from "@/store/entities/attendanceSlice";
 import { fetchShifts, selectAllShifts } from "@/store/entities/shiftsSlice";
 import { fetchDepartments, selectAllDepartments } from "@/store/entities/departmentsSlice";
@@ -57,6 +58,7 @@ export default function AttendanceDashboardPage() {
   const canReadBranches = hasPermission("branches:read");
 
   const companyAttendance = useSelector(selectCompanyAttendance) || [];
+  const companySummary = useSelector(selectCompanySummary);
   const corrections = useSelector(selectCorrections) || [];
   const conflicts = useSelector(selectConflicts) || [];
   const isLoading = useSelector(selectAttendanceLoading);
@@ -167,12 +169,14 @@ export default function AttendanceDashboardPage() {
     currentPage * PAGE_SIZE
   );
 
+  const summary = companySummary || { total: 0, present: 0, absent: 0, late: 0, halfDay: 0, onLeave: 0 };
+
   const stats = {
-    total: filteredAttendance.length,
-    present: filteredAttendance.filter(r => r.attendanceStatus === 'PRESENT' || r.attendanceStatus === 'HALF_DAY').length,
-    absent: filteredAttendance.filter(r => r.attendanceStatus === 'ABSENT').length,
-    late: filteredAttendance.filter(r => r.lateMinutes > 0).length,
-    onLeave: filteredAttendance.filter(r => r.attendanceStatus === 'ON_LEAVE').length,
+    total: summary.total,
+    present: summary.present,
+    absent: summary.absent,
+    late: summary.late,
+    onLeave: summary.onLeave,
     workingNow: filteredAttendance.filter(r => r.attendanceState === 'WORKING').length,
     onBreak: filteredAttendance.filter(r => r.attendanceState === 'ON_BREAK').length,
     checkedOut: filteredAttendance.filter(r => r.attendanceState === 'CHECKED_OUT').length,
@@ -529,7 +533,7 @@ export default function AttendanceDashboardPage() {
                         </td>
                         <td className="px-5 py-2 text-slate-600 font-medium">
                           {record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-                          {record.lateMinutes > 0 && <span className="ml-1.5 text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-1 py-0.5 rounded">+{record.lateMinutes}m</span>}
+                          {record.lateMinutes > 0 && record.attendanceStatus !== 'PRESENT' && <span className="ml-1.5 text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-1 py-0.5 rounded">+{record.lateMinutes}m</span>}
                         </td>
                         <td className="px-5 py-2 text-slate-600 font-medium">
                           {record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
@@ -549,9 +553,8 @@ export default function AttendanceDashboardPage() {
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider ${record.attendanceStatus === 'PRESENT' ? 'text-emerald-700 bg-emerald-50' :
                               record.attendanceStatus === 'HALF_DAY' ? 'text-amber-700 bg-amber-50' :
                                 record.attendanceStatus === 'ABSENT' ? 'text-rose-700 bg-rose-50' :
-                                  record.attendanceStatus === 'LATE' ? 'text-orange-700 bg-orange-50' :
-                                    record.attendanceStatus === 'ON_LEAVE' ? 'text-purple-700 bg-purple-50' :
-                                      'text-slate-600 bg-slate-50'
+                                  record.attendanceStatus === 'ON_LEAVE' ? 'text-purple-700 bg-purple-50' :
+                                    'text-slate-600 bg-slate-50'
                               }`}>
                               {record.attendanceStatus || '-'}
                             </span>

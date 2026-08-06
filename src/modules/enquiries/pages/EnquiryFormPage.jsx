@@ -66,12 +66,15 @@ export default function EnquiryFormPage({ id }) {
         buyingInterest: form.buyingInterest ? Number(form.buyingInterest) : undefined,
       };
 
-      // clean up empty strings
+      // clean up empty strings and UI-only fields
       if (!payload.podPort) delete payload.podPort;
       if (!payload.purity) delete payload.purity;
       if (!payload.shipmentType) delete payload.shipmentType;
       if (!payload.shipmentDate) delete payload.shipmentDate;
       delete payload.enquiryNo;
+      // originCountry is a UI-only field (country name string for port dropdown)
+      // backend only accepts originCountryId — remove the string version
+      delete payload.originCountry;
 
       await enquiriesApi.create(payload);
       router.push("/enquiries");

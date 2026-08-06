@@ -143,7 +143,22 @@ export default function ListView({ daysInView, records }) {
                 {isNonWorking && !record?.checkIn ? "00:00" : totalHoursStr}
               </span>
               <span className="text-[9px] md:text-[10px] text-gray-500">Hrs worked</span>
-              {(record?.isLate || record?.lateMinutes > 0) && (
+              {record?.status === "PRESENT" && (
+                <span className="mt-1 inline-block text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1 self-end">
+                  Present
+                </span>
+              )}
+              {record?.status === "HALF_DAY" && (
+                <span className="mt-1 inline-block text-[9px] font-bold text-orange-700 bg-orange-50 border border-orange-200 rounded px-1 self-end">
+                  Half Day
+                </span>
+              )}
+              {record?.status === "ABSENT" && (
+                <span className="mt-1 inline-block text-[9px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded px-1 self-end">
+                  Absent
+                </span>
+              )}
+              {(record?.isLate || record?.lateMinutes > 0) && record?.status !== 'PRESENT' && (
                 <span className="mt-1 inline-block text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 self-end">
                   Late
                 </span>
