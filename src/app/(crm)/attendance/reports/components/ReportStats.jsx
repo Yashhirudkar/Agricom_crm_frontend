@@ -65,11 +65,9 @@ export default function ReportStats({ stats, records = [], hrPolicy }) {
     ? records.filter(r => r.status === 'ABSENT').length
     : (safeStats.absent || 0);
 
-  const lateCount = records.length > 0
-    ? records.filter(r => r.isLate || (r.lateMinutes && r.lateMinutes > 0)).length
-    : (safeStats.lateCount ?? safeStats.late ?? 0);
-
-  const lateThreshold = hrPolicy?.monthlyLateThreshold ?? 3;
+  const halfDayCount = records.length > 0
+    ? records.filter(r => (r.employeeStatus === 'HALF_DAY' || r.status === 'HALF_DAY')).length
+    : (safeStats.halfDay || 0);
 
   // Dynamic Grace Window calculations derived directly from HR policy
   const shiftStartRaw = hrPolicy?.defaultShiftStartTime || "09:30";
@@ -125,18 +123,18 @@ export default function ReportStats({ stats, records = [], hrPolicy }) {
         </div>
       </div>
 
-      {/* 🟠 Late Marks */}
+      {/* 🟠 Half Days */}
       <div className="bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Late Marks</span>
+          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Half Days</span>
           <div className="w-6 h-6 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center">
             <AlertTriangle className="w-3.5 h-3.5" />
           </div>
         </div>
         <div className="mt-2">
-          <div className="text-xl font-bold text-slate-900 leading-none">{lateCount}</div>
-          <div className="text-[11px] font-medium text-slate-500 mt-1">
-            Monthly Tracker ({lateCount}/{lateThreshold})
+          <div className="text-xl font-bold text-slate-900 leading-none">{halfDayCount}</div>
+          <div className="text-[11px] font-medium text-amber-700 mt-1">
+            Days Half Day
           </div>
         </div>
       </div>

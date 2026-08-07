@@ -28,7 +28,8 @@ export default function ThisWeekOverview({ myAttendance }) {
               status = "WE";
               color = "text-slate-500 bg-slate-50 border-slate-100";
             } else if (dayRecord) {
-              switch (dayRecord.attendanceStatus) {
+              const recStatus = dayRecord.employeeStatus || (dayRecord.attendanceStatus === "LATE" ? "PRESENT" : dayRecord.attendanceStatus);
+              switch (recStatus) {
                 case "PRESENT":
                   status = "P";
                   color = "text-emerald-500 bg-emerald-50 border-emerald-100";
@@ -44,10 +45,6 @@ export default function ThisWeekOverview({ myAttendance }) {
                 case "ON_LEAVE":
                   status = "L";
                   color = "text-purple-500 bg-purple-50 border-purple-100";
-                  break;
-                case "LATE":
-                  status = "L";
-                  color = "text-orange-500 bg-orange-50 border-orange-100";
                   break;
                 case "WEEK_OFF":
                   status = "WE";

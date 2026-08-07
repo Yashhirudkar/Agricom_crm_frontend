@@ -70,47 +70,34 @@ export default function CalendarView({ referenceDate, records }) {
 
           let statusPills = [];
           if (record) {
-            const isLate = (record.isLate || record.lateMinutes > 0 || record.status === 'LATE')
-              && record.status !== 'PRESENT';
+            const empStatus = record.employeeStatus || (record.status === 'LATE' ? 'PRESENT' : record.status);
 
-            if (record.status === 'PRESENT' || record.status === 'LATE') {
+            if (empStatus === 'PRESENT') {
               statusPills.push({
                 label: 'Present',
                 style: 'bg-emerald-50 border border-emerald-200/60 border-l-[3px] border-l-emerald-500 text-emerald-800'
               });
-              if (isLate) {
-                statusPills.push({
-                  label: 'Late',
-                  style: 'bg-amber-50 border border-amber-200/60 border-l-[3px] border-l-amber-500 text-amber-800'
-                });
-              }
-            } else if (record.status === 'HALF_DAY') {
+            } else if (empStatus === 'HALF_DAY') {
               statusPills.push({
                 label: 'Half Day',
                 style: 'bg-orange-50 border border-orange-200/60 border-l-[3px] border-l-orange-500 text-orange-800'
               });
-              if (isLate) {
-                statusPills.push({
-                  label: 'Late',
-                  style: 'bg-amber-50 border border-amber-200/60 border-l-[3px] border-l-amber-500 text-amber-800'
-                });
-              }
-            } else if (record.status === 'ABSENT') {
+            } else if (empStatus === 'ABSENT') {
               statusPills.push({
                 label: 'Absent',
                 style: 'bg-rose-50 border border-rose-200/60 border-l-[3px] border-l-rose-500 text-rose-800'
               });
-            } else if (record.status === 'ON_LEAVE') {
+            } else if (empStatus === 'ON_LEAVE') {
               statusPills.push({
                 label: 'Leave',
                 style: 'bg-purple-50 border border-purple-200/60 border-l-[3px] border-l-purple-500 text-purple-800'
               });
-            } else if (record.status === 'WEEK_OFF') {
+            } else if (empStatus === 'WEEK_OFF') {
               statusPills.push({
                 label: 'Week Off',
                 style: 'bg-slate-50 border border-slate-200/60 border-l-[3px] border-l-slate-400 text-slate-700'
               });
-            } else if (record.status === 'HOLIDAY') {
+            } else if (empStatus === 'HOLIDAY') {
               statusPills.push({
                 label: 'Holiday',
                 style: 'bg-indigo-50 border border-indigo-200/60 border-l-[3px] border-l-indigo-500 text-indigo-800'

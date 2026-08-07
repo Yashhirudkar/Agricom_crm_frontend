@@ -146,7 +146,7 @@ export default function ListView({ daysInView, records }) {
               <span className="text-[9px] md:text-[10px] text-slate-400 font-medium">Hrs worked</span>
               
               {/* Clean Enterprise Badges */}
-              {record?.status === "PRESENT" && (
+              {(record?.employeeStatus === "PRESENT" || record?.status === "PRESENT" || record?.status === "LATE") && (
                 <span className="mt-1 inline-block text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 rounded-full px-2 py-0.5">
                   Present
                 </span>
@@ -159,11 +159,6 @@ export default function ListView({ daysInView, records }) {
               {record?.status === "ABSENT" && (
                 <span className="mt-1 inline-block text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200/60 rounded-full px-2 py-0.5">
                   Absent
-                </span>
-              )}
-              {(record?.isLate || record?.lateMinutes > 0) && record?.status !== 'PRESENT' && (
-                <span className="mt-1 inline-block text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/60 rounded-full px-2 py-0.5">
-                  Late
                 </span>
               )}
               {record?.isConflict && (
