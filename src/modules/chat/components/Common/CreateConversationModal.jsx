@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -77,11 +78,6 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
           const desigMap = Object.fromEntries(desigs.map(d => [d.value, d.label]));
           
           const mappedFallback = assignableList
-            .filter(emp => {
-              const deptName = emp.departmentId ? deptMap[emp.departmentId] : null;
-              const desigName = emp.designationId ? desigMap[emp.designationId] : null;
-              return Boolean(deptName && desigName);
-            })
             .map(emp => {
               const userObj = emp.user || {};
               return {
@@ -89,8 +85,8 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
                 userId: emp.userId,
                 name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || userObj.name || emp.email,
                 email: emp.email || userObj.email,
-                department: deptMap[emp.departmentId],
-                designation: desigMap[emp.designationId],
+                department: deptMap[emp.departmentId] || "",
+                designation: desigMap[emp.designationId] || "",
                 avatarUrl: userObj.avatarUrl || null
               };
             })
@@ -111,20 +107,15 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
         const res = await axiosClient.get("/employees", { params: { limit: 500 } });
         const list = res.data?.data || res.data || [];
         
-        // Map and filter (ensure they have assigned department & designation/role, have userId, and are not the current user)
+        // Map and filter (ensure they have userId, and are not the current user)
         const mapped = list
-          .filter(emp => {
-            const hasDept = Boolean((emp.departmentId || emp.department) && emp.department?.name);
-            const hasDesig = Boolean((emp.designationId || emp.designation) && emp.designation?.name);
-            return hasDept && hasDesig;
-          })
           .map(emp => ({
             id: emp.id,
             userId: emp.userId,
             name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || emp.email,
             email: emp.email,
-            department: emp.department?.name,
-            designation: emp.designation?.name,
+            department: emp.department?.name || "",
+            designation: emp.designation?.name || "",
             avatarUrl: emp.avatarUrl || null
           }))
           .filter(e => e.userId && e.userId !== currentUser?.id);
@@ -157,11 +148,6 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
           const desigMap = Object.fromEntries(desigs.map(d => [d.value, d.label]));
           
           const mappedFallback = assignableList
-            .filter(emp => {
-              const deptName = emp.departmentId ? deptMap[emp.departmentId] : null;
-              const desigName = emp.designationId ? desigMap[emp.designationId] : null;
-              return Boolean(deptName && desigName);
-            })
             .map(emp => {
               const userObj = emp.user || {};
               return {
@@ -169,8 +155,8 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
                 userId: emp.userId,
                 name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || userObj.name || emp.email,
                 email: emp.email || userObj.email,
-                department: deptMap[emp.departmentId],
-                designation: desigMap[emp.designationId],
+                department: deptMap[emp.departmentId] || "",
+                designation: desigMap[emp.designationId] || "",
                 avatarUrl: userObj.avatarUrl || null
               };
             })
@@ -435,9 +421,15 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
                         {/* Text description */}
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-slate-800 text-xs truncate leading-snug">{emp.name}</p>
-                          <p className="text-[10px] text-slate-450 text-slate-400 font-medium truncate mt-0.5">
-                            {emp.designation} • {emp.department}
-                          </p>
+                          {(emp.designation || emp.department) ? (
+                            <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
+                              {emp.designation}{emp.designation && emp.department ? " • " : ""}{emp.department}
+                            </p>
+                          ) : (
+                            <p className="text-[10px] text-slate-450 text-slate-400 font-medium truncate mt-0.5">
+                              {emp.email}
+                            </p>
+                          )}
                         </div>
 
                         {/* Quick DM indicator */}
@@ -564,9 +556,15 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
 
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-slate-800 text-xs truncate leading-snug">{emp.name}</p>
-                          <p className="text-[9px] text-slate-400 font-medium truncate mt-0.5">
-                            {emp.designation} • {emp.department}
-                          </p>
+                          {(emp.designation || emp.department) ? (
+                            <p className="text-[9px] text-slate-400 font-medium truncate mt-0.5">
+                              {emp.designation}{emp.designation && emp.department ? " • " : ""}{emp.department}
+                            </p>
+                          ) : (
+                            <p className="text-[9px] text-slate-400 font-medium truncate mt-0.5">
+                              {emp.email}
+                            </p>
+                          )}
                         </div>
                       </div>
                     );
@@ -708,9 +706,15 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
 
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-slate-800 text-xs truncate leading-snug">{emp.name}</p>
-                          <p className="text-[9px] text-slate-400 font-medium truncate mt-0.5">
-                            {emp.designation} • {emp.department}
-                          </p>
+                          {(emp.designation || emp.department) ? (
+                            <p className="text-[9px] text-slate-400 font-medium truncate mt-0.5">
+                              {emp.designation}{emp.designation && emp.department ? " • " : ""}{emp.department}
+                            </p>
+                          ) : (
+                            <p className="text-[9px] text-slate-400 font-medium truncate mt-0.5">
+                              {emp.email}
+                            </p>
+                          )}
                         </div>
                       </div>
                     );

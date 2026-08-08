@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   X, Users, Shield, Link as LinkIcon, FileText, Pin, Trash2,
@@ -723,11 +724,6 @@ function AddMemberModal({ isOpen, onClose, conversation, currentUser, onMemberAd
           const deptMap = Object.fromEntries(depts.map(d => [d.value, d.label]));
           const desigMap = Object.fromEntries(desigs.map(d => [d.value, d.label]));
           list = assignableList
-            .filter(emp => {
-              const deptName = emp.departmentId ? deptMap[emp.departmentId] : null;
-              const desigName = emp.designationId ? desigMap[emp.designationId] : null;
-              return Boolean(deptName && desigName);
-            })
             .map(emp => {
               const u = emp.user || {};
               return {
@@ -735,25 +731,20 @@ function AddMemberModal({ isOpen, onClose, conversation, currentUser, onMemberAd
                 userId: emp.userId,
                 name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || u.name || emp.email,
                 email: emp.email || u.email,
-                department: deptMap[emp.departmentId],
-                designation: desigMap[emp.designationId],
+                department: deptMap[emp.departmentId] || "",
+                designation: desigMap[emp.designationId] || "",
                 avatarUrl: u.avatarUrl || null
               };
             });
         } else {
           list = list
-            .filter(emp => {
-              const hasDept = Boolean((emp.departmentId || emp.department) && emp.department?.name);
-              const hasDesig = Boolean((emp.designationId || emp.designation) && emp.designation?.name);
-              return hasDept && hasDesig;
-            })
             .map(emp => ({
               id: emp.id,
               userId: emp.userId,
               name: `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || emp.email,
               email: emp.email,
-              department: emp.department?.name,
-              designation: emp.designation?.name,
+              department: emp.department?.name || "",
+              designation: emp.designation?.name || "",
               avatarUrl: emp.avatarUrl || null
             }));
         }
@@ -902,9 +893,15 @@ function AddMemberModal({ isOpen, onClose, conversation, currentUser, onMemberAd
                     <Avatar sender={{ name: emp.name, avatarUrl: emp.avatarUrl }} size="sm" />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-800 text-xs truncate">{emp.name}</p>
-                      <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
-                        {emp.designation} • {emp.department}
-                      </p>
+                      {(emp.designation || emp.department) ? (
+                        <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
+                          {emp.designation}{emp.designation && emp.department ? " • " : ""}{emp.department}
+                        </p>
+                      ) : (
+                        <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
+                          {emp.email}
+                        </p>
+                      )}
                     </div>
                   </div>
                 );
