@@ -1,5 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { useDispatch } from "react-redux";
+import { setActiveConversationId } from "@/modules/chat/store/chatSlice";
 import {
   X, Users, Shield, Link as LinkIcon, FileText, Pin, Trash2,
   Archive, LogOut, Check, Save, UserPlus, MoreVertical, ShieldAlert,
@@ -17,6 +19,7 @@ export default function GroupSettingsPanel({
   onClose,
   onUpdateConversation // Callback to trigger list refresh on rename, delete, member add
 }) {
+  const dispatch = useDispatch();
   const { checkGroupPermission, hasPermission } = usePermissions();
   const [activeTab, setActiveTab] = useState("overview"); // "overview", "members", "shared", "pinned", "danger"
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -30,12 +33,110 @@ export default function GroupSettingsPanel({
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Enterprise Privacy & Policies states
+  const [privacyVisibility, setPrivacyVisibility] = useState(conversation?.visibility || "MEMBERS_ONLY");
+  const [privacyClassification, setPrivacyClassification] = useState(conversation?.classification || "INTERNAL");
+  const [privacySecurityPreset, setPrivacySecurityPreset] = useState(conversation?.enterpriseSecurityLevel || "STANDARD");
+  const [privacyDynamicRules, setPrivacyDynamicRules] = useState(conversation?.dynamicMembershipRules ? JSON.stringify(conversation.dynamicMembershipRules, null, 2) : "");
+
+  const [epNobodyOverride, setEpNobodyOverride] = useState(!!conversation?.epNobodyOverride);
+  const [epHideMetadata, setEpHideMetadata] = useState(!!conversation?.epHideMetadata);
+  const [epHideApi, setEpHideApi] = useState(!!conversation?.epHideApi);
+  const [epHideSocket, setEpHideSocket] = useState(!!conversation?.epHideSocket);
+  const [epHideSearch, setEpHideSearch] = useState(!!conversation?.epHideSearch);
+
+  const [allowDownload, setAllowDownload] = useState(conversation?.settings?.allowDownload !== false);
+  const [disableCopy, setDisableCopy] = useState(!!conversation?.settings?.disableCopy);
+  const [screenshotProtectionBestEffort, setScreenshotProtectionBestEffort] = useState(!!conversation?.settings?.screenshotProtectionBestEffort);
+  const [disablePrint, setDisablePrint] = useState(!!conversation?.settings?.disablePrint);
+
+  const [invitePolicy, setInvitePolicy] = useState(conversation?.invitePolicy || "MEMBER");
+  const [removeMemberPolicy, setRemoveMemberPolicy] = useState(conversation?.removeMemberPolicy || "MEMBER");
+  const [renamePolicy, setRenamePolicy] = useState(conversation?.renamePolicy || "MEMBER");
+  const [iconPolicy, setIconPolicy] = useState(conversation?.iconPolicy || "MEMBER");
+  const [descPolicy, setDescPolicy] = useState(conversation?.descPolicy || "MEMBER");
+  const [archivePolicy, setArchivePolicy] = useState(conversation?.archivePolicy || "MEMBER");
+  const [deletePolicy, setDeletePolicy] = useState(conversation?.deletePolicy || "MEMBER");
+  const [exportPolicy, setExportPolicy] = useState(conversation?.exportPolicy || "NOBODY");
+
+  // Permission overrides state
+  const [permissionOverrides, setPermissionOverrides] = useState(conversation?.permissionOverrides || []);
+  const [newOverrideType, setNewOverrideType] = useState("ROLE");
+  const [newOverrideValue, setNewOverrideValue] = useState("");
+  const [newOverridePermission, setNewOverridePermission] = useState("VIEW");
+
+  const [roleOptions, setRoleOptions] = useState([]);
+  const [employeeOptions, setEmployeeOptions] = useState([]);
+  const [departmentOptions, setDepartmentOptions] = useState([]);
+  const [designationOptions, setDesignationOptions] = useState([]);
+  const [branchOptions, setBranchOptions] = useState([]);
+
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
+
   // Sync state if conversation changes
   useEffect(() => {
     setGroupName(conversation?.name || "");
     setGroupDesc(conversation?.description || "");
     setGroupPhoto(conversation?.avatarUrl || "");
+
+    setPrivacyVisibility(conversation?.visibility || "MEMBERS_ONLY");
+    setPrivacyClassification(conversation?.classification || "INTERNAL");
+    setPrivacySecurityPreset(conversation?.enterpriseSecurityLevel || "STANDARD");
+    setPrivacyDynamicRules(conversation?.dynamicMembershipRules ? JSON.stringify(conversation.dynamicMembershipRules, null, 2) : "");
+
+    setEpNobodyOverride(!!conversation?.epNobodyOverride);
+    setEpHideMetadata(!!conversation?.epHideMetadata);
+    setEpHideApi(!!conversation?.epHideApi);
+    setEpHideSocket(!!conversation?.epHideSocket);
+    setEpHideSearch(!!conversation?.epHideSearch);
+
+    setAllowDownload(conversation?.settings?.allowDownload !== false);
+    setDisableCopy(!!conversation?.settings?.disableCopy);
+    setScreenshotProtectionBestEffort(!!conversation?.settings?.screenshotProtectionBestEffort);
+    setDisablePrint(!!conversation?.settings?.disablePrint);
+
+    setInvitePolicy(conversation?.invitePolicy || "MEMBER");
+    setRemoveMemberPolicy(conversation?.removeMemberPolicy || "MEMBER");
+    setRenamePolicy(conversation?.renamePolicy || "MEMBER");
+    setIconPolicy(conversation?.iconPolicy || "MEMBER");
+    setDescPolicy(conversation?.descPolicy || "MEMBER");
+    setArchivePolicy(conversation?.archivePolicy || "MEMBER");
+    setDeletePolicy(conversation?.deletePolicy || "MEMBER");
+    setExportPolicy(conversation?.exportPolicy || "NOBODY");
+
+    setPermissionOverrides(conversation?.permissionOverrides || []);
   }, [conversation]);
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [rolesRes, deptsRes, desigsRes, branchesRes, empsRes] = await Promise.all([
+          axiosClient.get("/options", { params: { limit: 250 } }).catch(() => ({ data: [] })),
+          axiosClient.get("/departments/options", { params: { limit: 250 } }).catch(() => ({ data: [] })),
+          axiosClient.get("/designations/options", { params: { limit: 250 } }).catch(() => ({ data: [] })),
+          axiosClient.get("/branches/options", { params: { limit: 250 } }).catch(() => ({ data: [] })),
+          axiosClient.get("/employees/options", { params: { limit: 500 } }).catch(() => ({ data: [] })),
+        ]);
+
+        const rolesData = rolesRes.data?.data || rolesRes.data || [];
+        setRoleOptions(rolesData.map(r => ({ value: r.label, label: r.label })));
+
+        setDepartmentOptions(deptsRes.data?.data || deptsRes.data || []);
+        setDesignationOptions(desigsRes.data?.data || desigsRes.data || []);
+        setBranchOptions(branchesRes.data?.data || branchesRes.data || []);
+        setEmployeeOptions(empsRes.data?.data || empsRes.data || []);
+      } catch (err) {
+        console.error("Failed to load override options", err);
+      }
+    };
+    if (activeTab === "privacy") {
+      fetchOptions();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    setNewOverrideValue("");
+  }, [newOverrideType]);
 
   // Members lists
   const members = useMemo(() => conversation?.members || [], [conversation]);
@@ -151,9 +252,10 @@ export default function GroupSettingsPanel({
       isDestructive: true,
       onConfirm: async () => {
         try {
+          dispatch(setActiveConversationId(null));
+          onClose();
           await axiosClient.post(`/chat/conversations/${conversation.id}/leave`);
           toast.success("You left the group.");
-          onClose();
           if (onUpdateConversation) onUpdateConversation('leave');
         } catch (err) {
           toast.error("Failed to leave group.");
@@ -172,9 +274,10 @@ export default function GroupSettingsPanel({
       isDestructive: true,
       onConfirm: async () => {
         try {
+          dispatch(setActiveConversationId(null));
+          onClose();
           await axiosClient.delete(`/conversations/${conversation.id}`);
           toast.success(`${desc.charAt(0).toUpperCase() + desc.slice(1)} permanently deleted.`);
-          onClose();
           if (onUpdateConversation) onUpdateConversation('delete');
         } catch (err) {
           toast.error(`Failed to delete ${desc}.`);
@@ -183,11 +286,100 @@ export default function GroupSettingsPanel({
     });
   };
 
+  const handleSavePrivacy = async () => {
+    setIsSavingPrivacy(true);
+    try {
+      let parsedRules = undefined;
+      if (privacyDynamicRules.trim()) {
+        try {
+          parsedRules = JSON.parse(privacyDynamicRules.trim());
+        } catch (e) {
+          toast.error("Invalid Dynamic Rules JSON format");
+          setIsSavingPrivacy(false);
+          return;
+        }
+      }
+
+      await axiosClient.put(`/conversations/${conversation.id}`, {
+        visibility: privacyVisibility,
+        classification: privacyClassification,
+        enterpriseSecurityLevel: privacySecurityPreset,
+        dynamicMembershipRules: parsedRules,
+
+        epNobodyOverride,
+        epHideMetadata,
+        epHideApi,
+        epHideSocket,
+        epHideSearch,
+
+        allowDownload,
+        disableCopy,
+        screenshotProtectionBestEffort,
+        disablePrint,
+
+        invitePolicy,
+        removeMemberPolicy,
+        renamePolicy,
+        iconPolicy,
+        descPolicy,
+        archivePolicy,
+        deletePolicy,
+        exportPolicy,
+
+        permissionOverrides,
+      });
+
+      toast.success("Privacy settings updated successfully!");
+      if (onUpdateConversation) onUpdateConversation('update');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Failed to update privacy settings.");
+    } finally {
+      setIsSavingPrivacy(false);
+    }
+  };
+
+  const handleAddOverride = () => {
+    let val = newOverrideValue.trim();
+    if (newOverrideType === "REPORTING_MANAGER") {
+      val = "Reporting Manager";
+    }
+    if (!val) {
+      toast.error("Please select a target value or principal.");
+      return;
+    }
+    const duplicate = permissionOverrides.find(
+      (ov) =>
+        ov.principalType === newOverrideType &&
+        String(ov.principalId) === val &&
+        ov.permission === newOverridePermission
+    );
+    if (duplicate) {
+      toast.error("This permission override already exists!");
+      return;
+    }
+
+    const newOv = {
+      principalType: newOverrideType,
+      principalId: isNaN(Number(val)) ? val : Number(val),
+      permission: newOverridePermission,
+    };
+
+    setPermissionOverrides((prev) => [...prev, newOv]);
+    setNewOverrideValue("");
+    toast.success("Override added. Click Save to apply changes.");
+  };
+
+  const handleRemoveOverride = (index) => {
+    setPermissionOverrides((prev) => prev.filter((_, i) => i !== index));
+    toast.success("Override removed. Click Save to apply changes.");
+  };
+
   const handleArchiveGroup = async () => {
     try {
+      dispatch(setActiveConversationId(null));
+      onClose();
       await axiosClient.post(`/conversations/${conversation.id}/archive`);
       toast.success("Group conversation archived.");
-      onClose();
       if (onUpdateConversation) onUpdateConversation('archive');
     } catch (err) {
       toast.error("Failed to archive group.");
@@ -238,6 +430,14 @@ export default function GroupSettingsPanel({
           >
             <Megaphone className="h-3 w-3" />
             Posting
+          </button>
+        )}
+        {(currentMember?.role === "OWNER" || currentMember?.role === "ADMIN") && (
+          <button
+            onClick={() => setActiveTab("privacy")}
+            className={`px-3 py-2 border-b-2 cursor-pointer transition-colors ${activeTab === "privacy" ? "border-indigo-600 text-indigo-600" : "border-transparent hover:text-slate-800"}`}
+          >
+            Privacy
           </button>
         )}
         {canRename || canDelete || canArchive || canLeave ? (
@@ -474,7 +674,438 @@ export default function GroupSettingsPanel({
           />
         )}
 
-        {/* Tab 5: Danger actions zone */}
+        {/* Tab 5: Privacy Settings */}
+        {activeTab === "privacy" && (
+          <div className="space-y-4 text-xs">
+            {/* Section 1: Security Level Preset & Basic Policies */}
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 space-y-3">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Security Preset & Visibility</span>
+              
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Enterprise Security Preset</label>
+                <select
+                  value={privacySecurityPreset}
+                  onChange={(e) => setPrivacySecurityPreset(e.target.value)}
+                  className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500 font-medium"
+                >
+                  <option value="STANDARD">Standard</option>
+                  <option value="CONFIDENTIAL">Confidential</option>
+                  <option value="SECRET">Secret</option>
+                  <option value="CUSTOM">Custom</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Visibility Policy</label>
+                  <select
+                    value={privacyVisibility}
+                    onChange={(e) => setPrivacyVisibility(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500 font-medium"
+                  >
+                    <option value="PUBLIC">Public</option>
+                    <option value="MEMBERS_ONLY">Members Only</option>
+                    <option value="HIDDEN">Hidden</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Classification</label>
+                  <select
+                    value={privacyClassification}
+                    onChange={(e) => setPrivacyClassification(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500 font-medium"
+                  >
+                    <option value="PUBLIC">Public</option>
+                    <option value="INTERNAL">Internal</option>
+                    <option value="CONFIDENTIAL">Confidential</option>
+                    <option value="RESTRICTED">Restricted</option>
+                    <option value="SECRET">Secret</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Best-Effort Client Side Protection Deterrents */}
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 space-y-3">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Screenshot & Text Deterrents</span>
+              
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={allowDownload}
+                    onChange={(e) => setAllowDownload(e.target.checked)}
+                    className="h-3.5 w-3.5 text-blue-600 border-slate-350 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Allow Attachment Downloads</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={disableCopy}
+                    onChange={(e) => setDisableCopy(e.target.checked)}
+                    className="h-3.5 w-3.5 text-blue-600 border-slate-350 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Lock Copy / Text-Selection</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={screenshotProtectionBestEffort}
+                    onChange={(e) => setScreenshotProtectionBestEffort(e.target.checked)}
+                    className="h-3.5 w-3.5 text-blue-600 border-slate-350 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Enable Watermarking & Deterrents (Best Effort)</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={disablePrint}
+                    onChange={(e) => setDisablePrint(e.target.checked)}
+                    className="h-3.5 w-3.5 text-blue-600 border-slate-350 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Disable Printing / Print Lockout</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Section 3: Override Rules & Metadata visibility */}
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 space-y-3">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Access Overrides & Metadata</span>
+              
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={epNobodyOverride}
+                    onChange={(e) => setEpNobodyOverride(e.target.checked)}
+                    className="h-3.5 w-3.5 text-blue-600 border-slate-350 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="text-red-650 font-bold">Nobody override (Restrict to members only)</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={epHideMetadata}
+                    onChange={(e) => setEpHideMetadata(e.target.checked)}
+                    className="h-3.5 w-3.5 text-blue-600 border-slate-350 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Hide Conversation Metadata</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={epHideApi}
+                    onChange={(e) => setEpHideApi(e.target.checked)}
+                    className="h-3.5 w-3.5 text-blue-600 border-slate-350 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Hide API Endpoints Access</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={epHideSocket}
+                    onChange={(e) => setEpHideSocket(e.target.checked)}
+                    className="h-3.5 w-3.5 text-blue-600 border-slate-350 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Hide Socket Gateway Connection</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={epHideSearch}
+                    onChange={(e) => setEpHideSearch(e.target.checked)}
+                    className="h-3.5 w-3.5 text-blue-600 border-slate-350 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Hide search discoverability</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Section 4: Dynamic Membership Rules */}
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 space-y-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Dynamic Membership Rules (JSON)</span>
+              <textarea
+                placeholder='e.g. { "field": "departmentId", "operator": "equals", "value": 2 }'
+                value={privacyDynamicRules}
+                onChange={(e) => setPrivacyDynamicRules(e.target.value)}
+                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:border-blue-500 h-20 resize-y"
+              />
+            </div>
+
+            {/* Section 5: Specific Action Policies */}
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 space-y-3">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Conversation Action Policies</span>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Invite Members</label>
+                  <select value={invitePolicy} onChange={(e) => setInvitePolicy(e.target.value)} className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500">
+                    <option value="MEMBER">Everyone</option>
+                    <option value="ADMIN">Admins Only</option>
+                    <option value="OWNER">Owner Only</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Remove Members</label>
+                  <select value={removeMemberPolicy} onChange={(e) => setRemoveMemberPolicy(e.target.value)} className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500">
+                    <option value="MEMBER">Everyone</option>
+                    <option value="ADMIN">Admins Only</option>
+                    <option value="OWNER">Owner Only</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rename Workspace</label>
+                  <select value={renamePolicy} onChange={(e) => setRenamePolicy(e.target.value)} className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500">
+                    <option value="MEMBER">Everyone</option>
+                    <option value="ADMIN">Admins Only</option>
+                    <option value="OWNER">Owner Only</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Change Icon/Avatar</label>
+                  <select value={iconPolicy} onChange={(e) => setIconPolicy(e.target.value)} className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500">
+                    <option value="MEMBER">Everyone</option>
+                    <option value="ADMIN">Admins Only</option>
+                    <option value="OWNER">Owner Only</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Change Description</label>
+                  <select value={descPolicy} onChange={(e) => setDescPolicy(e.target.value)} className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500">
+                    <option value="MEMBER">Everyone</option>
+                    <option value="ADMIN">Admins Only</option>
+                    <option value="OWNER">Owner Only</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Archive Group</label>
+                  <select value={archivePolicy} onChange={(e) => setArchivePolicy(e.target.value)} className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500">
+                    <option value="MEMBER">Everyone</option>
+                    <option value="ADMIN">Admins Only</option>
+                    <option value="OWNER">Owner Only</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Delete Group</label>
+                  <select value={deletePolicy} onChange={(e) => setDeletePolicy(e.target.value)} className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500">
+                    <option value="MEMBER">Everyone</option>
+                    <option value="ADMIN">Admins Only</option>
+                    <option value="OWNER">Owner Only</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Export Conversation</label>
+                  <select value={exportPolicy} onChange={(e) => setExportPolicy(e.target.value)} className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-blue-500">
+                    <option value="NOBODY">Nobody</option>
+                    <option value="MEMBER">Everyone</option>
+                    <option value="ADMIN">Admins Only</option>
+                    <option value="OWNER">Owner Only</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 6: Specific Permission Overrides */}
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 space-y-3">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Explicit Access Overrides ({permissionOverrides.length})</span>
+              
+              {/* Overrides List */}
+              {permissionOverrides.length === 0 ? (
+                <p className="text-[10.5px] text-slate-400 italic">No custom overrides defined yet.</p>
+              ) : (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  {permissionOverrides.map((ov, index) => (
+                    <div key={`ov-${index}`} className="flex items-center justify-between p-1.5 bg-white border border-slate-150 rounded-lg">
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-bold text-slate-800 text-[10.5px]">
+                          {ov.principalType}: <span className="text-blue-600">{ov.principalId}</span>
+                        </span>
+                        <span className="text-[9px] text-slate-400 font-semibold uppercase mt-0.5">Permission: {ov.permission}</span>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveOverride(index)}
+                        className="p-1 text-slate-400 hover:text-red-650 hover:bg-slate-50 rounded"
+                        title="Remove override"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add Override Form */}
+              <div className="border-t border-slate-200/60 pt-3 space-y-2">
+                <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider block">Add Override Rule</span>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-0.5">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Target Type</label>
+                    <select
+                      value={newOverrideType}
+                      onChange={(e) => setNewOverrideType(e.target.value)}
+                      className="w-full p-1 bg-white border border-slate-200 rounded text-xs"
+                    >
+                      <option value="ROLE">Role</option>
+                      <option value="EMPLOYEE">Employee</option>
+                      <option value="DEPARTMENT">Department</option>
+                      <option value="DESIGNATION">Designation</option>
+                      <option value="BRANCH">Branch</option>
+                      <option value="REPORTING_MANAGER">Reporting Manager</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Permission</label>
+                    <select
+                      value={newOverridePermission}
+                      onChange={(e) => setNewOverridePermission(e.target.value)}
+                      className="w-full p-1 bg-white border border-slate-200 rounded text-xs"
+                    >
+                      <option value="VIEW">VIEW</option>
+                      <option value="POST">POST</option>
+                      <option value="PIN">PIN</option>
+                      <option value="DOWNLOAD">DOWNLOAD</option>
+                      <option value="EXPORT">EXPORT</option>
+                      <option value="MANAGE">MANAGE</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-1.5 items-end">
+                  <div className="flex-1 space-y-0.5">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase">Principal ID / Value</label>
+                    {newOverrideType === "REPORTING_MANAGER" ? (
+                      <input
+                        type="text"
+                        disabled
+                        value="Reporting Manager"
+                        className="w-full p-1 bg-slate-100 border border-slate-200 rounded text-xs text-slate-500 cursor-not-allowed"
+                      />
+                    ) : newOverrideType === "ROLE" ? (
+                      <select
+                        value={newOverrideValue}
+                        onChange={(e) => setNewOverrideValue(e.target.value)}
+                        className="w-full p-1 bg-white border border-slate-200 rounded text-xs focus:outline-none"
+                      >
+                        <option value="">Select Role...</option>
+                        {roleOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : newOverrideType === "EMPLOYEE" ? (
+                      <select
+                        value={newOverrideValue}
+                        onChange={(e) => setNewOverrideValue(e.target.value)}
+                        className="w-full p-1 bg-white border border-slate-200 rounded text-xs focus:outline-none"
+                      >
+                        <option value="">Select Employee...</option>
+                        {employeeOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : newOverrideType === "DEPARTMENT" ? (
+                      <select
+                        value={newOverrideValue}
+                        onChange={(e) => setNewOverrideValue(e.target.value)}
+                        className="w-full p-1 bg-white border border-slate-200 rounded text-xs focus:outline-none"
+                      >
+                        <option value="">Select Department...</option>
+                        {departmentOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : newOverrideType === "DESIGNATION" ? (
+                      <select
+                        value={newOverrideValue}
+                        onChange={(e) => setNewOverrideValue(e.target.value)}
+                        className="w-full p-1 bg-white border border-slate-200 rounded text-xs focus:outline-none"
+                      >
+                        <option value="">Select Designation...</option>
+                        {designationOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : newOverrideType === "BRANCH" ? (
+                      <select
+                        value={newOverrideValue}
+                        onChange={(e) => setNewOverrideValue(e.target.value)}
+                        className="w-full p-1 bg-white border border-slate-200 rounded text-xs focus:outline-none"
+                      >
+                        <option value="">Select Branch...</option>
+                        {branchOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="e.g. 5, admin, hr"
+                        value={newOverrideValue}
+                        onChange={(e) => setNewOverrideValue(e.target.value)}
+                        className="w-full p-1 bg-white border border-slate-200 rounded text-xs focus:outline-none"
+                      />
+                    )}
+                  </div>
+                  <button
+                    onClick={handleAddOverride}
+                    type="button"
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded text-[11px] font-bold h-[28px] cursor-pointer"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Save Buttons */}
+            <button
+              onClick={handleSavePrivacy}
+              disabled={isSavingPrivacy}
+              className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              {isSavingPrivacy ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-3.5 w-3.5" />
+                  <span>Save Privacy Policies</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Tab 6: Danger actions zone */}
         {activeTab === "danger" && (
           <div className="space-y-4 text-xs">
             <div className="p-3 bg-red-50/60 border border-red-150 rounded-xl flex items-start gap-2.5">

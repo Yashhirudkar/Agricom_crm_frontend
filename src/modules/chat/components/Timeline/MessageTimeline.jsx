@@ -2,6 +2,8 @@
 
 import React, { useRef, useEffect, useLayoutEffect, useState, useMemo, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { Shield } from "lucide-react";
+import { toast } from "sonner";
 
 // Import decoupled timeline subcomponents
 import DateDivider from "./DateDivider";
@@ -124,6 +126,34 @@ export const removeChatScrollCacheEntry = (conversationId) => {
   globalScrollCache.cache.delete(conversationId);
 };
 
+// ─── Watermark Overlay Component ──────────────────────────────────────────────
+const WatermarkOverlay = React.memo(({ currentUser }) => {
+  const name = currentUser?.name || currentUser?.username || "Teammate";
+  const email = currentUser?.email || "";
+  const infoText = `${name} (${email}) • CONFIDENTIAL`;
+
+  const cells = Array.from({ length: 32 }, (_, i) => i);
+
+  return (
+    <div
+      className="absolute inset-0 pointer-events-none select-none overflow-hidden grid grid-cols-2 sm:grid-cols-3 gap-y-20 gap-x-12 opacity-[0.05] rotate-[-20deg] scale-110 z-20"
+      style={{
+        width: "140%",
+        height: "140%",
+        top: "-20%",
+        left: "-20%",
+      }}
+    >
+      {cells.map((i) => (
+        <div key={i} className="text-[10px] font-mono font-black text-slate-700 whitespace-nowrap text-center tracking-wider">
+          {infoText}
+        </div>
+      ))}
+    </div>
+  );
+});
+WatermarkOverlay.displayName = "WatermarkOverlay";
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function MessageTimeline({
@@ -164,6 +194,96 @@ export default function MessageTimeline({
 
   // WhatsApp/Telegram style: divider auto-dismiss after user views the chat
   const [dismissedUnread, setDismissedUnread] = useState(false);
+
+  // Enterprise Privacy Screen Protection
+  const isSecret = conversation?.classification === "SECRET";
+  const screenshotProtection = !!conversation?.settings?.screenshotProtectionBestEffort;
+  const isCopyDisabled = !!conversation?.settings?.disableCopy;
+  const isPrintDisabled = !!conversation?.settings?.disablePrint;
+  const isProtected = isSecret || screenshotProtection;
+
+  // Window Focus/Blur State (for blurring messages on Snipping tool / focus loss)
+  const [isWindowBlurred, setIsWindowBlurred] = useState(false);
+
+  useEffect(() => {
+    if (!isProtected) {
+      setIsWindowBlurred(false);
+      return;
+    }
+
+    const handleBlur = () => {
+      setIsWindowBlurred(true);
+    };
+
+    const handleFocus = () => {
+      setIsWindowBlurred(false);
+    };
+
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [isProtected]);
+
+  // Context menu and key combinations deterrence
+  useEffect(() => {
+    if (!isProtected && !isCopyDisabled && !isPrintDisabled) return;
+
+    const handleKeyDown = (e) => {
+      // 1. Disable Ctrl+P / Cmd+P
+      if (isPrintDisabled && (e.ctrlKey || e.metaKey) && e.key === "p") {
+        e.preventDefault();
+        toast.warning("Printing is disabled in this confidential workspace.", { id: "print-warn" });
+        return;
+      }
+
+      // 2. Disable Ctrl+S / Cmd+S
+      if (isProtected && (e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        toast.warning("Saving pages is disabled in this workspace.", { id: "save-warn" });
+        return;
+      }
+
+      // 3. Disable Ctrl+C / Cmd+C
+      if (isCopyDisabled && (e.ctrlKey || e.metaKey) && e.key === "c") {
+        e.preventDefault();
+        toast.warning("Text copying is restricted in this channel.", { id: "copy-warn" });
+        return;
+      }
+
+      // 4. PrintScreen key listener (best-effort warning)
+      if (isProtected && e.key === "PrintScreen") {
+        toast.warning("Screenshots of secret conversations are restricted.", { id: "screenshot-warn" });
+      }
+    };
+
+    const handleContextMenu = (e) => {
+      if (isCopyDisabled) {
+        e.preventDefault();
+        toast.warning("Right click and copy are restricted.", { id: "ctx-warn" });
+      }
+    };
+
+    const handleCopy = (e) => {
+      if (isCopyDisabled) {
+        e.preventDefault();
+        toast.warning("Copying text is disabled.", { id: "copy-warn" });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("contextmenu", handleContextMenu, true);
+    window.addEventListener("copy", handleCopy, true);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("contextmenu", handleContextMenu, true);
+      window.removeEventListener("copy", handleCopy, true);
+    };
+  }, [isProtected, isCopyDisabled, isPrintDisabled]);
 
   // Reset dismissed state whenever the active conversation changes
   useEffect(() => {
@@ -658,7 +778,29 @@ export default function MessageTimeline({
         }
       `}</style>
 
-      <div className="flex-1 relative flex flex-col overflow-hidden">
+      <div className={`flex-1 relative flex flex-col overflow-hidden ${isCopyDisabled ? "select-none" : ""}`}>
+        {isPrintDisabled && (
+          <style>{`
+            @media print {
+              body { display: none !important; }
+            }
+          `}</style>
+        )}
+
+        {isProtected && <WatermarkOverlay currentUser={currentUser} />}
+
+        {isProtected && isWindowBlurred && (
+          <div className="absolute inset-0 z-[100] backdrop-blur-md bg-slate-100/40 flex flex-col items-center justify-center select-none p-6 animate-in fade-in duration-200">
+            <div className="bg-white/95 border border-slate-200 shadow-2xl rounded-2xl p-6 text-center max-w-xs">
+              <Shield className="h-10 w-10 text-indigo-650 mx-auto mb-3 animate-pulse" />
+              <h4 className="font-bold text-slate-800 text-sm mb-1">Confidential Screen Lock</h4>
+              <p className="text-[10px] text-slate-500 leading-relaxed">
+                This channel is classified as SECRET or has screenshot protection enabled. Screen content is blurred while browser focus is inactive to protect enterprise data.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Floating sticky Date Header overlay */}
         {activeDateLabel && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none select-none animate-in fade-in duration-200">

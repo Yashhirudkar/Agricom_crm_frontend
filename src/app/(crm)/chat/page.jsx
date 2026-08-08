@@ -453,6 +453,10 @@ export default function ChatPage() {
       }
     };
 
+    const handleConversationVisibilityChanged = (payload) => {
+      queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations() });
+    };
+
     subscribeToSocketEvent("message_created", handleMessageCreated);
     subscribeToSocketEvent("message_updated", handleMessageUpdated);
     subscribeToSocketEvent("message_deleted", handleMessageDeleted);
@@ -465,6 +469,7 @@ export default function ChatPage() {
     subscribeToSocketEvent("member_removed", handleMemberRemoved);
     subscribeToSocketEvent("conversation_updated", handleConversationUpdated);
     subscribeToSocketEvent("conversation_archived", handleConversationArchived);
+    subscribeToSocketEvent("CONVERSATION_VISIBILITY_CHANGED", handleConversationVisibilityChanged);
 
     return () => {
       unsubscribeFromSocketEvent("message_created", handleMessageCreated);
@@ -479,6 +484,7 @@ export default function ChatPage() {
       unsubscribeFromSocketEvent("member_removed", handleMemberRemoved);
       unsubscribeFromSocketEvent("conversation_updated", handleConversationUpdated);
       unsubscribeFromSocketEvent("conversation_archived", handleConversationArchived);
+      unsubscribeFromSocketEvent("CONVERSATION_VISIBILITY_CHANGED", handleConversationVisibilityChanged);
     };
   }, [dispatch, queryClient]);
 
@@ -490,8 +496,15 @@ export default function ChatPage() {
   });
   const conversations = conversationsData?.data || [];
 
-  const { data: activeConvDetail } = useConversationDetailQuery(activeConversationId);
+  const { data: activeConvDetail, error: activeConvError } = useConversationDetailQuery(activeConversationId);
   const activeConversation = activeConvDetail?.data || activeConvDetail || conversations.find(c => c.id === activeConversationId);
+
+  useEffect(() => {
+    if (activeConvError && (activeConvError.response?.status === 403 || activeConvError.status === 403)) {
+      dispatch(setActiveConversationId(null));
+      queryClient.removeQueries({ queryKey: CHAT_QUERY_KEYS.conversationDetail(Number(activeConversationId)) });
+    }
+  }, [activeConvError, activeConversationId, dispatch, queryClient]);
 
   // Channel posting permission
   const canPost = useMemo(() => {

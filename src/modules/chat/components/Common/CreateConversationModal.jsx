@@ -38,6 +38,10 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
   const [formDesc, setFormDesc] = useState("");
   const [selectedMemberIds, setSelectedMemberIds] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [visibility, setVisibility] = useState("MEMBERS_ONLY");
+  const [classification, setClassification] = useState("INTERNAL");
+  const [securityPreset, setSecurityPreset] = useState("STANDARD");
+  const [dynamicRules, setDynamicRules] = useState("");
 
   // Check permissions to load full employee list vs fallback options
   const { hasPermission } = usePermissions();
@@ -184,6 +188,10 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
       setFormDesc("");
       setSelectedMemberIds([]);
       setIsSubmitting(false);
+      setVisibility("MEMBERS_ONLY");
+      setClassification("INTERNAL");
+      setSecurityPreset("STANDARD");
+      setDynamicRules("");
     }
   }, [isOpen]);
 
@@ -275,11 +283,26 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
     
     try {
       setIsSubmitting(true);
+      let parsedRules = undefined;
+      if (dynamicRules.trim()) {
+        try {
+          parsedRules = JSON.parse(dynamicRules.trim());
+        } catch (e) {
+          toast.error("Invalid Dynamic Rules JSON format");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const conversation = await createConversationMutation.mutateAsync({
         name: formName.trim(),
         type: type,
         description: formDesc.trim() || undefined,
         memberUserIds: selectedMemberIds,
+        visibility,
+        classification,
+        enterpriseSecurityLevel: securityPreset,
+        dynamicMembershipRules: parsedRules,
       });
 
       dispatch(setActiveConversationId(conversation.id));
@@ -447,7 +470,7 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
         {step === "CREATE_GROUP" && (
           <div className="flex-1 flex flex-col min-h-0 bg-white">
             {/* Form details */}
-            <div className="p-4 border-b border-slate-100 space-y-3 flex-shrink-0 bg-slate-50/50">
+            <div className="p-4 border-b border-slate-100 space-y-3 flex-shrink-0 max-h-[220px] overflow-y-auto bg-slate-50/50">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Group Name</label>
                 <input
@@ -469,6 +492,68 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
                   className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-blue-500 resize-none h-16"
                   maxLength={150}
                 />
+              </div>
+
+              {/* Privacy & Security Settings */}
+              <div className="pt-2 border-t border-slate-200/60 space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Visibility Policy</label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <label className={`flex flex-col items-center justify-center p-1.5 border rounded-lg cursor-pointer text-center transition-all ${visibility === 'PUBLIC' ? 'border-blue-500 bg-blue-50/40' : 'border-slate-200 hover:bg-slate-50'}`}>
+                      <input type="radio" name="visibility" value="PUBLIC" checked={visibility === 'PUBLIC'} onChange={(e) => setVisibility(e.target.value)} className="sr-only" />
+                      <span className="text-[10px] font-bold text-slate-700">Public</span>
+                    </label>
+                    <label className={`flex flex-col items-center justify-center p-1.5 border rounded-lg cursor-pointer text-center transition-all ${visibility === 'MEMBERS_ONLY' ? 'border-blue-500 bg-blue-50/40' : 'border-slate-200 hover:bg-slate-50'}`}>
+                      <input type="radio" name="visibility" value="MEMBERS_ONLY" checked={visibility === 'MEMBERS_ONLY'} onChange={(e) => setVisibility(e.target.value)} className="sr-only" />
+                      <span className="text-[10px] font-bold text-slate-700">Members Only</span>
+                    </label>
+                    <label className={`flex flex-col items-center justify-center p-1.5 border rounded-lg cursor-pointer text-center transition-all ${visibility === 'HIDDEN' ? 'border-blue-500 bg-blue-50/40' : 'border-slate-200 hover:bg-slate-50'}`}>
+                      <input type="radio" name="visibility" value="HIDDEN" checked={visibility === 'HIDDEN'} onChange={(e) => setVisibility(e.target.value)} className="sr-only" />
+                      <span className="text-[10px] font-bold text-slate-700">Hidden</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Classification</label>
+                    <select
+                      value={classification}
+                      onChange={(e) => setClassification(e.target.value)}
+                      className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-750 text-xs focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="PUBLIC">Public</option>
+                      <option value="INTERNAL">Internal</option>
+                      <option value="CONFIDENTIAL">Confidential</option>
+                      <option value="RESTRICTED">Restricted</option>
+                      <option value="SECRET">Secret</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Security Preset</label>
+                    <select
+                      value={securityPreset}
+                      onChange={(e) => setSecurityPreset(e.target.value)}
+                      className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-750 text-xs focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="STANDARD">Standard</option>
+                      <option value="CONFIDENTIAL">Confidential</option>
+                      <option value="SECRET">Secret</option>
+                      <option value="CUSTOM">Custom</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dynamic Membership Rules (JSON)</label>
+                  <textarea
+                    placeholder='e.g. { "field": "departmentId", "operator": "equals", "value": 2 }'
+                    value={dynamicRules}
+                    onChange={(e) => setDynamicRules(e.target.value)}
+                    className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-[10px] text-slate-750 font-mono focus:outline-none focus:border-blue-500 resize-none h-12"
+                  />
+                </div>
               </div>
             </div>
 
@@ -597,7 +682,7 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
         {step === "CREATE_CHANNEL" && (
           <div className="flex-1 flex flex-col min-h-0 bg-white">
             {/* Form details */}
-            <div className="p-4 border-b border-slate-100 space-y-3 flex-shrink-0 bg-slate-50/50">
+            <div className="p-4 border-b border-slate-100 space-y-3 flex-shrink-0 max-h-[220px] overflow-y-auto bg-slate-50/50">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Channel Name</label>
                 <input
@@ -619,6 +704,68 @@ export default function CreateConversationModal({ isOpen, onClose, currentUser, 
                   className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-blue-500 resize-none h-16"
                   maxLength={150}
                 />
+              </div>
+
+              {/* Privacy & Security Settings */}
+              <div className="pt-2 border-t border-slate-200/60 space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Visibility Policy</label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <label className={`flex flex-col items-center justify-center p-1.5 border rounded-lg cursor-pointer text-center transition-all ${visibility === 'PUBLIC' ? 'border-blue-500 bg-blue-50/40' : 'border-slate-200 hover:bg-slate-50'}`}>
+                      <input type="radio" name="visibility" value="PUBLIC" checked={visibility === 'PUBLIC'} onChange={(e) => setVisibility(e.target.value)} className="sr-only" />
+                      <span className="text-[10px] font-bold text-slate-700">Public</span>
+                    </label>
+                    <label className={`flex flex-col items-center justify-center p-1.5 border rounded-lg cursor-pointer text-center transition-all ${visibility === 'MEMBERS_ONLY' ? 'border-blue-500 bg-blue-50/40' : 'border-slate-200 hover:bg-slate-50'}`}>
+                      <input type="radio" name="visibility" value="MEMBERS_ONLY" checked={visibility === 'MEMBERS_ONLY'} onChange={(e) => setVisibility(e.target.value)} className="sr-only" />
+                      <span className="text-[10px] font-bold text-slate-700">Members Only</span>
+                    </label>
+                    <label className={`flex flex-col items-center justify-center p-1.5 border rounded-lg cursor-pointer text-center transition-all ${visibility === 'HIDDEN' ? 'border-blue-500 bg-blue-50/40' : 'border-slate-200 hover:bg-slate-50'}`}>
+                      <input type="radio" name="visibility" value="HIDDEN" checked={visibility === 'HIDDEN'} onChange={(e) => setVisibility(e.target.value)} className="sr-only" />
+                      <span className="text-[10px] font-bold text-slate-700">Hidden</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Classification</label>
+                    <select
+                      value={classification}
+                      onChange={(e) => setClassification(e.target.value)}
+                      className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-750 text-xs focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="PUBLIC">Public</option>
+                      <option value="INTERNAL">Internal</option>
+                      <option value="CONFIDENTIAL">Confidential</option>
+                      <option value="RESTRICTED">Restricted</option>
+                      <option value="SECRET">Secret</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Security Preset</label>
+                    <select
+                      value={securityPreset}
+                      onChange={(e) => setSecurityPreset(e.target.value)}
+                      className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-750 text-xs focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="STANDARD">Standard</option>
+                      <option value="CONFIDENTIAL">Confidential</option>
+                      <option value="SECRET">Secret</option>
+                      <option value="CUSTOM">Custom</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dynamic Membership Rules (JSON)</label>
+                  <textarea
+                    placeholder='e.g. { "field": "departmentId", "operator": "equals", "value": 2 }'
+                    value={dynamicRules}
+                    onChange={(e) => setDynamicRules(e.target.value)}
+                    className="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-[10px] text-slate-750 font-mono focus:outline-none focus:border-blue-500 resize-none h-12"
+                  />
+                </div>
               </div>
             </div>
 
