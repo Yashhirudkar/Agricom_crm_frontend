@@ -6,7 +6,7 @@ export const companyHrPoliciesAdapter = createEntityAdapter();
 export const fetchCompanyHrPolicies = createAsyncThunk("entities/companyHrPolicies/fetchAll", async (_, { rejectWithValue }) => {
   try {
     const res = await axiosClient.get("/company/hr-policies");
-    return res.data;
+    return res.data?.data || res.data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to fetch company HR policies");
   }
@@ -15,7 +15,7 @@ export const fetchCompanyHrPolicies = createAsyncThunk("entities/companyHrPolici
 export const fetchAttendancePolicy = createAsyncThunk("entities/companyHrPolicies/fetchAttendancePolicy", async (_, { rejectWithValue }) => {
   try {
     const res = await axiosClient.get("/attendance/policy");
-    return res.data;
+    return res.data?.data || res.data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to fetch attendance policy");
   }
@@ -24,7 +24,7 @@ export const fetchAttendancePolicy = createAsyncThunk("entities/companyHrPolicie
 export const fetchCompanyHrPolicyPreview = createAsyncThunk("entities/companyHrPolicies/fetchPreview", async (formData, { rejectWithValue }) => {
   try {
     const res = await axiosClient.post("/company/hr-policies/preview", formData);
-    return res.data;
+    return res.data?.data || res.data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to fetch policy preview");
   }
@@ -33,7 +33,7 @@ export const fetchCompanyHrPolicyPreview = createAsyncThunk("entities/companyHrP
 export const fetchCompanyHrPolicyHistory = createAsyncThunk("entities/companyHrPolicies/fetchHistory", async (_, { rejectWithValue }) => {
   try {
     const res = await axiosClient.get("/company/hr-policies/history");
-    return res.data;
+    return res.data?.data || res.data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to fetch policy history");
   }
@@ -42,7 +42,7 @@ export const fetchCompanyHrPolicyHistory = createAsyncThunk("entities/companyHrP
 export const fetchCompanyHrPolicyImpact = createAsyncThunk("entities/companyHrPolicies/fetchImpact", async (_, { rejectWithValue }) => {
   try {
     const res = await axiosClient.get("/company/hr-policies/impact");
-    return res.data;
+    return res.data?.data || res.data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to fetch policy impact");
   }
@@ -51,7 +51,7 @@ export const fetchCompanyHrPolicyImpact = createAsyncThunk("entities/companyHrPo
 export const upsertCompanyHrPolicies = createAsyncThunk("entities/companyHrPolicies/upsert", async (data, { rejectWithValue }) => {
   try {
     const res = await axiosClient.put("/company/hr-policies", data);
-    return res.data;
+    return res.data?.data || res.data;
   } catch (err) {
     return rejectWithValue(err.response?.data?.message || "Failed to upsert company HR policies");
   }

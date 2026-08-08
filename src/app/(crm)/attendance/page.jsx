@@ -149,6 +149,9 @@ export default function AttendanceDashboardPage() {
 
   // Apply frontend filters and search term
   const filteredAttendance = companyAttendance.filter(r => {
+    // Only show employees who have both a department and a role (designation) assigned
+    if (!r.employee?.departmentId || !r.employee?.designationId) return false;
+
     if (filters.shift && r.shiftId?.toString() !== filters.shift) return false;
     if (filters.department && r.employee?.departmentId?.toString() !== filters.department) return false;
     if (filters.branch && r.employee?.branchId?.toString() !== filters.branch) return false;

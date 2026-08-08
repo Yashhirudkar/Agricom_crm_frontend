@@ -145,12 +145,12 @@ function HrPoliciesContent() {
             ? String(Number(currentPolicy.defaultNoticePeriodDays))
             : "",
         minHalfDayHours:
-          currentPolicy.minHalfDayHours != null
-            ? String(Number(currentPolicy.minHalfDayHours))
+          currentPolicy.minHoursForHalfDay != null
+            ? String(Number(currentPolicy.minHoursForHalfDay))
             : "",
         minFullDayHours:
-          currentPolicy.minFullDayHours != null
-            ? String(Number(currentPolicy.minFullDayHours))
+          currentPolicy.minHoursForPresent != null
+            ? String(Number(currentPolicy.minHoursForPresent))
             : "",
         defaultShiftStartTime: currentPolicy.defaultShiftStartTime || "",
         defaultShiftEndTime: currentPolicy.defaultShiftEndTime || "",
@@ -161,8 +161,8 @@ function HrPoliciesContent() {
             ? String(Number(currentPolicy.defaultBreakMinutes))
             : "",
         lateMarkGraceMinutes:
-          currentPolicy.lateMarkGraceMinutes != null
-            ? String(Number(currentPolicy.lateMarkGraceMinutes))
+          currentPolicy.lateComingGraceMinutes != null
+            ? String(Number(currentPolicy.lateComingGraceMinutes))
             : "",
         monthlyLateThreshold:
           currentPolicy.monthlyLateThreshold != null
@@ -190,12 +190,12 @@ function HrPoliciesContent() {
             : "",
         latePenaltyAction: currentPolicy.latePenaltyAction || "HALF_DAY",
         missedCheckoutAction: "AUTO_CHECKOUT",
-        geofencingRequired: false,
-        selfieRequired: false,
-        deviceRestriction: true,
-        sandwichPolicyAllowed: false,
-        holidayBetweenLeave: true,
-        weeklyOffBetweenLeave: true,
+        geofencingRequired: currentPolicy.geofencingRequired ?? false,
+        selfieRequired: currentPolicy.selfieRequired ?? false,
+        deviceRestriction: currentPolicy.deviceRestriction ?? true,
+        sandwichPolicyAllowed: currentPolicy.sandwichPolicyAllowed ?? false,
+        holidayBetweenLeave: currentPolicy.holidayBetweenLeave ?? true,
+        weeklyOffBetweenLeave: currentPolicy.weeklyOffBetweenLeave ?? true,
       });
     } else {
       setForm({
@@ -368,6 +368,13 @@ function HrPoliciesContent() {
       form.absentAfterTime !== (currentPolicy.absentAfterTime || "") ||
       isNumDiff(form.checkoutGraceMinutes, currentPolicy.checkoutGraceMinutes) ||
       Boolean(form.allowAttendanceCorrection) !== Boolean(currentPolicy.allowAttendanceCorrection) ||
+      form.autoCheckoutTime !== (currentPolicy.autoCheckoutTime || "") ||
+      isNumDiff(form.overtimeStartAfter, currentPolicy.overtimeStartAfter) ||
+      isNumDiff(form.maxCorrectionDays, currentPolicy.maxCorrectionDays) ||
+      form.latePenaltyAction !== (currentPolicy.latePenaltyAction || "HALF_DAY") ||
+      Boolean(form.geofencingRequired) !== Boolean(currentPolicy.geofencingRequired ?? false) ||
+      Boolean(form.selfieRequired) !== Boolean(currentPolicy.selfieRequired ?? false) ||
+      Boolean(form.deviceRestriction) !== Boolean(currentPolicy.deviceRestriction ?? true) ||
       JSON.stringify(form.weeklyOffDays) !== JSON.stringify(currentPolicy.weeklyOffDays ?? [0, 6])
     );
   }, [form, currentPolicy]);

@@ -341,6 +341,7 @@ function RolesContent() {
         assignedIds={assignedIds}
         handlePermissionToggle={handlePermissionToggle}
         formatLabel={formatLabel}
+        showToast={showToast}
       />
 
       <CreateRoleModal
