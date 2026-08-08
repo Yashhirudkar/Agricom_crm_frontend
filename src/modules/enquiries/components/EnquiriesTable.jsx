@@ -1,7 +1,7 @@
 import React from "react";
-import { MessageCircle, Trash2, FileSignature } from "lucide-react";
+import { MessageCircle, Trash2, FileSignature, Edit2 } from "lucide-react";
 
-export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelete, onExecute }) {
+export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelete, onExecute, onEdit }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -24,6 +24,30 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
       </div>
     );
   }
+
+  const getOriginText = (e) => {
+    if (e.shipmentMode === "SHIP") {
+      return e.originPort ? `🚢 ${e.originPort}` : "—";
+    }
+    if (e.shipmentMode === "ROAD" || e.shipmentMode === "RAIL") {
+      const icon = e.shipmentMode === "ROAD" ? "🚛 " : "🚆 ";
+      const parts = [e.originCity, e.originState, e.originCountryId].filter(Boolean);
+      return parts.length > 0 ? `${icon}${parts.join(", ")}` : "—";
+    }
+    return e.originCountryName || "—";
+  };
+
+  const getDestinationText = (e) => {
+    if (e.shipmentMode === "SHIP") {
+      return e.destinationPort || e.podName ? `🚢 ${e.destinationPort || e.podName}` : "—";
+    }
+    if (e.shipmentMode === "ROAD" || e.shipmentMode === "RAIL") {
+      const icon = e.shipmentMode === "ROAD" ? "🚛 " : "🚆 ";
+      const parts = [e.destinationCity, e.destinationState, e.destinationCountry].filter(Boolean);
+      return parts.length > 0 ? `${icon}${parts.join(", ")}` : "—";
+    }
+    return e.podName || "—";
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -54,8 +78,8 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                 <td className="px-3 py-3 text-gray-600 whitespace-nowrap max-w-[150px] truncate" title={e.productName || ""}>
                   {e.productName || "—"}
                 </td>
-                <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
-                  {e.originCountryName || "—"}
+                <td className="px-3 py-3 text-gray-600 whitespace-nowrap max-w-[200px] truncate" title={getOriginText(e)}>
+                  {getOriginText(e)}
                 </td>
                 <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
                   {e.purity || "—"}
@@ -63,8 +87,8 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                 <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
                   {e.packingName || "—"}
                 </td>
-                <td className="px-3 py-3 text-gray-600 whitespace-nowrap max-w-[150px] truncate" title={e.podName || ""}>
-                  {e.podName || "—"}
+                <td className="px-3 py-3 text-gray-600 whitespace-nowrap max-w-[200px] truncate" title={getDestinationText(e)}>
+                  {getDestinationText(e)}
                 </td>
                 <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
                   {e.shipmentType || "—"}
@@ -75,8 +99,8 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                 <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
                   {e.shipmentDate ? new Date(e.shipmentDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </td>
-                <td className="px-3 py-3 text-gray-800 font-semibold tabular-nums">
-                  {e.buyingInterest ? Number(e.buyingInterest).toLocaleString("en-IN", { minimumFractionDigits: 2 }) : "—"}
+                <td className="px-3 py-3 text-gray-800 font-semibold tabular-nums whitespace-nowrap">
+                  {e.buyingInterest ? `${e.bidCurrency || "USD"} ${Number(e.buyingInterest).toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "—"}
                 </td>
                 <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
                   {e.potentialEnquiry ? "Yes" : "No"}
@@ -93,6 +117,13 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                         <FileSignature className="h-3.5 w-3.5" />
                       </button>
                     )}
+                    <button
+                      onClick={() => onEdit?.(e)}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                      title="Edit"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </button>
                     <button
                       onClick={() => onFollowUp(e)}
                       className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"

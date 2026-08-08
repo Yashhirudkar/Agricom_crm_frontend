@@ -12,12 +12,14 @@ import EnquiriesFilter from "../components/EnquiriesFilter";
 import Pagination from "@/components/common/Pagination";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import PartnerFollowUpDrawer from "@/components/masters/partners/PartnerFollowUpDrawer";
+import EnquiryDrawer from "../components/EnquiryDrawer";
 
 export default function EnquiriesListPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const searchParams = useSearchParams();
   const enquiryIdParam = searchParams.get("enquiryId");
+  const newParam = searchParams.get("new");
 
   const userType = useSelector(selectUserType);
   const activeCompanyId = useSelector(selectActiveCompanyId) || "";
@@ -27,6 +29,11 @@ export default function EnquiriesListPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [followUpPartner, setFollowUpPartner] = useState(null);
+
+  // Form Drawer states
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editEnquiry, setEditEnquiry] = useState(null);
+  const [isViewMode, setIsViewMode] = useState(false);
 
   const activeQuery = useEnquiries(activeCompanyId, "NEW,PENDING,WAITING_RESPONSE,IN_PROGRESS", search);
 
@@ -52,9 +59,23 @@ export default function EnquiriesListPage() {
         });
       })
       .catch(() => {
-        // silently fail — user is still on the correct page
+        // silently fail
       });
   }, [enquiryIdParam]);
+
+  // Deep-link: auto-open Create drawer if ?new=true is present
+  useEffect(() => {
+    if (newParam === "true") {
+      setEditEnquiry(null);
+      setIsViewMode(false);
+      setIsFormOpen(true);
+
+      // Clean query parameter from history
+      const url = new URL(window.location.href);
+      url.searchParams.delete("new");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [newParam]);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -113,7 +134,11 @@ export default function EnquiriesListPage() {
             View Orders
           </button>
           <button
-            onClick={() => router.push("/enquiries/new")}
+            onClick={() => {
+              setEditEnquiry(null);
+              setIsViewMode(false);
+              setIsFormOpen(true);
+            }}
             className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors self-start sm:self-auto"
           >
             <Plus className="h-4 w-4" /> New Enquiry
@@ -136,6 +161,11 @@ export default function EnquiriesListPage() {
           onFollowUp={handleFollowUp}
           onDelete={(e) => setDeleteTarget(e)}
           onExecute={(e) => router.push(`/sales-contracts/new?enquiryId=${e.id}`)}
+          onEdit={(e) => {
+            setEditEnquiry(e);
+            setIsViewMode(false);
+            setIsFormOpen(true);
+          }}
         />
 
         <Pagination currentPage={activeQuery.page} totalPages={activeQuery.totalPages} onPageChange={activeQuery.setPage} />
@@ -163,7 +193,21 @@ export default function EnquiriesListPage() {
           activeQuery.fetchEnquiries();
         }}
       />
+
+      {/* Enquiry View/Create/Edit Drawer */}
+      <EnquiryDrawer
+        isOpen={isFormOpen}
+        onClose={() => {
+          setIsFormOpen(false);
+          setEditEnquiry(null);
+        }}
+        editData={editEnquiry}
+        isViewMode={isViewMode}
+        onSaveSuccess={() => {
+          activeQuery.fetchEnquiries();
+          showToast(editEnquiry ? "Enquiry updated successfully" : "Enquiry created successfully");
+        }}
+      />
     </div>
   );
 }
-

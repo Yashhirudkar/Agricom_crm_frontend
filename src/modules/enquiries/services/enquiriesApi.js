@@ -4,6 +4,7 @@ export const enquiriesApi = {
   getAll: (params) => axiosClient.get("/enquiries", { params }),
   getOne: (id) => axiosClient.get(`/enquiries/${id}`).then((res) => res.data?.data ?? res.data),
   create: (data) => axiosClient.post("/enquiries", data),
+  update: (id, data) => axiosClient.patch(`/enquiries/${id}`, data),
   remove: (id, reason) => axiosClient.delete(`/enquiries/${id}`, { params: { reason } }),
 };
 
