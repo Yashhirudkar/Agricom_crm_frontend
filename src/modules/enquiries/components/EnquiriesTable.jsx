@@ -49,6 +49,18 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
     return e.podName || "—";
   };
 
+  const getShipmentTypeLabel = (type) => {
+    if (!type) return "—";
+    const mapping = {
+      FCL: "FCL",
+      VESSEL: "Vessel",
+      TRUCK: "Truck",
+      WAGON: "Wagon",
+      TRUCK_WAGON: "Truck + Wagon"
+    };
+    return mapping[type] || type;
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
@@ -91,7 +103,7 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                   {getDestinationText(e)}
                 </td>
                 <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
-                  {e.shipmentType || "—"}
+                  {getShipmentTypeLabel(e.shipmentType)}
                 </td>
                 <td className="px-3 py-3 text-gray-800 font-semibold tabular-nums">
                   {Number(e.quantity || 0).toLocaleString("en-IN")}

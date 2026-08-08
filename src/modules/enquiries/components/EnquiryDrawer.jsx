@@ -846,7 +846,10 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                       >
                         <option value="">Select Shipment Type</option>
                         <option value="FCL">FCL</option>
-                        <option value="VESSEL">VESSEL</option>
+                        <option value="VESSEL">Vessel</option>
+                        <option value="TRUCK">Truck</option>
+                        <option value="WAGON">Wagon</option>
+                        <option value="TRUCK_WAGON">Truck + Wagon</option>
                       </select>
                       <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
                     </div>
