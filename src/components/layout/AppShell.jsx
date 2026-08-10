@@ -8,7 +8,7 @@ import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 import CommandPalette from "@/components/CommandPalette";
 import FollowUpHeaderDrawer from "@/modules/follow-ups/components/FollowUpHeaderDrawer";
-import { connectSocket, disconnectSocket } from "@/lib/socket";
+import { getSocketInstance } from "@/lib/socket";
 import { handleSocketBatchUpdate, fetchCorrections } from "@/store/entities/attendanceSlice";
 import { fetchNotifications, addSocketNotification } from "@/store/slices/notificationsSlice";
 import { useQueryClient } from "@tanstack/react-query";
@@ -107,59 +107,49 @@ export default function AppShellClient({ children }) {
     }
   }, [activeCompanyId, queryClient]);
 
-  // 4. Socket and Notifications Sync
+  // 4. Socket subscriptions — Notifications + Attendance real-time events
+  // NOTE: AppShell is NOT the socket owner. ChatSocketProvider (which wraps
+  // AppShell's rendered output) creates and destroys the socket.
+  // Because React runs child effects BEFORE parent effects, ChatSocketProvider's
+  // useEffect runs first, creating the socket. Then AppShell's effect runs here
+  // and getSocketInstance() returns the already-connected socket.
   useEffect(() => {
-    if (isPublic || !user || !activeCompanyId) {
-      return;
-    }
+    if (isPublic || !user || !activeCompanyId) return;
 
     const employeeId = user.employeeId;
     const isAdmin = user.type === "super_admin" || user.type === "client_admin";
+    if (!employeeId && !isAdmin) return;
 
-    if (!employeeId && !isAdmin) {
-      return;
-    }
-
-    // Connect global socket
-    console.log("[AppShell] Connecting socket with company ID:", activeCompanyId);
-    const socket = connectSocket(parseInt(activeCompanyId, 10));
+    // ChatSocketProvider already created the socket — get it, don't recreate it.
+    const socket = getSocketInstance();
     if (!socket) {
-      console.warn("[AppShell] Socket connection failed or connectSocket returned null");
+      console.warn("[AppShell] Socket not available yet — ChatSocketProvider may not have initialized.");
       return;
     }
 
-    // Fetch initial notifications
-    console.log("[AppShell] Fetching initial notifications list...");
+    console.log("[AppShell] Attaching notification + attendance listeners to existing socket.");
+
+    // Fetch initial notifications once.
     dispatch(fetchNotifications());
 
-    // Notification permission request
+    // Request OS notification permission.
     if (typeof window !== "undefined" && "Notification" in window) {
-      console.log("[AppShell] Notification permission status:", Notification.permission);
       if (Notification.permission === "default") {
         Notification.requestPermission();
       }
     }
 
-    // Register notification socket listener.
-    // IMPORTANT: Always pass the handler reference to socket.off() — never call
-    // socket.off("notification") with no callback, because that wipes ALL listeners
-    // for the event (including those registered by individual pages like leave-approvals).
+    // ── Notification handler (named so it can be precisely removed) ──
     const handleSocketNotification = (payload) => {
       console.log("[AppShell] Received socket notification payload:", payload);
 
-      // Step 1: Push into Redux — Header bell re-renders instantly
       dispatch(addSocketNotification(payload));
 
       const bodyMessage = payload.payload?.message || (payload.payload?.taskName ? `${payload.payload.taskName} - ${payload.payload.status || ""}` : "");
-      console.log("[AppShell] Extracted body message:", bodyMessage);
 
-      // Step 2: Resolve canonical route BEFORE using it in toast
       const targetUrl = resolveNotificationUrl(payload);
-      console.log("[AppShell] Resolved target URL:", targetUrl);
 
-      // Step 3: Entity-type-specific cache invalidation
       const entityType = (payload?.entityType || payload?.type || payload?.referenceType || '').toUpperCase();
-      console.log("[AppShell] Entity Type for invalidation:", entityType);
       if (entityType === 'TASK' || entityType.includes('TASK')) {
         queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.lists() });
       } else if (entityType.includes('LEAVE')) {
@@ -169,100 +159,79 @@ export default function AppShellClient({ children }) {
         queryClient.invalidateQueries({ queryKey: ['attendance'] });
       }
 
-
-      // Step 5: Show Desktop (OS) Notification
-      console.log("[AppShell] Checking window & Notification support:", {
-        hasWindow: typeof window !== "undefined",
-        hasNotification: typeof window !== "undefined" && "Notification" in window
-      });
-
-      if (typeof window !== "undefined" && "Notification" in window) {
-        console.log("[AppShell] Current Notification.permission:", Notification.permission);
-        if (Notification.permission === "granted") {
-          console.log("[AppShell] Permission granted. Triggering new Notification...");
-          try {
-            if ("serviceWorker" in navigator) {
-              navigator.serviceWorker.ready.then((registration) => {
-                registration.showNotification(payload.title, {
-                  body: bodyMessage,
-                  icon: '/agri_logo.png',
-                  badge: '/maple-leaf.png',
-                  vibrate: [200, 100, 200],
-                  data: { url: targetUrl }
-                });
-                console.log("[AppShell] Notification sent via Service Worker");
-              }).catch(err => {
-                console.error("[AppShell] SW ready failed, falling back to Notification API", err);
-                fallbackNotification();
-              });
-            } else {
-              fallbackNotification();
-            }
-
-            function fallbackNotification() {
-              const osNotification = new Notification(payload.title, {
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        try {
+          if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.ready.then((registration) => {
+              registration.showNotification(payload.title, {
                 body: bodyMessage,
                 icon: '/agri_logo.png',
                 badge: '/maple-leaf.png',
+                vibrate: [200, 100, 200],
+                data: { url: targetUrl }
               });
-              console.log("[AppShell] osNotification created successfully:", osNotification);
-
-              osNotification.onclick = () => {
-                console.log("[AppShell] OS Notification clicked. Focusing window and navigating to:", targetUrl);
-                window.focus();
-                if (targetUrl && targetUrl !== "/") {
-                  routerRef.current.push(targetUrl);
-                }
-                osNotification.close();
-              };
-            }
-          } catch (err) {
-            console.error("[AppShell] Error creating Notification:", err);
+            }).catch(() => {
+              new Notification(payload.title, { body: bodyMessage, icon: '/agri_logo.png' });
+            });
+          } else {
+            const osNotification = new Notification(payload.title, {
+              body: bodyMessage,
+              icon: '/agri_logo.png',
+            });
+            osNotification.onclick = () => {
+              window.focus();
+              if (targetUrl && targetUrl !== "/") routerRef.current.push(targetUrl);
+              osNotification.close();
+            };
           }
-        } else {
-          console.warn("[AppShell] Cannot show OS notification. Permission is not granted:", Notification.permission);
+        } catch (err) {
+          console.error("[AppShell] Error creating Notification:", err);
         }
-      } else {
-        console.warn("[AppShell] Window or Notification API is not available.");
       }
     };
-    socket.on("notification", handleSocketNotification);
 
-    const events = [
-      "attendance-checkin",
-      "attendance-checkout",
-      "attendance-update",
-      "attendance-batch-update",
-      "regularization-update",
-    ];
+    // ── Attendance handlers (named for precise removal) ──
+    const handleAttendanceBatchUpdate = (payload) => {
+      dispatch(handleSocketBatchUpdate(payload));
+    };
+    const handleAttendanceSingleUpdate = (payload) => {
+      if (payload && typeof payload === 'object' && payload.id) {
+        dispatch(handleSocketBatchUpdate([payload]));
+      }
+    };
+    const handleRegularizationUpdate = (payload) => {
+      if (payload && typeof payload === 'object' && payload.id) {
+        dispatch(handleSocketBatchUpdate([payload]));
+      }
+      dispatch(fetchCorrections());
+    };
+    const handleAttendanceUpdate = (payload) => {
+      if (payload && typeof payload === 'object' && payload.id) {
+        dispatch(handleSocketBatchUpdate([payload]));
+      }
+      dispatch(fetchCorrections());
+    };
 
-    events.forEach(event => {
-      socket.off(event);
-      socket.on(event, (payload) => {
-        if (event === "attendance-batch-update") {
-          dispatch(handleSocketBatchUpdate(payload));
-        } else if (payload && typeof payload === 'object' && payload.id) {
-          dispatch(handleSocketBatchUpdate([payload]));
-        }
-
-        if (event === "regularization-update" || event === "attendance-update") {
-          dispatch(fetchCorrections());
-        }
-      });
-    });
+    socket.on("notification",            handleSocketNotification);
+    socket.on("attendance-batch-update", handleAttendanceBatchUpdate);
+    socket.on("attendance-checkin",      handleAttendanceSingleUpdate);
+    socket.on("attendance-checkout",     handleAttendanceSingleUpdate);
+    socket.on("attendance-update",       handleAttendanceUpdate);
+    socket.on("regularization-update",  handleRegularizationUpdate);
 
     return () => {
-      events.forEach(event => socket.off(event));
-      // Pass the specific handler ref so only AppShell's listener is removed;
-      // page-level listeners (leave-approvals, etc.) remain intact.
-      socket.off("notification", handleSocketNotification);
-      disconnectSocket();
+      // Remove only AppShell's named handlers — do NOT call disconnectSocket().
+      // ChatSocketProvider owns the socket and disconnects it when IT unmounts.
+      socket.off("notification",            handleSocketNotification);
+      socket.off("attendance-batch-update", handleAttendanceBatchUpdate);
+      socket.off("attendance-checkin",      handleAttendanceSingleUpdate);
+      socket.off("attendance-checkout",     handleAttendanceSingleUpdate);
+      socket.off("attendance-update",       handleAttendanceUpdate);
+      socket.off("regularization-update",  handleRegularizationUpdate);
     };
-    // NOTE: `router` is intentionally excluded from deps — it changes on every
-    // navigation and would cause the socket to disconnect/reconnect on every page
-    // change, losing in-flight events. routerRef keeps the handler up-to-date.
+    // NOTE: `router` intentionally excluded — see routerRef above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isPublic, dispatch, activeCompanyId]);
+  }, [user, isPublic, dispatch, activeCompanyId, queryClient]);
 
   if (isPublic) {
     return <>{children}</>;

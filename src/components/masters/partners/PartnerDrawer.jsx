@@ -100,6 +100,7 @@ export default function PartnerDrawer({
   const [dynamicConfigName, setDynamicConfigName] = useState("");
   const [dynamicValues, setDynamicValues] = useState({});
   const [loadingDynamic, setLoadingDynamic] = useState(false);
+  const [isSavingAdditional, setIsSavingAdditional] = useState(false);
   const [previousRoleId, setPreviousRoleId] = useState("");
 
   const {

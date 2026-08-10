@@ -14,9 +14,6 @@ const nextConfig = {
       ? process.env.NEXT_PUBLIC_ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
       : [])
   ],
-  turbopack: {
-    root: __dirname,
-  },
   devIndicators: false,
 };
 

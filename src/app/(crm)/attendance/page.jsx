@@ -86,7 +86,13 @@ export default function AttendanceDashboardPage() {
     if (!canReadDashboard) {
       router.replace("/attendance/my-attendance");
     }
-  }, [canReadDashboard, router]);
+  // NOTE: `router` is intentionally omitted from deps. The Next.js App Router
+  // `router` object is not referentially stable across navigations — including it
+  // caused this effect to re-fire after every redirect, producing the repeated
+  // GET /attendance/my-attendance requests seen in server logs.
+  // `canReadDashboard` is a boolean and is the only value that should trigger a redirect.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canReadDashboard]);
 
   useEffect(() => {
     const timer = setInterval(() => {
