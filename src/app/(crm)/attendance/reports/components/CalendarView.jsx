@@ -1,15 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { formatDisplayTime, formatDateString } from "../utils";
 
 export default function CalendarView({ referenceDate, records }) {
-  const [now, setNow] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Calendar Specific Variables
   const calendarDaysInMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0).getDate();
@@ -61,7 +53,7 @@ export default function CalendarView({ referenceDate, records }) {
 
           if (!record?.checkOut && isToday && record?.attendanceState === "WORKING") {
             const checkInMs = new Date(record?.checkIn).getTime();
-            workHrs = Math.max(0, (now.getTime() - checkInMs) / (1000 * 60 * 60));
+            workHrs = Math.max(0, (Date.now() - checkInMs) / (1000 * 60 * 60));
           }
 
           const hours = Math.floor(workHrs);

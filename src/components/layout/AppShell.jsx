@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
 import axiosClient from "@/lib/axios";
 import { TASK_QUERY_KEYS } from "@/modules/tasks/constants/query-keys";
+import { CHAT_QUERY_KEYS } from "@/modules/chat/constants/query-keys";
 import {
   selectActiveCompanyId,
   selectCompanyContextLoading,
@@ -99,12 +100,27 @@ export default function AppShellClient({ children }) {
     }
   }, [user, companies, activeCompanyId, isPublic, dispatch]);
 
-  // 3. Global React Query Invalidation Engine
+  // 3. Company-context React Query invalidation
+  // Uses actual root query keys from each module so only relevant cache entries
+  // are invalidated — not the entire cache (which was the previous bug).
+  const prevCompanyIdRef = useRef(null);
   useEffect(() => {
-    if (activeCompanyId) {
-      console.log("[AppShell] Invalidating all queries reactively for company ID:", activeCompanyId);
-      queryClient.invalidateQueries();
+    if (!activeCompanyId) return;
+    const prev = prevCompanyIdRef.current;
+    prevCompanyIdRef.current = activeCompanyId;
+
+    if (prev && prev !== activeCompanyId) {
+      console.log(`[AppShell] Company switched: ${prev} → ${activeCompanyId}. Invalidating scoped queries.`);
+    } else if (!prev) {
+      console.log(`[AppShell] Initial company context: ${activeCompanyId}. Invalidating scoped queries.`);
     }
+
+    // Invalidate using the actual registered query key roots from each module
+    queryClient.invalidateQueries({ queryKey: TASK_QUERY_KEYS.all });
+    queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.all });
+    queryClient.invalidateQueries({ queryKey: ['follow-ups'] });
+    queryClient.invalidateQueries({ queryKey: ['leave-requests'] });
+    queryClient.invalidateQueries({ queryKey: ['leaves'] });
   }, [activeCompanyId, queryClient]);
 
   // 4. Socket subscriptions — Notifications + Attendance real-time events

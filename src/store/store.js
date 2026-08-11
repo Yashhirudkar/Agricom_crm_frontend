@@ -69,7 +69,7 @@ export const store = configureStore({
     entities: entitiesReducer,
     chat: chatReducer,
   },
-  devTools: process.env.NODE_ENV !== "production",
+  devTools: false,
 });
 
 injectStore(store);

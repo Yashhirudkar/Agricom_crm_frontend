@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import LiveWorkHours from "@/components/attendance/LiveWorkHours";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchCompanyAttendance,
@@ -72,7 +73,6 @@ export default function AttendanceDashboardPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 15;
-  const [now, setNow] = useState(new Date());
   const [lastUpdated, setLastUpdated] = useState("");
 
   // Conflict States
@@ -94,12 +94,6 @@ export default function AttendanceDashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canReadDashboard]);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     if (companyAttendance && companyAttendance.length > 0) {
@@ -107,12 +101,12 @@ export default function AttendanceDashboardPage() {
     }
   }, [companyAttendance]);
 
-  const getWorkHours = (record) => {
+  // getWorkHours is used for CSV export only — a snapshot at time of click
+  const getWorkHoursForExport = (record) => {
     if (!record) return '0h 0m';
     if ((record.attendanceState === 'WORKING' || record.attendanceState === 'ON_BREAK') && record.checkInTime && !record.checkOutTime) {
       const start = new Date(record.checkInTime).getTime();
-      const current = now.getTime();
-      const diffMs = Math.max(0, current - start);
+      const diffMs = Math.max(0, Date.now() - start);
       const totalMinutes = Math.floor(diffMs / (1000 * 60));
       const hrs = Math.floor(totalMinutes / 60);
       const mins = totalMinutes % 60;
@@ -180,7 +174,7 @@ export default function AttendanceDashboardPage() {
 
   const summary = companySummary || { total: 0, present: 0, absent: 0, late: 0, halfDay: 0, onLeave: 0 };
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: summary.total,
     present: summary.present,
     absent: summary.absent,
@@ -191,7 +185,7 @@ export default function AttendanceDashboardPage() {
     checkedOut: filteredAttendance.filter(r => r.attendanceState === 'CHECKED_OUT').length,
     needsRegularization: corrections.filter(c => c.status === 'PENDING').length,
     leaveConflicts: conflicts.filter(c => c.status === 'OPEN' || c.status === 'UNDER_REVIEW').length,
-  };
+  }), [summary, filteredAttendance, corrections, conflicts]);
 
   const handleExport = () => {
     if (filteredAttendance.length === 0) return;
@@ -207,7 +201,7 @@ export default function AttendanceDashboardPage() {
       r.attendanceState || "",
       r.checkInTime ? new Date(r.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
       r.checkOutTime ? new Date(r.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
-      getWorkHours(r)
+      getWorkHoursForExport(r)
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8,"
@@ -580,7 +574,12 @@ export default function AttendanceDashboardPage() {
                           </div>
                         </td>
                         <td className="px-5 py-2 text-right font-bold text-slate-800 tabular-nums">
-                          {getWorkHours(record)}
+                          <LiveWorkHours
+                            checkInTime={record.checkInTime}
+                            checkOutTime={record.checkOutTime}
+                            status={record.attendanceState}
+                            totalHours={record.totalHours}
+                          />
                         </td>
                         <td className="px-5 py-2 text-center">
                           <div className="flex justify-center items-center gap-0.5">
@@ -720,7 +719,14 @@ export default function AttendanceDashboardPage() {
                     </div>
                     <div className="flex justify-between">
                       <span>Worked Duration:</span>
-                      <span className="font-bold text-slate-800">{getWorkHours(selectedConflict.attendanceRecordRef)}</span>
+                      <span className="font-bold text-slate-800">
+                        <LiveWorkHours
+                          checkInTime={selectedConflict.attendanceRecordRef?.checkInTime}
+                          checkOutTime={selectedConflict.attendanceRecordRef?.checkOutTime}
+                          status={selectedConflict.attendanceRecordRef?.attendanceState}
+                          totalHours={selectedConflict.attendanceRecordRef?.totalHours}
+                        />
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Current Status:</span>

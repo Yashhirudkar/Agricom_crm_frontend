@@ -1,24 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useSelector } from "react-redux";
 import { selectCurrentHrPolicy } from "@/store/entities/companyHrPoliciesSlice";
 import { formatDisplayTime, formatDateString } from "../utils";
 import VisualAttendanceTimeline from "@/components/attendance/VisualAttendanceTimeline";
 
 export default function ListView({ daysInView, records }) {
-  const [now, setNow] = useState(new Date());
   const hrPolicy = useSelector(selectCurrentHrPolicy);
 
   const defaultShiftStart = hrPolicy?.defaultShiftStartTime;
   const defaultShiftEnd = hrPolicy?.defaultShiftEndTime;
   const defaultBreakStart = hrPolicy?.defaultBreakStartTime;
   const defaultBreakEnd = hrPolicy?.defaultBreakEndTime;
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const getRecordForDate = (dateObj) => {
     const dateStr = formatDateString(dateObj);
@@ -36,7 +28,8 @@ export default function ListView({ daysInView, records }) {
         const checkInTime = formatDisplayTime(record?.checkIn);
         let checkOutTime = formatDisplayTime(record?.checkOut);
         if (!record?.checkOut && isToday && record?.attendanceState === "WORKING") {
-          checkOutTime = formatDisplayTime(now, true);
+          // Show a static snapshot — ListView does not need sub-second accuracy
+          checkOutTime = formatDisplayTime(new Date(), true);
         }
 
         const hasPunch = Boolean(record?.checkIn || record?.checkOut);

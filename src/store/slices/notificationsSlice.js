@@ -56,6 +56,10 @@ const notificationsSlice = createSlice({
         if (!action.payload.isRead) {
           state.unreadCount += 1;
         }
+        // Trim to last 100 notifications to prevent unbounded memory growth
+        if (state.list.length > 100) {
+          state.list = state.list.slice(0, 100);
+        }
       }
     },
   },

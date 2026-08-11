@@ -74,7 +74,8 @@ export default function MyAttendancePage() {
   const success = useSelector(selectAttendanceSuccess);
   const activeCompanyId = useSelector(selectActiveCompanyId);
 
-  const [currentTime, setCurrentTime] = useState(new Date());
+  // currentTime drives calculateLiveTimer via re-render; no direct JSX reference needed
+  const [, setCurrentTime] = useState(0);
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [correctionForm, setCorrectionForm] = useState({
     date: "",
@@ -96,10 +97,14 @@ export default function MyAttendancePage() {
         endDate: new Date().toLocaleDateString("en-CA"),
       })
     );
-
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
   }, [dispatch, activeCompanyId]);
+
+  // Separate 1s tick to update the live work timer.
+  // Using a counter (not Date) avoids allocating a new Date object on every tick.
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(n => n + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (error || success) {
