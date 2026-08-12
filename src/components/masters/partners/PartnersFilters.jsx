@@ -14,16 +14,19 @@ export default function PartnersFilters({
   setRoleFilter,
   countryFilter,
   setCountryFilter,
+  dnbRiskFilter,
+  setDnbRiskFilter,
 }) {
   const [localSearch, setLocalSearch] = useState(search);
 
-  const isDirty = !!(localSearch || roleFilter || countryFilter || isActiveFilter !== "true");
+  const isDirty = !!(localSearch || roleFilter || countryFilter || dnbRiskFilter || isActiveFilter !== "true");
 
   const handleClear = () => {
     setLocalSearch("");
     setSearch("");
     setRoleFilter("");
     setCountryFilter("");
+    setDnbRiskFilter("");
     setIsActiveFilter("true");
     setCurrentPage(1);
   };
@@ -84,6 +87,25 @@ export default function PartnersFilters({
               {c}
             </option>
           ))}
+        </select>
+
+        {/* D&B Risk & Failure Score Filter */}
+        <select
+          value={dnbRiskFilter}
+          onChange={(e) => {
+            setDnbRiskFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full sm:w-auto px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
+        >
+          <option value="">All D&B Risk</option>
+          <option value="VERY_LOW">🟢 Very Low (90 – 100)</option>
+          <option value="LOW">🟢 Low (75 – 89)</option>
+          <option value="MODERATE_LOW">🟡 Moderate-Low (60 – 74)</option>
+          <option value="MODERATE">🟠 Moderate (40 – 59)</option>
+          <option value="HIGH">🔴 High (20 – 39)</option>
+          <option value="VERY_HIGH">🔴 Very High (1 – 19)</option>
+          <option value="UNKNOWN">⚪ Unknown (0 / No Score)</option>
         </select>
 
         {/* Status Filter */}

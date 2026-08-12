@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray, Controller, useWatch } from "react-hook-form";
 import Select from "react-select";
@@ -17,15 +19,18 @@ import {
   CheckCircle,
   FileText,
   User,
+  Lock,
+  ShieldCheck,
 } from "lucide-react";
 import Drawer from "@/components/common/Drawer";
 import HasPermission from "@/components/rbac/HasPermission";
 import useSystemOptions from "@/hooks/useSystemOptions";
 import axiosClient from "@/lib/axios";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import DynamicFieldRenderer from "@/components/common/DynamicFieldRenderer";
 import { City } from "country-state-city";
 import CountrySelect from "@/components/common/CountrySelect";
+import PartnerDnbTab from "./PartnerDnbTab";
 import countriesLib from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
 
@@ -79,7 +84,7 @@ const VirtualMenuList = (props) => {
   );
 };
 
-export default function PartnerDrawer({
+function PartnerDrawer({
   isOpen,
   onClose,
   onSubmit,
@@ -115,6 +120,7 @@ export default function PartnerDrawer({
       entityName: "",
       partnerRoleId: "",
       country: "",
+      yearOfEstablishment: "",
       address: "",
       city: "",
       website: "",
@@ -136,18 +142,31 @@ export default function PartnerDrawer({
     return countriesLib.getAlpha2Code(watchedCountry, "en") || "";
   }, [watchedCountry]);
 
-  // Derive available cities from selected country
+  const [citySearchInput, setCitySearchInput] = useState("");
+  const [dnbDraft, setDnbDraft] = useState(null);
+
+  // Reset city search input when country changes
+  useEffect(() => {
+    setCitySearchInput("");
+  }, [watchedCountryIso2]);
+
+  // Derive available cities from selected country (top 10 max)
   const availableCities = useMemo(() => {
     if (!watchedCountryIso2) return [];
-    // Get cities from country-state-city package
     const cities = City.getCitiesOfCountry(watchedCountryIso2) || [];
+    if (!cities.length) return [];
 
-    // Map to react-select options format
-    return cities.map(city => ({
+    let filtered = cities;
+    if (citySearchInput && citySearchInput.trim()) {
+      const q = citySearchInput.trim().toLowerCase();
+      filtered = cities.filter((c) => c.name.toLowerCase().includes(q));
+    }
+
+    return filtered.slice(0, 10).map((city) => ({
       value: city.name,
-      label: city.name
+      label: city.name,
     }));
-  }, [watchedCountryIso2]);
+  }, [watchedCountryIso2, citySearchInput]);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -246,6 +265,7 @@ export default function PartnerDrawer({
           entityName: editData.entityName || "",
           partnerRoleId: editData.partnerRoleId || "",
           country: editData.country || "",
+          yearOfEstablishment: editData.yearOfEstablishment || "",
           address: editData.address || "",
           city: editData.city || "",
           website: editData.website || "",
@@ -272,6 +292,7 @@ export default function PartnerDrawer({
           entityName: "",
           partnerRoleId: "",
           country: "",
+          yearOfEstablishment: "",
           address: "",
           city: "",
           website: "",
@@ -316,7 +337,17 @@ export default function PartnerDrawer({
       });
     }
 
+    if (payload.yearOfEstablishment) {
+      payload.yearOfEstablishment = parseInt(payload.yearOfEstablishment, 10);
+    } else {
+      delete payload.yearOfEstablishment;
+    }
+
     payload.partnerRoleId = parseInt(payload.partnerRoleId, 10);
+
+    if (!editData && dnbDraft?.selectedFile) {
+      payload.dnbDraft = dnbDraft;
+    }
 
     onSubmit(payload);
   };
@@ -361,6 +392,7 @@ export default function PartnerDrawer({
   const tabs = isEditMode
     ? [
       { id: "general", label: "General Information" },
+      { id: "dnb", label: editData?.id ? "D&B Section" : "🔒 D&B" },
       { id: "financial", label: "Financial Details" },
       { id: "contacts", label: "Contacts" },
       { id: "products", label: "Products" },
@@ -369,6 +401,7 @@ export default function PartnerDrawer({
     : [
       { id: "overview", label: "Overview" },
       { id: "general", label: "General Information" },
+      { id: "dnb", label: "D&B Section" },
       { id: "financial", label: "Financial Details" },
       { id: "contacts", label: "Contacts" },
       { id: "products", label: "Products" },
@@ -622,6 +655,14 @@ export default function PartnerDrawer({
                     </div>
                     <div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        Year of Establishment
+                      </div>
+                      <div className="text-xs font-bold text-gray-800 mt-1">
+                        {editData.yearOfEstablishment || "-"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                         City
                       </div>
                       <div className="text-xs font-bold text-gray-800 mt-1">
@@ -658,6 +699,16 @@ export default function PartnerDrawer({
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* D&B Information Tab (View Mode) */}
+              {activeTab === "dnb" && (
+                <PartnerDnbTab
+                  partnerId={editData?.id}
+                  isEditMode={isEditMode}
+                  dnbDraft={dnbDraft}
+                  onDnbDraftChange={setDnbDraft}
+                />
               )}
 
               {/* Financial & Tax Details Tab */}
@@ -871,6 +922,27 @@ export default function PartnerDrawer({
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                        Year of Establishment
+                      </label>
+                      <input
+                        type="number"
+                        min="1900"
+                        max={new Date().getFullYear()}
+                        {...register("yearOfEstablishment", {
+                          min: { value: 1900, message: "Year must be >= 1900" },
+                          max: { value: new Date().getFullYear(), message: "Year cannot be in the future" },
+                        })}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-xs focus:outline-none focus:ring-0 text-gray-700 bg-gray-50/30"
+                        placeholder="e.g. 2018"
+                      />
+                      {errors.yearOfEstablishment && (
+                        <p className="text-red-500 text-[10px] mt-1 font-semibold">
+                          {errors.yearOfEstablishment.message}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                         Address
                       </label>
                       <input
@@ -890,6 +962,9 @@ export default function PartnerDrawer({
                         render={({ field }) => (
                           <Select
                             {...field}
+                            onInputChange={(inputValue, { action }) => {
+                              if (action === "input-change") setCitySearchInput(inputValue);
+                            }}
                             options={availableCities}
                             isDisabled={!watchedCountry || availableCities.length === 0}
                             placeholder={
@@ -953,6 +1028,16 @@ export default function PartnerDrawer({
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* TAB: D&B Information */}
+              {activeTab === "dnb" && (
+                <PartnerDnbTab
+                  partnerId={editData?.id}
+                  isEditMode={isEditMode}
+                  dnbDraft={dnbDraft}
+                  onDnbDraftChange={setDnbDraft}
+                />
               )}
 
               {/* TAB: Financial Details */}
@@ -1334,3 +1419,5 @@ export default function PartnerDrawer({
     </Drawer>
   );
 }
+
+export default React.memo(PartnerDrawer);

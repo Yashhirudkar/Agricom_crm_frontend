@@ -111,7 +111,7 @@ axiosClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-import { toast } from "sonner";
+import { toast } from "./toast";
 
 // Silent Refresh state variables
 let isRefreshing = false;

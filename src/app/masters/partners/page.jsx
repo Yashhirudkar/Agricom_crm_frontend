@@ -73,6 +73,7 @@ function PartnersContent() {
   const [isActiveFilter, setIsActiveFilter] = useState("true");
   const [roleFilter, setRoleFilter] = useState("");
   const [countryFilter, setCountryFilter] = useState("");
+  const [dnbRiskFilter, setDnbRiskFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
@@ -89,9 +90,10 @@ function PartnersContent() {
         isActive: isActiveFilter,
         partnerRoleId: roleFilter || undefined,
         country: countryFilter || undefined,
+        dnbRiskFactor: dnbRiskFilter || undefined,
       }));
     }
-  }, [dispatch, currentPage, search, isActiveFilter, roleFilter, countryFilter, activeCompanyId]);
+  }, [dispatch, currentPage, search, isActiveFilter, roleFilter, countryFilter, dnbRiskFilter, activeCompanyId]);
 
   // Load dropdown dependencies once
   useEffect(() => {
@@ -181,9 +183,36 @@ function PartnersContent() {
         showToast("Partner updated successfully");
       } else {
         const createPayload = { ...payload };
-        delete createPayload.id;
-        await dispatch(createPartner(createPayload)).unwrap();
-        showToast("Partner created successfully");
+        const dnbDraft = createPayload.dnbDraft;
+        if (dnbDraft?.yearOfEstablishment && !createPayload.yearOfEstablishment) {
+          createPayload.yearOfEstablishment = parseInt(dnbDraft.yearOfEstablishment, 10);
+        }
+
+        const createdPartner = await dispatch(createPartner(createPayload)).unwrap();
+
+        if (dnbDraft && dnbDraft.selectedFile) {
+          try {
+            const formData = new FormData();
+            formData.append("file", dnbDraft.selectedFile);
+            formData.append("reportDate", dnbDraft.reportDate || new Date().toISOString().split("T")[0]);
+            formData.append("riskFactor", dnbDraft.riskFactor || "LOW");
+            formData.append("creditLimit", dnbDraft.creditLimit || 0);
+            formData.append("failureScore", dnbDraft.failureScore || "MODERATE");
+            formData.append("paydex", dnbDraft.paydex || 0);
+            formData.append("dnbRating", (dnbDraft.dnbRating || "EE1").toUpperCase().trim());
+
+            await axiosClient.post(`/masters/partners/${createdPartner.id}/dnb-reports`, formData, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
+            showToast("Partner & D&B Report created successfully");
+          } catch (dnbErr) {
+            console.error("Failed to upload D&B report on partner creation", dnbErr);
+            showToast("Partner created, but D&B report upload failed", "warning");
+          }
+        } else {
+          showToast("Partner created successfully");
+        }
+
         if (currentPage !== 1) setCurrentPage(1);
         else dispatch(fetchPartners({ page: 1, limit: itemsPerPage, search, isActive: isActiveFilter }));
       }
@@ -276,7 +305,7 @@ function PartnersContent() {
             <Users className="h-6 w-6 text-[#007aff]" />
             Business Partners
           </h1>
-          <p className="text-xs text-gray-400 font-medium mt-1">
+          <p className="text-xs text-gray-500 font-medium mt-1">
             Manage buyers, suppliers, logistics providers and their associated contacts.
           </p>
         </div>
@@ -293,34 +322,36 @@ function PartnersContent() {
         </div>
       </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-          <PartnersFilters
-            search={search}
-            setSearch={setSearch}
-            isActiveFilter={isActiveFilter}
-            setIsActiveFilter={setIsActiveFilter}
-            setCurrentPage={setCurrentPage}
-            totalCount={totalCount}
-            partnerRoles={partnerRoles}
-            countries={countries}
-            roleFilter={roleFilter}
-            setRoleFilter={setRoleFilter}
-            countryFilter={countryFilter}
-            setCountryFilter={setCountryFilter}
-          />
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+        <PartnersFilters
+          search={search}
+          setSearch={setSearch}
+          isActiveFilter={isActiveFilter}
+          setIsActiveFilter={setIsActiveFilter}
+          setCurrentPage={setCurrentPage}
+          totalCount={totalCount}
+          partnerRoles={partnerRoles}
+          countries={countries}
+          roleFilter={roleFilter}
+          setRoleFilter={setRoleFilter}
+          countryFilter={countryFilter}
+          setCountryFilter={setCountryFilter}
+          dnbRiskFilter={dnbRiskFilter}
+          setDnbRiskFilter={setDnbRiskFilter}
+        />
 
-          <PartnersTable
-            partners={partners}
-            openViewDrawer={openViewDrawer}
-            openEditModal={openEditModal}
-            openFollowUpDrawer={openFollowUpDrawer}
-            setDeleteTarget={setDeleteTarget}
-            setRestoreTarget={setRestoreTarget}
-            setPermanentDeleteTarget={setPermanentDeleteTarget}
-          />
+        <PartnersTable
+          partners={partners}
+          openViewDrawer={openViewDrawer}
+          openEditModal={openEditModal}
+          openFollowUpDrawer={openFollowUpDrawer}
+          setDeleteTarget={setDeleteTarget}
+          setRestoreTarget={setRestoreTarget}
+          setPermanentDeleteTarget={setPermanentDeleteTarget}
+        />
 
-          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-        </div>
+        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+      </div>
 
       <PartnerDrawer
         isOpen={isModalOpen}

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronDown, Search, X, Loader2 } from "lucide-react";
 import axiosClient from "@/lib/axios";
 
-export default function SearchablePartnerSelect({
+function SearchablePartnerSelect({
   label,
   required = false,
   value,
@@ -29,25 +29,28 @@ export default function SearchablePartnerSelect({
   const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
   const errClass = "text-[10px] text-red-500 mt-1";
 
+  const fetchedValueRef = useRef(null);
+
   // Fetch options from backend options endpoint
   const fetchOptions = useCallback(
     async (searchQuery = "") => {
       if (requireRoleId && !partnerRoleId) {
-        setOptions(initialPartners);
+        setOptions(initialPartners.slice(0, 10));
         return;
       }
       setLoading(true);
       try {
         const params = {
+          limit: 10,
           ...(partnerRoleId ? { partnerRoleId } : {}),
           ...(searchQuery.trim() ? { search: searchQuery.trim() } : {}),
         };
         const res = await axiosClient.get("/masters/partners/options", { params });
         const data = res.data?.data || res.data || [];
-        setOptions(Array.isArray(data) ? data : []);
+        setOptions(Array.isArray(data) ? data.slice(0, 10) : []);
       } catch (e) {
         console.error("Failed to fetch partner options", e);
-        setOptions(initialPartners.length > 0 ? initialPartners : []);
+        setOptions(initialPartners.length > 0 ? initialPartners.slice(0, 10) : []);
       } finally {
         setLoading(false);
       }
@@ -55,10 +58,10 @@ export default function SearchablePartnerSelect({
     [partnerRoleId, initialPartners, requireRoleId]
   );
 
-  // Initialize options with initialPartners if available
+  // Initialize options with initialPartners if available (limit to 10)
   useEffect(() => {
     if (initialPartners && initialPartners.length > 0) {
-      setOptions(initialPartners);
+      setOptions(initialPartners.slice(0, 10));
     }
   }, [initialPartners]);
 
@@ -66,6 +69,7 @@ export default function SearchablePartnerSelect({
   useEffect(() => {
     if (!value) {
       setSelectedName("");
+      fetchedValueRef.current = null;
       return;
     }
 
@@ -76,8 +80,9 @@ export default function SearchablePartnerSelect({
 
     if (item) {
       setSelectedName(item.name || item.entityName || "");
-    } else {
-      // Fallback fetch single partner details if not in list
+      fetchedValueRef.current = numValue;
+    } else if (fetchedValueRef.current !== numValue) {
+      fetchedValueRef.current = numValue;
       axiosClient
         .get(`/masters/partners/${numValue}`)
         .then((res) => {
@@ -85,7 +90,9 @@ export default function SearchablePartnerSelect({
             setSelectedName(res.data.entityName || res.data.name);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          fetchedValueRef.current = null;
+        });
     }
   }, [value, options, initialPartners]);
 
@@ -184,7 +191,7 @@ export default function SearchablePartnerSelect({
                   No partners found
                 </div>
               ) : (
-                options.map((p) => {
+                options.slice(0, 10).map((p) => {
                   const pName = p.name || p.entityName;
                   const isSelected = Number(value) === Number(p.id);
                   return (
@@ -216,3 +223,5 @@ export default function SearchablePartnerSelect({
     </div>
   );
 }
+
+export default React.memo(SearchablePartnerSelect);

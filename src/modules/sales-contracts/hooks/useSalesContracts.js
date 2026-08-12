@@ -101,13 +101,15 @@ export function useSalesMasters() {
         const brokerRole = roles.find(r => r.name?.toLowerCase() === "broker" || r.name?.toLowerCase().includes("broker") || r.name?.toLowerCase() === "agent");
 
         const [buyersRes, sellersRes, brokersRes] = await Promise.all([
-          buyerRole ? mastersApi.getPartners({ partnerRoleId: buyerRole.id, limit: 100, isActive: true }) : Promise.resolve({ data: { data: [] } }),
-          sellerRole ? mastersApi.getPartners({ partnerRoleId: sellerRole.id, limit: 100, isActive: true }) : Promise.resolve({ data: { data: [] } }),
-          brokerRole ? mastersApi.getPartners({ partnerRoleId: brokerRole.id, limit: 100, isActive: true }) : Promise.resolve({ data: { data: [] } }),
+          buyerRole ? mastersApi.getPartnersOptions({ partnerRoleId: buyerRole.id, limit: 10, isActive: true }) : Promise.resolve({ data: [] }),
+          sellerRole ? mastersApi.getPartnersOptions({ partnerRoleId: sellerRole.id, limit: 10, isActive: true }) : Promise.resolve({ data: [] }),
+          brokerRole ? mastersApi.getPartnersOptions({ partnerRoleId: brokerRole.id, limit: 10, isActive: true }) : Promise.resolve({ data: [] }),
         ]);
 
         const fetchedCountries = countries?.data?.data || [];
         const finalCountries = fetchedCountries.length > 0 ? fetchedCountries : defaultCountries;
+
+        const extractData = (res) => (Array.isArray(res.data) ? res.data : (res.data?.data || []));
 
         setMasters({
           currencies: finalCurrencies,
@@ -117,9 +119,9 @@ export function useSalesMasters() {
           buyerRoleId: buyerRole?.id,
           sellerRoleId: sellerRole?.id,
           brokerRoleId: brokerRole?.id,
-          buyers: buyersRes.data?.data || [],
-          sellers: sellersRes.data?.data || [],
-          brokers: brokersRes.data?.data || [],
+          buyers: extractData(buyersRes),
+          sellers: extractData(sellersRes),
+          brokers: extractData(brokersRes),
           products: prod.data.data || [],
           countries: finalCountries,
           bagTypes: Array.isArray(bt.data) ? bt.data : (bt.data.data || []),

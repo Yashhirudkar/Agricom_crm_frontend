@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import {
   X,
@@ -19,7 +19,7 @@ import Drawer from "@/components/common/Drawer";
 import axiosClient from "@/lib/axios";
 import { useQueryClient } from "@tanstack/react-query";
 
-export default function PartnerFollowUpDrawer({
+function PartnerFollowUpDrawer({
   isOpen,
   onClose,
   partner,
@@ -220,17 +220,19 @@ export default function PartnerFollowUpDrawer({
     return "bg-gray-100 text-gray-700";
   };
 
-  const filteredTimeline = followUps.filter((item) => {
-    if (timelineSearch) {
-      const search = timelineSearch.toLowerCase();
-      return (
-        (item.buyerRemark && item.buyerRemark.toLowerCase().includes(search)) ||
-        (item.ourResponse && item.ourResponse.toLowerCase().includes(search)) ||
-        item.communicationType.toLowerCase().includes(search)
-      );
-    }
-    return true;
-  });
+  const filteredTimeline = useMemo(() => {
+    return followUps.filter((item) => {
+      if (timelineSearch) {
+        const search = timelineSearch.toLowerCase();
+        return (
+          (item.buyerRemark && item.buyerRemark.toLowerCase().includes(search)) ||
+          (item.ourResponse && item.ourResponse.toLowerCase().includes(search)) ||
+          item.communicationType.toLowerCase().includes(search)
+        );
+      }
+      return true;
+    });
+  }, [followUps, timelineSearch]);
 
   return (
     <Drawer
@@ -502,3 +504,5 @@ export default function PartnerFollowUpDrawer({
     </Drawer>
   );
 }
+
+export default React.memo(PartnerFollowUpDrawer);
