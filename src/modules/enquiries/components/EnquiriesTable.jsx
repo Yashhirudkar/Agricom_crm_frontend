@@ -66,9 +66,24 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Enquiry No.", "Date", "Partner", "Product", "Origin", "Purity", "Packing", "POD", "Shipment", "Qty (MT)", "Shipment Date", "Bid", "Potential", "Actions"].map(h => (
-              <th key={h} className="px-3 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">{h}</th>
-            ))}
+            {["Enquiry No.", "Date", "Partner", "Product", "Origin", "Purity", "Packing", "POD", "Shipment", "Qty (MT)", "Shipment Date", "Bid", "Potential", "Actions"].map((h, index) => {
+              let stickyClass = "";
+              if (index === 0) {
+                stickyClass = "sticky left-0 z-30 bg-[#f9fafb] w-[120px] min-w-[120px] max-w-[120px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none";
+              } else if (index === 1) {
+                stickyClass = "sticky left-[120px] z-29 bg-[#f9fafb] w-[100px] min-w-[100px] max-w-[100px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none";
+              } else if (index === 2) {
+                stickyClass = "sticky left-[220px] z-28 bg-[#f9fafb] border-r border-gray-200/80 w-[150px] min-w-[150px] max-w-[150px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-[150px] xl:border-r-0";
+              }
+              return (
+                <th
+                  key={h}
+                  className={`px-3 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap ${stickyClass}`}
+                >
+                  {h}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">
@@ -78,13 +93,13 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                 key={e.id}
                 className="transition-colors group hover:bg-gray-50/70"
               >
-                <td className="px-3 py-3 font-mono font-bold text-[#007aff] whitespace-nowrap">
+                <td className="px-3 py-3 font-mono font-bold text-[#007aff] whitespace-nowrap sticky left-0 z-30 bg-white group-hover:bg-gray-50/70 transition-colors w-[120px] min-w-[120px] max-w-[120px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none">
                   {e.enquiryNo}
                 </td>
-                <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
+                <td className="px-3 py-3 text-gray-600 whitespace-nowrap sticky left-[120px] z-29 bg-white group-hover:bg-gray-50/70 transition-colors w-[100px] min-w-[100px] max-w-[100px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none">
                   {e.enquiryDate ? new Date(e.enquiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </td>
-                <td className="px-3 py-3 text-gray-800 font-medium whitespace-nowrap max-w-[150px] truncate" title={e.partnerName || ""}>
+                <td className="px-3 py-3 text-gray-800 font-medium whitespace-nowrap sticky left-[220px] z-28 bg-white group-hover:bg-gray-50/70 transition-colors border-r border-gray-100 w-[150px] min-w-[150px] max-w-[150px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-[150px] xl:border-r-0" title={e.partnerName || ""}>
                   {e.partnerName || "—"}
                 </td>
                 <td className="px-3 py-3 text-gray-600 whitespace-nowrap max-w-[150px] truncate" title={e.productName || ""}>

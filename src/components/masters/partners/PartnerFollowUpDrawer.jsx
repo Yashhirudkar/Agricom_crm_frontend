@@ -16,8 +16,32 @@ import {
   Edit2
 } from "lucide-react";
 import Drawer from "@/components/common/Drawer";
-import axiosClient from "@/lib/axios";
+import axiosClient, { getAvatarUrl } from "@/lib/axios";
 import { useQueryClient } from "@tanstack/react-query";
+
+const getInitials = (name) => {
+  if (!name) return "??";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const getAvatarColor = (name) => {
+  if (!name) return "from-slate-400 to-slate-500 text-white";
+  const colors = [
+    "from-blue-500 to-indigo-600 text-white",
+    "from-emerald-500 to-teal-600 text-white",
+    "from-violet-500 to-purple-600 text-white",
+    "from-amber-500 to-orange-600 text-white",
+    "from-rose-500 to-pink-600 text-white",
+    "from-cyan-500 to-blue-600 text-white"
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
 
 function PartnerFollowUpDrawer({
   isOpen,
@@ -355,17 +379,29 @@ function PartnerFollowUpDrawer({
 
                     <div className="flex flex-col items-end gap-1.5 min-w-[160px]">
                       {item.ourResponse && (
-                        <div className="bg-white  p-2.5 rounded-2xl rounded-br-none shadow-[0_1px_2px_rgba(0,0,0,0.1)] relative">
+                        <div className="bg-white p-2.5 rounded-2xl rounded-br-none shadow-[0_1px_2px_rgba(0,0,0,0.1)] relative">
                           <p className="text-[13px] text-gray-800 whitespace-pre-wrap leading-relaxed px-1">
                             {item.ourResponse}
                           </p>
+                          {/* Created By Details */}
+                          <div className="mt-1.5 pt-1 border-t border-gray-100/80 flex items-center gap-1 justify-end">
+                            <span className="text-[8.5px] font-bold text-gray-400">Created By:</span>
+                            <span className="text-[9.5px] font-bold text-gray-600">
+                              {item.createdBy?.name || "Unknown User"}
+                            </span>
+                            {item.createdBy?.role && (
+                              <span className="text-[8.5px] font-semibold text-gray-400">
+                                ({item.createdBy.role})
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )}
 
                       <div className="flex flex-wrap items-center justify-end gap-1.5">
                         {item.nextFollowupDate && (
                           <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
-                            <Calendar className="w-3 h-3 text-indigo-500" />
+                            <Calendar className="w-3.5 h-3.5 text-indigo-500" />
                             Next: {new Date(item.nextFollowupDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                           </span>
                         )}
@@ -374,9 +410,21 @@ function PartnerFollowUpDrawer({
                         </span>
                       </div>
                     </div>
-                    <div className="w-7 h-7 rounded-full bg-blue-100 flex-shrink-0 flex items-center justify-center text-blue-700 shadow-sm border border-blue-200">
-                      <span className="text-[9px] font-black tracking-tighter">ME</span>
-                    </div>
+                    {item.createdBy?.avatar ? (
+                      <img
+                        src={getAvatarUrl(item.createdBy.avatar)}
+                        alt={item.createdBy.name}
+                        className="w-7 h-7 rounded-full border border-blue-200 object-cover shadow-xs shrink-0"
+                        title={item.createdBy.name}
+                      />
+                    ) : (
+                      <div
+                        className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getAvatarColor(item.createdBy?.name || "Unknown User")} text-white font-extrabold flex items-center justify-center text-[9px] shadow-sm border border-blue-200 shrink-0`}
+                        title={item.createdBy?.name || "Unknown User"}
+                      >
+                        {getInitials(item.createdBy?.name || "Unknown User")}
+                      </div>
+                    )}
                   </div>
 
                 </div>

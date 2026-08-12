@@ -20,9 +20,44 @@ import {
   markAllNotificationsRead,
 } from "@/store/slices/notificationsSlice";
 import { createNotificationClickHandler } from "@/lib/notificationRouter";
-import { useFollowUpStatsQuery } from "@/modules/follow-ups/queries/follow-ups.query";
+import { useFollowUpStatsQuery, useFollowUpRemindersQuery } from "@/modules/follow-ups/queries/follow-ups.query";
 import { usePermissions } from "@/hooks/usePermissions";
 import BirthdayBalloon from "./BirthdayBalloon";
+
+const FOLLOW_UP_REMINDER_PRIORITY = {
+  OVERDUE: "overdue",
+  TOMORROW: "tomorrow",
+};
+
+const formatRelativeDueTime = (dateStr) => {
+  if (!dateStr) return "";
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr);
+  target.setHours(0, 0, 0, 0);
+  
+  const diffTime = target.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  const timeStr = new Date(dateStr).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  
+  const formattedTime = timeStr.replace(/:00/, ""); // "2:00 PM" -> "2 PM"
+  
+  if (diffDays === 0) {
+    return `Today ${formattedTime}`;
+  } else if (diffDays === 1) {
+    return `Tomorrow ${formattedTime}`;
+  } else if (diffDays === -1) {
+    return `Yesterday ${formattedTime}`;
+  } else if (diffDays < 0) {
+    return `${Math.abs(diffDays)} Days Overdue`;
+  }
+  
+  return new Date(dateStr).toLocaleDateString("en-US", { day: "numeric", month: "short" }) + ` ${formattedTime}`;
+};
 
 export function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -31,6 +66,7 @@ export function Header() {
   const canViewFollowUps = hasPermission("follow_up:read");
 
   const { data: followUpStats } = useFollowUpStatsQuery(canViewFollowUps);
+  const { data: reminders, isLoading: remindersLoading } = useFollowUpRemindersQuery(canViewFollowUps);
   const totalFollowUpBadge = (followUpStats?.todayCount || 0) + (followUpStats?.overdueCount || 0);
 
   const dispatch = useDispatch();
@@ -593,6 +629,92 @@ export function Header() {
           >
             Dismiss
           </button>
+        </div>
+      )}
+
+      {/* Follow-up Reminder Marquee Banner */}
+      {canViewFollowUps && !remindersLoading && reminders && reminders.length > 0 && (
+        <div className="w-full bg-gradient-to-r from-red-500 via-orange-500 to-rose-500 text-white px-4 py-2 flex items-center justify-between text-xs font-semibold shadow-inner transition-all duration-300">
+          <div className="flex items-center gap-2 flex-1 w-0">
+            <span className="shrink-0 animate-pulse">
+              <CalendarClock className="h-4 w-4" />
+            </span>
+            <marquee className="flex-1 cursor-pointer" behavior="scroll" direction="left" scrollamount="4">
+              {[1, 2, 3].map((loopIdx) => {
+                const overdueCount = reminders.filter(r => r.priority === FOLLOW_UP_REMINDER_PRIORITY.OVERDUE).length;
+                const tomorrowCount = reminders.filter(r => r.priority === FOLLOW_UP_REMINDER_PRIORITY.TOMORROW).length;
+                
+                const displayReminders = reminders.slice(0, 20);
+                const remainingCount = reminders.length - displayReminders.length;
+                
+                return (
+                  <span key={loopIdx} className="mr-[25vw] inline-flex items-center gap-4">
+                    {/* Summary Badge */}
+                    <span className="inline-flex items-center gap-1.5 bg-white/10 px-2 py-0.5 rounded border border-white/20 select-none">
+                      {overdueCount > 0 && (
+                        <span className="text-[10px] font-bold text-red-200 flex items-center gap-0.5">
+                          🔴 {overdueCount} Overdue
+                        </span>
+                      )}
+                      {overdueCount > 0 && tomorrowCount > 0 && (
+                        <span className="h-2 w-px bg-white/20"></span>
+                      )}
+                      {tomorrowCount > 0 && (
+                        <span className="text-[10px] font-bold text-yellow-200 flex items-center gap-0.5">
+                          🟡 {tomorrowCount} Tomorrow
+                        </span>
+                      )}
+                    </span>
+                    
+                    {/* Reminders List */}
+                    {displayReminders.map((rem) => {
+                      const typeStr = rem.communicationType ? ` (${rem.communicationType})` : "";
+                      const formattedTime = formatRelativeDueTime(rem.followUpDate);
+                      
+                      if (rem.priority === FOLLOW_UP_REMINDER_PRIORITY.OVERDUE) {
+                        return (
+                          <button
+                            key={rem.id}
+                            type="button"
+                            onClick={() => window.dispatchEvent(new CustomEvent("open-followups", { detail: { followUpId: rem.id } }))}
+                            className="inline-flex items-center gap-1 hover:underline text-white font-semibold text-xs border-none bg-transparent p-0 cursor-pointer text-left focus:outline-none"
+                          >
+                            <span className="text-red-200 font-extrabold">🔴 Overdue follow-up:</span>
+                            <span className="font-bold">{rem.buyerName}{typeStr}</span>
+                            <span className="font-medium">was due {formattedTime}</span>
+                            <span className="text-white/75 text-[10px] font-medium">(Created by {rem.createdByName})</span>
+                            <span className="mx-1 text-white/50">•</span>
+                          </button>
+                        );
+                      } else {
+                        return (
+                          <button
+                            key={rem.id}
+                            type="button"
+                            onClick={() => window.dispatchEvent(new CustomEvent("open-followups", { detail: { followUpId: rem.id } }))}
+                            className="inline-flex items-center gap-1 hover:underline text-white font-semibold text-xs border-none bg-transparent p-0 cursor-pointer text-left focus:outline-none"
+                          >
+                            <span className="text-yellow-200 font-extrabold">🔔 Tomorrow follow-up:</span>
+                            <span className="font-bold">{rem.buyerName}{typeStr}</span>
+                            <span className="font-medium">due {formattedTime}</span>
+                            <span className="text-white/75 text-[10px] font-medium">(Created by {rem.createdByName})</span>
+                            <span className="mx-1 text-white/50">•</span>
+                          </button>
+                        );
+                      }
+                    })}
+                    
+                    {/* Remaining Count */}
+                    {remainingCount > 0 && (
+                      <span className="text-yellow-100 font-bold bg-white/10 px-2 py-0.5 rounded text-[10px] animate-pulse">
+                        +{remainingCount} more pending follow-ups
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
+            </marquee>
+          </div>
         </div>
       )}
     </header>

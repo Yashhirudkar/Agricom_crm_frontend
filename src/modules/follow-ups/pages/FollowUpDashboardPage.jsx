@@ -30,6 +30,31 @@ import {
   Plus,
   AlertTriangle
 } from "lucide-react";
+import { getAvatarUrl } from "@/lib/axios";
+
+const getInitials = (name) => {
+  if (!name) return "??";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const getAvatarColor = (name) => {
+  if (!name) return "from-slate-400 to-slate-500 text-white";
+  const colors = [
+    "from-blue-500 to-indigo-600 text-white",
+    "from-emerald-500 to-teal-600 text-white",
+    "from-violet-500 to-purple-600 text-white",
+    "from-amber-500 to-orange-600 text-white",
+    "from-rose-500 to-pink-600 text-white",
+    "from-cyan-500 to-blue-600 text-white"
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
 
 export default function FollowUpDashboardPage() {
   const router = useRouter();
@@ -140,7 +165,10 @@ export default function FollowUpDashboardPage() {
     let text = item.status;
 
     if (item.status === "Pending") {
-      if (diffDays < 0) {
+      if (!item.nextFollowupDate) {
+        classes = "bg-gray-50 text-gray-500 border-gray-200";
+        text = "Pending";
+      } else if (diffDays < 0) {
         classes = "bg-rose-50 text-rose-700 border-rose-100";
         text = "Overdue";
       } else if (diffDays === 0) {
@@ -447,7 +475,7 @@ export default function FollowUpDashboardPage() {
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Next Follow-up</th>
                 <th className="px-6 py-4">Timeline</th>
-                <th className="px-6 py-4">Creator</th>
+                <th className="px-6 py-4">Created By</th>
                 <th className="px-6 py-4">Updated At</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
@@ -528,8 +556,34 @@ export default function FollowUpDashboardPage() {
                     <td className="px-6 py-4">{getDaysRemainingText(item.nextFollowupDate, item.status)}</td>
 
                     {/* Creator */}
-                    <td className="px-6 py-4 text-gray-400 font-semibold">
-                      User #{item.createdBy}
+                    <td className="px-6 py-4">
+                      {item.createdBy ? (
+                        <div className="flex items-center gap-2.5">
+                          {item.createdBy.avatar ? (
+                            <img
+                              src={getAvatarUrl(item.createdBy.avatar)}
+                              alt={item.createdBy.name}
+                              className="h-8 w-8 rounded-full border border-gray-100 object-cover shadow-xs shrink-0"
+                            />
+                          ) : (
+                            <div className={`h-8 w-8 rounded-full border border-gray-200/60 bg-gradient-to-tr ${getAvatarColor(item.createdBy.name)} flex items-center justify-center text-xs font-bold shadow-xs shrink-0`}>
+                              {getInitials(item.createdBy.name)}
+                            </div>
+                          )}
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-bold text-gray-900 truncate max-w-[150px]">
+                              {item.createdBy.name}
+                            </span>
+                            {item.createdBy.role && (
+                              <span className="text-[10px] text-gray-500 font-medium truncate max-w-[150px] leading-tight">
+                                {item.createdBy.role}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 italic">Unknown User</span>
+                      )}
                     </td>
 
                     {/* Update Date */}

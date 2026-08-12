@@ -16,6 +16,11 @@ export const FollowUpsAPI = {
     return data;
   },
 
+  getReminders: async () => {
+    const { data } = await axiosClient.get("/follow-ups/reminders");
+    return data;
+  },
+
   complete: async (id, payload) => {
     const { data } = await axiosClient.patch(`/follow-ups/${id}/complete`, payload);
     return data;

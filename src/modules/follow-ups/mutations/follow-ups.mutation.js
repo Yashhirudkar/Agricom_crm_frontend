@@ -9,8 +9,13 @@ export const useCompleteFollowUpMutation = () => {
   return useMutation({
     mutationFn: ({ id, status, ourResponse }) =>
       FollowUpsAPI.complete(id, { status, ourResponse }),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       toast.success("Follow-up marked as completed successfully!");
+      // Immediately remove completed follow-up from reminders cache for zero-latency UI updates
+      queryClient.setQueryData(FOLLOW_UP_QUERY_KEYS.reminders(), (old) => {
+        if (!old) return old;
+        return old.filter((item) => item.id !== variables.id);
+      });
       // Invalidate all follow-up queries to update counts and tables
       queryClient.invalidateQueries({ queryKey: FOLLOW_UP_QUERY_KEYS.all });
     },

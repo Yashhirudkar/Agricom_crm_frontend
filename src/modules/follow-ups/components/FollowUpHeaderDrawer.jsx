@@ -1,10 +1,36 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Drawer from "@/components/common/Drawer";
 import { useFollowUpHeaderQuery } from "../queries/follow-ups.query";
 import { useQueryClient } from "@tanstack/react-query";
+import { getAvatarUrl } from "@/lib/axios";
+
+const getInitials = (name) => {
+  if (!name) return "??";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const getAvatarColor = (name) => {
+  if (!name) return "from-slate-400 to-slate-500 text-white";
+  const colors = [
+    "from-blue-500 to-indigo-600 text-white",
+    "from-emerald-500 to-teal-600 text-white",
+    "from-violet-500 to-purple-600 text-white",
+    "from-amber-500 to-orange-600 text-white",
+    "from-rose-500 to-pink-600 text-white",
+    "from-cyan-500 to-blue-600 text-white"
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
 import {
   Calendar,
   AlertTriangle,
@@ -42,6 +68,57 @@ export default function FollowUpHeaderDrawer({ isOpen, onClose }) {
   };
 
   const { data, isLoading, isError, refetch, isRefetching } = useFollowUpHeaderQuery(isOpen);
+
+  const [highlightedId, setHighlightedId] = useState(null);
+
+  useEffect(() => {
+    const handleOpen = (e) => {
+      const id = e.detail?.followUpId;
+      if (id && data) {
+        // Verify if follow-up exists in the loaded lists
+        const allItems = [
+          ...(data.today || []),
+          ...(data.overdue || []),
+          ...(data.tomorrow || []),
+          ...(data.recent || []),
+        ];
+        const exists = allItems.some(item => item.id === id);
+        
+        if (!exists) {
+          toast.error("Follow-up no longer available.");
+          return;
+        }
+
+        // Determine which section has this followUp and expand it
+        const sectionId = 
+          data.today?.some(item => item.id === id) ? 'today' :
+          data.overdue?.some(item => item.id === id) ? 'overdue' :
+          data.tomorrow?.some(item => item.id === id) ? 'tomorrow' :
+          data.recent?.some(item => item.id === id) ? 'recent' : null;
+          
+        if (sectionId) {
+          setExpandedSections(prev => ({ ...prev, [sectionId]: true }));
+        }
+
+        setHighlightedId(id);
+        
+        // Scroll to element after drawer opens and renders
+        setTimeout(() => {
+          const el = document.getElementById(`followup-card-${id}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 400);
+
+        // Clear highlight after 2.4 seconds
+        setTimeout(() => {
+          setHighlightedId(null);
+        }, 2400);
+      }
+    };
+    window.addEventListener("open-followups", handleOpen);
+    return () => window.removeEventListener("open-followups", handleOpen);
+  }, [data]);
 
   const handleRefresh = async () => {
     await refetch();
@@ -223,10 +300,15 @@ export default function FollowUpHeaderDrawer({ isOpen, onClose }) {
                           const initials = partnerName.slice(0, 2).toUpperCase();
                           const avatarGrad = getAvatarGradient(partnerName);
 
+                          const isHighlighted = highlightedId === item.id;
+
                           return (
                             <div
                               key={item.id}
-                              className={`bg-white p-3 border border-slate-200/80 rounded-lg shadow-sm hover:border-slate-300 transition-all group flex flex-col gap-1.5 ${getPriorityBorder(item.priority)}`}
+                              id={`followup-card-${item.id}`}
+                              className={`bg-white p-3 border border-slate-200/80 rounded-lg shadow-sm hover:border-slate-300 transition-all duration-300 group flex flex-col gap-1.5 ${getPriorityBorder(item.priority)} ${
+                                isHighlighted ? "ring-2 ring-yellow-400 scale-102 bg-yellow-50/50 shadow-md" : ""
+                              }`}
                             >
                               <div className="flex items-start justify-between gap-3">
                                 {/* Left Side: Avatar + Name + Tags */}
@@ -263,6 +345,34 @@ export default function FollowUpHeaderDrawer({ isOpen, onClose }) {
                                   >
                                     <ExternalLink className="h-3.5 w-3.5" />
                                   </button>
+                                </div>
+                              </div>
+
+                              {/* Created By Section */}
+                              <div className="mt-1.5 pt-1.5 border-t border-slate-100/80 flex flex-col gap-1">
+                                <span className="text-[8.5px] font-bold text-slate-400 uppercase tracking-wider">Created By</span>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  {item.createdBy?.avatar ? (
+                                    <img
+                                      src={getAvatarUrl(item.createdBy.avatar)}
+                                      alt={item.createdBy.name}
+                                      className="h-6 w-6 rounded-full border border-slate-100 object-cover shrink-0"
+                                    />
+                                  ) : (
+                                    <div className={`h-6 w-6 rounded-full bg-gradient-to-tr ${getAvatarColor(item.createdBy?.name || "Unknown User")} text-white font-extrabold flex items-center justify-center text-[9px] shrink-0`}>
+                                      {getInitials(item.createdBy?.name || "Unknown User")}
+                                    </div>
+                                  )}
+                                  <div className="flex flex-col min-w-0 leading-tight">
+                                    <span className="text-[11px] font-bold text-slate-700 truncate">
+                                      {item.createdBy?.name || "Unknown User"}
+                                    </span>
+                                    {item.createdBy?.role && (
+                                      <span className="text-[9px] text-slate-400 font-semibold truncate leading-none">
+                                        {item.createdBy.role}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>

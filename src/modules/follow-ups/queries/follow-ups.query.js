@@ -6,6 +6,7 @@ export const FOLLOW_UP_QUERY_KEYS = {
   stats: () => [...FOLLOW_UP_QUERY_KEYS.all, "stats"],
   list: (params) => [...FOLLOW_UP_QUERY_KEYS.all, "list", params],
   header: () => [...FOLLOW_UP_QUERY_KEYS.all, "header"],
+  reminders: () => [...FOLLOW_UP_QUERY_KEYS.all, "reminders"],
 };
 
 export const useFollowUpStatsQuery = (enabled = true) => {
@@ -32,6 +33,16 @@ export const useFollowUpHeaderQuery = (enabled = true) => {
     queryKey: FOLLOW_UP_QUERY_KEYS.header(),
     queryFn: () => FollowUpsAPI.getHeader(),
     staleTime: 1000 * 30, // 30 seconds
+    refetchOnWindowFocus: false,
+    enabled,
+  });
+};
+
+export const useFollowUpRemindersQuery = (enabled = true) => {
+  return useQuery({
+    queryKey: FOLLOW_UP_QUERY_KEYS.reminders(),
+    queryFn: () => FollowUpsAPI.getReminders(),
+    refetchInterval: 30000, // Refetch every 30 seconds (tab inactive = pauses automatically)
     refetchOnWindowFocus: false,
     enabled,
   });
