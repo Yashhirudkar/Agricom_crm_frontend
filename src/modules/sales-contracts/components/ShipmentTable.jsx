@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect } from "react";
 import { Ship, ChevronDown } from "lucide-react";
+import { getShipmentReferencePreview } from "../utils/shipmentReference";
 
 // currencyCode is intentionally omitted — it is always derived from form.currencyCode (Contract Currency)
 const emptyShipment = (no) => ({
@@ -95,61 +96,74 @@ export default function ShipmentTable({ form, setForm, errors, masters, isView }
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                {["Ship #", "Date", "Containers", "Rate/MT", "Currency", "Purchase Rate", "Forex", "Freight", "Qty (MT)", "Remarks"].map(h => (
+                {["Ship #", "Shipment Ref", "Date", "Containers", "Rate/MT", "Currency", "Purchase Rate", "Forex", "Freight", "Qty (MT)", "Remarks"].map(h => (
                   <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-500 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {shipments.map((s, idx) => (
-                <tr key={idx} className="hover:bg-gray-50/50">
-                  <td className="px-3 py-2 font-bold text-gray-600">{idx + 1}</td>
-                  <td className="px-3 py-2 min-w-[130px]">
-                    <input type="date" value={s.shipmentDate || ""} onChange={e => updateShipment(idx, "shipmentDate", e.target.value)} disabled={isView} className={inpCls} />
-                  </td>
-                  <td className="px-3 py-2 min-w-[80px]">
-                    <input type="number" min="0" value={s.noOfContainers || ""} onChange={e => updateShipment(idx, "noOfContainers", e.target.value)} disabled={isView} className={inpCls} placeholder="0" />
-                  </td>
-                  <td className="px-3 py-2 min-w-[90px]">
-                    <input type="number" min="0" step="0.01" value={s.ratePerMt || ""} onChange={e => updateShipment(idx, "ratePerMt", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
-                  </td>
-                  <td className="px-3 py-2 min-w-[110px]">
-                    {isView ? (
-                      // In view mode — show as badge (always equals Contract Currency)
-                      <span className="inline-flex items-center px-2 py-1 text-[10px] font-bold bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100">
-                        {form.currencyCode || "—"}
-                      </span>
-                    ) : (
-                      <div className="relative">
-                        {/* Reads from form.currencyCode — single source of truth */}
-                        <select
-                          value={form.currencyCode || ""}
-                          onChange={e => updateShipment(idx, "currencyCode", e.target.value)}
-                          className={selCls}
-                        >
-                          <option value="">Currency</option>
-                          {masters.currencies.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
-                        </select>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 min-w-[90px]">
-                    <input type="number" min="0" step="0.01" value={s.purchaseRate || ""} onChange={e => updateShipment(idx, "purchaseRate", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
-                  </td>
-                  <td className="px-3 py-2 min-w-[80px]">
-                    <input type="number" min="0" step="0.01" value={s.forex || ""} onChange={e => updateShipment(idx, "forex", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
-                  </td>
-                  <td className="px-3 py-2 min-w-[80px]">
-                    <input type="number" min="0" step="0.01" value={s.freight || ""} onChange={e => updateShipment(idx, "freight", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
-                  </td>
-                  <td className="px-3 py-2 min-w-[90px]">
-                    <input type="number" min="0" step="0.01" value={s.quantity || ""} onChange={e => updateShipment(idx, "quantity", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
-                  </td>
-                  <td className="px-3 py-2 min-w-[130px]">
-                    <input type="text" value={s.remarks || ""} onChange={e => updateShipment(idx, "remarks", e.target.value)} disabled={isView} className={inpCls} placeholder="Remarks" />
-                  </td>
-                </tr>
-              ))}
+              {shipments.map((s, idx) => {
+                const displayRef = s.shipmentReference ?? getShipmentReferencePreview(
+                  form.contractNumber,
+                  idx + 1,
+                  s.noOfContainers,
+                  s.shipmentDate,
+                  s.quantity
+                );
+
+                return (
+                  <tr key={idx} className="hover:bg-gray-50/50">
+                    <td className="px-3 py-2 font-bold text-gray-600">{idx + 1}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-slate-600 select-all whitespace-nowrap">
+                      {displayRef}
+                    </td>
+                    <td className="px-3 py-2 min-w-[130px]">
+                      <input type="date" value={s.shipmentDate || ""} onChange={e => updateShipment(idx, "shipmentDate", e.target.value)} disabled={isView} className={inpCls} />
+                    </td>
+                    <td className="px-3 py-2 min-w-[80px]">
+                      <input type="number" min="0" value={s.noOfContainers || ""} onChange={e => updateShipment(idx, "noOfContainers", e.target.value)} disabled={isView} className={inpCls} placeholder="0" />
+                    </td>
+                    <td className="px-3 py-2 min-w-[90px]">
+                      <input type="number" min="0" step="0.01" value={s.ratePerMt || ""} onChange={e => updateShipment(idx, "ratePerMt", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
+                    </td>
+                    <td className="px-3 py-2 min-w-[110px]">
+                      {isView ? (
+                        // In view mode — show as badge (always equals Contract Currency)
+                        <span className="inline-flex items-center px-2 py-1 text-[10px] font-bold bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100">
+                          {form.currencyCode || "—"}
+                        </span>
+                      ) : (
+                        <div className="relative">
+                          {/* Reads from form.currencyCode — single source of truth */}
+                          <select
+                            value={form.currencyCode || ""}
+                            onChange={e => updateShipment(idx, "currencyCode", e.target.value)}
+                            className={selCls}
+                          >
+                            <option value="">Currency</option>
+                            {masters.currencies.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 min-w-[90px]">
+                      <input type="number" min="0" step="0.01" value={s.purchaseRate || ""} onChange={e => updateShipment(idx, "purchaseRate", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
+                    </td>
+                    <td className="px-3 py-2 min-w-[80px]">
+                      <input type="number" min="0" step="0.01" value={s.forex || ""} onChange={e => updateShipment(idx, "forex", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
+                    </td>
+                    <td className="px-3 py-2 min-w-[80px]">
+                      <input type="number" min="0" step="0.01" value={s.freight || ""} onChange={e => updateShipment(idx, "freight", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
+                    </td>
+                    <td className="px-3 py-2 min-w-[90px]">
+                      <input type="number" min="0" step="0.01" value={s.quantity || ""} onChange={e => updateShipment(idx, "quantity", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
+                    </td>
+                    <td className="px-3 py-2 min-w-[130px]">
+                      <input type="text" value={s.remarks || ""} onChange={e => updateShipment(idx, "remarks", e.target.value)} disabled={isView} className={inpCls} placeholder="Remarks" />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

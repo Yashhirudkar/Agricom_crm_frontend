@@ -152,10 +152,46 @@ export default function ContractViewModal({ contractId, onClose }) {
   const buyerName = (contract.buyerCompanyName || contract.buyer?.entityName || "").toUpperCase();
   const brokerName = contract.broker?.entityName?.toUpperCase() || "";
 
-  const shipmentLine =
-    contract.shipments?.length > 0
-      ? contract.shipments.map((s) => `${formatDate(s.shipmentDate)} SHIPMENT`).join(", ")
-      : "—";
+  const getShipmentPeriodText = (shipments) => {
+    if (!shipments || shipments.length === 0) return "—";
+    const dates = shipments
+      .map((s) => s.shipmentDate ? new Date(s.shipmentDate) : null)
+      .filter((d) => d && !isNaN(d.getTime()));
+    if (dates.length === 0) return "—";
+    dates.sort((a, b) => a.getTime() - b.getTime());
+    const startDate = dates[0];
+    const lastDate = dates[dates.length - 1];
+    const standardMonthNames = [
+      "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+      "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+    ];
+
+    const startOfFirstMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const startOfLastMonth = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
+
+    const startOfFirstMonthPlusOne = new Date(startOfFirstMonth);
+    startOfFirstMonthPlusOne.setMonth(startOfFirstMonthPlusOne.getMonth() + 1);
+
+    let endMonthDate;
+    if (startOfLastMonth.getTime() > startOfFirstMonthPlusOne.getTime()) {
+      endMonthDate = startOfLastMonth;
+    } else {
+      endMonthDate = startOfFirstMonthPlusOne;
+    }
+
+    const firstMonth = standardMonthNames[startDate.getMonth()];
+    const firstYear = startDate.getFullYear();
+    const lastMonth = standardMonthNames[endMonthDate.getMonth()];
+    const lastYear = endMonthDate.getFullYear();
+
+    if (firstYear === lastYear) {
+      return `${firstMonth} – ${lastMonth} ${firstYear} SHIPMENT`;
+    } else {
+      return `${firstMonth} ${firstYear} –  ${lastMonth} ${lastYear} SHIPMENT`;
+    }
+  };
+
+  const shipmentPeriod = getShipmentPeriodText(contract.shipments);
 
   const documentLine =
     contract.documents?.length > 0
@@ -545,7 +581,7 @@ export default function ContractViewModal({ contractId, onClose }) {
 
                     {/* SHIPMENT */}
                     <Row label="Shipment">
-                      {renderValue("shipment", shipmentLine?.toUpperCase())}
+                      {renderValue("shipment_period", shipmentPeriod.toUpperCase())}
                     </Row>
 
                     {/* DOCUMENTS */}

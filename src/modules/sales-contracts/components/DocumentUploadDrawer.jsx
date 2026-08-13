@@ -226,6 +226,9 @@ export default function DocumentUploadDrawer({ contract, onClose, onRefreshList 
                 </div>
                 <p className="text-[11px] text-gray-400 mt-0.5">
                   Contract <span className="font-bold text-gray-600">{contract?.contractNumber}</span>
+                  {contract?.shipments?.length > 0 && (
+                    <> · <span className="text-gray-500 underline decoration-dotted cursor-help" title={contract.shipments.map(s => s.shipmentReference || "—").join('\n')}>Shipments: {contract.shipments.length}</span></>
+                  )}
                   {contract?.buyer?.name && (
                     <> · <span className="text-gray-500">{contract.buyer.name || contract.buyer.entityName}</span></>
                   )}

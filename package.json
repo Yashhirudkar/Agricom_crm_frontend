@@ -50,7 +50,7 @@
     "sea-ports": "^0.0.9",
     "sharp": "^0.34.5",
     "socket.io-client": "^4.8.3",
-    "sonner": "^2.0.7",
+    "sonner": "^2.0.8",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
