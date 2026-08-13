@@ -1,45 +1,50 @@
 import React, { useState, useEffect } from "react";
-import { Search, RotateCcw } from "lucide-react";
+import { Search, RotateCcw, X } from "lucide-react";
 
 export default function PartnersFilters({
-  search,
-  setSearch,
-  isActiveFilter,
-  setIsActiveFilter,
-  setCurrentPage,
+  filters,
+  setFilters,
   totalCount,
   partnerRoles = [],
   countries = [],
-  roleFilter,
-  setRoleFilter,
-  countryFilter,
-  setCountryFilter,
-  dnbRiskFilter,
-  setDnbRiskFilter,
+  isLoading,
 }) {
-  const [localSearch, setLocalSearch] = useState(search);
+  const [localSearch, setLocalSearch] = useState(filters.search);
 
-  const isDirty = !!(localSearch || roleFilter || countryFilter || dnbRiskFilter || isActiveFilter !== "true");
+  const isDirty = !!(localSearch || filters.role || filters.country || filters.dbRisk || filters.status !== "true");
 
   const handleClear = () => {
     setLocalSearch("");
-    setSearch("");
-    setRoleFilter("");
-    setCountryFilter("");
-    setDnbRiskFilter("");
-    setIsActiveFilter("true");
-    setCurrentPage(1);
+    setFilters({
+      search: "",
+      role: "",
+      country: "",
+      dbRisk: "",
+      status: "true",
+      page: 1,
+      limit: filters.limit,
+    });
   };
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (localSearch !== search) {
-        setSearch(localSearch);
-        setCurrentPage(1);
+      if (localSearch !== filters.search) {
+        setFilters((prev) => ({
+          ...prev,
+          search: localSearch,
+          page: 1,
+        }));
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [localSearch, search, setSearch, setCurrentPage]);
+  }, [localSearch, filters.search, setFilters]);
+
+  // Sync local search with external search state (e.g. on reset)
+  useEffect(() => {
+    if (filters.search !== localSearch) {
+      setLocalSearch(filters.search);
+    }
+  }, [filters.search]);
 
   return (
     <div className="p-4 border-b border-gray-100 flex flex-col lg:flex-row gap-4 items-center justify-between bg-gray-50/30">
@@ -51,16 +56,28 @@ export default function PartnersFilters({
             placeholder="Search partners by name..."
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
+            className="w-full pl-9 pr-10 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
           />
+          {localSearch.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setLocalSearch("");
+                setFilters((prev) => ({ ...prev, search: "", page: 1 }));
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-gray-100 transition-colors cursor-pointer flex items-center justify-center"
+              title="Clear search"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
         </div>
 
         {/* Dynamic Partner Role Filter */}
         <select
-          value={roleFilter}
+          value={filters.role}
           onChange={(e) => {
-            setRoleFilter(e.target.value);
-            setCurrentPage(1);
+            setFilters((prev) => ({ ...prev, role: e.target.value, page: 1 }));
           }}
           className="w-full sm:w-auto px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
         >
@@ -74,10 +91,9 @@ export default function PartnersFilters({
 
         {/* Dynamic Country Filter */}
         <select
-          value={countryFilter}
+          value={filters.country}
           onChange={(e) => {
-            setCountryFilter(e.target.value);
-            setCurrentPage(1);
+            setFilters((prev) => ({ ...prev, country: e.target.value, page: 1 }));
           }}
           className="w-full sm:w-auto px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
         >
@@ -91,10 +107,9 @@ export default function PartnersFilters({
 
         {/* D&B Risk & Failure Score Filter */}
         <select
-          value={dnbRiskFilter}
+          value={filters.dbRisk}
           onChange={(e) => {
-            setDnbRiskFilter(e.target.value);
-            setCurrentPage(1);
+            setFilters((prev) => ({ ...prev, dbRisk: e.target.value, page: 1 }));
           }}
           className="w-full sm:w-auto px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
         >
@@ -110,10 +125,9 @@ export default function PartnersFilters({
 
         {/* Status Filter */}
         <select
-          value={isActiveFilter}
+          value={filters.status}
           onChange={(e) => {
-            setIsActiveFilter(e.target.value);
-            setCurrentPage(1);
+            setFilters((prev) => ({ ...prev, status: e.target.value, page: 1 }));
           }}
           className="w-full sm:w-auto px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
         >
@@ -134,7 +148,10 @@ export default function PartnersFilters({
           </button>
         )}
       </div>
-      <div className="text-xs text-gray-500 font-medium whitespace-nowrap lg:self-center self-end">
+      <div className="text-xs text-gray-500 font-medium whitespace-nowrap lg:self-center self-end flex items-center gap-2">
+        {isLoading && (
+          <span className="h-3 w-3 rounded-full border border-gray-300 border-t-[#007aff] animate-spin inline-block" />
+        )}
         Total Partners: {totalCount}
       </div>
     </div>
