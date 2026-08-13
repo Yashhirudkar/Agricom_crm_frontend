@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense, useMemo } from "react";
+import { useEffect, useState, Suspense, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import axiosClient from "@/lib/axios";
@@ -45,6 +45,7 @@ function PartnersContent() {
 
   const userType = useSelector(selectUserType);
   const activeCompanyId = useSelector(selectActiveCompanyId) || "";
+  const activeRequestRef = useRef(null);
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = "success") => {
@@ -69,31 +70,61 @@ function PartnersContent() {
 
   const [products, setProducts] = useState([]);
 
-  const [search, setSearch] = useState("");
-  const [isActiveFilter, setIsActiveFilter] = useState("true");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [countryFilter, setCountryFilter] = useState("");
-  const [dnbRiskFilter, setDnbRiskFilter] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [filters, setFilters] = useState({
+    search: "",
+    role: "",
+    country: "",
+    dbRisk: "",
+    status: "true",
+    page: 1,
+    limit: 8,
+  });
 
   const searchParams = useSearchParams();
   const partnerIdParam = searchParams.get("partnerId");
 
+  const reFetchPartners = (customPage) => {
+    dispatch(fetchPartners({
+      page: customPage !== undefined ? customPage : filters.page,
+      limit: filters.limit,
+      search: filters.search || undefined,
+      isActive: filters.status,
+      partnerRoleId: filters.role || undefined,
+      country: filters.country || undefined,
+      dnbRiskFactor: filters.dbRisk || undefined,
+    }));
+  };
+
   // Load partners list
   useEffect(() => {
     if (activeCompanyId) {
-      dispatch(fetchPartners({
-        page: currentPage,
-        limit: itemsPerPage,
-        search,
-        isActive: isActiveFilter,
-        partnerRoleId: roleFilter || undefined,
-        country: countryFilter || undefined,
-        dnbRiskFactor: dnbRiskFilter || undefined,
+      if (activeRequestRef.current) {
+        activeRequestRef.current.abort();
+      }
+      activeRequestRef.current = dispatch(fetchPartners({
+        page: filters.page,
+        limit: filters.limit,
+        search: filters.search || undefined,
+        isActive: filters.status,
+        partnerRoleId: filters.role || undefined,
+        country: filters.country || undefined,
+        dnbRiskFactor: filters.dbRisk || undefined,
       }));
     }
-  }, [dispatch, currentPage, search, isActiveFilter, roleFilter, countryFilter, dnbRiskFilter, activeCompanyId]);
+    return () => {
+      if (activeRequestRef.current) {
+        activeRequestRef.current.abort();
+      }
+    };
+  }, [dispatch, filters, activeCompanyId]);
+
+  // Toast error listener
+  useEffect(() => {
+    if (error && error !== "canceled") {
+      showToast(error, "error");
+      dispatch(clearPartnersError());
+    }
+  }, [error, dispatch]);
 
   // Load dropdown dependencies once
   useEffect(() => {
@@ -213,8 +244,11 @@ function PartnersContent() {
           showToast("Partner created successfully");
         }
 
-        if (currentPage !== 1) setCurrentPage(1);
-        else dispatch(fetchPartners({ page: 1, limit: itemsPerPage, search, isActive: isActiveFilter }));
+        if (filters.page !== 1) {
+          setFilters((prev) => ({ ...prev, page: 1 }));
+        } else {
+          reFetchPartners(1);
+        }
       }
       closeModals();
     } catch (err) {
@@ -230,10 +264,10 @@ function PartnersContent() {
       await dispatch(deletePartner({ id: deleteTarget.id })).unwrap();
       showToast("Partner deactivated successfully");
 
-      if (partners.length === 1 && currentPage > 1) {
-        setCurrentPage(currentPage - 1);
+      if (partners.length === 1 && filters.page > 1) {
+        setFilters((prev) => ({ ...prev, page: prev.page - 1 }));
       } else {
-        dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+        reFetchPartners();
       }
 
       closeModals();
@@ -249,7 +283,7 @@ function PartnersContent() {
     try {
       await dispatch(restorePartner(restoreTarget.id)).unwrap();
       showToast("Partner restored successfully");
-      dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+      reFetchPartners();
       closeModals();
     } catch (err) {
       showToast(err || "Failed to restore partner", "error");
@@ -264,10 +298,10 @@ function PartnersContent() {
       await dispatch(permanentDeletePartner({ id: permanentDeleteTarget.id, reason })).unwrap();
       showToast("Partner permanently deleted");
 
-      if (partners.length === 1 && currentPage > 1) {
-        setCurrentPage(currentPage - 1);
+      if (partners.length === 1 && filters.page > 1) {
+        setFilters((prev) => ({ ...prev, page: prev.page - 1 }));
       } else {
-        dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+        reFetchPartners();
       }
 
       closeModals();
@@ -278,14 +312,7 @@ function PartnersContent() {
     }
   };
 
-  if (isLoading && partners.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <div className="h-8 w-8 rounded-full border-2 border-[#007aff] border-t-transparent animate-spin mb-3" />
-        <p className="text-xs font-semibold text-gray-400">Loading partners...</p>
-      </div>
-    );
-  }
+  // Removed full-page loading check to prevent unmounting filter inputs and losing focus.
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6">
@@ -324,20 +351,12 @@ function PartnersContent() {
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
         <PartnersFilters
-          search={search}
-          setSearch={setSearch}
-          isActiveFilter={isActiveFilter}
-          setIsActiveFilter={setIsActiveFilter}
-          setCurrentPage={setCurrentPage}
+          filters={filters}
+          setFilters={setFilters}
           totalCount={totalCount}
           partnerRoles={partnerRoles}
           countries={countries}
-          roleFilter={roleFilter}
-          setRoleFilter={setRoleFilter}
-          countryFilter={countryFilter}
-          setCountryFilter={setCountryFilter}
-          dnbRiskFilter={dnbRiskFilter}
-          setDnbRiskFilter={setDnbRiskFilter}
+          isLoading={isLoading}
         />
 
         <PartnersTable
@@ -348,9 +367,14 @@ function PartnersContent() {
           setDeleteTarget={setDeleteTarget}
           setRestoreTarget={setRestoreTarget}
           setPermanentDeleteTarget={setPermanentDeleteTarget}
+          isLoading={isLoading}
         />
 
-        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+        <Pagination
+          currentPage={filters.page}
+          totalPages={totalPages}
+          onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
+        />
       </div>
 
       <PartnerDrawer
@@ -372,7 +396,7 @@ function PartnersContent() {
         partner={followUpPartner}
         onSaveSuccess={() => {
           // Re-fetch partners to update follow-up badges
-          dispatch(fetchPartners({ page: currentPage, limit: itemsPerPage, search, isActive: isActiveFilter }));
+          reFetchPartners();
         }}
       />
 

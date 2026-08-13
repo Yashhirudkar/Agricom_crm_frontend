@@ -1,11 +1,14 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosClient from "@/lib/axios";
 
-export const fetchPartners = createAsyncThunk("partners/fetchAll", async (params, { rejectWithValue }) => {
+export const fetchPartners = createAsyncThunk("partners/fetchAll", async (params, { rejectWithValue, signal }) => {
   try {
-    const res = await axiosClient.get("/masters/partners", { params });
+    const res = await axiosClient.get("/masters/partners", { params, signal });
     return res.data;
   } catch (err) {
+    if (err.name === 'CanceledError' || axiosClient.isCancel?.(err)) {
+      return rejectWithValue("canceled");
+    }
     return rejectWithValue(err.response?.data?.message || "Failed to fetch partners");
   }
 });
@@ -82,7 +85,13 @@ const partnerSlice = createSlice({
       state.totalPages = action.payload.totalPages || 1;
       state.currentPage = action.payload.page || 1;
     })
-      .addCase(fetchPartners.rejected, (state, action) => { state.isLoading = false; state.error = action.payload; })
+      .addCase(fetchPartners.rejected, (state, action) => {
+        if (action.meta.aborted) {
+          return;
+        }
+        state.isLoading = false;
+        state.error = action.payload;
+      })
 
       .addCase(createPartner.fulfilled, (state, action) => { state.list.unshift(action.payload); state.totalCount += 1; })
       .addCase(createPartner.rejected, (state, action) => { state.error = action.payload; })

@@ -10,6 +10,7 @@ function PartnersTable({
   setDeleteTarget,
   setRestoreTarget,
   setPermanentDeleteTarget,
+  isLoading,
 }) {
   return (
     <div className="overflow-x-auto">
@@ -25,10 +26,43 @@ function PartnersTable({
             <th className="px-6 py-4 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100 text-xs">
+        <tbody className={`divide-y divide-gray-100 text-xs ${isLoading && partners.length > 0 ? 'opacity-70' : ''} transition-opacity duration-200`}>
           {(() => {
             const today = new Date().toLocaleDateString("en-CA");
             const completedStatuses = ['Confirmed', 'Closed', 'Deal Finalized', 'Completed'];
+
+            if (isLoading && partners.length === 0) {
+              return Array.from({ length: 5 }).map((_, i) => (
+                <tr key={`skeleton-${i}`} className="animate-pulse">
+                  <td className="px-6 py-4">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
+                    <div className="h-3 bg-gray-100 rounded w-1/2"></div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="h-3.5 bg-gray-100 rounded w-2/3 mb-1"></div>
+                    <div className="h-3 bg-gray-50 rounded w-1/3"></div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="h-3.5 bg-gray-100 rounded w-1/2"></div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex gap-1.5">
+                      <div className="h-5 bg-gray-100 rounded w-14"></div>
+                      <div className="h-5 bg-gray-100 rounded w-14"></div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="h-3.5 bg-gray-100 rounded w-16"></div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="h-5 bg-gray-100 rounded w-12"></div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="h-4 bg-gray-200 rounded w-20 ml-auto"></div>
+                  </td>
+                </tr>
+              ));
+            }
 
             return partners.length > 0 ? (
               partners.map((item) => {
@@ -197,7 +231,7 @@ function PartnersTable({
               })
             ) : (
               <tr>
-                <td colSpan="6" className="px-6 py-12 text-center text-gray-400 font-semibold">
+                <td colSpan="7" className="px-6 py-12 text-center text-gray-400 font-semibold">
                   No partners found.
                 </td>
               </tr>
