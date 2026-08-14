@@ -58,7 +58,7 @@ export default function ShipmentsFilter({
       try {
         const [partnersRes, productsRes, fyRes] = await Promise.all([
           mastersApi.getPartnersOptions({ limit: 100 }),
-          mastersApi.getProducts({ limit: 100 }),
+          mastersApi.getProductsOptions({ limit: 100 }),
           salesContractApi.getFilterFinancialYears()
         ]);
 

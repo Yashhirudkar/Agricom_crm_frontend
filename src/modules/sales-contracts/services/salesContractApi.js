@@ -39,6 +39,8 @@ export const mastersApi = {
     axiosClient.get("/masters/partners/options", { params }),
   getProducts: (params) =>
     axiosClient.get("/masters/products", { params }),
+  getProductsOptions: (params) =>
+    axiosClient.get("/masters/products/options", { params }),
   getCountries: (params) =>
     Promise.resolve({ data: { data: [] } }),
   // bag-types and packing-types use isActive (boolean), not status
