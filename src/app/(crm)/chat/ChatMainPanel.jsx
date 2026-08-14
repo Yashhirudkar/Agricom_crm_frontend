@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   MessageSquare,
   Search,
@@ -19,6 +19,7 @@ import MessageTimeline from "@/modules/chat/components/Timeline/MessageTimeline"
 import RichComposer from "@/modules/chat/components/Composer/RichComposer";
 import ErrorBoundary from "@/modules/chat/components/Common/ErrorBoundary";
 import { HeaderSkeleton, MessagesSkeleton } from "@/modules/chat/components/Common/SkeletonLoading";
+import UserProfileModal from "@/modules/chat/components/Common/UserProfileModal";
 
 export default function ChatMainPanel({
   showSidebarMobile,
@@ -62,6 +63,8 @@ export default function ChatMainPanel({
   onBannerUnpin,
   onOpenPinnedPanel,
 }) {
+  const [headerProfileModalOpen, setHeaderProfileModalOpen] = useState(false);
+
   return (
     <main
       className={`flex-1 min-w-0 flex flex-col h-full bg-white overflow-hidden transition-all duration-200
@@ -96,47 +99,44 @@ export default function ChatMainPanel({
                 <ArrowLeft className="h-4 w-4" />
               </button>
 
-              {activeConversation?.type !== "DIRECT" ? (
-                <div className="relative flex-shrink-0">
-                  {activeDetails?.avatar ? (
-                    <img
-                      src={getAvatarUrl(activeDetails.avatar)}
-                      alt={activeDetails.title}
-                      className="h-10 w-10 rounded-full object-cover border border-slate-200"
-                    />
-                  ) : (
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold ${activeConversation?.type === "CHANNEL"
+              <div
+                onClick={() => setHeaderProfileModalOpen(true)}
+                className="relative flex-shrink-0 cursor-pointer group"
+                title="View Image"
+              >
+                {activeDetails?.avatar ? (
+                  <img
+                    src={getAvatarUrl(activeDetails.avatar)}
+                    alt={activeDetails.title}
+                    className="h-10 w-10 rounded-full object-cover border border-slate-200 group-hover:scale-105 transition-transform"
+                  />
+                ) : (
+                  <div className={`h-10 w-10 rounded-full border flex items-center justify-center text-sm font-bold group-hover:scale-105 transition-transform ${
+                    activeConversation?.type === "CHANNEL"
                       ? "bg-blue-50 text-blue-600 border border-blue-100"
-                      : "bg-slate-100 text-slate-700 border border-slate-250"
-                      }`}>
-                      {activeConversation?.type === "CHANNEL" ? "#" : activeDetails?.initials || "G"}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="relative flex-shrink-0">
-                  {activeDetails?.avatar ? (
-                    <img
-                      src={getAvatarUrl(activeDetails.avatar)}
-                      alt={activeDetails.title}
-                      className="h-10 w-10 rounded-full object-cover border border-slate-200"
-                    />
-                  ) : (
-                    <div className={`h-10 w-10 rounded-full border flex items-center justify-center text-sm font-bold ${activeDetails?.avatarClass || "bg-slate-100 text-slate-700"}`}>
-                      {activeDetails?.initials}
-                    </div>
-                  )}
-                  <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${activeDetails?.presence === "ONLINE" ? "bg-emerald-500" :
+                      : activeConversation?.type === "GROUP"
+                      ? "bg-slate-100 text-slate-700 border border-slate-250"
+                      : activeDetails?.avatarClass || "bg-slate-100 text-slate-700"
+                  }`}>
+                    {activeConversation?.type === "CHANNEL" ? "#" : activeDetails?.initials || "G"}
+                  </div>
+                )}
+                {activeConversation?.type === "DIRECT" && (
+                  <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${
+                    activeDetails?.presence === "ONLINE" ? "bg-emerald-500" :
                     activeDetails?.presence === "AWAY" ? "bg-amber-500" :
-                      activeDetails?.presence === "BUSY" ? "bg-red-500" :
-                        "bg-slate-400"
-                    }`} />
-                </div>
-              )}
+                    activeDetails?.presence === "BUSY" ? "bg-red-500" :
+                    "bg-slate-400"
+                  }`} />
+                )}
+              </div>
 
-              <div className="min-w-0">
+              <div
+                className="min-w-0 cursor-pointer"
+                onClick={() => setHeaderProfileModalOpen(true)}
+              >
                 <div className="flex items-center gap-1.5">
-                  <h1 className="font-bold text-slate-900 text-sm md:text-[14.5px] truncate leading-none">{activeDetails?.title}</h1>
+                  <h1 className="font-bold text-slate-900 text-sm md:text-[14.5px] truncate leading-none hover:text-blue-600 transition-colors">{activeDetails?.title}</h1>
                   {activeConversation?.isLocked && <Lock className="h-3 w-3 text-amber-500" />}
                 </div>
                 {activeDetails?.isTyping ? (
@@ -148,6 +148,19 @@ export default function ChatMainPanel({
                 )}
               </div>
             </div>
+
+            {headerProfileModalOpen && (
+              <UserProfileModal
+                user={{
+                  name: activeDetails?.title,
+                  avatarUrl: activeDetails?.avatar,
+                  presence: activeDetails?.presence,
+                  role: activeConversation?.type === "CHANNEL" ? "Channel" : activeConversation?.type === "GROUP" ? "Group Chat" : "Team Member"
+                }}
+                isOpen={headerProfileModalOpen}
+                onClose={() => setHeaderProfileModalOpen(false)}
+              />
+            )}
 
             <div className="flex items-center gap-1.5 flex-shrink-0 select-none">
               <button

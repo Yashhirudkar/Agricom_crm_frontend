@@ -63,11 +63,13 @@ const parseLocalDate = (dateStr) => {
 
 export default function HolidayCalendar({ holidays, onHolidayClick }) {
   const calendarRef = useRef(null);
+  const dateInputRef = useRef(null);
 
   const [currentTitle, setCurrentTitle] = useState("");
   const [currentView, setCurrentView] = useState("dayGridMonth");
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentDateStr, setCurrentDateStr] = useState(format(new Date(), "yyyy-MM-dd"));
 
   const events = holidays
     .filter((h) => !(isWeeklyOffHelper(h) && currentView === "dayGridMonth"))
@@ -123,6 +125,29 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
     setCurrentView(viewType);
   };
 
+  const handleDateChange = (e) => {
+    const selectedVal = e.target.value;
+    if (selectedVal) {
+      setCurrentDateStr(selectedVal);
+      calendarRef.current?.getApi().gotoDate(selectedVal);
+    }
+  };
+
+  const handleOpenPicker = (e) => {
+    e?.stopPropagation();
+    try {
+      if (dateInputRef.current) {
+        if (typeof dateInputRef.current.showPicker === "function") {
+          dateInputRef.current.showPicker();
+        } else {
+          dateInputRef.current.click();
+        }
+      }
+    } catch (err) {
+      console.error("Error opening date picker:", err);
+    }
+  };
+
   const handleDatesSet = (dateInfo) => {
     setCurrentTitle(dateInfo.view.title);
     setCurrentView(dateInfo.view.type);
@@ -131,6 +156,7 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
     if (start) {
       setCurrentMonth(start.getMonth());
       setCurrentYear(start.getFullYear());
+      setCurrentDateStr(format(start, "yyyy-MM-dd"));
     }
   };
 
@@ -154,10 +180,10 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
     }
 
     let colorTheme = {
-      border: "border-cyan-500",
-      text: "text-cyan-600",
-      btn: "bg-cyan-500",
-      star: "text-cyan-500"
+      border: "border-slate-500",
+      text: "text-slate-600",
+      btn: "bg-slate-500",
+      bg: "bg-slate-50/80"
     };
 
     if (isOptional) {
@@ -165,7 +191,7 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
         border: "border-amber-500",
         text: "text-amber-600",
         btn: "bg-amber-500",
-        star: "text-amber-500"
+        bg: "bg-amber-50/80"
       };
     } else {
       switch (holidayType) {
@@ -174,7 +200,7 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
             border: "border-rose-500",
             text: "text-rose-600",
             btn: "bg-rose-500",
-            star: "text-rose-500"
+            bg: "bg-rose-50/80"
           };
           break;
         case "COMPANY":
@@ -182,7 +208,7 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
             border: "border-blue-500",
             text: "text-blue-600",
             btn: "bg-blue-500",
-            star: "text-blue-500"
+            bg: "bg-blue-50/80"
           };
           break;
         case "SHUTDOWN":
@@ -190,15 +216,15 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
             border: "border-purple-500",
             text: "text-purple-600",
             btn: "bg-purple-500",
-            star: "text-purple-500"
+            bg: "bg-purple-50/80"
           };
           break;
         case "FESTIVAL":
           colorTheme = {
-            border: "border-cyan-500",
-            text: "text-cyan-600",
-            btn: "bg-cyan-500",
-            star: "text-cyan-500"
+            border: "border-emerald-500",
+            text: "text-emerald-600",
+            btn: "bg-emerald-500",
+            bg: "bg-emerald-50/80"
           };
           break;
         case "REGIONAL":
@@ -206,7 +232,7 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
             border: "border-teal-500",
             text: "text-teal-600",
             btn: "bg-teal-500",
-            star: "text-teal-500"
+            bg: "bg-teal-50/80"
           };
           break;
         default:
@@ -214,7 +240,7 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
             border: "border-slate-500",
             text: "text-slate-600",
             btn: "bg-slate-500",
-            star: "text-slate-500"
+            bg: "bg-slate-50/80"
           };
           break;
       }
@@ -230,17 +256,37 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
       };
     }
 
-    const isFestival = holidayType === "FESTIVAL";
+    if (!isMonthView) {
+      return (
+        <div className="flex items-center gap-2 py-1 px-2 font-semibold text-xs">
+          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${colorTheme.btn}`} />
+          <span className={`${colorTheme.text} font-bold`}>{title}</span>
+          {isHalfDay && (
+            <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded font-medium">
+              Half Day
+            </span>
+          )}
+        </div>
+      );
+    }
 
     return (
       <div
-        className={`relative w-full h-full ${colorTheme.bg || 'bg-[#f4f8fc]'} px-3 pt-8 pb-2 border-l-[3px] ${colorTheme.border} overflow-hidden cursor-pointer rounded-r-md flex flex-col justify-end`}
+        className={`relative w-full h-full ${colorTheme.bg} pl-2 pr-2.5 pt-6 pb-6 ${colorTheme.border} rounded-r-md flex flex-col justify-end overflow-hidden cursor-pointer transition-all hover:brightness-95`}
       >
-        <div className={`text-[11px] font-bold ${colorTheme.text} leading-tight line-clamp-1`}>
+        <div
+          className={`text-[10.5px] sm:text-[11px] font-bold ${colorTheme.text} leading-tight break-words`}
+          style={{
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+            overflowWrap: "anywhere"
+          }}
+          title={title}
+        >
           {title}
         </div>
         {isHalfDay && (
-          <div className="text-[9px] font-semibold text-amber-600/80 mt-0.5">
+          <div className="text-[8.5px] font-semibold text-amber-700/90 mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
             Half Day • {extendedProps.halfDayStart && extendedProps.halfDayStart.slice(0, 5)} - {extendedProps.halfDayEnd && extendedProps.halfDayEnd.slice(0, 5)}
           </div>
         )}
@@ -262,25 +308,22 @@ export default function HolidayCalendar({ holidays, onHolidayClick }) {
         <div className="flex items-center flex-wrap gap-3.5">
           <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">{currentTitle}</h2>
 
-          <div className="flex items-center gap-1 bg-gray-100/80 border border-gray-200/50 rounded-xl p-1 shadow-sm">
-            <button
-              onClick={handlePrev}
-              className="p-1 text-gray-600 hover:text-blue-600 hover:bg-white rounded-lg transition-all cursor-pointer"
-              title="Previous Month"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="px-2 py-0.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100/50 rounded-md">
-              {currentYear}
-            </span>
-            <button
-              onClick={handleNext}
-              className="p-1 text-gray-600 hover:text-blue-600 hover:bg-white rounded-lg transition-all cursor-pointer"
-              title="Next Month"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleOpenPicker}
+            className="relative flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-blue-700 bg-blue-50/90 hover:bg-blue-100/80 border border-blue-200/80 rounded-xl transition-all shadow-xs cursor-pointer group"
+            title="Click to open calendar"
+          >
+            <CalendarIcon size={14} className="text-blue-600 shrink-0" />
+            <span>{currentYear}</span>
+            <input
+              type="date"
+              ref={dateInputRef}
+              value={currentDateStr}
+              onChange={handleDateChange}
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            />
+          </button>
 
           <button
             onClick={handleToday}

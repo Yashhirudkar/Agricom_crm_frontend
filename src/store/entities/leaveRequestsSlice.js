@@ -43,6 +43,15 @@ export const fetchLeaveDashboardSummary = createAsyncThunk("entities/leaveReques
   }
 });
 
+export const fetchMonthlyLeaveSummary = createAsyncThunk("entities/leaveRequests/fetchMonthlySummary", async (params, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.get("/leave-requests/monthly-summary", { params });
+    return res.data;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to fetch monthly summary");
+  }
+});
+
 export const approveLeave = createAsyncThunk("entities/leaveRequests/approve", async ({ id, remarks }, { rejectWithValue }) => {
   try {
     const res = await axiosClient.put(`/leave-requests/${id}/approve`, { remarks });
@@ -78,6 +87,7 @@ const leaveRequestsSlice = createSlice({
     limit: 10,
     totalPages: 0,
     dashboardSummary: null,
+    monthlySummary: null,
     isLoading: false,
     error: null,
   }),
@@ -127,10 +137,12 @@ const leaveRequestsSlice = createSlice({
         state.dashboardSummary = action.payload;
       })
 
+      // Monthly Summary
+      .addCase(fetchMonthlyLeaveSummary.fulfilled, (state, action) => {
+        state.monthlySummary = action.payload;
+      })
+
       // Status updates (Approve, Reject, Cancel)
-      // Backend may return { message: '...' } instead of full entity.
-      // Guard: only upsert if the payload has a valid id (i.e. it's the full entity).
-      // Otherwise, remove the stale entity so it doesn't render with undefined dates.
       .addCase(approveLeave.fulfilled, (state, action) => {
         if (action.payload?.id) {
           leaveRequestsAdapter.upsertOne(state, action.payload);
@@ -181,6 +193,7 @@ export const selectLeaveRequestsData = createSelector(
   })
 );
 
+export const selectMonthlyLeaveSummary = (state) => state.entities.leaveRequests.monthlySummary;
 export const selectLeaveRequestsLoading = (state) => state.entities.leaveRequests.isLoading;
 export const selectLeaveRequestsError = (state) => state.entities.leaveRequests.error;
 

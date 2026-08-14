@@ -56,6 +56,21 @@ export const ROUTE_MAPPERS = {
   /** Attendance conflict (e.g., checked in on a leave day) → attendance page */
   ATTENDANCE_CONFLICT: () => '/attendance',
 
+  // ── Chat / Message Notifications ───────────────────────────────────────────
+  /** New chat message received → navigate to chat page or open active conversation */
+  MESSAGE: (notif) => {
+    const id = notif.entityId || notif.payload?.conversationId;
+    return id ? `/chat?conversationId=${id}` : '/chat';
+  },
+  CHAT_MESSAGE: (notif) => {
+    const id = notif.entityId || notif.payload?.conversationId;
+    return id ? `/chat?conversationId=${id}` : '/chat';
+  },
+  CHAT: (notif) => {
+    const id = notif.entityId || notif.payload?.conversationId;
+    return id ? `/chat?conversationId=${id}` : '/chat';
+  },
+
   // ── Chat / Follow-up Notifications ───────────────────────────────────────
   /**
    * New follow-up added on an enquiry → enquiries list with drawer auto-open.

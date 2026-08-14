@@ -7,16 +7,18 @@ import { selectUser } from "@/store/slices/authSlice";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import {
   fetchLeaveRequests,
+  fetchMonthlyLeaveSummary,
   approveLeave,
   rejectLeave,
   selectLeaveRequestsData,
+  selectMonthlyLeaveSummary,
   selectLeaveRequestsLoading
 } from "@/store/entities/leaveRequestsSlice";
 import { subscribeToSocketEvent, unsubscribeFromSocketEvent } from "@/lib/socket";
 import Modal from "@/components/modals/Modal";
 import HasPermission from "@/components/rbac/HasPermission";
 import {
-  Check, AlertCircle, X, CheckCircle2, XCircle, FileText, Calendar, Building2, User as UserIcon, Shield, Loader2
+  Check, AlertCircle, X, CheckCircle2, XCircle, FileText, Calendar, Building2, User as UserIcon, Shield, Loader2, Users, Layers, Clock, Palmtree, BarChart2
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import Image from "next/image";
@@ -30,6 +32,7 @@ function LeaveApprovalsContent() {
   const requestId = searchParams.get("requestId");
 
   const { data: allLeaves } = useSelector(selectLeaveRequestsData) || { data: [] };
+  const monthlySummary = useSelector(selectMonthlyLeaveSummary);
   const isLoading = useSelector(selectLeaveRequestsLoading);
 
   const [toast, setToast] = useState(null);
@@ -45,6 +48,7 @@ function LeaveApprovalsContent() {
   useEffect(() => {
     if (activeCompanyId) {
       dispatch(fetchLeaveRequests({}));
+      dispatch(fetchMonthlyLeaveSummary({}));
     }
   }, [dispatch, activeCompanyId]);
 
@@ -145,12 +149,47 @@ function LeaveApprovalsContent() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
           <CheckCircle2 className="h-6 w-6 text-[#007aff]" />
-          Leave Approvals
+          Leave Approvals & Manager Analytics
         </h1>
         <p className="text-xs text-gray-400 font-medium mt-1">
-          Review and take action on leave requests from your team.
+          Review and take action on leave requests from your team ({monthlySummary?.monthLabel || format(new Date(), "MMMM yyyy")}).
         </p>
       </div>
+
+      {/* Summary Cards Banner */}
+      {monthlySummary && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
+            <span className="text-[9.5px] font-bold uppercase tracking-wider text-gray-400 block">Period</span>
+            <span className="text-xs font-bold text-gray-900 truncate block mt-1">{monthlySummary.monthLabel}</span>
+          </div>
+
+          <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
+            <span className="text-[9.5px] font-bold uppercase tracking-wider text-purple-600 block">On Leave Today</span>
+            <span className="text-xl font-black text-purple-700 block mt-0.5">{monthlySummary.summaryCards?.employeesOnLeaveToday || 0}</span>
+          </div>
+
+          <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
+            <span className="text-[9.5px] font-bold uppercase tracking-wider text-gray-400 block">Total Requests</span>
+            <span className="text-xl font-black text-gray-900 block mt-0.5">{monthlySummary.summaryCards?.totalRequests || 0}</span>
+          </div>
+
+          <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
+            <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-600 block">Approved</span>
+            <span className="text-xl font-black text-emerald-600 block mt-0.5">{monthlySummary.summaryCards?.approvedLeaves || 0}</span>
+          </div>
+
+          <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
+            <span className="text-[9.5px] font-bold uppercase tracking-wider text-amber-600 block">Pending</span>
+            <span className="text-xl font-black text-amber-600 block mt-0.5">{monthlySummary.summaryCards?.pendingApprovals || 0}</span>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-3.5 shadow-xs">
+            <span className="text-[9.5px] font-bold uppercase tracking-wider text-blue-100 block">Total Leave Days</span>
+            <span className="text-xl font-black text-white block mt-0.5">{monthlySummary.summaryCards?.totalLeaveDaysTaken || 0} <span className="text-[10px] font-normal">Days</span></span>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-4 border-b border-gray-200">
         <button

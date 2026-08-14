@@ -212,16 +212,15 @@ export default function ShipmentListPage({ preSelectedShipmentId }) {
 
       {/* Toast Notification */}
       {toastMsg && (
-        <div className={`fixed top-5 right-5 z-[500] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
-          toastMsg.type === "error" ? "bg-red-500" : "bg-green-500"
-        }`}>
+        <div className={`fixed top-5 right-5 z-[500] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${toastMsg.type === "error" ? "bg-red-500" : "bg-green-500"
+          }`}>
           {toastMsg.type === "error"
             ? <AlertCircle className="h-4 w-4" />
             : <AlertCircle className="h-4 w-4 hidden" />}
           {toastMsg.msg}
         </div>
       )}
-      
+
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
@@ -258,33 +257,6 @@ export default function ShipmentListPage({ preSelectedShipmentId }) {
         ))}
       </div>
 
-      {/* Bulk actions context menu (only shows if rows checked) */}
-      {selectedShipments.length > 0 && (
-        <div className="bg-slate-950 border border-slate-900 text-white rounded-2xl px-5 py-3.5 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-4 duration-300 print:hidden">
-          <div className="flex items-center gap-2">
-            <ClipboardCheck className="h-4.5 w-4.5 text-blue-400" />
-            <span className="text-xs font-bold">{selectedShipments.length} shipment(s) selected</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                showToast(`Exporting ${selectedShipments.length} selected shipments...`);
-                const url = shipmentsApi.getExportExcelUrl({ ...filters, id: selectedShipments });
-                window.open(url, "_blank");
-              }}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-            >
-              Export Selected
-            </button>
-            <button
-              onClick={() => setSelectedShipments([])}
-              className="text-xs text-gray-400 hover:text-white transition-colors"
-            >
-              Clear Selection
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Filtering Panel */}
       <div className="print:hidden">

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { getAvatarUrl } from "@/lib/axios";
+import UserProfileModal from "../Common/UserProfileModal";
 
 const AVATAR_COLORS = [
   "from-rose-400 to-rose-500 text-white",
@@ -29,8 +30,18 @@ function getInitials(name = "") {
   return name.slice(0, 2).toUpperCase();
 }
 
-const Avatar = React.memo(({ sender, size = "md", presence }) => {
+const Avatar = React.memo(({ sender, size = "md", presence, onClick, disableModal = false }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    if (onClick) {
+      onClick(e);
+    } else if (!disableModal && sender) {
+      setModalOpen(true);
+    }
+  };
 
   // Sizing definitions
   const dimensions = {
@@ -81,22 +92,32 @@ const Avatar = React.memo(({ sender, size = "md", presence }) => {
   };
 
   return (
-    <div className="relative inline-block flex-shrink-0 select-none">
-      <div
-        className={`${dimensions.box} rounded-full border-2 border-white shadow-xs hover:shadow-md transition-all duration-150 hover:scale-[1.04] cursor-pointer bg-white overflow-hidden`}
-      >
-        {renderContent()}
+    <>
+      <div className="relative inline-block flex-shrink-0 select-none" onClick={handleClick}>
+        <div
+          className={`${dimensions.box} rounded-full border-2 border-white shadow-xs hover:shadow-md transition-all duration-150 hover:scale-[1.04] cursor-pointer bg-white overflow-hidden`}
+        >
+          {renderContent()}
+        </div>
+
+        {/* Presence Dot Overlay */}
+        {presence && (
+          <span
+            className={`absolute rounded-full border-2 border-white transition-colors duration-200 shadow-sm ${
+              dimensions.dot
+            } ${getPresenceColor(presence)}`}
+          />
+        )}
       </div>
 
-      {/* Presence Dot Overlay */}
-      {presence && (
-        <span
-          className={`absolute rounded-full border-2 border-white transition-colors duration-200 shadow-sm ${
-            dimensions.dot
-          } ${getPresenceColor(presence)}`}
+      {!disableModal && !onClick && modalOpen && (
+        <UserProfileModal
+          user={sender ? { ...sender, presence } : null}
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
         />
       )}
-    </div>
+    </>
   );
 });
 

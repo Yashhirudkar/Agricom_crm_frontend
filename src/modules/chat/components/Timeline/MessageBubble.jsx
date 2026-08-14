@@ -5,6 +5,7 @@ import MessageStatus from "./MessageStatus";
 import MessageActionsMenu from "./MessageActionsMenu";
 import ReactionBadges from "./ReactionBadges";
 import MessageRenderer from "./MessageRenderer";
+import UserProfileModal from "../Common/UserProfileModal";
 import { toast } from "sonner";
 
 function formatTime(dateStr) {
@@ -61,6 +62,7 @@ const MessageBubble = React.memo(({
   presence
 }) => {
   const [hovered, setHovered] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const touchTimer = useRef(null);
 
   const isPinned = !!msg.pinnedAt;
@@ -192,9 +194,24 @@ const MessageBubble = React.memo(({
             }
           >
             {showSenderName && !isOutgoing && conversation?.type !== "DIRECT" && (
-              <span className="text-[10px] font-bold text-blue-600 block mb-0.5 select-none leading-none tracking-tight">
-                {msg.sender?.name || "Unknown"}
-              </span>
+              <>
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowProfileModal(true);
+                  }}
+                  className="text-[10px] font-bold text-blue-600 block mb-0.5 select-none leading-none tracking-tight cursor-pointer hover:underline"
+                >
+                  {msg.sender?.name || "Unknown"}
+                </span>
+                {showProfileModal && (
+                  <UserProfileModal
+                    user={msg.sender ? { ...msg.sender, presence } : null}
+                    isOpen={showProfileModal}
+                    onClose={() => setShowProfileModal(false)}
+                  />
+                )}
+              </>
             )}
 
             {/* Telegram style Reply Preview */}

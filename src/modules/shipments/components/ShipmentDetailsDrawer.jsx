@@ -44,7 +44,7 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
 
       {/* Slide-over Panel */}
       <div className="fixed right-0 top-0 bottom-0 z-[160] w-full max-w-lg bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/60 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -63,7 +63,7 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
 
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          
+
           {/* Section 1: Shipment Info */}
           <div className={cardCls}>
             <h3 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 mb-1">
@@ -92,12 +92,11 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
             </h3>
             <div className={itemCls}>
               <span className={lblCls}>Urgency / Timeline</span>
-              <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold ${
-                timelineObj.type === "today" ? "bg-green-50 text-green-700 border-green-200" :
+              <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold ${timelineObj.type === "today" ? "bg-green-50 text-green-700 border-green-200" :
                 timelineObj.type === "tomorrow" || timelineObj.type === "upcoming" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                timelineObj.type === "overdue" ? "bg-red-50 text-red-700 border-red-200" :
-                "bg-gray-100 text-gray-700 border-gray-200"
-              }`}>
+                  timelineObj.type === "overdue" ? "bg-red-50 text-red-700 border-red-200" :
+                    "bg-gray-100 text-gray-700 border-gray-200"
+                }`}>
                 {timelineObj.label || "—"}
               </span>
             </div>
@@ -119,10 +118,9 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
               <span className={lblCls}>Contract No</span>
               <button
                 onClick={() => onViewContract(contract.id)}
-                className="text-[#007aff] hover:underline font-bold flex items-center gap-1.5 font-sans"
+                className="text-[#007aff] font-bold flex items-center gap-1.5 font-sans"
               >
                 <span>{contract.contractNumber || "—"}</span>
-                <ExternalLink className="h-3 w-3" />
               </button>
             </div>
             <div className={itemCls}>
@@ -214,13 +212,12 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
               {docProgress.checklist.map((doc, idx) => (
                 <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-gray-100 last:border-b-0">
                   <span className="text-gray-600 font-medium">{doc.name}</span>
-                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
-                    doc.uploaded
-                      ? "bg-green-50 text-green-700 border-green-200"
-                      : doc.isMandatory
+                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${doc.uploaded
+                    ? "bg-green-50 text-green-700 border-green-200"
+                    : doc.isMandatory
                       ? "bg-red-50 text-red-700 border-red-200"
                       : "bg-gray-50 text-gray-500 border-gray-200"
-                  }`}>
+                    }`}>
                     {doc.uploaded ? "Uploaded" : doc.isMandatory ? "Required" : "Optional"}
                   </span>
                 </div>

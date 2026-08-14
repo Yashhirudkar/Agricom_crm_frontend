@@ -18,6 +18,7 @@ import {
 import Drawer from "@/components/common/Drawer";
 import axiosClient, { getAvatarUrl } from "@/lib/axios";
 import { useQueryClient } from "@tanstack/react-query";
+import UserProfileModal from "@/modules/chat/components/Common/UserProfileModal";
 
 const getInitials = (name) => {
   if (!name) return "??";
@@ -58,6 +59,7 @@ function PartnerFollowUpDrawer({
   const [isSaving, setIsSaving] = useState(false);
   const [timelineSearch, setTimelineSearch] = useState("");
   const [editingId, setEditingId] = useState(null);
+  const [selectedUserProfile, setSelectedUserProfile] = useState(null);
 
   // Ref for the chat scroll container
   const chatContainerRef = useRef(null);
@@ -384,9 +386,12 @@ function PartnerFollowUpDrawer({
                             {item.ourResponse}
                           </p>
                           {/* Created By Details */}
-                          <div className="mt-1.5 pt-1 border-t border-gray-100/80 flex items-center gap-1 justify-end">
+                          <div
+                            onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
+                            className="mt-1.5 pt-1 border-t border-gray-100/80 flex items-center gap-1 justify-end cursor-pointer hover:opacity-80 transition-opacity"
+                          >
                             <span className="text-[8.5px] font-bold text-gray-400">Created By:</span>
-                            <span className="text-[9.5px] font-bold text-gray-600">
+                            <span className="text-[9.5px] font-bold text-blue-600 hover:underline">
                               {item.createdBy?.name || "Unknown User"}
                             </span>
                             {item.createdBy?.role && (
@@ -414,12 +419,14 @@ function PartnerFollowUpDrawer({
                       <img
                         src={getAvatarUrl(item.createdBy.avatar)}
                         alt={item.createdBy.name}
-                        className="w-7 h-7 rounded-full border border-blue-200 object-cover shadow-xs shrink-0"
+                        onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
+                        className="w-7 h-7 rounded-full border border-blue-200 object-cover shadow-xs shrink-0 cursor-pointer hover:scale-105 transition-transform"
                         title={item.createdBy.name}
                       />
                     ) : (
                       <div
-                        className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getAvatarColor(item.createdBy?.name || "Unknown User")} text-white font-extrabold flex items-center justify-center text-[9px] shadow-sm border border-blue-200 shrink-0`}
+                        onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
+                        className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getAvatarColor(item.createdBy?.name || "Unknown User")} text-white font-extrabold flex items-center justify-center text-[9px] shadow-sm border border-blue-200 shrink-0 cursor-pointer hover:scale-105 transition-transform`}
                         title={item.createdBy?.name || "Unknown User"}
                       >
                         {getInitials(item.createdBy?.name || "Unknown User")}
@@ -475,22 +482,29 @@ function PartnerFollowUpDrawer({
                 </select>
               </div>
 
-              <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-full px-3 py-1 ml-auto">
-                <span className="font-semibold text-blue-700">Next Follow-Up:</span>
+              <div className="relative flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100/80 border border-blue-100 rounded-full px-3 py-1 ml-auto cursor-pointer transition-colors select-none">
+                <span className="font-semibold text-blue-700 pointer-events-none">Next Follow-Up:</span>
                 {selectedNextDate ? (
-                  <span className="text-blue-700 font-medium text-[11px] bg-white px-2 py-0.5 rounded shadow-sm">
+                  <span className="text-blue-700 font-medium text-[11px] bg-white px-2 py-0.5 rounded shadow-sm pointer-events-none">
                     {new Date(selectedNextDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                   </span>
                 ) : null}
-                <div className="relative flex items-center justify-center h-5 w-5 hover:bg-blue-100 rounded-full transition-colors">
-                  <Calendar className="h-3.5 w-3.5 text-red-800 pointer-events-none" />
-                  <input
-                    type="date"
-                    {...register("nextFollowupDate")}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                    title="Select Next Follow-Up Date"
-                  />
+                <div className="flex items-center justify-center h-5 w-5 rounded-full pointer-events-none">
+                  <Calendar className="h-3.5 w-3.5 text-red-800" />
                 </div>
+                <input
+                  type="date"
+                  {...register("nextFollowupDate")}
+                  onClick={(e) => {
+                    if (e.target.showPicker) {
+                      try {
+                        e.target.showPicker();
+                      } catch (err) {}
+                    }
+                  }}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                  title="Select Next Follow-Up Date"
+                />
               </div>
             </div>
 
@@ -549,6 +563,11 @@ function PartnerFollowUpDrawer({
           </form>
         </div>
       </div>
+      <UserProfileModal
+        user={selectedUserProfile}
+        isOpen={!!selectedUserProfile}
+        onClose={() => setSelectedUserProfile(null)}
+      />
     </Drawer>
   );
 }

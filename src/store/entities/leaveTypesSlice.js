@@ -8,6 +8,14 @@ export const fetchLeaveTypes = createAsyncThunk("entities/leaveTypes/fetchAll", 
     const res = await axiosClient.get("/leave-types", { params });
     return res.data;
   } catch (err) {
+    if (err.response?.status === 403) {
+      try {
+        const fallbackRes = await axiosClient.get("/leave-types/for-apply", { params });
+        return fallbackRes.data;
+      } catch (fallbackErr) {
+        return rejectWithValue(err.response?.data?.message || "Failed to fetch leave types");
+      }
+    }
     return rejectWithValue(err.response?.data?.message || "Failed to fetch leave types");
   }
 });

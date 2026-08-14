@@ -678,18 +678,32 @@ export default function TaskTable() {
               onSave={(val) => handleUpdate(row.original.id, row.original.version, { assigneeIds: val })}
               renderValue={() => {
                 if (assignees.length === 0) return <span className="text-gray-400 text-[13px]">Unassigned</span>;
+                if (assignees.length === 1) {
+                  const user = assignees[0].user || assignees[0];
+                  const userName = user?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : "Unknown");
+                  const { bg, text } = getAvatarColor(userName);
+                  return (
+                    <div className="flex items-center gap-2 w-full truncate" title={userName}>
+                      <div className={`w-5 h-5 rounded-full ${bg} flex items-center justify-center text-[9px] font-medium ${text} shrink-0`}>
+                        {getInitials(userName)}
+                      </div>
+                      <span className="text-[13px] text-gray-700 truncate">{userName}</span>
+                    </div>
+                  );
+                }
                 return (
                   <div className="flex items-center -space-x-1 p-1 px-2 w-full truncate">
                     {assignees.slice(0, 3).map((assignee, idx) => {
                       const user = assignee.user || assignee;
-                      const { bg, text } = getAvatarColor(user?.name || "");
+                      const userName = user?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : "Unknown");
+                      const { bg, text } = getAvatarColor(userName);
                       return (
                         <div
                           key={user?.id || idx}
                           className={`w-6 h-6 rounded-full border border-white ${bg} flex items-center justify-center text-[9px] font-medium ${text}`}
-                          title={user?.name || "Unknown"}
+                          title={userName}
                         >
-                          {getInitials(user?.name || "")}
+                          {getInitials(userName)}
                         </div>
                       );
                     })}

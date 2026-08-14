@@ -27,6 +27,7 @@ import {
 } from "@/modules/chat/store/chatSlice";
 import { getConversationDisplay } from "@/modules/chat/utils/getConversationDisplay";
 import Avatar from "../Timeline/Avatar";
+import UserProfileModal from "../Common/UserProfileModal";
 import { getAvatarUrl } from "@/lib/axios";
 import { ChatAPI } from "@/api/chat.api";
 import { useQueryClient } from "@tanstack/react-query";
@@ -325,9 +326,10 @@ export default function ConversationList({
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState(null); // { x, y, conversation, isPinned, isMuted, isFavorite, isPrivileged }
-  
+
   // Custom Confirmation Modal state
   const [modalConfig, setModalConfig] = useState(null); // { title, message, confirmLabel, cancelLabel, onConfirm, isDestructive }
+  const [selectedAvatarUser, setSelectedAvatarUser] = useState(null);
 
   const handleContextMenu = useCallback((e, c, isPinned, isMuted, isFavorite, isPrivileged) => {
     e.preventDefault();
@@ -617,25 +619,36 @@ export default function ConversationList({
                   onContextMenu={(e) => handleContextMenu(e, c, isPinned, isMuted, isFavorite, isPrivileged)}
                   className={`w-full flex items-center h-[58px] pr-3 rounded-r-lg rounded-l-none text-xs transition-all duration-100 cursor-pointer text-slate-700
                     ${isActive
-                      ? "bg-slate-100/90 border-l-[3.5px] border-blue-600 pl-[8.5px] font-semibold shadow-xs"
+                      ? "bg-slate-200/80 border-blue-600 pl-[8.5px] font-semibold shadow-xs"
                       : "border-l-[3.5px] border-transparent pl-[8.5px] hover:bg-slate-100/50 hover:text-slate-900"
                     }`}
                 >
                   <div className="flex items-center gap-2.5 truncate flex-1 min-w-0 h-full">
                     {/* Avatar presence rendering */}
-                    <div className="relative flex-shrink-0">
+                    <div
+                      className="relative flex-shrink-0 cursor-pointer group"
+                      title="View Image"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedAvatarUser({
+                          name: details.title,
+                          avatarUrl: details.avatar,
+                          presence: details.presence,
+                        });
+                      }}
+                    >
                       {c.type === "DIRECT" ? (
-                        <Avatar sender={senderDetails} presence={details.presence} size="md" />
+                        <Avatar sender={senderDetails} presence={details.presence} size="md" disableModal />
                       ) : details.avatar ? (
                         <img
                           src={getAvatarUrl(details.avatar)}
                           alt={details.title}
-                          className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                          className="h-10 w-10 rounded-full object-cover border border-slate-200 group-hover:scale-105 transition-transform"
                         />
                       ) : (
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center border transition-colors ${isActive
-                            ? "bg-blue-55 border-blue-200 text-blue-600"
-                            : "bg-slate-200/50 border-slate-200/20 text-slate-500"
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center border transition-colors group-hover:scale-105 ${isActive
+                          ? "bg-blue-55 border-blue-200 text-blue-600"
+                          : "bg-slate-200/50 border-slate-200/20 text-slate-500"
                           }`}>
                           {c.type === "CHANNEL" ? (
                             <Hash className="h-5.5 w-5.5" />
@@ -735,6 +748,15 @@ export default function ConversationList({
           cancelLabel={modalConfig.cancelLabel}
           onConfirm={modalConfig.onConfirm}
           isDestructive={modalConfig.isDestructive}
+        />
+      )}
+
+      {/* Full Image Preview Modal */}
+      {selectedAvatarUser && (
+        <UserProfileModal
+          user={selectedAvatarUser}
+          isOpen={!!selectedAvatarUser}
+          onClose={() => setSelectedAvatarUser(null)}
         />
       )}
     </div>

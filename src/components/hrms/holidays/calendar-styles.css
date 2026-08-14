@@ -120,17 +120,24 @@
   box-shadow: none !important;
   cursor: pointer;
   height: 100% !important;
+  white-space: normal !important;
 }
 
 .holiday-calendar-container .fc-h-event {
   border: none !important;
   background: transparent !important;
   height: 100% !important;
+  white-space: normal !important;
 }
 
-.holiday-calendar-container .fc-daygrid-block-event .fc-event-main {
+.holiday-calendar-container .fc-daygrid-block-event .fc-event-main,
+.holiday-calendar-container .fc-event-main,
+.holiday-calendar-container .fc-event-title-container,
+.holiday-calendar-container .fc-event-title {
   padding: 0 !important;
   height: 100% !important;
+  white-space: normal !important;
+  overflow: visible !important;
 }
 
 /* Force all wrapping containers within day-events to span full height and width */
@@ -143,6 +150,7 @@
   display: block !important;
   margin: 0 !important;
   padding: 0 !important;
+  white-space: normal !important;
 }
 
 .holiday-calendar-container .fc-daygrid-day-events {
@@ -160,7 +168,7 @@
 .holiday-calendar-container .fc-daygrid-day-frame {
   position: relative !important;
   height: 100% !important;
-  min-height: 80px !important;
+  min-height: 90px !important;
 }
 
 /* Day number position and z-index to overlay on event card background */
