@@ -572,14 +572,14 @@ export default function ConversationList({
           No conversations found.
         </div>
       ) : (
-        <ul className="space-y-[3px]">
+        <ul className="space-y-0.5 px-1">
           {filteredList.map((c) => {
             const isActive = activeId === c.id;
             const currentUserMembership = c.members?.find((m) => m.userId === currentUser?.id) || {};
             const isMuted = currentUserMembership.isNotificationMuted || currentUserMembership.isMuted;
             const isPinned = currentUserMembership.isPinned;
             const isFavorite = currentUserMembership.isFavorite;
-            const unreadCount = currentUserMembership.unreadMessagesCount || 0;
+            const unreadCount = c.unreadCount !== undefined ? c.unreadCount : (currentUserMembership.unreadMessagesCount || 0);
             const isPrivileged = ["OWNER", "ADMIN", "MODERATOR"].includes(currentUserMembership.role);
 
             const details = getConversationDisplay(c, currentUser, presenceMap, typingState);
@@ -617,89 +617,102 @@ export default function ConversationList({
                 <button
                   onClick={() => dispatch(setActiveConversationId(c.id))}
                   onContextMenu={(e) => handleContextMenu(e, c, isPinned, isMuted, isFavorite, isPrivileged)}
-                  className={`w-full flex items-center h-[58px] pr-3 rounded-r-lg rounded-l-none text-xs transition-all duration-100 cursor-pointer text-slate-700
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 cursor-pointer group
                     ${isActive
-                      ? "bg-slate-200/80 border-blue-600 pl-[8.5px] font-semibold shadow-xs"
-                      : "border-l-[3.5px] border-transparent pl-[8.5px] hover:bg-slate-100/50 hover:text-slate-900"
+                      ? "bg-blue-50/80 border border-blue-100 shadow-sm"
+                      : "border border-transparent hover:bg-slate-50/80 hover:border-slate-100/60"
                     }`}
                 >
-                  <div className="flex items-center gap-2.5 truncate flex-1 min-w-0 h-full">
-                    {/* Avatar presence rendering */}
-                    <div
-                      className="relative flex-shrink-0 cursor-pointer group"
-                      title="View Image"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedAvatarUser({
-                          name: details.title,
-                          avatarUrl: details.avatar,
-                          presence: details.presence,
-                        });
-                      }}
-                    >
-                      {c.type === "DIRECT" ? (
-                        <Avatar sender={senderDetails} presence={details.presence} size="md" disableModal />
-                      ) : details.avatar ? (
-                        <img
-                          src={getAvatarUrl(details.avatar)}
-                          alt={details.title}
-                          className="h-10 w-10 rounded-full object-cover border border-slate-200 group-hover:scale-105 transition-transform"
-                        />
-                      ) : (
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center border transition-colors group-hover:scale-105 ${isActive
-                          ? "bg-blue-55 border-blue-200 text-blue-600"
-                          : "bg-slate-200/50 border-slate-200/20 text-slate-500"
-                          }`}>
-                          {c.type === "CHANNEL" ? (
-                            <Hash className="h-5.5 w-5.5" />
-                          ) : (
-                            <Users className="h-5.5 w-5.5" />
-                          )}
-                        </div>
-                      )}
+                  {/* Avatar */}
+                  <div
+                    className="relative flex-shrink-0 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedAvatarUser({
+                        name: details.title,
+                        avatarUrl: details.avatar,
+                        presence: details.presence,
+                      });
+                    }}
+                  >
+                    {c.type === "DIRECT" ? (
+                      <Avatar sender={senderDetails} presence={details.presence} size="md" disableModal />
+                    ) : details.avatar ? (
+                      <img
+                        src={getAvatarUrl(details.avatar)}
+                        alt={details.title}
+                        className="h-10 w-10 rounded-full object-cover border border-slate-200 group-hover:ring-2 group-hover:ring-blue-100 transition-all"
+                      />
+                    ) : (
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center border transition-all
+                        ${isActive
+                          ? "bg-blue-100 border-blue-200 text-blue-600"
+                          : "bg-slate-100 border-slate-200 text-slate-500 group-hover:bg-slate-200/70"
+                        }`}>
+                        {c.type === "CHANNEL" ? (
+                          <Hash className="h-5 w-5" />
+                        ) : (
+                          <Users className="h-5 w-5" />
+                        )}
+                      </div>
+                    )}
 
-                      {/* Pinned indicator badge on avatar */}
-                      {isPinned && (
-                        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center">
-                          <Pin className="h-2 w-2 text-white" />
-                        </span>
-                      )}
+                    {/* Pinned badge on avatar */}
+                    {isPinned && (
+                      <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center shadow-sm">
+                        <Pin className="h-2 w-2 text-white" />
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Text content */}
+                  <div className="flex flex-col flex-1 min-w-0 gap-[1px]">
+
+                    {/* Row 1: Name + Time */}
+                    <div className="flex items-center justify-between w-full">
+                      <span className={`truncate text-[14.5px] leading-snug
+                        ${unreadCount > 0 && !isActive
+                          ? "font-bold text-slate-900"
+                          : isActive ? "font-semibold text-blue-700" : "font-semibold text-slate-800 group-hover:text-slate-900"
+                        }`}>
+                        {details.title}
+                      </span>
+                      <span className={`text-[11px] font-medium shrink-0 ml-2 tabular-nums
+                        ${unreadCount > 0 && !isActive ? "text-emerald-600 font-semibold" : isActive ? "text-blue-500" : "text-slate-400"}`}>
+                        {lastMsgTime}
+                      </span>
                     </div>
 
-                    {/* Meta info columns */}
-                    <div className="flex flex-col items-start truncate flex-grow text-left">
-                      <div className="flex items-center justify-between w-full">
-                        <span className={`truncate text-[13px] leading-tight ${isActive ? "text-slate-900 font-bold" : "text-slate-800 font-semibold"}`}>
-                          {details.title}
-                        </span>
-                        <span className={`text-[10px] shrink-0 ml-2 ${isActive ? "text-slate-600 font-semibold" : "text-slate-400"}`}>
-                          {lastMsgTime}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between w-full mt-0.5">
+                    {/* Row 2: Preview + Unread badge */}
+                    <div className="flex items-center justify-between w-full mt-0.5">
+                      <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                        {isMuted && <VolumeX className="h-3 w-3 text-slate-400 flex-shrink-0" />}
+                        {isPinned && <Pin className={`h-3 w-3 rotate-45 flex-shrink-0 ${isActive ? "text-blue-500" : "text-blue-400"}`} />}
+                        {isFavorite && <Star className="h-3 w-3 text-amber-400 fill-amber-400 flex-shrink-0" />}
                         {details.isTyping ? (
-                          <span className={`text-[10.5px] font-semibold animate-pulse ${isActive ? "text-blue-700" : "text-emerald-600"}`}>
+                          <span className={`text-[11.5px] font-semibold animate-pulse
+                            ${isActive ? "text-blue-600" : "text-emerald-600"}`}>
                             typing...
                           </span>
                         ) : (
-                          <span className={`text-[11.5px] truncate max-w-[160px] sm:max-w-[180px] leading-tight ${isActive ? "text-slate-700 font-medium" : "text-slate-500"}`}>
+                          <span className={`text-[12.5px] truncate leading-tight
+                            ${unreadCount > 0 && !isActive
+                              ? "text-slate-700 font-medium"
+                              : isActive ? "text-slate-600" : "text-slate-500"
+                            }`}>
                             {lastMsgContent}
                           </span>
                         )}
-
-                        <div className="flex items-center gap-1 shrink-0 ml-2 select-none">
-                          {isPinned && <Pin className={`h-3 w-3 rotate-45 ${isActive ? "text-blue-600" : "text-blue-500"}`} />}
-                          {isFavorite && <Star className={`h-3 w-3 ${isActive ? "text-amber-500 fill-amber-500" : "text-amber-500 fill-amber-500"}`} />}
-                          {isMuted && <VolumeX className={`h-3 w-3 ${isActive ? "text-slate-500" : "text-slate-450 text-slate-400"}`} />}
-                          {unreadCount > 0 && !isActive && (
-                            <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[9.5px] font-bold rounded-full leading-none min-w-[16px] text-center">
-                              {unreadCount}
-                            </span>
-                          )}
-                        </div>
                       </div>
+
+                      {/* WhatsApp-style unread badge */}
+                      {unreadCount > 0 && !isActive && (
+                        <span className="ml-2 flex-shrink-0 h-5 min-w-[20px] px-1.5 bg-emerald-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center shadow-sm leading-none">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
                     </div>
+
                   </div>
                 </button>
               </li>

@@ -327,6 +327,16 @@ export default function ChatPage() {
     const handleMessageCreated = (payload) => {
       if (payload?.conversationId) {
         queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.messages(payload.conversationId) });
+
+        const currentUserId = userRef.current?.id || userRef.current?.userId;
+        const msgSenderId = payload.message?.senderId || payload.message?.sender?.id;
+        const isFromOther = Number(msgSenderId) !== Number(currentUserId);
+        const isActiveConv = Number(activeConversationIdRef.current) === Number(payload.conversationId);
+
+        if (isActiveConv && isFromOther && payload.message?.id) {
+          ChatAPI.markRead(payload.conversationId, payload.message.id).catch(() => {});
+        }
+
         queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.conversations() });
       }
     };
@@ -580,6 +590,43 @@ export default function ChatPage() {
     if (!messagesData) return [];
     return messagesData.pages.flatMap((page) => page.data || []);
   }, [messagesData]);
+
+  // Auto-mark conversation as read when opened or when messages update while active
+  useEffect(() => {
+    if (!activeConversationId) return;
+
+    const lastMsg = messagesList.length > 0
+      ? messagesList[messagesList.length - 1]
+      : activeConversation?.lastMessage;
+    const lastMsgId = lastMsg?.id;
+
+    if (lastMsgId) {
+      ChatAPI.markRead(activeConversationId, lastMsgId)
+        .then(() => {
+          queryClient.setQueriesData({ queryKey: CHAT_QUERY_KEYS.conversations() }, (oldData) => {
+            if (!oldData?.data) return oldData;
+            return {
+              ...oldData,
+              data: oldData.data.map((c) => {
+                if (c.id === activeConversationId) {
+                  return {
+                    ...c,
+                    unreadCount: 0,
+                    members: c.members?.map((m) =>
+                      Number(m.userId) === Number(user?.id || user?.userId)
+                        ? { ...m, unreadMessagesCount: 0 }
+                        : m
+                    ),
+                  };
+                }
+                return c;
+              }),
+            };
+          });
+        })
+        .catch(() => {});
+    }
+  }, [activeConversationId, messagesList, activeConversation?.lastMessage?.id, queryClient, user]);
 
   const mergedMessagesList = useMemo(() => {
     const dbMessages = messagesList;
