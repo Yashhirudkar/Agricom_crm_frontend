@@ -286,7 +286,11 @@ export default function ShipmentListPage({ preSelectedShipmentId }) {
           <Pagination
             currentPage={filters.page}
             totalPages={totalPages}
-            onPageChange={(p) => setFilters(prev => ({ ...prev, page: p }))}
+            onPageChange={(p) => setFilters((prev) => ({ ...prev, page: p }))}
+            totalItems={total}
+            itemsPerPage={filters.limit}
+            onLimitChange={(newLimit) => setFilters((prev) => ({ ...prev, limit: newLimit, page: 1 }))}
+            itemName="shipments"
           />
         </div>
       </div>
