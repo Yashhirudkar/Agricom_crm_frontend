@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import Select from "react-select";
-import { Country, State, City } from "country-state-city";
+import { State, City } from "country-state-city";
+import { getAllCountryOptions, getAlpha2Code } from "@/lib/countryUtils";
 
 export default function LocationHierarchy({ prefix, form, setForm, errors, isView }) {
   const labelPrefix = prefix === "origin" ? "Origin" : "Destination";
@@ -19,22 +20,17 @@ export default function LocationHierarchy({ prefix, form, setForm, errors, isVie
 
   // 1. Generate sorted country options once
   const countryOptions = useMemo(() => {
-    return Country.getAllCountries()
-      .map((c) => ({
-        value: c.name,
-        label: c.name,
-        isoCode: c.isoCode,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+    return getAllCountryOptions().map((c) => ({
+      value: c.value,
+      label: c.label,
+      isoCode: c.alpha2,
+    }));
   }, []);
 
   // 2. Resolve country ISO code when countryValue changes
   const selectedCountryCode = useMemo(() => {
     if (!countryValue) return "";
-    const country = Country.getAllCountries().find(
-      (c) => c.name.toLowerCase() === countryValue.toLowerCase()
-    );
-    return country ? country.isoCode : "";
+    return getAlpha2Code(countryValue);
   }, [countryValue]);
 
   // 3. Load states for selected country

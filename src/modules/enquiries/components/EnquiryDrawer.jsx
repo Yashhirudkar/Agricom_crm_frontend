@@ -19,7 +19,7 @@ import { useCurrencyMaster } from "../hooks/useCurrencyMaster";
 import LocationHierarchy from "@/components/common/LocationHierarchy";
 import PortSelector from "@/components/common/PortSelector";
 import axiosClient from "@/lib/axios";
-import { Country } from "country-state-city";
+import { getAllCountryOptions } from "@/lib/countryUtils";
 
 export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, onSaveSuccess }) {
   const { masters, loading: mastersLoading } = useEnquiriesMasters();
@@ -253,13 +253,11 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
 
   // Country options for SHIP mode
   const countryOptions = useMemo(() => {
-    return Country.getAllCountries()
-      .map((c) => ({
-        value: c.name,
-        label: c.name,
-        isoCode: c.isoCode,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+    return getAllCountryOptions().map((c) => ({
+      value: c.value,
+      label: c.label,
+      isoCode: c.alpha2,
+    }));
   }, []);
 
   const selectedOriginCountryOption = useMemo(() => {

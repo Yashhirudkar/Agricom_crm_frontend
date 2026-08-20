@@ -3,11 +3,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Package, ChevronDown, Search, X, Loader2 } from "lucide-react";
 import { PORTS_BY_COUNTRY } from "@/constants/portsData";
 import CountrySelect from "@/components/common/CountrySelect";
-import countriesLib from "i18n-iso-countries";
-import enLocale from "i18n-iso-countries/langs/en.json";
+import { getAlpha2Code } from "@/lib/countryUtils";
 import axiosClient from "@/lib/axios";
-
-countriesLib.registerLocale(enLocale);
 
 export default function EnquiryDetailsSection({ form, setForm, errors, masters = {}, isView }) {
   const {
@@ -101,7 +98,7 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
   }, []);
 
   // Port logic based on Origin Country
-  const originCode = form.originCountry ? (countriesLib.getAlpha2Code(form.originCountry, "en") || "") : "";
+  const originCode = form.originCountry ? (getAlpha2Code(form.originCountry) || "") : "";
   const originPorts = PORTS_BY_COUNTRY[originCode] || [];
 
   return (
