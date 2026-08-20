@@ -12,6 +12,7 @@ import EnquiriesFilter from "@/modules/enquiries/components/EnquiriesFilter";
 import Pagination from "@/components/common/Pagination";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import PartnerFollowUpDrawer from "@/components/masters/partners/PartnerFollowUpDrawer";
+import EnquiryDrawer from "@/modules/enquiries/components/EnquiryDrawer";
 
 export default function CompletedEnquiriesListPage() {
   const router = useRouter();
@@ -26,6 +27,10 @@ export default function CompletedEnquiriesListPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [followUpPartner, setFollowUpPartner] = useState(null);
+
+  // Form Drawer states
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editEnquiry, setEditEnquiry] = useState(null);
 
   const completedQuery = useEnquiries(activeCompanyId, completedTab, search);
 
@@ -133,6 +138,10 @@ export default function CompletedEnquiriesListPage() {
           onFollowUp={handleFollowUp}
           onDelete={(e) => setDeleteTarget(e)}
           onExecute={(e) => router.push(`/sales-contracts/new?enquiryId=${e.id}`)}
+          onView={(e) => {
+            setEditEnquiry(e);
+            setIsFormOpen(true);
+          }}
         />
 
         <Pagination
@@ -163,6 +172,17 @@ export default function CompletedEnquiriesListPage() {
         onSaveSuccess={() => {
           completedQuery.fetchEnquiries();
         }}
+      />
+
+      {/* Enquiry View Drawer */}
+      <EnquiryDrawer
+        isOpen={isFormOpen}
+        onClose={() => {
+          setIsFormOpen(false);
+          setEditEnquiry(null);
+        }}
+        editData={editEnquiry}
+        isViewMode={true}
       />
     </div>
   );

@@ -166,6 +166,11 @@ export default function EnquiriesListPage() {
             setIsViewMode(false);
             setIsFormOpen(true);
           }}
+          onView={(e) => {
+            setEditEnquiry(e);
+            setIsViewMode(true);
+            setIsFormOpen(true);
+          }}
         />
 
         <Pagination currentPage={activeQuery.page} totalPages={activeQuery.totalPages} onPageChange={activeQuery.setPage} />

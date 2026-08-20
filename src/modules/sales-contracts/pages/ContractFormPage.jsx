@@ -190,6 +190,7 @@ export default function ContractFormPage({ editId, viewId }) {
           buyerCompanySeal: c.buyerCompanySeal || "",
           numShipments: c.shipments?.length || 3,
           items: (c.items || []).map(item => ({
+            id: item.id,
             productId: item.productId || "",
             bagTypeId: item.bagTypeId || "",
             packingTypeId: item.packingTypeId || "",
@@ -201,19 +202,21 @@ export default function ContractFormPage({ editId, viewId }) {
             remarks: item.remarks || "",
           })),
           shipments: (c.shipments || []).map((s, i) => ({
-            shipmentNo: i + 1,
+            id: s.id,
+            shipmentNo: s.shipmentNo || i + 1,
             shipmentDate: s.shipmentDate ? s.shipmentDate.split("T")[0] : "",
-            quantity: s.quantity || "",
-            noOfContainers: s.noOfContainers || "",
-            ratePerMt: s.ratePerMt || "",
+            quantity: s.quantity ?? "",
+            noOfContainers: s.noOfContainers != null ? s.noOfContainers : "",
+            ratePerMt: s.ratePerMt != null ? s.ratePerMt : "",
             // Normalize to Contract Currency — discard any row-level divergence from older data
             currencyCode: c.currencyCode || "",
-            purchaseRate: s.purchaseRate || "",
-            forex: s.forex || "",
-            freight: s.freight || "",
+            purchaseRate: s.purchaseRate != null ? s.purchaseRate : "",
+            forex: s.forex != null ? s.forex : "",
+            freight: s.freight != null ? s.freight : "",
             remarks: s.remarks || "",
           })),
           documents: (c.documents || []).map(d => ({
+            id: d.id,
             tradeDocumentId: d.tradeDocumentId,
             isMandatory: d.isMandatory || false,
             remarks: d.remarks || "",
@@ -378,6 +381,7 @@ export default function ContractFormPage({ editId, viewId }) {
       totalAmount,
       status: asDraft ? "Draft" : "Active",
       items: validItems.map(i => ({
+        ...(i.id ? { id: Number(i.id) } : {}),
         productId: Number(i.productId),
         bagTypeId: Number(i.bagTypeId),
         packingTypeId: Number(i.packingTypeId),
@@ -388,6 +392,8 @@ export default function ContractFormPage({ editId, viewId }) {
         remarks: [i.marking, i.remarks].filter(Boolean).join(" | ") || null,
       })),
       shipments: validShipments.map(s => ({
+        ...(s.id ? { id: Number(s.id) } : {}),
+        shipmentNo: s.shipmentNo ? Number(s.shipmentNo) : undefined,
         shipmentDate: s.shipmentDate,
         quantity: parseFloat(s.quantity) || 0,
         noOfContainers: s.noOfContainers !== "" && s.noOfContainers !== null && s.noOfContainers !== undefined ? parseInt(s.noOfContainers, 10) : null,
@@ -398,6 +404,7 @@ export default function ContractFormPage({ editId, viewId }) {
         remarks: s.remarks || null,
       })),
       documents: (form.documents || []).map(d => ({
+        ...(d.id ? { id: Number(d.id) } : {}),
         tradeDocumentId: Number(d.tradeDocumentId),
         isMandatory: !!d.isMandatory,
         remarks: d.remarks || null,

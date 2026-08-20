@@ -1,10 +1,13 @@
 import React from "react";
+import { useRouter } from "next/navigation";
 import { currencies } from "@/constants/currenciesData";
 import { Eye, Pencil, Trash2, Rocket, FolderOpen } from "lucide-react";
 import ContractStatusBadge from "./ContractStatusBadge";
 import ScheduleBadge from "./ScheduleBadge";
+import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 
-export default function ContractsTable({ contracts, loading, onView, onEdit, onDelete, onDocuments }) {
+export default function ContractsTable({ contracts, loading, onView, onEdit, onDelete, onDocuments, onExecutePurchase }) {
+  const router = useRouter();
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -104,10 +107,26 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                   )}
                   <button
                     type="button"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (onExecutePurchase) {
+                        onExecutePurchase(c);
+                      } else {
+                        try {
+                          const res = await purchaseContractApi.create({ salesContractId: c.id });
+                          const pcId = res.data?.id;
+                          if (pcId) {
+                            router.push(`/sales/purchase-contracts/${pcId}`);
+                          }
+                        } catch (err) {
+                          console.error("Failed to open Purchase Contract workspace", err);
+                        }
+                      }
+                    }}
                     className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
-                    title="Execute Contract"
+                    title="Execute + Workspace"
                   >
-                    <Rocket className="h-3.5 w-3.5" />
+                    <Rocket className="h-3.5 w-3.5 text-purple-600 animate-pulse" />
                   </button>
                   {(c.status === "Draft" || c.status === "Cancelled") && (
                     <button

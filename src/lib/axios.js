@@ -137,13 +137,15 @@ axiosClient.interceptors.response.use(
     }
     const originalRequest = error.config;
 
+    const isBackgroundPolling = originalRequest?.url?.includes("/chat/unread/total");
+
     const isRefreshable401 =
       error.response?.status === 401 &&
       !originalRequest?._retry &&
       !originalRequest?.url?.includes("/auth/login") &&
       !originalRequest?.url?.includes("/auth/refresh");
 
-    if (!isRefreshable401) {
+    if (!isRefreshable401 && !isBackgroundPolling) {
       if (error.response) {
         console.error("[Axios Error]", originalRequest?.url, error.response.status, error.response.data);
       } else if (!axios.isCancel(error)) {
@@ -222,7 +224,7 @@ axiosClient.interceptors.response.use(
       // Also ignore 401s here to prevent displaying error messages to users when silent refresh is about to occur
       if (error.response?.status >= 400 && error.response?.status !== 404 && error.response?.status !== 401 && !isConversations403) {
         toast.error(message);
-      } else if (error.message === "Network Error") {
+      } else if (error.message === "Network Error" && !isBackgroundPolling) {
         toast.error("Network connection lost. Please check your internet connection.");
       }
     }

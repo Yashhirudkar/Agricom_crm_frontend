@@ -10,7 +10,8 @@ import {
   Loader2, 
   Search, 
   X, 
-  ChevronDown 
+  ChevronDown,
+  User
 } from "lucide-react";
 import { enquiriesApi } from "../services/enquiriesApi";
 import { useEnquiriesMasters } from "../hooks/useEnquiries";
@@ -27,6 +28,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [errors, setErrors] = useState({});
+  const [createdByName, setCreatedByName] = useState("");
 
   const [form, setForm] = useState({
     enquiryNo: "",
@@ -82,6 +84,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
   useEffect(() => {
     if (isOpen) {
       if (editData) {
+        setCreatedByName(editData.createdByName || editData.creator?.name || "");
         const initialForm = {
           enquiryNo: editData.enquiryNo || "",
           enquiryDate: editData.enquiryDate ? editData.enquiryDate.split("T")[0] : "",
@@ -115,6 +118,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
         enquiriesApi.getOne(editData.id)
           .then((fresh) => {
             if (fresh) {
+              setCreatedByName(fresh.createdByName || fresh.creator?.name || fresh.creator?.email || "");
               const freshForm = {
                 enquiryNo: fresh.enquiryNo || "",
                 enquiryDate: fresh.enquiryDate ? fresh.enquiryDate.split("T")[0] : "",
@@ -146,6 +150,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           })
           .catch((e) => console.error("Error refreshing background enquiry", e));
       } else {
+        setCreatedByName("");
         const emptyForm = {
           enquiryNo: "",
           enquiryDate: new Date().toISOString().split("T")[0],
@@ -491,6 +496,16 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                         disabled
                         className={`${inp} bg-gray-50 text-gray-500 font-medium`}
                       />
+                    </div>
+                  )}
+
+                  {(editData || isViewMode) && (
+                    <div>
+                      <label className={lbl}>Created By</label>
+                      <div className={`${inp} bg-gray-50 text-gray-700 font-semibold flex items-center gap-1.5`}>
+                        <User className="h-3.5 w-3.5 text-gray-400" />
+                        <span>{createdByName || editData?.createdByName || editData?.creator?.name || "—"}</span>
+                      </div>
                     </div>
                   )}
 

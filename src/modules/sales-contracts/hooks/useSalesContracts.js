@@ -75,7 +75,7 @@ export function useSalesMasters() {
       try {
         const pNew = { limit: 100, status: "Active" };
         const pOld = { limit: 100, isActive: true };
-        const [st, pt, td, rolesRes, prod, countries, bt, pkt, bsp, currRes] = await Promise.all([
+        const [st, pt, td, rolesRes, prod, countries, bt, pkt, bsp, currRes, stchRes, mrkRes] = await Promise.all([
           mastersApi.getShipmentTypes(pNew),
           mastersApi.getPaymentTerms(pNew),
           mastersApi.getTradeDocuments(pNew),
@@ -86,6 +86,8 @@ export function useSalesMasters() {
           mastersApi.getPackingTypes(),
           mastersApi.getBagSpecs(),
           mastersApi.getCurrencies(pNew).catch(() => null),
+          mastersApi.getStitchingTypes(),
+          mastersApi.getMarkingTypes(),
         ]);
 
         const fetchedCurrencies = currRes?.data?.data || [];
@@ -127,6 +129,8 @@ export function useSalesMasters() {
           bagTypes: Array.isArray(bt.data) ? bt.data : (bt.data.data || []),
           packingTypes: Array.isArray(pkt.data) ? pkt.data : (pkt.data.data || []),
           bagSpecifications: bsp.data.data || bsp.data || [],
+          stitchingTypes: extractData(stchRes),
+          markingTypes: extractData(mrkRes),
         });
       } catch (e) {
         console.error("Failed to load masters", e);

@@ -51,6 +51,10 @@ export const mastersApi = {
   // bag-specifications uses isActive param
   getBagSpecs: () =>
     axiosClient.get("/masters/bag-specifications", { params: { isActive: true, limit: 100 } }),
+  getStitchingTypes: () =>
+    axiosClient.get("/masters/stitching-types").catch(() => ({ data: [] })),
+  getMarkingTypes: () =>
+    axiosClient.get("/masters/marking-types").catch(() => ({ data: [] })),
   getCurrencies: (params) =>
     axiosClient.get("/masters/currencies", { params }),
   createCurrency: (data) =>
