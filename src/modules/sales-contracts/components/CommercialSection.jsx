@@ -10,10 +10,7 @@ import {
   getLocations,
 } from "../services/locationProvider";
 import CountrySelect from "@/components/common/CountrySelect";
-import countriesLib from "i18n-iso-countries";
-import enLocale from "i18n-iso-countries/langs/en.json";
-
-countriesLib.registerLocale(enLocale);
+import { getAlpha2Code } from "@/lib/countryUtils";
 
 
 // ---------------------------------------------------------------------------
@@ -168,8 +165,8 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
   const err = "text-[10px] text-red-500 mt-1";
 
   // Resolve country ISO codes
-  const originCode = form.originCountry ? (countriesLib.getAlpha2Code(form.originCountry, "en") || "") : "";
-  const destCode = form.destinationCountry ? (countriesLib.getAlpha2Code(form.destinationCountry, "en") || "") : "";
+  const originCode = form.originCountry ? (getAlpha2Code(form.originCountry) || "") : "";
+  const destCode = form.destinationCountry ? (getAlpha2Code(form.destinationCountry) || "") : "";
 
   // Current transport modes
   const originTransportMode = form.originTransportMode || "sea";

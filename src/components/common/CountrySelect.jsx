@@ -1,25 +1,18 @@
 import React, { useMemo, useState } from "react";
 import CreatableSelect from "react-select/creatable";
-import countries from "i18n-iso-countries";
-import enLocale from "i18n-iso-countries/langs/en.json";
-
-// Register the English locale language resource
-countries.registerLocale(enLocale);
+import {
+  getAllCountryOptions,
+  getAlpha2Code,
+  findCountryOption,
+  COUNTRY_ALIASES,
+} from "@/lib/countryUtils";
 
 export default function CountrySelect({ value, onChange, error, className }) {
   const [inputValue, setInputValue] = useState("");
 
   // 1. Generate sorted country options once and cache it via useMemo
   const countryOptions = useMemo(() => {
-    const rawNames = countries.getNames("en");
-    return Object.entries(rawNames)
-      .map(([alpha2, name]) => ({
-        label: name,
-        value: name,
-        alpha2: alpha2,
-        alpha3: countries.alpha2ToAlpha3(alpha2) || "",
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+    return getAllCountryOptions();
   }, []);
 
   // 2. Dynamically filter & rank options based on search query so prefix & ISO matches come first
@@ -36,10 +29,14 @@ export default function CountrySelect({ value, onChange, error, className }) {
       // Rank 1: Exact ISO code match or exact country name
       if (alpha2 === q || alpha3 === q || label === q) return 1;
 
-      // Rank 2: Starts with query (e.g. "India", "Indonesia" for "in")
+      // Rank 2: Starts with query (e.g. "China", "India", "Indonesia")
       if (label.startsWith(q)) return 2;
 
-      // Rank 2: Common country aliases (e.g., "uk", "usa", "uae")
+      // Rank 2: Common country aliases (e.g., "uk", "usa", "uae", "prc", "china")
+      const aliasedCode = COUNTRY_ALIASES[q];
+      if (aliasedCode && aliasedCode.toLowerCase() === alpha2) return 2;
+      if (q === "china" && alpha2 === "cn") return 2;
+      if (q === "prc" && alpha2 === "cn") return 2;
       if (q === "uk" && (alpha2 === "gb" || label.includes("united kingdom"))) return 2;
       if (q === "usa" && (alpha2 === "us" || label.includes("united states"))) return 2;
       if (q === "uae" && (alpha2 === "ae" || label.includes("united arab emirates"))) return 2;
@@ -72,13 +69,7 @@ export default function CountrySelect({ value, onChange, error, className }) {
 
   // 3. Map current string value from parent state to select option object
   const selectedOption = useMemo(() => {
-    if (!value) return null;
-    const standard = countryOptions.find(
-      (opt) => opt.label.toLowerCase() === value.toLowerCase()
-    );
-    if (standard) return standard;
-    // Fallback: If not found in standard i18n database, represent as custom option
-    return { label: value, value: value, isCustom: true };
+    return findCountryOption(value, countryOptions);
   }, [value, countryOptions]);
 
   // 4. Handle selection change

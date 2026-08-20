@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import CreatableSelect from "react-select/creatable";
 import { PORTS_BY_COUNTRY } from "@/constants/portsData";
-import { Country } from "country-state-city";
+import { getAlpha2Code } from "@/lib/countryUtils";
 
 export default function PortSelector({ value, onChange, label, placeholder, isView, error, countryName }) {
   const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
@@ -11,10 +11,7 @@ export default function PortSelector({ value, onChange, label, placeholder, isVi
   // Resolve country code from country name
   const selectedCountryCode = useMemo(() => {
     if (!countryName) return "";
-    const country = Country.getAllCountries().find(
-      (c) => c.name.toLowerCase() === countryName.toLowerCase()
-    );
-    return country ? country.isoCode : "";
+    return getAlpha2Code(countryName);
   }, [countryName]);
 
   // Load and map ports for the selected country

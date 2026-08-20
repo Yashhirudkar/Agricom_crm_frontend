@@ -31,10 +31,7 @@ import DynamicFieldRenderer from "@/components/common/DynamicFieldRenderer";
 import { City } from "country-state-city";
 import CountrySelect from "@/components/common/CountrySelect";
 import PartnerDnbTab from "./PartnerDnbTab";
-import countriesLib from "i18n-iso-countries";
-import enLocale from "i18n-iso-countries/langs/en.json";
-
-countriesLib.registerLocale(enLocale);
+import { getAlpha2Code } from "@/lib/countryUtils";
 
 // Custom virtualized MenuList for react-select to handle large options (e.g. cities) smoothly
 const VirtualMenuList = (props) => {
@@ -139,7 +136,7 @@ function PartnerDrawer({
   const watchedCountry = useWatch({ control, name: "country" });
   const watchedCountryIso2 = useMemo(() => {
     if (!watchedCountry) return "";
-    return countriesLib.getAlpha2Code(watchedCountry, "en") || "";
+    return getAlpha2Code(watchedCountry) || "";
   }, [watchedCountry]);
 
   const [citySearchInput, setCitySearchInput] = useState("");

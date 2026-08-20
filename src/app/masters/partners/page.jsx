@@ -4,9 +4,7 @@ import { useEffect, useState, Suspense, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import axiosClient from "@/lib/axios";
-import countriesLib from "i18n-iso-countries";
-import enLocale from "i18n-iso-countries/langs/en.json";
-countriesLib.registerLocale(enLocale);
+import { getCountryNameList } from "@/lib/countryUtils";
 import {
   fetchPartners,
   createPartner,
@@ -145,10 +143,9 @@ function PartnersContent() {
   }, [activeCompanyId]);
 
 
-  // Populate countries from npm package (i18n-iso-countries) — same source as CountrySelect
+  // Populate countries from standard countryUtils (with canonical names like "China")
   const countries = useMemo(() => {
-    const rawNames = countriesLib.getNames("en");
-    return Object.values(rawNames).sort((a, b) => a.localeCompare(b));
+    return getCountryNameList();
   }, []);
 
   // Deep-link: auto-open the follow-up drawer for a partner from notification
