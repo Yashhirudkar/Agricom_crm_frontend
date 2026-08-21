@@ -2,16 +2,8 @@
 import React, { useState } from "react";
 import { ScrollText, Plus, Trash2, GripVertical, AlertCircle } from "lucide-react";
 
-const DEFAULT_TERMS = [
-  "Goods once dispatched cannot be cancelled.",
-  "Subject to Nagpur jurisdiction.",
-  "Payment shall follow agreed payment terms.",
-  "Quality disputes must be reported within agreed timeline.",
-  "All export documents shall be issued after payment compliance.",
-];
-
 export default function TermsSection({ form, setForm, isView }) {
-  const terms = form.terms ?? DEFAULT_TERMS;
+  const terms = Array.isArray(form.terms) ? form.terms : [];
   const [newTerm, setNewTerm] = useState("");
   const [editIdx, setEditIdx] = useState(null);
   const [editValue, setEditValue] = useState("");

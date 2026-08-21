@@ -82,6 +82,7 @@ export default function PurchaseContractWorkspacePage({ contractId }) {
   });
 
   const [selectedShipmentIds, setSelectedShipmentIds] = useState([]);
+  const [isShipmentsInitialized, setIsShipmentsInitialized] = useState(false);
   const [shipmentScheduleData, setShipmentScheduleData] = useState({});
   const [saving, setSaving] = useState(false);
 
@@ -127,12 +128,14 @@ export default function PurchaseContractWorkspacePage({ contractId }) {
         notes: contract.notes || f.notes || "",
         incoterm: contract.incoterm || salesContract.shipmentType?.name || salesContract.shipmentType?.code || f.incoterm || "",
         deliveryPlace: contract.deliveryPlace || salesContract.portOfLoading || salesContract.originLocationName || f.deliveryPlace || "",
-        terms: contract.terms || f.terms || [],
+        terms: (contract.terms && contract.terms.length > 0) ? contract.terms : (salesContract.terms && salesContract.terms.length > 0) ? salesContract.terms : (f.terms && f.terms.length > 0) ? f.terms : [],
       }));
     }
   }, [contract]);
 
   useEffect(() => {
+    if (isShipmentsInitialized) return;
+
     if (allAvailableShipments && allAvailableShipments.length > 0) {
       const availableIds = allAvailableShipments.map((s) => s.id);
       if (shipments && shipments.length > 0) {
@@ -141,13 +144,18 @@ export default function PurchaseContractWorkspacePage({ contractId }) {
           .filter((id) => availableIds.includes(id));
 
         if (linkedIds.length > 0) {
-          setSelectedShipmentIds((prev) => (prev.length > 0 ? prev : linkedIds));
+          setSelectedShipmentIds(linkedIds);
+          setIsShipmentsInitialized(true);
           return;
         }
       }
-      setSelectedShipmentIds((prev) => (prev.length > 0 ? prev : availableIds));
+
+      if (shipments !== undefined) {
+        setSelectedShipmentIds(availableIds);
+        setIsShipmentsInitialized(true);
+      }
     }
-  }, [shipments, allAvailableShipments]);
+  }, [shipments, allAvailableShipments, isShipmentsInitialized]);
 
   // Toggle single shipment selection in Against Shipment
   const handleToggleShipment = (shipmentId) => {
@@ -168,10 +176,21 @@ export default function PurchaseContractWorkspacePage({ contractId }) {
     setSaving(true);
     try {
       const payload = {
-        purchaseType: form.purchaseType,
-        sellerContractNo: form.sellerContractNo,
-        notes: form.notes,
-        shipmentIds: selectedShipmentIds,
+        purchaseType: form.purchaseType || null,
+        sellerContractNo: form.sellerContractNo || null,
+        notes: form.notes || null,
+        terms: Array.isArray(form.terms) ? form.terms : [],
+        quantity: form.quantity != null ? String(form.quantity) : null,
+        productQuality: form.productQuality || null,
+        packing: form.packing || null,
+        bagType: form.bagType || null,
+        bagSpec: form.bagSpec || null,
+        stitching: form.stitching || null,
+        marking: form.marking || null,
+        incoterm: form.incoterm || null,
+        deliveryPlace: form.deliveryPlace || null,
+        shipmentIds: (selectedShipmentIds || []).map(Number).filter((n) => !isNaN(n)),
+        shipmentScheduleData: shipmentScheduleData || {},
       };
 
       await purchaseContractApi.update(id, payload);
