@@ -40,4 +40,17 @@ export const purchaseContractApi = {
   // Activity Log
   getActivity: (id, params) =>
     axiosClient.get(`/purchase-contracts/${id}/activity`, { params }),
+
+  // Attachments
+  getAttachments: (id) => axiosClient.get(`/purchase-contracts/${id}/attachments`),
+  uploadAttachment: (id, formData, companyId = 1) =>
+    axiosClient.post(`/purchase-contracts/${id}/attachments`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        "x-company-id": companyId.toString(),
+      },
+    }),
+  deleteAttachment: (id, attachmentId) =>
+    axiosClient.delete(`/purchase-contracts/${id}/attachments/${attachmentId}`),
 };
+

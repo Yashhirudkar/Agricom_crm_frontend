@@ -1,4 +1,3 @@
-"use client";
 import React, { useState } from "react";
 import {
   FileCheck,
@@ -11,7 +10,10 @@ import {
   AlertCircle,
   Loader2,
   ExternalLink,
+  Eye,
 } from "lucide-react";
+import axiosClient from "@/lib/axios";
+import { toast } from "sonner";
 
 export default function PurchaseDocuments({
   documents = [],
@@ -26,6 +28,29 @@ export default function PurchaseDocuments({
   const [selectedFile, setSelectedFile] = useState(null);
   const [showAddDocModal, setShowAddDocModal] = useState(false);
   const [selectedTradeDocId, setSelectedTradeDocId] = useState("");
+
+  const handleDownload = async (attachmentId, filename, view = false) => {
+    try {
+      const url = `/attachments/${attachmentId}/download`;
+      const response = await axiosClient.get(url, { responseType: 'blob' });
+      const blobUrl = window.URL.createObjectURL(new Blob([response.data], { type: response.headers['content-type'] }));
+
+      if (view) {
+        window.open(blobUrl, '_blank');
+      } else {
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.setAttribute('download', filename || 'document');
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
+      }
+
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+    } catch (error) {
+      toast.error("Failed to retrieve file.");
+    }
+  };
 
   if (loading) {
     return (
@@ -195,16 +220,24 @@ export default function PurchaseDocuments({
                       <div className="flex items-center justify-end gap-1.5">
                         {isUploaded && attachment ? (
                           <>
-                            <a
-                              href={`/attachments/${attachment.id}/download`}
-                              target="_blank"
-                              rel="noreferrer"
+                            <button
+                              type="button"
+                              onClick={() => handleDownload(attachment.id, attachment.originalName, true)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 font-semibold text-[11px]"
+                              title="View Document"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              <span>View</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDownload(attachment.id, attachment.originalName, false)}
                               className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-1 font-semibold text-[11px]"
                               title="Download File"
                             >
                               <Download className="h-3.5 w-3.5" />
                               <span>Download</span>
-                            </a>
+                            </button>
                             <button
                               onClick={() => onDeleteDocument(doc.tradeDocument.id)}
                               className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"

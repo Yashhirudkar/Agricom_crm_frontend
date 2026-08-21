@@ -7,11 +7,10 @@ import {
   usePurchaseContractDetail,
   usePurchaseContractSummary,
   usePurchaseContractShipments,
-  usePurchaseContractDocuments,
   useUpdatePurchaseContractStatus,
-  useUploadPurchaseContractDocument,
-  useDeletePurchaseContractDocument,
-  useAddRequiredDocument,
+  usePurchaseContractAttachments,
+  useUploadPurchaseContractAttachment,
+  useDeletePurchaseContractAttachment,
 } from "../hooks/usePurchaseContracts";
 import { useSalesMasters } from "@/modules/sales-contracts/hooks/useSalesContracts";
 import { purchaseContractApi } from "../services/purchaseContractApi";
@@ -20,7 +19,6 @@ import PurchaseContractInformationSection from "../components/PurchaseContractIn
 import PurchaseCommercialInformationSection from "../components/PurchaseCommercialInformationSection";
 import AgainstShipmentSection from "../components/AgainstShipmentSection";
 import PurchaseShipmentSection from "../components/PurchaseShipmentSection";
-import PurchaseDocumentSection from "../components/PurchaseDocumentSection";
 import TermsSection from "@/modules/sales-contracts/components/TermsSection";
 import PurchaseAttachmentsSection from "../components/PurchaseAttachmentsSection";
 import PurchaseFinancialSummary from "../components/PurchaseFinancialSummary";
@@ -50,18 +48,16 @@ export default function PurchaseContractWorkspacePage({ contractId }) {
   } = usePurchaseContractShipments(id);
 
   const {
-    data: documents,
-    isLoading: loadingDocuments,
-    refetch: refetchDocuments,
-  } = usePurchaseContractDocuments(id);
+    data: attachmentsData,
+  } = usePurchaseContractAttachments(id);
 
   const { masters } = useSalesMasters();
 
   // Mutations
   const { mutate: updateStatus } = useUpdatePurchaseContractStatus(id);
-  const { mutate: addRequiredDoc } = useAddRequiredDocument(id);
-  const { mutate: uploadDoc, isPending: uploadingDoc } = useUploadPurchaseContractDocument(id);
-  const { mutate: deleteDoc } = useDeletePurchaseContractDocument(id);
+  const { mutate: uploadAttachment } = useUploadPurchaseContractAttachment(id);
+  const { mutate: deleteAttachment } = useDeletePurchaseContractAttachment(id);
+
 
   // Form State — ZERO hardcoded default business values
   const [form, setForm] = useState({
@@ -369,16 +365,6 @@ export default function PurchaseContractWorkspacePage({ contractId }) {
           loading={loadingShipments}
         />
 
-        {/* 5. Required Trade Documents */}
-        <PurchaseDocumentSection
-          documents={documents}
-          loading={loadingDocuments}
-          onUploadDocument={(params) => uploadDoc(params)}
-          onDeleteDocument={(tdId) => deleteDoc(tdId)}
-          onAddRequiredDocument={(tdId) => addRequiredDoc(tdId)}
-          masterDocuments={masters.tradeDocuments || []}
-          uploading={uploadingDoc}
-        />
 
         {/* 6. Notes Section */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
@@ -406,11 +392,15 @@ export default function PurchaseContractWorkspacePage({ contractId }) {
 
         {/* 8. Attachments Section */}
         <PurchaseAttachmentsSection
-          attachments={form.attachments}
+          attachments={attachmentsData || contract?.attachments || form.attachments || []}
           onUploadAttachment={(formData) => {
-            toast.success("Attachment uploaded successfully");
+            uploadAttachment(formData);
+          }}
+          onDeleteAttachment={(attId) => {
+            deleteAttachment(attId);
           }}
         />
+
 
         {/* 9. Financial Summary (Totals Section) */}
         <PurchaseFinancialSummary

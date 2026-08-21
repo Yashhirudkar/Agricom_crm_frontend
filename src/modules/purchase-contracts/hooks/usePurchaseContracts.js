@@ -208,3 +208,47 @@ export function useDeletePurchaseContractDocument(id) {
     },
   });
 }
+
+export function usePurchaseContractAttachments(id) {
+  return useQuery({
+    queryKey: ["purchase-contracts", id, "attachments"],
+    queryFn: async () => {
+      if (!id) return [];
+      const res = await purchaseContractApi.getAttachments(id);
+      return res.data || [];
+    },
+    enabled: !!id,
+    staleTime: 10000,
+  });
+}
+
+export function useUploadPurchaseContractAttachment(id) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (formData) => purchaseContractApi.uploadAttachment(id, formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-contracts", id, "attachments"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-contracts", id, "detail"] });
+      toast.success("Attachment uploaded successfully");
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || "Failed to upload attachment");
+    },
+  });
+}
+
+export function useDeletePurchaseContractAttachment(id) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (attachmentId) => purchaseContractApi.deleteAttachment(id, attachmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-contracts", id, "attachments"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-contracts", id, "detail"] });
+      toast.success("Attachment removed successfully");
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || "Failed to remove attachment");
+    },
+  });
+}
+

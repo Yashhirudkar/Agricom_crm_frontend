@@ -1,6 +1,7 @@
-"use client";
 import React, { useState } from "react";
-import { Paperclip, Upload, FileText, Download, Trash2 } from "lucide-react";
+import { Paperclip, Upload, FileText, Download, Trash2, Eye } from "lucide-react";
+import axiosClient from "@/lib/axios";
+import { toast } from "sonner";
 
 export default function PurchaseAttachmentsSection({
   attachments = [],
@@ -34,6 +35,29 @@ export default function PurchaseAttachmentsSection({
 
     onUploadAttachment(formData);
     setSelectedFile(null);
+  };
+
+  const handleDownload = async (attId, filename, view = false) => {
+    try {
+      const url = `/attachments/${attId}/download`;
+      const response = await axiosClient.get(url, { responseType: 'blob' });
+      const blobUrl = window.URL.createObjectURL(new Blob([response.data], { type: response.headers['content-type'] }));
+
+      if (view) {
+        window.open(blobUrl, '_blank');
+      } else {
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.setAttribute('download', filename || 'attachment');
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
+      }
+
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+    } catch (error) {
+      toast.error("Failed to retrieve file.");
+    }
   };
 
   return (
@@ -114,23 +138,35 @@ export default function PurchaseAttachmentsSection({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 {att.id && (
-                  <a
-                    href={`/attachments/${att.id}/download`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex items-center gap-1 font-semibold text-[11px]"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>Download</span>
-                  </a>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(att.id, att.originalName || att.name, true)}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 font-semibold text-[11px]"
+                      title="View document"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>View</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(att.id, att.originalName || att.name, false)}
+                      className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex items-center gap-1 font-semibold text-[11px]"
+                      title="Download file"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Download</span>
+                    </button>
+                  </>
                 )}
                 {!isView && onDeleteAttachment && (
                   <button
                     type="button"
                     onClick={() => onDeleteAttachment(att.id)}
                     className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete attachment"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
