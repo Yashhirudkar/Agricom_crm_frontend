@@ -316,14 +316,14 @@ export default function PurchaseContractWorkspacePage({ contractId }) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/sales-contracts")}
-              className="px-3 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors"
+              className="px-3 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={() => handleSaveContract(null)}
               disabled={saving}
-              className="px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
+              className="px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
             >
               <Save className="h-3.5 w-3.5" />
               <span>Save Draft</span>
@@ -331,7 +331,7 @@ export default function PurchaseContractWorkspacePage({ contractId }) {
             <button
               onClick={() => handleSaveContract("In Progress")}
               disabled={saving}
-              className="px-4.5 py-2 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl transition-colors shadow-xs disabled:opacity-50 inline-flex items-center gap-1.5"
+              className="px-4.5 py-2 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl transition-colors shadow-xs disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
             >
               <CheckCircle className="h-3.5 w-3.5" />
               <span>Save & Activate</span>

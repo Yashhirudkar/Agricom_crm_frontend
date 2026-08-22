@@ -75,15 +75,15 @@ function validate(form) {
 
   // Transport-mode-aware location validation
   const modeLabels = {
-    sea:  { origin: "Port of Loading",          dest: "Port of Discharge" },
-    air:  { origin: "Origin Airport",            dest: "Destination Airport" },
-    road: { origin: "Pickup City",               dest: "Delivery City" },
-    rail: { origin: "Origin Railway Station",    dest: "Destination Railway Station" },
+    sea: { origin: "Port of Loading", dest: "Port of Discharge" },
+    air: { origin: "Origin Airport", dest: "Destination Airport" },
+    road: { origin: "Pickup City", dest: "Delivery City" },
+    rail: { origin: "Origin Railway Station", dest: "Destination Railway Station" },
   };
-  
+
   const originMode = form.originTransportMode || "sea";
   const destMode = form.destinationTransportMode || "sea";
-  
+
   const originLabel = modeLabels[originMode]?.origin || modeLabels.sea.origin;
   const destLabel = modeLabels[destMode]?.dest || modeLabels.sea.dest;
 
@@ -344,7 +344,7 @@ export default function ContractFormPage({ editId, viewId }) {
       destinationTransportMode: form.destinationTransportMode || "sea",
       originLocationName: form.originLocationName || null,
       destinationLocationName: form.destinationLocationName || null,
-      
+
       // Legacy port fields: keep in sync for backward compat
       portOfLoading: (form.originTransportMode === "sea" || !form.originTransportMode)
         ? (form.originLocationName || null)
@@ -539,17 +539,17 @@ export default function ContractFormPage({ editId, viewId }) {
       {/* Bottom Action Bar */}
       {!isView && (
         <div className="sticky bottom-4 flex justify-end gap-2.5">
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-lg px-4 py-2.5 flex items-center gap-2.5">
+          <div className="cursor-pointer bg-white border border-gray-200 rounded-2xl shadow-lg px-4 py-2.5 flex items-center gap-2.5">
             <button
               onClick={() => router.push("/sales-contracts")}
-              className="px-3 py-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+              className="cursor-pointer px-3 py-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={() => handleSave(true)}
               disabled={saving}
-              className="px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="cursor-pointer px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               {saving && <Loader2 className="h-3 w-3 animate-spin" />}
               Save Draft
@@ -557,7 +557,7 @@ export default function ContractFormPage({ editId, viewId }) {
             <button
               onClick={() => handleSave(false)}
               disabled={saving}
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
+              className="cursor-pointer px-4 py-1.5 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
             >
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
               {isEdit ? "Update" : "Save & Activate"}

@@ -91,7 +91,7 @@ export default function PurchaseAttachmentsSection({
             <select
               value={fileCategory}
               onChange={(e) => setFileCategory(e.target.value)}
-              className="px-3 py-2 text-xs border border-gray-200 rounded-xl bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
+              className="px-3 py-2 text-xs border border-gray-200 rounded-xl bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer"
             >
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
@@ -104,14 +104,14 @@ export default function PurchaseAttachmentsSection({
               type="file"
               onChange={handleFileChange}
               accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx"
-              className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer border border-gray-200 rounded-xl p-1 bg-white"
+              className="flex-1 text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer border border-gray-200 rounded-xl p-1 bg-white cursor-pointer"
               required
             />
 
             <button
               type="submit"
               disabled={!selectedFile}
-              className="px-4 py-2 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-xl transition-colors disabled:opacity-40 flex items-center gap-1.5 flex-shrink-0"
+              className="cursor-pointer px-4 py-2 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-xl transition-colors disabled:opacity-40 flex items-center gap-1.5 flex-shrink-0"
             >
               <Upload className="h-3.5 w-3.5" />
               <span>Attach File</span>
