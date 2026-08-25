@@ -90,9 +90,9 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation 
   const formattedPrice = isNaN(parsedPrice)
     ? '0.00'
     : parsedPrice.toLocaleString('en-IN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
   const currencyCode = quotation.currencyCode || item.currencyCode || 'USD';
   const priceDisplay = `${formattedPrice} ${currencyCode} / MT`;
@@ -100,15 +100,15 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation 
   // 4. Header Date
   const formattedDate = quotation.generatedAt
     ? new Date(quotation.generatedAt).toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      })
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
     : new Date(quotation.createdAt).toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      });
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -241,11 +241,23 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation 
               This quotation is subject to availability and market conditions.
             </div>
             <div style={{ textAlign: 'right' }}>
+              <div style={{ position: 'relative', height: '60px', width: '160px', margin: '0 0 -12px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <img
+                  src="/WhatsApp Image 2026-04-16 at 2.44.32 PM.jpeg"
+                  alt="Company Seal"
+                  style={{ position: 'absolute', marginBottom: 20, maxHeight: '130px', maxWidth: '180px', objectFit: 'contain', opacity: 0.85, mixBlendMode: 'multiply' }}
+                />
+                <img
+                  src="/akashsign.png"
+                  alt="Authorized Signature"
+                  style={{ position: 'absolute', maxHeight: '50px', maxWidth: '180px', objectFit: 'contain', zIndex: 10, mixBlendMode: 'multiply' }}
+                />
+              </div>
               <div
                 style={{
                   borderTop: '1.5px solid #0f172a',
                   paddingTop: '6px',
-                  marginTop: '32px',
+                  marginTop: '10px',
                   fontSize: '11px',
                   fontWeight: 700,
                   color: '#0f172a',
