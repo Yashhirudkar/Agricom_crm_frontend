@@ -89,6 +89,7 @@ function PartnerDrawer({
   isSaving,
   error,
   isEditMode: initialEditMode,
+  initialTab = "contacts",
   countries = [],
   partnerRoles = [],
   products = [],
@@ -174,9 +175,9 @@ function PartnerDrawer({
   useEffect(() => {
     setIsEditMode(initialEditMode);
     if (isOpen) {
-      setActiveTab(initialEditMode ? "general" : "overview");
+      setActiveTab(initialEditMode ? "general" : (initialTab || "overview"));
     }
-  }, [isOpen, initialEditMode]);
+  }, [isOpen, initialEditMode, initialTab]);
 
   // Load dynamic schema and values for existing partner
   useEffect(() => {

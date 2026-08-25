@@ -85,8 +85,7 @@ function PartnersTable({
                 return (
                   <tr
                     key={item.id}
-                    onClick={() => openViewDrawer(item)}
-                    className="hover:bg-gray-50/75 transition-colors cursor-pointer group/row"
+                    className="hover:bg-gray-50/30 transition-colors group/row"
                   >
                     <td className="px-6 py-4">
                       <div className="font-bold text-gray-800 group-hover/row:text-[#007aff] transition-colors">
@@ -103,7 +102,11 @@ function PartnersTable({
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-900">
+                    <td
+                      className="px-6 py-4 text-gray-900 cursor-pointer hover:bg-blue-50/60 transition-colors rounded-lg group/contact"
+                      onClick={() => openViewDrawer(item, "contacts")}
+                      title="View Contacts"
+                    >
                       {(() => {
                         const primaryContact = item.contacts?.find((c) => c.isPrimary) || item.contacts?.[0];
                         const displayEmail = primaryContact?.email || item.contactEmail;
@@ -114,7 +117,7 @@ function PartnersTable({
                         return (
                           <>
                             {displayEmail && (
-                              <div className="truncate max-w-[200px] text-[#007aff] font-medium text-[11px]">
+                              <div className="truncate max-w-[200px] text-[#007aff] group-hover/contact:underline font-medium text-[11px]">
                                 {displayEmail}
                               </div>
                             )}
@@ -195,7 +198,7 @@ function PartnersTable({
                     </td>
                     <td className="px-6 py-4 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => openViewDrawer(item)}
+                        onClick={(e) => { e.stopPropagation(); openViewDrawer(item, "overview"); }}
                         className="p-1 rounded-lg text-gray-500 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
                         title="View Details"
                       >
@@ -219,7 +222,7 @@ function PartnersTable({
                         <>
                           <HasPermission permission="partner:update">
                             <button
-                              onClick={() => openEditModal(item)}
+                              onClick={(e) => { e.stopPropagation(); openEditModal(item); }}
                               className="p-1 rounded-lg text-gray-500 hover:text-[#007aff] hover:bg-blue-50 transition-colors cursor-pointer"
                               title="Edit"
                             >
@@ -228,7 +231,7 @@ function PartnersTable({
                           </HasPermission>
                           <HasPermission permission="partner:delete">
                             <button
-                              onClick={() => setDeleteTarget(item)}
+                              onClick={(e) => { e.stopPropagation(); setDeleteTarget(item); }}
                               className="p-1 rounded-lg text-gray-500 hover:text-orange-500 hover:bg-orange-50 transition-colors cursor-pointer"
                               title="Deactivate"
                             >
@@ -240,7 +243,7 @@ function PartnersTable({
                         <>
                           <HasPermission permission="partner:update">
                             <button
-                              onClick={() => setRestoreTarget(item)}
+                              onClick={(e) => { e.stopPropagation(); setRestoreTarget(item); }}
                               className="p-1 rounded-lg text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors cursor-pointer"
                               title="Restore"
                             >
@@ -249,7 +252,7 @@ function PartnersTable({
                           </HasPermission>
                           <HasPermission permission="partner:force_delete">
                             <button
-                              onClick={() => setPermanentDeleteTarget(item)}
+                              onClick={(e) => { e.stopPropagation(); setPermanentDeleteTarget(item); }}
                               className="p-1 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                               title="Permanent Delete"
                             >

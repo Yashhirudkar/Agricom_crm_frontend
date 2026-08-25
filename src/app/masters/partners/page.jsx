@@ -55,6 +55,7 @@ function PartnersContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editData, setEditData] = useState(null);
+  const [drawerInitialTab, setDrawerInitialTab] = useState("contacts");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [restoreTarget, setRestoreTarget] = useState(null);
   const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
@@ -191,9 +192,10 @@ function PartnersContent() {
     setIsModalOpen(true);
   };
 
-  const openViewDrawer = (item) => {
+  const openViewDrawer = (item, tab = "contacts") => {
     setEditData(item);
     setIsEditMode(false);
+    setDrawerInitialTab(tab);
     setIsModalOpen(true);
   };
 
@@ -217,6 +219,7 @@ function PartnersContent() {
     setDeleteTarget(null);
     setRestoreTarget(null);
     setPermanentDeleteTarget(null);
+    setDrawerInitialTab("contacts");
     dispatch(clearPartnersError());
   };
 
@@ -406,6 +409,7 @@ function PartnersContent() {
         isSaving={isSaving}
         error={error}
         isEditMode={isEditMode}
+        initialTab={drawerInitialTab}
         countries={countries}
         partnerRoles={partnerRoles}
         products={products}
