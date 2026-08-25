@@ -128,8 +128,10 @@ export function normalizeCountryName(val) {
  */
 export function findCountryOption(val, options = null) {
   if (!val) return null;
+  const rawString = typeof val === "object" && val !== null ? val.name || "" : String(val);
+  if (!rawString || !rawString.trim()) return null;
   const opts = options || getAllCountryOptions();
-  const vLower = String(val).trim().toLowerCase();
+  const vLower = rawString.trim().toLowerCase();
 
   // 1. Direct label match
   let matched = opts.find((opt) => opt.label.toLowerCase() === vLower || opt.value.toLowerCase() === vLower);

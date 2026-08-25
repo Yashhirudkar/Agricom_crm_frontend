@@ -1,5 +1,5 @@
 import React from "react";
-import { Edit2, Trash2, RefreshCcw, ShieldAlert, Ban, Eye, MessageCircle } from "lucide-react";
+import { Edit2, Trash2, RefreshCcw, ShieldAlert, Ban, Eye, MessageCircle, FileText } from "lucide-react";
 import HasPermission from "@/components/rbac/HasPermission";
 
 function PartnersTable({
@@ -7,6 +7,7 @@ function PartnersTable({
   openViewDrawer,
   openEditModal,
   openFollowUpDrawer,
+  openPartnerQuotationsDrawer,
   setDeleteTarget,
   setRestoreTarget,
   setPermanentDeleteTarget,
@@ -22,6 +23,7 @@ function PartnersTable({
             <th className="px-6 py-4">Country</th>
             <th className="px-6 py-4">Associations</th>
             <th className="px-6 py-4">Follow Ups</th>
+            <th className="px-6 py-4">Quotation</th>
             <th className="px-6 py-4">Status</th>
             <th className="px-6 py-4 text-right">Actions</th>
           </tr>
@@ -149,6 +151,16 @@ function PartnersTable({
                         {dueTodayCount === 0 && upcomingCount === 0 && completedCount === 0 && <span className="text-[10px] text-gray-400 font-semibold">-</span>}
                       </div>
                     </td>
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => openPartnerQuotationsDrawer && openPartnerQuotationsDrawer(item)}
+                        className="px-2.5 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-2xs hover:shadow-xs flex items-center gap-1.5"
+                        title="View Partner Quotations"
+                      >
+                        <FileText className="h-3 w-3 text-violet-500" />
+                        <span>📄 {item.quotationCount ?? 0}</span>
+                      </button>
+                    </td>
                     <td className="px-6 py-4">
                       {item.isActive ? (
                         <span className="px-2 py-0.5 bg-green-50 text-green-600 border border-green-100 rounded text-[10px] font-bold">
@@ -231,7 +243,7 @@ function PartnersTable({
               })
             ) : (
               <tr>
-                <td colSpan="7" className="px-6 py-12 text-center text-gray-400 font-semibold">
+                <td colSpan="8" className="px-6 py-12 text-center text-gray-400 font-semibold">
                   No partners found.
                 </td>
               </tr>
