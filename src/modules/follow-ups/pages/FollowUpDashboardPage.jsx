@@ -10,6 +10,7 @@ import {
 } from "../queries/follow-ups.query";
 import FollowUpCompleteModal from "../components/FollowUpCompleteModal";
 import FollowUpRescheduleModal from "../components/FollowUpRescheduleModal";
+import CreateQuotationDrawer from "../components/CreateQuotationDrawer";
 import Pagination from "@/components/common/Pagination";
 import {
   Phone,
@@ -76,6 +77,8 @@ export default function FollowUpDashboardPage() {
   const [selectedFollowUp, setSelectedFollowUp] = useState(null);
   const [isCompleteOpen, setIsCompleteOpen] = useState(false);
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
+  const [isQuotationOpen, setIsQuotationOpen] = useState(false);
+  const [quotationFollowUp, setQuotationFollowUp] = useState(null);
 
   // Debounce search text
   useEffect(() => {
@@ -599,6 +602,16 @@ export default function FollowUpDashboardPage() {
                           <>
                             <button
                               onClick={() => {
+                                setQuotationFollowUp(item);
+                                setIsQuotationOpen(true);
+                              }}
+                              className="px-2.5 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200/50 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                              title="Create Quotation"
+                            >
+                              + Quote
+                            </button>
+                            <button
+                              onClick={() => {
                                 setSelectedFollowUp(item);
                                 setIsCompleteOpen(true);
                               }}
@@ -664,6 +677,16 @@ export default function FollowUpDashboardPage() {
           setSelectedFollowUp(null);
         }}
         followUp={selectedFollowUp}
+      />
+
+      {/* Create Quotation Drawer */}
+      <CreateQuotationDrawer
+        isOpen={isQuotationOpen}
+        onClose={() => {
+          setIsQuotationOpen(false);
+          setQuotationFollowUp(null);
+        }}
+        followUp={quotationFollowUp}
       />
 
     </div>

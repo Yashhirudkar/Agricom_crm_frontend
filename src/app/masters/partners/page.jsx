@@ -30,6 +30,7 @@ import PartnersTable from "@/components/masters/partners/PartnersTable";
 import PartnersFilters from "@/components/masters/partners/PartnersFilters";
 import PartnerDrawer from "@/components/masters/partners/PartnerDrawer";
 import PartnerFollowUpDrawer from "@/components/masters/partners/PartnerFollowUpDrawer";
+import PartnerQuotationsDrawer from "@/components/masters/partners/PartnerQuotationsDrawer";
 import PermanentDeleteModal from "@/components/common/PermanentDeleteModal";
 
 function PartnersContent() {
@@ -62,6 +63,9 @@ function PartnersContent() {
 
   const [isFollowUpDrawerOpen, setIsFollowUpDrawerOpen] = useState(false);
   const [followUpPartner, setFollowUpPartner] = useState(null);
+
+  const [isQuotationsDrawerOpen, setIsQuotationsDrawerOpen] = useState(false);
+  const [quotationsPartner, setQuotationsPartner] = useState(null);
 
   // External dependencies for dropdowns
   const [partnerRoles, setPartnerRoles] = useState([]);
@@ -115,6 +119,15 @@ function PartnersContent() {
       }
     };
   }, [dispatch, filters, activeCompanyId]);
+
+  // Refetch partners on quotation creation
+  useEffect(() => {
+    const handleQuotationCreated = () => {
+      reFetchPartners();
+    };
+    window.addEventListener("quotation-created", handleQuotationCreated);
+    return () => window.removeEventListener("quotation-created", handleQuotationCreated);
+  }, [filters]);
 
   // Toast error listener
   useEffect(() => {
@@ -187,6 +200,16 @@ function PartnersContent() {
   const openFollowUpDrawer = (item) => {
     setFollowUpPartner(item);
     setIsFollowUpDrawerOpen(true);
+  };
+
+  const openPartnerQuotationsDrawer = (item) => {
+    setQuotationsPartner(item);
+    setIsQuotationsDrawerOpen(true);
+  };
+
+  const closeQuotationsDrawer = () => {
+    setIsQuotationsDrawerOpen(false);
+    setQuotationsPartner(null);
   };
 
   const closeModals = () => {
@@ -361,6 +384,7 @@ function PartnersContent() {
           openViewDrawer={openViewDrawer}
           openEditModal={openEditModal}
           openFollowUpDrawer={openFollowUpDrawer}
+          openPartnerQuotationsDrawer={openPartnerQuotationsDrawer}
           setDeleteTarget={setDeleteTarget}
           setRestoreTarget={setRestoreTarget}
           setPermanentDeleteTarget={setPermanentDeleteTarget}
@@ -395,6 +419,12 @@ function PartnersContent() {
           // Re-fetch partners to update follow-up badges
           reFetchPartners();
         }}
+      />
+
+      <PartnerQuotationsDrawer
+        isOpen={isQuotationsDrawerOpen}
+        onClose={closeQuotationsDrawer}
+        partner={quotationsPartner}
       />
 
       <ConfirmModal

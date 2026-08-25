@@ -13,12 +13,16 @@ import {
   MoreVertical,
   User,
   Info,
-  Edit2
+  Edit2,
+  FileText
 } from "lucide-react";
 import Drawer from "@/components/common/Drawer";
 import axiosClient, { getAvatarUrl } from "@/lib/axios";
 import { useQueryClient } from "@tanstack/react-query";
 import UserProfileModal from "@/modules/chat/components/Common/UserProfileModal";
+import CreateQuotationDrawer from "@/modules/follow-ups/components/CreateQuotationDrawer";
+import QuotationActivityCard from "@/modules/follow-ups/components/QuotationActivityCard";
+import QuotationPreviewDrawer from "@/modules/follow-ups/components/QuotationPreviewDrawer";
 
 const getInitials = (name) => {
   if (!name) return "??";
@@ -60,6 +64,21 @@ function PartnerFollowUpDrawer({
   const [timelineSearch, setTimelineSearch] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [selectedUserProfile, setSelectedUserProfile] = useState(null);
+  const [isQuotationOpen, setIsQuotationOpen] = useState(false);
+  const [previewQuotationId, setPreviewQuotationId] = useState(null);
+  const [previewQuotationData, setPreviewQuotationData] = useState(null);
+  const [isPreviewDrawerOpen, setIsPreviewDrawerOpen] = useState(false);
+
+  const handleOpenQuotationPreview = (quotation, quotationId) => {
+    if (quotation) {
+      setPreviewQuotationData(quotation);
+      setPreviewQuotationId(quotation.id);
+    } else if (quotationId) {
+      setPreviewQuotationId(quotationId);
+      setPreviewQuotationData(null);
+    }
+    setIsPreviewDrawerOpen(true);
+  };
 
   // Ref for the chat scroll container
   const chatContainerRef = useRef(null);
@@ -116,6 +135,17 @@ function PartnerFollowUpDrawer({
       fetchFollowUps(true);
     }
   }, [isOpen, partner, reset]);
+
+  useEffect(() => {
+    const handleQuotationCreated = () => {
+      if (isOpen && partner) {
+        isSendingRef.current = true;
+        fetchFollowUps(false);
+      }
+    };
+    window.addEventListener("quotation-created", handleQuotationCreated);
+    return () => window.removeEventListener("quotation-created", handleQuotationCreated);
+  }, [isOpen, partner]);
 
   useEffect(() => {
     // isSendingRef = user just sent → always scroll to bottom (fires after DOM paint)
@@ -357,82 +387,94 @@ function PartnerFollowUpDrawer({
                     </span>
                   </div>
 
-                  {/* Buyer Remark (Incoming Message - Left) */}
-                  {item.buyerRemark && (
-                    <div className="flex items-end gap-2 self-start max-w-[85%] sm:max-w-[75%]">
-                      <div className="w-7 h-7 rounded-full bg-gray-200 flex-shrink-0 flex items-center justify-center text-gray-600 shadow-sm border border-gray-300">
-                        <User className="h-4 w-4" />
-                      </div>
-                      <div className="bg-white px-4 py-2.5 rounded-2xl rounded-bl-none shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-gray-100 relative group">
-                        <p className="text-[13px] text-gray-800 whitespace-pre-wrap leading-relaxed">{item.buyerRemark}</p>
-                      </div>
+                  {/* Check for QUOTATION timeline activity */}
+                  {item.communicationType === 'QUOTATION' || item.communicationType === 'Quotation' || item.entityType === 'Quotation' ? (
+                    <div className="flex justify-center my-1">
+                      <QuotationActivityCard
+                        quotation={item.quotation}
+                        onClick={(q) => handleOpenQuotationPreview(q, item.entityId)}
+                      />
                     </div>
-                  )}
-
-                  {/* Our Action (Outgoing Message - Right) */}
-                  <div className="flex items-end gap-2 self-end max-w-[90%] sm:max-w-[80%] group">
-                    <button
-                      onClick={() => handleEdit(item)}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 bg-gray-100 text-gray-500 rounded-full hover:bg-gray-200 hover:text-blue-600 transition-all mb-1 shrink-0 shadow-sm border border-gray-200"
-                      title="Edit this interaction"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-
-                    <div className="flex flex-col items-end gap-1.5 min-w-[160px]">
-                      {item.ourResponse && (
-                        <div className="bg-white p-2.5 rounded-2xl rounded-br-none shadow-[0_1px_2px_rgba(0,0,0,0.1)] relative">
-                          <p className="text-[13px] text-gray-800 whitespace-pre-wrap leading-relaxed px-1">
-                            {item.ourResponse}
-                          </p>
-                          {/* Created By Details */}
-                          <div
-                            onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
-                            className="mt-1.5 pt-1 border-t border-gray-100/80 flex items-center gap-1 justify-end cursor-pointer hover:opacity-80 transition-opacity"
-                          >
-                            <span className="text-[8.5px] font-bold text-gray-400">Created By:</span>
-                            <span className="text-[9.5px] font-bold text-blue-600 hover:underline">
-                              {item.createdBy?.name || "Unknown User"}
-                            </span>
-                            {item.createdBy?.role && (
-                              <span className="text-[8.5px] font-semibold text-gray-400">
-                                ({item.createdBy.role})
-                              </span>
-                            )}
+                  ) : (
+                    <>
+                      {/* Buyer Remark (Incoming Message - Left) */}
+                      {item.buyerRemark && (
+                        <div className="flex items-end gap-2 self-start max-w-[85%] sm:max-w-[75%]">
+                          <div className="w-7 h-7 rounded-full bg-gray-200 flex-shrink-0 flex items-center justify-center text-gray-600 shadow-sm border border-gray-300">
+                            <User className="h-4 w-4" />
+                          </div>
+                          <div className="bg-white px-4 py-2.5 rounded-2xl rounded-bl-none shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-gray-100 relative group">
+                            <p className="text-[13px] text-gray-800 whitespace-pre-wrap leading-relaxed">{item.buyerRemark}</p>
                           </div>
                         </div>
                       )}
 
-                      <div className="flex flex-wrap items-center justify-end gap-1.5">
-                        {item.nextFollowupDate && (
-                          <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
-                            <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-                            Next: {new Date(item.nextFollowupDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                          </span>
+                      {/* Our Action (Outgoing Message - Right) */}
+                      <div className="flex items-end gap-2 self-end max-w-[90%] sm:max-w-[80%] group">
+                        <button
+                          onClick={() => handleEdit(item)}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 bg-gray-100 text-gray-500 rounded-full hover:bg-gray-200 hover:text-blue-600 transition-all mb-1 shrink-0 shadow-sm border border-gray-200"
+                          title="Edit this interaction"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        <div className="flex flex-col items-end gap-1.5 min-w-[160px]">
+                          {item.ourResponse && (
+                            <div className="bg-white p-2.5 rounded-2xl rounded-br-none shadow-[0_1px_2px_rgba(0,0,0,0.1)] relative">
+                              <p className="text-[13px] text-gray-800 whitespace-pre-wrap leading-relaxed px-1">
+                                {item.ourResponse}
+                              </p>
+                              {/* Created By Details */}
+                              <div
+                                onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
+                                className="mt-1.5 pt-1 border-t border-gray-100/80 flex items-center gap-1 justify-end cursor-pointer hover:opacity-80 transition-opacity"
+                              >
+                                <span className="text-[8.5px] font-bold text-gray-400">Created By:</span>
+                                <span className="text-[9.5px] font-bold text-blue-600 hover:underline">
+                                  {item.createdBy?.name || "Unknown User"}
+                                </span>
+                                {item.createdBy?.role && (
+                                  <span className="text-[8.5px] font-semibold text-gray-400">
+                                    ({item.createdBy.role})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex flex-wrap items-center justify-end gap-1.5">
+                            {item.nextFollowupDate && (
+                              <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
+                                <Calendar className="w-3.5 h-3.5 text-indigo-500" />
+                                Next: {new Date(item.nextFollowupDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                              </span>
+                            )}
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shadow-sm ${getStatusColor(item.status)} border-opacity-30 uppercase tracking-wider`}>
+                              {item.status}
+                            </span>
+                          </div>
+                        </div>
+                        {item.createdBy?.avatar ? (
+                          <img
+                            src={getAvatarUrl(item.createdBy.avatar)}
+                            alt={item.createdBy.name}
+                            onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
+                            className="w-7 h-7 rounded-full border border-blue-200 object-cover shadow-xs shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                            title={item.createdBy.name}
+                          />
+                        ) : (
+                          <div
+                            onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
+                            className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getAvatarColor(item.createdBy?.name || "Unknown User")} text-white font-extrabold flex items-center justify-center text-[9px] shadow-sm border border-blue-200 shrink-0 cursor-pointer hover:scale-105 transition-transform`}
+                            title={item.createdBy?.name || "Unknown User"}
+                          >
+                            {getInitials(item.createdBy?.name || "Unknown User")}
+                          </div>
                         )}
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shadow-sm ${getStatusColor(item.status)} border-opacity-30 uppercase tracking-wider`}>
-                          {item.status}
-                        </span>
                       </div>
-                    </div>
-                    {item.createdBy?.avatar ? (
-                      <img
-                        src={getAvatarUrl(item.createdBy.avatar)}
-                        alt={item.createdBy.name}
-                        onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
-                        className="w-7 h-7 rounded-full border border-blue-200 object-cover shadow-xs shrink-0 cursor-pointer hover:scale-105 transition-transform"
-                        title={item.createdBy.name}
-                      />
-                    ) : (
-                      <div
-                        onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
-                        className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getAvatarColor(item.createdBy?.name || "Unknown User")} text-white font-extrabold flex items-center justify-center text-[9px] shadow-sm border border-blue-200 shrink-0 cursor-pointer hover:scale-105 transition-transform`}
-                        title={item.createdBy?.name || "Unknown User"}
-                      >
-                        {getInitials(item.createdBy?.name || "Unknown User")}
-                      </div>
-                    )}
-                  </div>
+                    </>
+                  )}
 
                 </div>
               ))}
@@ -481,6 +523,17 @@ function PartnerFollowUpDrawer({
                   <option value="Closed">Closed</option>
                 </select>
               </div>
+
+              {/* + Create Quotation Button */}
+              <button
+                type="button"
+                onClick={() => setIsQuotationOpen(true)}
+                className="flex items-center gap-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold text-xs px-3 py-1 rounded-full shadow-sm hover:shadow cursor-pointer transition-all shrink-0"
+                title="Create Quotation for this partner"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                + Create Quotation
+              </button>
 
               <div className="relative flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100/80 border border-blue-100 rounded-full px-3 py-1 ml-auto cursor-pointer transition-colors select-none">
                 <span className="font-semibold text-blue-700 pointer-events-none">Next Follow-Up:</span>
@@ -567,6 +620,25 @@ function PartnerFollowUpDrawer({
         user={selectedUserProfile}
         isOpen={!!selectedUserProfile}
         onClose={() => setSelectedUserProfile(null)}
+      />
+      <CreateQuotationDrawer
+        isOpen={isQuotationOpen}
+        onClose={() => setIsQuotationOpen(false)}
+        followUp={{ partner, id: editingId || undefined }}
+        onQuotationCreated={() => {
+          isSendingRef.current = true;
+          fetchFollowUps(false);
+        }}
+      />
+      <QuotationPreviewDrawer
+        isOpen={isPreviewDrawerOpen}
+        onClose={() => {
+          setIsPreviewDrawerOpen(false);
+          setPreviewQuotationId(null);
+          setPreviewQuotationData(null);
+        }}
+        quotationId={previewQuotationId}
+        quotationData={previewQuotationData}
       />
     </Drawer>
   );

@@ -67,9 +67,10 @@ export default function CountrySelect({ value, onChange, error, className }) {
     return scored.map((item) => item.opt);
   }, [countryOptions, inputValue]);
 
-  // 3. Map current string value from parent state to select option object
+  // 3. Map current string or object value from parent state to select option object
   const selectedOption = useMemo(() => {
-    return findCountryOption(value, countryOptions);
+    const rawVal = typeof value === "object" && value !== null ? value.name : value;
+    return findCountryOption(rawVal, countryOptions);
   }, [value, countryOptions]);
 
   // 4. Handle selection change
