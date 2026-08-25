@@ -2,13 +2,17 @@
 
 import React, { useState, useEffect } from "react";
 import Drawer from "@/components/common/Drawer";
-import { FileText, ExternalLink, RefreshCw, Calendar, Globe, DollarSign } from "lucide-react";
+import { FileText, ExternalLink, RefreshCw, Calendar, Globe, DollarSign, Trash2 } from "lucide-react";
 import axiosClient from "@/lib/axios";
+import { toast } from "sonner";
 import QuotationPreviewDrawer from "@/modules/follow-ups/components/QuotationPreviewDrawer";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 
 export default function PartnerQuotationsDrawer({ isOpen, onClose, partner }) {
   const [quotations, setQuotations] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [selectedQuotation, setSelectedQuotation] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
@@ -19,6 +23,19 @@ export default function PartnerQuotationsDrawer({ isOpen, onClose, partner }) {
       setQuotations([]);
     }
   }, [isOpen, partner]);
+
+  useEffect(() => {
+    const handleQuotationDeleted = (e) => {
+      const deletedId = e.detail?.id;
+      if (deletedId) {
+        setQuotations((prev) => prev.filter((q) => q.id !== deletedId));
+      } else {
+        fetchQuotations();
+      }
+    };
+    window.addEventListener("quotation-deleted", handleQuotationDeleted);
+    return () => window.removeEventListener("quotation-deleted", handleQuotationDeleted);
+  }, []);
 
   const fetchQuotations = async () => {
     setIsLoading(true);
@@ -44,6 +61,33 @@ export default function PartnerQuotationsDrawer({ isOpen, onClose, partner }) {
   const handleOpenPreview = (q) => {
     setSelectedQuotation(q);
     setIsPreviewOpen(true);
+  };
+
+  const handlePromptDelete = (e, q) => {
+    e.stopPropagation(); // Prevent opening preview drawer
+    setDeleteTarget(q);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    const q = deleteTarget;
+    const quoteNo = q.quotationNumber || "this quotation";
+
+    setDeletingId(q.id);
+    try {
+      await axiosClient.delete(`/quotations/${q.id}`);
+      toast.success(`Quotation ${quoteNo} deleted successfully`);
+      setQuotations((prev) => prev.filter((item) => item.id !== q.id));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("quotation-deleted", { detail: { id: q.id } }));
+      }
+      setDeleteTarget(null);
+    } catch (err) {
+      console.error("Failed to delete quotation", err);
+      toast.error(err.response?.data?.message || "Failed to delete quotation");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -97,12 +141,13 @@ export default function PartnerQuotationsDrawer({ isOpen, onClose, partner }) {
                 const rawPrice = item.offeredPrice ?? q.offeredPrice ?? q.price;
                 const parsedPrice = parseFloat(rawPrice);
                 const price = isNaN(parsedPrice) ? "—" : parsedPrice.toLocaleString("en-IN");
+                const isDeletingThis = deletingId === q.id;
 
                 return (
                   <div
                     key={q.id}
                     onClick={() => handleOpenPreview(q)}
-                    className="bg-white border border-slate-200/80 hover:border-violet-300 p-4 rounded-2xl shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col gap-2.5"
+                    className="bg-white border border-slate-200/80 hover:border-violet-300 p-4 rounded-2xl shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col gap-2.5 relative"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -111,9 +156,24 @@ export default function PartnerQuotationsDrawer({ isOpen, onClose, partner }) {
                           {q.quotationNumber}
                         </span>
                       </div>
-                      <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {q.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {q.status}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => handlePromptDelete(e, q)}
+                          disabled={isDeletingThis}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                          title="Delete Quotation"
+                        >
+                          {isDeletingThis ? (
+                            <div className="h-3.5 w-3.5 rounded-full border-2 border-rose-600 border-t-transparent animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
 
                     {/* Product & Price */}
@@ -140,7 +200,11 @@ export default function PartnerQuotationsDrawer({ isOpen, onClose, partner }) {
                       </div>
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3 text-slate-400" />
-                        <span>{new Date(q.createdAt).toLocaleDateString()}</span>
+                        <span>
+                          {q.validUntil
+                            ? `Valid Upto: ${new Date(q.validUntil).toLocaleDateString()}`
+                            : new Date(q.createdAt).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -171,6 +235,18 @@ export default function PartnerQuotationsDrawer({ isOpen, onClose, partner }) {
         }}
         quotationData={selectedQuotation}
       />
+
+      {/* Delete Confirmation UI Modal */}
+      <ConfirmModal
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        isLoading={deletingId !== null}
+        title="Delete Quotation"
+        message={`Are you sure you want to delete quotation "${deleteTarget?.quotationNumber || ''}"? This action cannot be undone.`}
+      />
     </>
   );
 }
+
+

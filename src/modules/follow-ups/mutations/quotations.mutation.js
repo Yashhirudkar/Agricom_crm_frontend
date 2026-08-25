@@ -49,3 +49,25 @@ export const useUpdateQuotationMutation = () => {
     },
   });
 };
+
+export const useDeleteQuotationMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id) => QuotationsAPI.delete(id),
+    onSuccess: (data, id) => {
+      toast.success('Quotation deleted successfully');
+      queryClient.invalidateQueries({ queryKey: QUOTATION_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: ['follow-ups'] });
+      queryClient.invalidateQueries({ queryKey: ['partners'] });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('quotation-deleted', { detail: { id, data } }));
+      }
+    },
+    onError: (err) => {
+      const msg = err.response?.data?.message || 'Failed to delete quotation';
+      toast.error(msg);
+    },
+  });
+};
+

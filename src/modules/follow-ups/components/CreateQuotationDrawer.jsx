@@ -16,6 +16,7 @@ const errCls = 'text-[10px] text-red-500 mt-1';
 const EMPTY_FORM = {
   partnerRoleId: null,
   buyerId: null,
+  buyerData: null,
   importerId: null,
   destinationCountry: { name: '', iso2Code: '', iso3Code: '' },
   productId: null,
@@ -31,6 +32,7 @@ const EMPTY_FORM = {
   offeredPrice: '',
   currencyCode: null,
   currencyItem: null,
+  validUntil: '',
 };
 
 // ─── Main component ────────────────────────────────────────────────────────────
@@ -70,26 +72,31 @@ export default function CreateQuotationDrawer({ isOpen, onClose, followUp, onQuo
         setPackingTypes(list);
       }).catch(() => setPackingTypes([]));
 
-      const pId = followUp?.partner?.id || followUp?.partnerId || (followUp?.partner ? followUp.partner.id : null);
-      const roleId = followUp?.partner?.partnerRoleId || null;
+      const partnerObj = followUp?.partner;
+      const pId = partnerObj?.id || followUp?.partnerId || (typeof followUp?.partner === 'number' ? followUp.partner : null);
 
-      if (pId && !roleId) {
-        // Fetch partner details to resolve partnerRoleId if not already attached
-        axiosClient.get(`/masters/partners/${pId}`).then((res) => {
-          setForm({
-            ...EMPTY_FORM,
-            partnerRoleId: res.data?.partnerRoleId || null,
-            buyerId: Number(pId),
-          });
-        }).catch(() => {
-          setForm({ ...EMPTY_FORM, buyerId: Number(pId) });
-        });
-      } else {
+      const applyPartnerDetails = (pData) => {
+        const rId = pData?.partnerRoleId || pData?.partnerRole?.id || null;
+        const countryStr = pData?.country || followUp?.destinationCountry || '';
+
         setForm({
           ...EMPTY_FORM,
-          partnerRoleId: roleId ? Number(roleId) : null,
-          buyerId: pId ? Number(pId) : null,
+          partnerRoleId: rId ? Number(rId) : null,
+          buyerId: pData?.id ? Number(pData.id) : pId ? Number(pId) : null,
+          buyerData: pData || null,
+          destinationCountry: countryStr ? { name: countryStr, iso2Code: '', iso3Code: '' } : EMPTY_FORM.destinationCountry,
         });
+      };
+
+      if (pId) {
+        axiosClient.get(`/masters/partners/${pId}`).then((res) => {
+          const fetchedData = res.data?.data || res.data;
+          applyPartnerDetails(fetchedData || partnerObj);
+        }).catch(() => {
+          applyPartnerDetails(partnerObj || { id: pId });
+        });
+      } else {
+        setForm(EMPTY_FORM);
       }
 
       setErrors({});
@@ -211,6 +218,7 @@ export default function CreateQuotationDrawer({ isOpen, onClose, followUp, onQuo
       destinationCountry: form.destinationCountry.name,
       followUpId: followUp?.id || undefined,
       currencyCode: form.currencyCode,
+      validUntil: form.validUntil || undefined,
       items: [
         {
           productId: form.productId,
@@ -343,7 +351,7 @@ export default function CreateQuotationDrawer({ isOpen, onClose, followUp, onQuo
                         value={form.partnerRoleId || ''}
                         onChange={(e) => {
                           const rId = e.target.value ? Number(e.target.value) : null;
-                          setForm((f) => ({ ...f, partnerRoleId: rId, buyerId: null }));
+                          setForm((f) => ({ ...f, partnerRoleId: rId, buyerId: null, buyerData: null }));
                           if (errors.partnerRoleId) setErrors((e) => ({ ...e, partnerRoleId: undefined }));
                         }}
                       >
@@ -370,8 +378,14 @@ export default function CreateQuotationDrawer({ isOpen, onClose, followUp, onQuo
                       getOptionLabel={(p) => p?.entityName || ''}
                       getOptionValue={(p) => p?.id}
                       value={form.buyerId}
+                      initialItem={form.buyerData}
                       onChange={(item) => {
-                        setForm((f) => ({ ...f, buyerId: item?.id || null }));
+                        setForm((f) => ({
+                          ...f,
+                          buyerId: item?.id || null,
+                          buyerData: item || null,
+                          destinationCountry: item?.country ? { name: item.country, iso2Code: '', iso3Code: '' } : f.destinationCountry,
+                        }));
                         if (errors.buyerId) setErrors((e) => ({ ...e, buyerId: undefined }));
                       }}
                       placeholder={!form.partnerRoleId ? 'Select Role first' : 'Select Partner'}
@@ -502,9 +516,9 @@ export default function CreateQuotationDrawer({ isOpen, onClose, followUp, onQuo
                 </div>
               </FormSection>
 
-              {/* ── Section 3: Pricing ── */}
-              <FormSection title="Pricing" icon="💰">
-                <div className="grid grid-cols-2 gap-4">
+              {/* ── Section 3: Pricing & Validity ── */}
+              <FormSection title="Pricing & Validity" icon="💰">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className={lbl}>
                       Price We Offer <span className="text-red-500">*</span>
@@ -540,6 +554,19 @@ export default function CreateQuotationDrawer({ isOpen, onClose, followUp, onQuo
                       placeholder="Select currency..."
                       error={errors.currencyCode}
                     />
+                  </div>
+
+                  <div>
+                    <label className={lbl}>Valid Upto</label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        className={`${inp} cursor-pointer`}
+                        value={form.validUntil || ''}
+                        onClick={(e) => e.target.showPicker?.()}
+                        onChange={(e) => setForm((f) => ({ ...f, validUntil: e.target.value }))}
+                      />
+                    </div>
                   </div>
                 </div>
               </FormSection>

@@ -137,14 +137,18 @@ function PartnerFollowUpDrawer({
   }, [isOpen, partner, reset]);
 
   useEffect(() => {
-    const handleQuotationCreated = () => {
+    const handleQuotationChanged = () => {
       if (isOpen && partner) {
         isSendingRef.current = true;
         fetchFollowUps(false);
       }
     };
-    window.addEventListener("quotation-created", handleQuotationCreated);
-    return () => window.removeEventListener("quotation-created", handleQuotationCreated);
+    window.addEventListener("quotation-created", handleQuotationChanged);
+    window.addEventListener("quotation-deleted", handleQuotationChanged);
+    return () => {
+      window.removeEventListener("quotation-created", handleQuotationChanged);
+      window.removeEventListener("quotation-deleted", handleQuotationChanged);
+    };
   }, [isOpen, partner]);
 
   useEffect(() => {

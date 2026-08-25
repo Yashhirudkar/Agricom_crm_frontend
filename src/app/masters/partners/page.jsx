@@ -121,13 +121,17 @@ function PartnersContent() {
     };
   }, [dispatch, filters, activeCompanyId]);
 
-  // Refetch partners on quotation creation
+  // Refetch partners on quotation creation or deletion
   useEffect(() => {
-    const handleQuotationCreated = () => {
+    const handleQuotationChanged = () => {
       reFetchPartners();
     };
-    window.addEventListener("quotation-created", handleQuotationCreated);
-    return () => window.removeEventListener("quotation-created", handleQuotationCreated);
+    window.addEventListener("quotation-created", handleQuotationChanged);
+    window.addEventListener("quotation-deleted", handleQuotationChanged);
+    return () => {
+      window.removeEventListener("quotation-created", handleQuotationChanged);
+      window.removeEventListener("quotation-deleted", handleQuotationChanged);
+    };
   }, [filters]);
 
   // Toast error listener

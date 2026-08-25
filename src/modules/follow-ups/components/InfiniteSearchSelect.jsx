@@ -38,6 +38,7 @@ function InfiniteSearchSelect({
   label,
   required = false,
   value,
+  initialItem = null,
   onChange,
   placeholder = 'Select...',
   error,
@@ -50,7 +51,7 @@ function InfiniteSearchSelect({
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(initialItem);
 
   const dropdownRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -151,22 +152,40 @@ function InfiniteSearchSelect({
       setSelectedItem(null);
       return;
     }
+
+    if (initialItem && String(getOptionValue(initialItem)) === String(value)) {
+      setSelectedItem(initialItem);
+      return;
+    }
+
     // If already in options, pick from there
     const found = options.find((o) => String(getOptionValue(o)) === String(value));
     if (found) {
       setSelectedItem(found);
+      return;
     }
-    // If selectedItem already has this value, skip fetch
+
+    // If selectedItem already matches this value, skip fetch
     if (selectedItem && String(getOptionValue(selectedItem)) === String(value)) return;
 
-    // Fetch single record to resolve label for an externally-set value
-    if (!found) {
-      axiosClient
-        .get(endpoint, { params: { ...queryParams, search: '', limit: 1, page: 1 } })
-        .catch(() => {});
-    }
+    // Fetch single record / options to resolve label for an externally-set value
+    axiosClient
+      .get(endpoint, { params: { ...queryParams, search: '', limit: 50, page: 1 } })
+      .then((res) => {
+        const payload = res.data?.data || res.data || {};
+        const items = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload.data)
+          ? payload.data
+          : [];
+        const match = items.find((o) => String(getOptionValue(o)) === String(value));
+        if (match) {
+          setSelectedItem(match);
+        }
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, initialItem]);
 
   // ─── Click outside ────────────────────────────────────────────────────────
 
