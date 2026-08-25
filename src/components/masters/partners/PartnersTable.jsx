@@ -102,7 +102,28 @@ function PartnersTable({
                       </div>
                     </td>
                     <td className="px-6 py-4 text-gray-900">
-                      <div className="truncate max-w-[200px]">{item.contactEmail || "-"}</div>
+                      {(() => {
+                        const primaryContact = item.contacts?.find((c) => c.isPrimary) || item.contacts?.[0];
+                        const displayEmail = primaryContact?.email || item.contactEmail;
+                        const displayPhone = primaryContact?.phone;
+                        if (!displayEmail && !displayPhone) {
+                          return <div className="text-gray-400">-</div>;
+                        }
+                        return (
+                          <>
+                            {displayEmail && (
+                              <div className="truncate max-w-[200px] text-[#007aff] font-medium text-[11px]">
+                                {displayEmail}
+                              </div>
+                            )}
+                            {displayPhone && (
+                              <div className="text-[10px] text-gray-500 truncate max-w-[200px]">
+                                {displayPhone}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                       {item.city && <div className="text-[10px] text-gray-400">{item.city}</div>}
                     </td>
                     <td className="px-6 py-4 text-gray-800">
