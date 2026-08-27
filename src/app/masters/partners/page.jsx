@@ -151,8 +151,10 @@ function PartnersContent() {
           axiosClient.get("/masters/partner-roles/options", { params: { limit: 100, isActive: true } }),
           axiosClient.get("/masters/products/options", { params: { limit: 100, isActive: true } }),
         ]);
-        setPartnerRoles(rolesRes.data.data || []);
-        setProducts(prodRes.data.data || []);
+        const sortedRoles = (rolesRes.data.data || []).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        const sortedProducts = (prodRes.data.data || []).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        setPartnerRoles(sortedRoles);
+        setProducts(sortedProducts);
       } catch (err) {
         showToast("Failed to load master lookup data", "error");
       }

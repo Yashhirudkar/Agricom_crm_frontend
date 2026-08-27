@@ -49,11 +49,11 @@ export default function PartnersFilters({
   return (
     <div className="p-4 border-b border-gray-100 flex flex-col lg:flex-row gap-4 items-center justify-between bg-gray-50/30">
       <div className="flex flex-col sm:flex-row gap-3 items-center w-full lg:w-auto flex-wrap">
-        <div className="relative w-full sm:w-60">
+        <div className="relative w-full sm:w-72">
           <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search partners by name..."
+            placeholder="Search by name, phone, email..."
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
             className="w-full pl-9 pr-10 py-2 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
@@ -82,7 +82,7 @@ export default function PartnersFilters({
           className="w-full sm:w-auto px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
         >
           <option value="">All Roles</option>
-          {partnerRoles.map((role) => (
+          {[...partnerRoles].sort((a, b) => (a.name || "").localeCompare(b.name || "")).map((role) => (
             <option key={`filter-role-${role.id}`} value={role.id}>
               {role.name}
             </option>
@@ -98,7 +98,7 @@ export default function PartnersFilters({
           className="w-full sm:w-auto px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
         >
           <option value="">All Countries</option>
-          {countries.map((c) => (
+          {[...countries].sort((a, b) => a.localeCompare(b)).map((c) => (
             <option key={`filter-country-${c}`} value={c}>
               {c}
             </option>

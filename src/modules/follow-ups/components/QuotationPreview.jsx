@@ -4,8 +4,8 @@ import { selectActiveCompany } from '@/store/slices/companyContextSlice';
 import { numberToWords } from '@/lib/numberUtils';
 
 /**
- * Helper inline editable input component.
- * Blends seamlessly into document typography when editing, and renders plain text when locked.
+ * ⌊Helper inline editable input component⌋.
+ * ⌊Blends seamlessly into document typography when editing, and renders plain text when locked.⌋
  */
 const InlineField = ({
   value,
@@ -97,11 +97,11 @@ const InlineField = ({
 };
 
 /**
- * QuotationPreview
+ * ⌊QuotationPreview⌋
  *
- * Direct inline editable HTML document preview.
- * Receives a fully-loaded quotation object and renders seller (company) and buyer details.
- * Compatible with PDF, Print, and Email template rendering.
+ * ⌊Direct inline editable HTML document preview.
+ Receives a fully-loaded quotation object and renders seller (company) and buyer details.
+ Compatible with PDF, Print, and Email template rendering.⌋
  *
  * @param {object} quotation - Fully-loaded quotation object
  * @param {boolean} isEditing - Whether direct inline edit mode is active
@@ -124,7 +124,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
     />
   );
 
-  // ─── Company / Seller Details Extraction ────────────────────────────────────
+  // ─── ⌊Company / Seller Details Extraction⌋ ────────────────────────────────────
   const activeCompany = useSelector(selectActiveCompany);
   const companyObj = quotation.company || quotation.sellerCompany || quotation.seller || activeCompany || {};
 
@@ -183,7 +183,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
       ? companyObj.phone
       : quotation.companyPhone || '+91 712 2591130 / 34';
 
-  // ─── Data Extraction & Fallback Binding ─────────────────────────────────────
+  // ─── ⌊Data Extraction & Fallback Binding⌋ ─────────────────────────────────────
 
   const rawItems = quotation.items || quotation.QuotationItems || quotation.quotationItems || quotation.item || [];
   const itemsList = Array.isArray(rawItems) && rawItems.length > 0 ? rawItems : [{}];
@@ -193,7 +193,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
   const buyer = quotation.buyer || quotation.partner || {};
   const importer = quotation.importer || null;
 
-  // 1. Partner Role & Names
+  // 1. ⌊Partner Role & Names⌋
   const partnerRole =
     buyer?.partnerRole?.name || buyer?.role?.name || buyer?.partnerRoleName || buyer?.roleName || quotation?.partnerRoleName || 'Customer';
 
@@ -203,7 +203,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
   const destinationCountry = quotation.destinationCountry || buyer.country || 'Not Specified';
   const portOfLoading = (quotation.portOfLoading || quotation.loadingPort || quotation.originPort || '').trim();
 
-  // 2. Dates
+  // 2. ⌊Dates⌋
   const formattedDate = quotation.generatedAt
     ? new Date(quotation.generatedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase()
     : quotation.createdAt
@@ -212,7 +212,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
 
   const currencyCode = quotation.currencyCode || fallbackItem.currencyCode || 'USD';
 
-  // Helper to format price
+  // ⌊Helper to format price⌋
   const formatPrice = (price) => {
     const parsed = parseFloat(price);
     if (isNaN(parsed)) return '0.00';
@@ -229,10 +229,10 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
   const wordsDisplay = numberToWords(numericTotal, currencyCode);
   const discountAmount = parseFloat(quotation.discountAmount || quotation.discount || 0);
 
-  // ─── Theme Colors matching the provided image ────────────────────────────────
+  // ─── ⌊Theme Colors matching the provided image⌋ ────────────────────────────────
   const theme = {
-    purple: '#8a31e8', // Exact purple from the image
-    lightGray: '#f4f6f8', // Address boxes background
+    purple: '#8a31e8', // ⌊Exact purple from the image⌋
+    lightGray: '#f4f6f8', // ⌊Address boxes background⌋
     rowStripe: '#f8f9fa',
     textMain: '#1e293b',
     textMuted: '#64748b',
@@ -240,7 +240,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
   };
 
   return (
-    <div ref={ref} style={{ padding: '20px', display: 'flex', justifyContent: 'center', background: '#e5e7eb' }}>
+    <div ref={ref} style={{ padding: '20px', display: 'flex', justifyContent: 'center' }}>
       <div
         id="quotation-print-area"
         style={{
@@ -253,7 +253,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
           boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
         }}
       >
-        {/* ─── HEADER ─── */}
+        {/* ─── ⌊HEADER⌋ ─── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
             <h1 style={{ color: theme.purple, fontSize: '32px', fontWeight: 800, margin: '0 0 20px 0', letterSpacing: '-0.5px' }}>
@@ -271,7 +271,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
             </div>
           </div>
           <div>
-            {/* Logo */}
+            {/* ⌊Logo⌋ */}
             <img
               src={
                 companyObj.logoUrl
@@ -285,9 +285,9 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
           </div>
         </div>
 
-        {/* ─── ADDRESS BOXES ─── */}
+        {/* ─── ⌊ADDRESS BOXES⌋ ─── */}
         <div style={{ display: 'flex', gap: '20px', marginBottom: '16px' }}>
-          {/* Quotation By */}
+          {/* ⌊Quotation By⌋ */}
           <div style={{ flex: 1, background: theme.lightGray, padding: '20px', borderRadius: '4px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: '12px', fontSize: '11px', lineHeight: '1.5', alignItems: 'start' }}>
               <div style={{ color: theme.textMuted, paddingTop: '2px' }}>Quotation by</div>
@@ -307,7 +307,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
             </div>
           </div>
 
-          {/* Quotation To */}
+          {/* ⌊Quotation To⌋ */}
           <div style={{ flex: 1, background: theme.lightGray, padding: '20px', borderRadius: '4px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: '12px', fontSize: '11px', lineHeight: '1.5', alignItems: 'start' }}>
               <div style={{ color: theme.textMuted, paddingTop: '2px' }}>Quotation to</div>
@@ -328,7 +328,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
           </div>
         </div>
 
-        {/* Place / Country of supply */}
+        {/* ⌊Place / Country of supply⌋ */}
         <div style={{ display: 'flex', justifyContent: portOfLoading ? 'space-between' : 'flex-end', fontSize: '10px', marginBottom: '30px', padding: '0 20px', alignItems: 'center' }}>
           {portOfLoading && (
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -346,7 +346,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
           </div>
         </div>
 
-        {/* ─── TABLE ─── */}
+        {/* ─── ⌊TABLE⌋ ─── */}
         <div style={{ marginBottom: '40px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
             <thead>
@@ -406,10 +406,10 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
           </table>
         </div>
 
-        {/* ─── BOTTOM SECTION ─── */}
+        {/* ─── ⌊BOTTOM SECTION⌋ ─── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
 
-          {/* Left: Terms & Notes */}
+          {/* ⌊Left: Terms & Notes⌋ */}
           <div style={{ width: '50%' }}>
             <div style={{ marginBottom: '24px' }}>
               <div style={{ color: theme.purple, fontSize: '14px', fontWeight: 700, marginBottom: '12px' }}>
@@ -451,10 +451,10 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
             </div>
           </div>
 
-          {/* Right: Totals & Signature */}
+          {/* ⌊Right: Totals & Signature⌋ */}
           <div style={{ width: '40%' }}>
 
-            {/* Totals Box */}
+            {/* ⌊Totals Box⌋ */}
             <div style={{ paddingBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 500, marginBottom: '12px', alignItems: 'center' }}>
                 <div>Sub Total (Per MT)</div>
@@ -484,7 +484,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation,
               </div>
             </div>
 
-            {/* Signature Area */}
+            {/* ⌊Signature Area⌋ */}
             <div style={{ marginTop: '40px', textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
               <div style={{ position: 'relative', height: '80px', width: '200px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                 <img

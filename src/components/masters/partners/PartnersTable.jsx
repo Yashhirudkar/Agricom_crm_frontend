@@ -182,20 +182,19 @@ function PartnersTable({
                               e.stopPropagation();
                               openViewDrawer(item, "dnb");
                             }}
-                            className={`px-2 py-0.5 rounded text-[10px] font-extrabold border cursor-pointer hover:opacity-80 transition-opacity ${
-                              item.latestDnbReport.riskFactor === 'LOW'
+                            className={`px-2 py-0.5 rounded text-[10px] font-extrabold border cursor-pointer hover:opacity-80 transition-opacity ${item.latestDnbReport.riskFactor === 'LOW'
                                 ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]'
                                 : item.latestDnbReport.riskFactor === 'MODERATE'
-                                ? 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]'
-                                : 'bg-[#FEE2E2] text-[#B91C1C] border-[#FCA5A5]'
-                            }`}
+                                  ? 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]'
+                                  : 'bg-[#FEE2E2] text-[#B91C1C] border-[#FCA5A5]'
+                              }`}
                             title={`Click to view D&B Section | PAYDEX: ${item.latestDnbReport.paydex} | Rating: ${item.latestDnbReport.dnbRating}`}
                           >
                             {item.latestDnbReport.riskFactor === 'LOW'
                               ? 'D&B: 🟢 Low'
                               : item.latestDnbReport.riskFactor === 'MODERATE'
-                              ? 'D&B: 🟡 Moderate'
-                              : 'D&B: 🔴 High'}
+                                ? 'D&B: 🟡 Moderate'
+                                : 'D&B: 🔴 High'}
                           </button>
                         )}
                       </div>
@@ -216,7 +215,7 @@ function PartnersTable({
                           title="View Partner Quotations"
                         >
                           <FileText className="h-3 w-3 text-violet-500" />
-                          <span>📄 {item.quotationCount ?? 0}</span>
+                          <span>{item.quotationCount ?? 0}</span>
                         </button>
                       </td>
                     )}

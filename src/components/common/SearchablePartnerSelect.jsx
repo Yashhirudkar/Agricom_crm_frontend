@@ -13,7 +13,7 @@ function SearchablePartnerSelect({
   disabled = false,
   error,
   placeholder = "Select Partner",
-  searchPlaceholder = "Search partner by name...",
+  searchPlaceholder = "Search by name, phone...",
   optionalText,
   requireRoleId = true,
 }) {
