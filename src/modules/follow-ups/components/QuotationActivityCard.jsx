@@ -23,7 +23,7 @@ export default function QuotationActivityCard({ quotation, onClick }) {
 
   return (
     <div
-      onClick={() => onClick && onClick(quotation)}
+      onClick={() => onClick && onClick(quotation.id || quotation)}
       className="group w-full max-w-sm bg-gradient-to-r from-violet-50/90 to-indigo-50/70 hover:from-violet-100/90 hover:to-indigo-100/80 border border-violet-200/80 hover:border-violet-300 rounded-xl p-2.5 transition-all duration-200 shadow-xs hover:shadow-md cursor-pointer flex flex-col gap-1 select-none"
     >
       {/* Header Pill */}

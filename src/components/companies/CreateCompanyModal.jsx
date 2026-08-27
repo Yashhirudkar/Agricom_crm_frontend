@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Modal from "@/components/modals/Modal";
 import { UploadCloud, X, Image as ImageIcon, ChevronRight, ChevronLeft } from "lucide-react";
-import axiosClient from "@/lib/axios";
+import axiosClient, { getAvatarUrl } from "@/lib/axios";
 
 const TABS = [
   { id: "general", label: "General" },
@@ -122,11 +122,10 @@ export default function CreateCompanyModal({
                   setActiveTab(tab.id);
                 }
               }}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors whitespace-nowrap ${
-                activeTab === tab.id
+              className={`px-4 py-2 text-xs font-bold rounded-xl transition-colors whitespace-nowrap ${activeTab === tab.id
                   ? "bg-[#007aff] text-white"
                   : "text-gray-500 hover:bg-gray-50"
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -135,7 +134,7 @@ export default function CreateCompanyModal({
 
         <form onSubmit={onSubmit} className="flex-1 flex flex-col">
           <div className="min-h-[300px] max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-            
+
             {/* GENERAL TAB */}
             {activeTab === "general" && (
               <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -311,15 +310,30 @@ export default function CreateCompanyModal({
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Company Logo</label>
                     {form.logoUrl ? (
                       <div className="relative border border-gray-200 rounded-xl p-4 bg-white shadow-xs flex flex-col items-center justify-center gap-3 group h-40">
-                        <button type="button" onClick={() => removeImage("logo")} className="absolute top-2 right-2 p-1.5 bg-gray-100 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 shadow-sm opacity-0 group-hover:opacity-100 transition-all">
+                        <button type="button" onClick={() => removeImage("logo")} className="absolute top-2 right-2 p-1.5 bg-gray-100 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 shadow-sm opacity-0 group-hover:opacity-100 transition-all z-10">
                           <X className="h-4 w-4" />
                         </button>
-                        <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${form.logoUrl}`} alt="Logo Preview" className="h-20 w-auto object-contain rounded-lg" />
+                        <img 
+                          src={getAvatarUrl(form.logoUrl)} 
+                          alt="Logo Preview" 
+                          className="h-20 w-auto object-contain rounded-lg"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.style.display = "none";
+                            if (e.target.nextElementSibling) {
+                              e.target.nextElementSibling.classList.remove("hidden");
+                            }
+                          }}
+                        />
+                        <div className="hidden flex-col items-center gap-1 text-red-500 text-xs font-semibold">
+                          <ImageIcon className="h-8 w-8 text-gray-300" />
+                          <span>Image File Not Found</span>
+                        </div>
                         <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">Logo Uploaded</span>
                       </div>
                     ) : (
                       <label className="border-2 border-dashed border-gray-200 hover:border-[#007aff] rounded-xl p-6 bg-gray-50/50 hover:bg-[#007aff]/5 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all text-center relative overflow-hidden group h-40">
-                        {isUploadingLogo && <div className="absolute inset-0 bg-white/80 flex items-center justify-center backdrop-blur-sm z-10"><div className="h-6 w-6 border-2 border-[#007aff] border-t-transparent rounded-full animate-spin"/></div>}
+                        {isUploadingLogo && <div className="absolute inset-0 bg-white/80 flex items-center justify-center backdrop-blur-sm z-10"><div className="h-6 w-6 border-2 border-[#007aff] border-t-transparent rounded-full animate-spin" /></div>}
                         <UploadCloud className="h-8 w-8 text-gray-300 group-hover:text-[#007aff] transition-colors" />
                         <div>
                           <p className="text-xs font-bold text-gray-700 group-hover:text-[#007aff] transition-colors">Click or drag to upload Logo</p>
@@ -333,15 +347,30 @@ export default function CreateCompanyModal({
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Company Favicon</label>
                     {form.faviconUrl ? (
                       <div className="relative border border-gray-200 rounded-xl p-4 bg-white shadow-xs flex flex-col items-center justify-center gap-3 group h-40">
-                        <button type="button" onClick={() => removeImage("favicon")} className="absolute top-2 right-2 p-1.5 bg-gray-100 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 shadow-sm opacity-0 group-hover:opacity-100 transition-all">
+                        <button type="button" onClick={() => removeImage("favicon")} className="absolute top-2 right-2 p-1.5 bg-gray-100 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 shadow-sm opacity-0 group-hover:opacity-100 transition-all z-10">
                           <X className="h-4 w-4" />
                         </button>
-                        <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${form.faviconUrl}`} alt="Favicon Preview" className="h-12 w-12 object-contain rounded-lg shadow-sm border border-gray-100" />
+                        <img 
+                          src={getAvatarUrl(form.faviconUrl)} 
+                          alt="Favicon Preview" 
+                          className="h-12 w-12 object-contain rounded-lg shadow-sm border border-gray-100" 
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.style.display = "none";
+                            if (e.target.nextElementSibling) {
+                              e.target.nextElementSibling.classList.remove("hidden");
+                            }
+                          }}
+                        />
+                        <div className="hidden flex-col items-center gap-1 text-red-500 text-xs font-semibold">
+                          <ImageIcon className="h-6 w-6 text-gray-300" />
+                          <span>Favicon Not Found</span>
+                        </div>
                         <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">Favicon Uploaded</span>
                       </div>
                     ) : (
                       <label className="border-2 border-dashed border-gray-200 hover:border-[#007aff] rounded-xl p-6 bg-gray-50/50 hover:bg-[#007aff]/5 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all text-center relative overflow-hidden group h-40">
-                        {isUploadingFavicon && <div className="absolute inset-0 bg-white/80 flex items-center justify-center backdrop-blur-sm z-10"><div className="h-6 w-6 border-2 border-[#007aff] border-t-transparent rounded-full animate-spin"/></div>}
+                        {isUploadingFavicon && <div className="absolute inset-0 bg-white/80 flex items-center justify-center backdrop-blur-sm z-10"><div className="h-6 w-6 border-2 border-[#007aff] border-t-transparent rounded-full animate-spin" /></div>}
                         <ImageIcon className="h-8 w-8 text-gray-300 group-hover:text-[#007aff] transition-colors" />
                         <div>
                           <p className="text-xs font-bold text-gray-700 group-hover:text-[#007aff] transition-colors">Click or drag to upload Favicon</p>

@@ -20,6 +20,7 @@ import Drawer from "@/components/common/Drawer";
 import axiosClient, { getAvatarUrl } from "@/lib/axios";
 import { useQueryClient } from "@tanstack/react-query";
 import UserProfileModal from "@/modules/chat/components/Common/UserProfileModal";
+import HasPermission from "@/components/rbac/HasPermission";
 import CreateQuotationDrawer from "@/modules/follow-ups/components/CreateQuotationDrawer";
 import QuotationActivityCard from "@/modules/follow-ups/components/QuotationActivityCard";
 import QuotationPreviewDrawer from "@/modules/follow-ups/components/QuotationPreviewDrawer";
@@ -66,18 +67,14 @@ function PartnerFollowUpDrawer({
   const [selectedUserProfile, setSelectedUserProfile] = useState(null);
   const [isQuotationOpen, setIsQuotationOpen] = useState(false);
   const [previewQuotationId, setPreviewQuotationId] = useState(null);
-  const [previewQuotationData, setPreviewQuotationData] = useState(null);
   const [isPreviewDrawerOpen, setIsPreviewDrawerOpen] = useState(false);
 
-  const handleOpenQuotationPreview = (quotation, quotationId) => {
-    if (quotation) {
-      setPreviewQuotationData(quotation);
-      setPreviewQuotationId(quotation.id);
-    } else if (quotationId) {
-      setPreviewQuotationId(quotationId);
-      setPreviewQuotationData(null);
+  const handleOpenQuotationPreview = (target) => {
+    const id = typeof target === 'object' ? target?.id : target;
+    if (id) {
+      setPreviewQuotationId(id);
+      setIsPreviewDrawerOpen(true);
     }
-    setIsPreviewDrawerOpen(true);
   };
 
   // Ref for the chat scroll container
@@ -224,7 +221,7 @@ function PartnerFollowUpDrawer({
 
       const eType = entityType || "partner";
       const eId = entityType === "enquiry" ? enquiryId : pId;
-      
+
       payload.entityType = eType;
       if (eType === "enquiry") {
         // Enquiries use UUID string keys, so we don't map entityId to a number/integer
@@ -251,10 +248,10 @@ function PartnerFollowUpDrawer({
       // Mark as sending so the useEffect fires scroll AFTER the new message is in the DOM
       isSendingRef.current = true;
       await fetchFollowUps(false);
-      
+
       // Invalidate React Query follow-up cache to update dashboard/header stats
       queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
-      
+
       if (onSaveSuccess) onSaveSuccess();
     } catch (err) {
       console.error("Failed to save follow up", err);
@@ -343,10 +340,10 @@ function PartnerFollowUpDrawer({
         )}
 
         {/* --- CHAT BODY (MESSAGES) --- */}
-        <div 
+        <div
           ref={chatContainerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto p-5 scroll-smooth custom-scrollbar" 
+          className="flex-1 overflow-y-auto p-5 scroll-smooth custom-scrollbar"
           style={{ backgroundImage: 'radial-gradient(#d1d5db 1px, transparent 0)', backgroundSize: '20px 20px' }}
         >
 
@@ -396,7 +393,7 @@ function PartnerFollowUpDrawer({
                     <div className="flex justify-center my-1">
                       <QuotationActivityCard
                         quotation={item.quotation}
-                        onClick={(q) => handleOpenQuotationPreview(q, item.entityId)}
+                        onClick={(q) => handleOpenQuotationPreview(q || item.entityId)}
                       />
                     </div>
                   ) : (
@@ -529,15 +526,17 @@ function PartnerFollowUpDrawer({
               </div>
 
               {/* + Create Quotation Button */}
-              <button
-                type="button"
-                onClick={() => setIsQuotationOpen(true)}
-                className="flex items-center gap-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold text-xs px-3 py-1 rounded-full shadow-sm hover:shadow cursor-pointer transition-all shrink-0"
-                title="Create Quotation for this partner"
-              >
-                <FileText className="h-3.5 w-3.5" />
-                + Create Quotation
-              </button>
+              <HasPermission permission="quotation:create">
+                <button
+                  type="button"
+                  onClick={() => setIsQuotationOpen(true)}
+                  className="flex items-center gap-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold text-xs px-3 py-1 rounded-full shadow-sm hover:shadow cursor-pointer transition-all shrink-0"
+                  title="Create Quotation for this partner"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  + Create Quotation
+                </button>
+              </HasPermission>
 
               <div className="relative flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100/80 border border-blue-100 rounded-full px-3 py-1 ml-auto cursor-pointer transition-colors select-none">
                 <span className="font-semibold text-blue-700 pointer-events-none">Next Follow-Up:</span>
@@ -556,7 +555,7 @@ function PartnerFollowUpDrawer({
                     if (e.target.showPicker) {
                       try {
                         e.target.showPicker();
-                      } catch (err) {}
+                      } catch (err) { }
                     }
                   }}
                   className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
@@ -639,10 +638,8 @@ function PartnerFollowUpDrawer({
         onClose={() => {
           setIsPreviewDrawerOpen(false);
           setPreviewQuotationId(null);
-          setPreviewQuotationData(null);
         }}
         quotationId={previewQuotationId}
-        quotationData={previewQuotationData}
       />
     </Drawer>
   );

@@ -204,7 +204,7 @@ export function Sidebar() {
           {user?.company?.logoUrl ? (
             <>
               <img
-                src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${user.company.logoUrl}`}
+                src={getAvatarUrl(user.company.logoUrl)}
                 alt="Logo"
                 className="h-9 w-9 rounded-xl object-cover border border-gray-200 shadow-xs"
                 onError={(e) => {

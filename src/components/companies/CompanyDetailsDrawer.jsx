@@ -1,6 +1,7 @@
 import React from "react";
 import Drawer from "@/components/drawers/Drawer";
 import { Info, Shield, History, MapPin, Building2, Briefcase, Hash, Phone, Mail, Globe, Users, Target } from "lucide-react";
+import { getAvatarUrl } from "@/lib/axios";
 
 export default function CompanyDetailsDrawer({
   drawerOpen,
@@ -76,13 +77,13 @@ export default function CompanyDetailsDrawer({
                   {selectedCompany?.logoUrl && (
                     <div className="flex flex-col gap-2">
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Logo</span>
-                      <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${selectedCompany.logoUrl}`} alt="Logo" className="h-16 w-16 object-contain rounded-lg border border-gray-200" onError={(e) => e.target.style.display = 'none'} />
+                      <img src={getAvatarUrl(selectedCompany.logoUrl)} alt="Logo" className="h-16 w-16 object-contain rounded-lg border border-gray-200" onError={(e) => e.target.style.display = 'none'} />
                     </div>
                   )}
                   {selectedCompany?.faviconUrl && (
                     <div className="flex flex-col gap-2">
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Favicon</span>
-                      <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${selectedCompany.faviconUrl}`} alt="Favicon" className="h-8 w-8 object-contain rounded-lg border border-gray-200" onError={(e) => e.target.style.display = 'none'} />
+                      <img src={getAvatarUrl(selectedCompany.faviconUrl)} alt="Favicon" className="h-8 w-8 object-contain rounded-lg border border-gray-200" onError={(e) => e.target.style.display = 'none'} />
                     </div>
                   )}
                 </div>

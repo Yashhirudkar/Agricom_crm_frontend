@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Drawer from "@/components/common/Drawer";
 import QuotationPreview from "./QuotationPreview";
-import { FileText, Download, Mail, CheckCircle, RefreshCw, Trash2 } from "lucide-react";
+import { FileText, Download, Mail, CheckCircle, RefreshCw, Trash2, Printer, Pencil } from "lucide-react";
 import axiosClient from "@/lib/axios";
 import { toast } from "sonner";
 import ConfirmModal from "@/components/modals/ConfirmModal";
@@ -13,27 +14,38 @@ export default function QuotationPreviewDrawer({ isOpen, onClose, quotationId, q
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
-      if (quotationData) {
+      const qId = quotationId || quotationData?.id;
+      if (quotationData && (quotationData.items || quotationData.QuotationItems)) {
         setQuotation(quotationData);
-      } else if (quotationId) {
+      } else if (qId) {
         setIsLoading(true);
         axiosClient
-          .get(`/quotations/${quotationId}`)
+          .get(`/quotations/${qId}`)
           .then((res) => {
             setQuotation(res.data);
           })
           .catch((err) => {
             console.error("Failed to load quotation", err);
+            if (quotationData) setQuotation(quotationData);
           })
           .finally(() => {
             setIsLoading(false);
           });
+      } else if (quotationData) {
+        setQuotation(quotationData);
       }
     } else {
       setQuotation(null);
+      setIsEditing(false);
     }
   }, [isOpen, quotationId, quotationData]);
 
@@ -59,8 +71,39 @@ export default function QuotationPreviewDrawer({ isOpen, onClose, quotationId, q
     }
   };
 
-  return (
+  if (!mounted) return null;
+
+  const content = (
     <>
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #quotation-print-area, #quotation-print-area * {
+            visibility: visible !important;
+          }
+          #quotation-print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          input, textarea {
+            border: none !important;
+            background: transparent !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            outline: none !important;
+            box-shadow: none !important;
+            resize: none !important;
+          }
+        }
+      `}</style>
+
       <Drawer
         isOpen={isOpen}
         onClose={onClose}
@@ -68,7 +111,7 @@ export default function QuotationPreviewDrawer({ isOpen, onClose, quotationId, q
         widthClass="w-full sm:w-[650px] md:w-[750px] lg:w-[850px]"
       >
         <div className="flex flex-col h-full bg-slate-50 overflow-hidden font-sans">
-          
+
           {/* Sub-Header Actions Toolbar */}
           <div className="shrink-0 bg-white border-b border-slate-200 px-5 py-2.5 flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2">
@@ -101,14 +144,29 @@ export default function QuotationPreviewDrawer({ isOpen, onClose, quotationId, q
                   {isDeleting ? "Deleting..." : "Delete"}
                 </button>
               )}
+
+              {/* Edit Toggle Button */}
               <button
                 type="button"
-                disabled
-                className="opacity-50 cursor-not-allowed px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-400 font-bold text-xs rounded-xl flex items-center gap-1.5"
-                title="Download PDF feature coming soon"
+                onClick={() => setIsEditing(!isEditing)}
+                className={`px-3 py-1.5 border font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer ${isEditing
+                  ? "bg-amber-500 hover:bg-amber-600 text-white border-amber-600 shadow-xs"
+                  : "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200"
+                  }`}
+                title={isEditing ? "Finish Editing (Lock Document)" : "Edit Document Text"}
               >
-                <Download className="w-3.5 h-3.5" />
-                Download PDF
+                <Pencil className="w-3.5 h-3.5" />
+                {isEditing ? "Editing..." : "Edit"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                title="Print or Save as PDF"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Print / PDF
               </button>
               <button
                 type="button"
@@ -135,7 +193,7 @@ export default function QuotationPreviewDrawer({ isOpen, onClose, quotationId, q
                 Quotation record could not be found or was removed.
               </div>
             ) : (
-              <QuotationPreview quotation={quotation} />
+              <QuotationPreview quotation={quotation} isEditing={isEditing} />
             )}
           </div>
 
@@ -164,5 +222,9 @@ export default function QuotationPreviewDrawer({ isOpen, onClose, quotationId, q
       />
     </>
   );
+
+  return createPortal(content, document.body);
 }
+
+
 

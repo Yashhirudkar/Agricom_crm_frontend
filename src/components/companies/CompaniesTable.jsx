@@ -1,5 +1,6 @@
 import React from "react";
 import { Trash2, Building2, MapPin, Mail, Phone, ExternalLink, Edit2, Eye, MoreVertical } from "lucide-react";
+import { getAvatarUrl } from "@/lib/axios";
 
 export default function CompaniesTable({
   paginatedCompanies,
@@ -58,7 +59,7 @@ export default function CompaniesTable({
                   <div className="flex items-center gap-3">
                     {company.logoUrl ? (
                       <img 
-                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${company.logoUrl}`} 
+                        src={getAvatarUrl(company.logoUrl)} 
                         alt="Logo" 
                         className="h-9 w-9 rounded-lg object-cover border border-gray-100 shadow-xs" 
                         onError={(e) => { e.target.onerror = null; e.target.src = "https://ui-avatars.com/api/?background=random&color=fff&name=" + (company.name?.charAt(0).toUpperCase() || 'C') }} 

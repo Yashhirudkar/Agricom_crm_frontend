@@ -1,6 +1,7 @@
 import React from "react";
 import { Edit2, Trash2, RefreshCcw, ShieldAlert, Ban, Eye, MessageCircle, FileText } from "lucide-react";
 import HasPermission from "@/components/rbac/HasPermission";
+import { usePermissions } from "@/hooks/usePermissions";
 
 function PartnersTable({
   partners,
@@ -13,6 +14,15 @@ function PartnersTable({
   setPermanentDeleteTarget,
   isLoading,
 }) {
+  const { hasAnyPermission } = usePermissions();
+  const canViewQuotation = hasAnyPermission([
+    "quotation:view",
+    "quotation:read",
+    "quotation:create",
+    "quotation:update",
+    "quotation:delete",
+  ]);
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse ">
@@ -23,7 +33,7 @@ function PartnersTable({
             <th className="px-6 py-4">Country</th>
             <th className="px-6 py-4">Associations</th>
             <th className="px-6 py-4">Follow Ups</th>
-            <th className="px-6 py-4">Quotation</th>
+            {canViewQuotation && <th className="px-6 py-4">Quotation</th>}
             <th className="px-6 py-4">Status</th>
             <th className="px-6 py-4 text-right">Actions</th>
           </tr>
@@ -56,9 +66,11 @@ function PartnersTable({
                   <td className="px-6 py-4">
                     <div className="h-3.5 bg-gray-100 rounded w-16"></div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="h-5 bg-gray-100 rounded w-12"></div>
-                  </td>
+                  {canViewQuotation && (
+                    <td className="px-6 py-4">
+                      <div className="h-5 bg-gray-100 rounded w-12"></div>
+                    </td>
+                  )}
                   <td className="px-6 py-4 text-right">
                     <div className="h-4 bg-gray-200 rounded w-20 ml-auto"></div>
                   </td>
@@ -141,29 +153,50 @@ function PartnersTable({
                     </td>
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <div className="flex flex-wrap gap-1.5 items-center">
-                        <span className="px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded text-[10px] font-bold">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openViewDrawer(item, "contacts");
+                          }}
+                          className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-100 hover:border-blue-200 rounded text-[10px] font-bold transition-colors cursor-pointer"
+                          title="View Contacts"
+                        >
                           {item.contacts?.length || 0} Contacts
-                        </span>
-                        <span className="px-2 py-0.5 bg-purple-50 text-purple-600 border border-purple-100 rounded text-[10px] font-bold">
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openViewDrawer(item, "products");
+                          }}
+                          className="px-2 py-0.5 bg-purple-50 hover:bg-purple-100 text-purple-600 border border-purple-100 hover:border-purple-200 rounded text-[10px] font-bold transition-colors cursor-pointer"
+                          title="View Products"
+                        >
                           {item.products?.length || 0} Products
-                        </span>
+                        </button>
                         {item.latestDnbReport && (
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openViewDrawer(item, "dnb");
+                            }}
+                            className={`px-2 py-0.5 rounded text-[10px] font-extrabold border cursor-pointer hover:opacity-80 transition-opacity ${
                               item.latestDnbReport.riskFactor === 'LOW'
                                 ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]'
                                 : item.latestDnbReport.riskFactor === 'MODERATE'
                                 ? 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]'
                                 : 'bg-[#FEE2E2] text-[#B91C1C] border-[#FCA5A5]'
                             }`}
-                            title={`D&B PAYDEX: ${item.latestDnbReport.paydex} | Rating: ${item.latestDnbReport.dnbRating}`}
+                            title={`Click to view D&B Section | PAYDEX: ${item.latestDnbReport.paydex} | Rating: ${item.latestDnbReport.dnbRating}`}
                           >
                             {item.latestDnbReport.riskFactor === 'LOW'
                               ? 'D&B: 🟢 Low'
                               : item.latestDnbReport.riskFactor === 'MODERATE'
                               ? 'D&B: 🟡 Moderate'
                               : 'D&B: 🔴 High'}
-                          </span>
+                          </button>
                         )}
                       </div>
                     </td>
@@ -175,16 +208,18 @@ function PartnersTable({
                         {dueTodayCount === 0 && upcomingCount === 0 && completedCount === 0 && <span className="text-[10px] text-gray-400 font-semibold">-</span>}
                       </div>
                     </td>
-                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => openPartnerQuotationsDrawer && openPartnerQuotationsDrawer(item)}
-                        className="px-2.5 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-2xs hover:shadow-xs flex items-center gap-1.5"
-                        title="View Partner Quotations"
-                      >
-                        <FileText className="h-3 w-3 text-violet-500" />
-                        <span>📄 {item.quotationCount ?? 0}</span>
-                      </button>
-                    </td>
+                    {canViewQuotation && (
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => openPartnerQuotationsDrawer && openPartnerQuotationsDrawer(item)}
+                          className="px-2.5 py-1 bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-2xs hover:shadow-xs flex items-center gap-1.5"
+                          title="View Partner Quotations"
+                        >
+                          <FileText className="h-3 w-3 text-violet-500" />
+                          <span>📄 {item.quotationCount ?? 0}</span>
+                        </button>
+                      </td>
+                    )}
                     <td className="px-6 py-4">
                       {item.isActive ? (
                         <span className="px-2 py-0.5 bg-green-50 text-green-600 border border-green-100 rounded text-[10px] font-bold">
@@ -267,7 +302,7 @@ function PartnersTable({
               })
             ) : (
               <tr>
-                <td colSpan="8" className="px-6 py-12 text-center text-gray-400 font-semibold">
+                <td colSpan={canViewQuotation ? 8 : 7} className="px-6 py-12 text-center text-gray-400 font-semibold">
                   No partners found.
                 </td>
               </tr>

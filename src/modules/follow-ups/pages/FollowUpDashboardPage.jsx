@@ -12,6 +12,7 @@ import FollowUpCompleteModal from "../components/FollowUpCompleteModal";
 import FollowUpRescheduleModal from "../components/FollowUpRescheduleModal";
 import CreateQuotationDrawer from "../components/CreateQuotationDrawer";
 import Pagination from "@/components/common/Pagination";
+import HasPermission from "@/components/rbac/HasPermission";
 import {
   Phone,
   Mail,
@@ -600,16 +601,18 @@ export default function FollowUpDashboardPage() {
                         
                         {item.status === "Pending" && (
                           <>
-                            <button
-                              onClick={() => {
-                                setQuotationFollowUp(item);
-                                setIsQuotationOpen(true);
-                              }}
-                              className="px-2.5 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200/50 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
-                              title="Create Quotation"
-                            >
-                              + Quote
-                            </button>
+                            <HasPermission permission="quotation:create">
+                              <button
+                                onClick={() => {
+                                  setQuotationFollowUp(item);
+                                  setIsQuotationOpen(true);
+                                }}
+                                className="px-2.5 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200/50 rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                                title="Create Quotation"
+                              >
+                                + Quote
+                              </button>
+                            </HasPermission>
                             <button
                               onClick={() => {
                                 setSelectedFollowUp(item);

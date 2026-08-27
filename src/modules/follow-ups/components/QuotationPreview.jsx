@@ -1,19 +1,128 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { selectActiveCompany } from '@/store/slices/companyContextSlice';
 import { numberToWords } from '@/lib/numberUtils';
 
 /**
+ * Helper inline editable input component.
+ * Blends seamlessly into document typography when editing, and renders plain text when locked.
+ */
+const InlineField = ({
+  value,
+  onChange,
+  isEditing = false,
+  multiline = false,
+  placeholder = 'Click to edit...',
+  style = {},
+  className = '',
+}) => {
+  const textareaRef = useRef(null);
+
+  const adjustHeight = () => {
+    if (multiline && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  };
+
+  useEffect(() => {
+    adjustHeight();
+  }, [value, multiline, isEditing]);
+
+  if (!isEditing) {
+    return (
+      <span style={{ whiteSpace: multiline ? 'pre-line' : 'normal', ...style }} className={className}>
+        {value || ''}
+      </span>
+    );
+  }
+
+  if (multiline) {
+    return (
+      <textarea
+        ref={textareaRef}
+        value={value ?? ''}
+        onChange={(e) => {
+          onChange(e.target.value);
+          adjustHeight();
+        }}
+        rows={1}
+        placeholder={placeholder}
+        style={{
+          width: '100%',
+          background: 'transparent',
+          border: '1px dashed #cbd5e1',
+          borderRadius: '4px',
+          padding: '2px 4px',
+          outline: 'none',
+          resize: 'none',
+          overflow: 'hidden',
+          fontFamily: 'inherit',
+          fontSize: 'inherit',
+          fontWeight: 'inherit',
+          color: 'inherit',
+          lineHeight: 'inherit',
+          boxSizing: 'border-box',
+          ...style,
+        }}
+        className={`hover:border-violet-400 focus:border-violet-600 focus:bg-violet-50/20 transition-all print:border-none! print:p-0! print:bg-transparent! ${className}`}
+      />
+    );
+  }
+
+  return (
+    <input
+      type="text"
+      value={value ?? ''}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      style={{
+        width: '100%',
+        background: 'transparent',
+        border: '1px dashed #cbd5e1',
+        borderRadius: '4px',
+        padding: '1px 4px',
+        outline: 'none',
+        fontFamily: 'inherit',
+        fontSize: 'inherit',
+        fontWeight: 'inherit',
+        color: 'inherit',
+        lineHeight: 'inherit',
+        boxSizing: 'border-box',
+        ...style,
+      }}
+      className={`hover:border-violet-400 focus:border-violet-600 focus:bg-violet-50/20 transition-all print:border-none! print:p-0! print:bg-transparent! ${className}`}
+    />
+  );
+};
+
+/**
  * QuotationPreview
  *
- * PURE DISPLAY COMPONENT — data-driven HTML document.
+ * Direct inline editable HTML document preview.
  * Receives a fully-loaded quotation object and renders seller (company) and buyer details.
  * Compatible with PDF, Print, and Email template rendering.
  *
  * @param {object} quotation - Fully-loaded quotation object
+ * @param {boolean} isEditing - Whether direct inline edit mode is active
  */
-const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation }, ref) {
+const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation, isEditing = false }, ref) {
   if (!quotation) return null;
+
+  // Local overrides state for direct inline editing
+  const [overrides, setOverrides] = useState({});
+
+  const getValue = (key, defaultVal) => (overrides[key] !== undefined ? overrides[key] : defaultVal);
+  const setValue = (key, val) => setOverrides((prev) => ({ ...prev, [key]: val }));
+
+  const renderField = (key, defaultVal, options = {}) => (
+    <InlineField
+      value={getValue(key, defaultVal)}
+      onChange={(val) => setValue(key, val)}
+      isEditing={isEditing}
+      {...options}
+    />
+  );
 
   // ─── Company / Seller Details Extraction ────────────────────────────────────
   const activeCompany = useSelector(selectActiveCompany);
@@ -133,6 +242,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation 
   return (
     <div ref={ref} style={{ padding: '20px', display: 'flex', justifyContent: 'center', background: '#e5e7eb' }}>
       <div
+        id="quotation-print-area"
         style={{
           fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
           width: '850px',
@@ -147,13 +257,17 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
             <h1 style={{ color: theme.purple, fontSize: '32px', fontWeight: 800, margin: '0 0 20px 0', letterSpacing: '-0.5px' }}>
-              Quotation
+              {renderField('quotationTitle', 'Quotation', { style: { color: theme.purple, fontWeight: 800 } })}
             </h1>
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '8px', fontSize: '11px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '8px', fontSize: '11px', alignItems: 'center' }}>
               <div style={{ color: theme.textMuted }}>Quotation#</div>
-              <div style={{ fontWeight: 700 }}>{quotation.quotationNumber || '004'}</div>
+              <div style={{ fontWeight: 700 }}>
+                {renderField('quotationNumber', quotation.quotationNumber || '004', { style: { fontWeight: 700 } })}
+              </div>
               <div style={{ color: theme.textMuted }}>Quotation Date</div>
-              <div style={{ fontWeight: 700 }}>{formattedDate}</div>
+              <div style={{ fontWeight: 700 }}>
+                {renderField('quotationDate', formattedDate, { style: { fontWeight: 700 } })}
+              </div>
             </div>
           </div>
           <div>
@@ -175,39 +289,61 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation 
         <div style={{ display: 'flex', gap: '20px', marginBottom: '16px' }}>
           {/* Quotation By */}
           <div style={{ flex: 1, background: theme.lightGray, padding: '20px', borderRadius: '4px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: '12px', fontSize: '11px', lineHeight: '1.5' }}>
-              <div style={{ color: theme.textMuted }}>Quotation by</div>
-              <div style={{ fontWeight: 700 }}>{companyName}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: '12px', fontSize: '11px', lineHeight: '1.5', alignItems: 'start' }}>
+              <div style={{ color: theme.textMuted, paddingTop: '2px' }}>Quotation by</div>
+              <div style={{ fontWeight: 700 }}>
+                {renderField('companyName', companyName, { style: { fontWeight: 700 } })}
+              </div>
 
-              <div style={{ color: theme.textMuted }}>Address</div>
-              <div style={{ whiteSpace: 'pre-line' }}>{companyAddress}</div>
+              <div style={{ color: theme.textMuted, paddingTop: '2px' }}>Address</div>
+              <div>
+                {renderField('companyAddress', companyAddress, { multiline: true })}
+              </div>
 
-              <div style={{ color: theme.textMuted }}>Role</div>
-              <div>{companyRole}</div>
+              <div style={{ color: theme.textMuted, paddingTop: '2px' }}>Role</div>
+              <div>
+                {renderField('companyRole', companyRole)}
+              </div>
             </div>
           </div>
 
           {/* Quotation To */}
           <div style={{ flex: 1, background: theme.lightGray, padding: '20px', borderRadius: '4px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: '12px', fontSize: '11px', lineHeight: '1.5' }}>
-              <div style={{ color: theme.textMuted }}>Quotation to</div>
-              <div style={{ fontWeight: 700 }}>{buyerName}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', gap: '12px', fontSize: '11px', lineHeight: '1.5', alignItems: 'start' }}>
+              <div style={{ color: theme.textMuted, paddingTop: '2px' }}>Quotation to</div>
+              <div style={{ fontWeight: 700 }}>
+                {renderField('buyerName', buyerName, { style: { fontWeight: 700 } })}
+              </div>
 
-              <div style={{ color: theme.textMuted }}>Destination</div>
-              <div>{destinationCountry}</div>
+              <div style={{ color: theme.textMuted, paddingTop: '2px' }}>Destination</div>
+              <div>
+                {renderField('destinationCountry', destinationCountry)}
+              </div>
 
-              <div style={{ color: theme.textMuted }}>Role</div>
-              <div>{partnerRole} {importer?.entityName ? `/ Importer: ${importer.entityName}` : ''}</div>
+              <div style={{ color: theme.textMuted, paddingTop: '2px' }}>Role</div>
+              <div>
+                {renderField('partnerRole', `${partnerRole}${importer?.entityName ? ` / Importer: ${importer.entityName}` : ''}`)}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Place / Country of supply */}
-        <div style={{ display: 'flex', justifyContent: portOfLoading ? 'space-between' : 'flex-end', fontSize: '10px', marginBottom: '30px', padding: '0 20px' }}>
+        <div style={{ display: 'flex', justifyContent: portOfLoading ? 'space-between' : 'flex-end', fontSize: '10px', marginBottom: '30px', padding: '0 20px', alignItems: 'center' }}>
           {portOfLoading && (
-            <div><span style={{ color: theme.textMuted, marginRight: '8px' }}>Port of Loading</span> <strong style={{ fontSize: '11px' }}>{portOfLoading}</strong></div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ color: theme.textMuted, marginRight: '8px', whiteSpace: 'nowrap' }}>Port of Loading</span>
+              <strong style={{ fontSize: '11px', minWidth: '100px' }}>
+                {renderField('portOfLoading', portOfLoading, { style: { fontWeight: 700 } })}
+              </strong>
+            </div>
           )}
-          <div><span style={{ color: theme.textMuted, marginRight: '8px' }}>Port of Discharge</span> <strong style={{ fontSize: '11px' }}>{destinationCountry}</strong></div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ color: theme.textMuted, marginRight: '8px', whiteSpace: 'nowrap' }}>Port of Discharge</span>
+            <strong style={{ fontSize: '11px', minWidth: '100px' }}>
+              {renderField('portOfDischarge', destinationCountry, { style: { fontWeight: 700 } })}
+            </strong>
+          </div>
         </div>
 
         {/* ─── TABLE ─── */}
@@ -242,13 +378,27 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation 
                 return (
                   <tr key={idx} style={{ background: idx % 2 === 0 ? '#ffffff' : theme.rowStripe }}>
                     <td style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                      <span style={{ marginRight: '12px' }}>{idx + 1}.</span>
-                      <strong>{productName}</strong>
-                      {subType && <span style={{ display: 'block', paddingLeft: '24px', fontSize: '11px', color: theme.textMuted, marginTop: '4px' }}>{subType}</span>}
+                      <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                        <span style={{ marginRight: '8px', paddingTop: '2px' }}>{idx + 1}.</span>
+                        <div style={{ flex: 1 }}>
+                          <strong>
+                            {renderField(`productName_${idx}`, productName, { style: { fontWeight: 700 } })}
+                          </strong>
+                          <div style={{ fontSize: '11px', color: theme.textMuted, marginTop: '2px' }}>
+                            {renderField(`subType_${idx}`, subType)}
+                          </div>
+                        </div>
+                      </div>
                     </td>
-                    <td style={{ padding: '14px 16px', textAlign: 'center', borderBottom: '1px solid #f1f5f9' }}>{packingDisplay}</td>
-                    <td style={{ padding: '14px 16px', textAlign: 'right', borderBottom: '1px solid #f1f5f9' }}>{purityDisplay}</td>
-                    <td style={{ padding: '14px 16px', textAlign: 'right', borderBottom: '1px solid #f1f5f9' }}>{currencyCode} {formattedItemPrice}</td>
+                    <td style={{ padding: '14px 16px', textAlign: 'center', borderBottom: '1px solid #f1f5f9' }}>
+                      {renderField(`packing_${idx}`, packingDisplay, { style: { textAlign: 'center' } })}
+                    </td>
+                    <td style={{ padding: '14px 16px', textAlign: 'right', borderBottom: '1px solid #f1f5f9' }}>
+                      {renderField(`purity_${idx}`, purityDisplay, { style: { textAlign: 'right' } })}
+                    </td>
+                    <td style={{ padding: '14px 16px', textAlign: 'right', borderBottom: '1px solid #f1f5f9' }}>
+                      {renderField(`rate_${idx}`, `${currencyCode} ${formattedItemPrice}`, { style: { textAlign: 'right' } })}
+                    </td>
                   </tr>
                 );
               })}
@@ -262,26 +412,40 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation 
           {/* Left: Terms & Notes */}
           <div style={{ width: '50%' }}>
             <div style={{ marginBottom: '24px' }}>
-              <div style={{ color: theme.purple, fontSize: '14px', fontWeight: 700, marginBottom: '12px' }}>Terms and Conditions</div>
+              <div style={{ color: theme.purple, fontSize: '14px', fontWeight: 700, marginBottom: '12px' }}>
+                {renderField('termsHeading', 'Terms and Conditions', { style: { color: theme.purple, fontWeight: 700 } })}
+              </div>
               <ol style={{ paddingLeft: '16px', margin: 0, fontSize: '10px', color: theme.textMuted, lineHeight: '1.6' }}>
-                <li style={{ paddingLeft: '4px', marginBottom: '8px' }}>This quotation is subject to final confirmation by the seller.</li>
-                <li style={{ paddingLeft: '4px', marginBottom: '8px' }}>Prices are based on current market rates and are subject to change after the validity period.</li>
-                <li style={{ paddingLeft: '4px' }}>Valid until: {quotation.validUntil ? new Date(quotation.validUntil).toLocaleDateString('en-US') : '7 Days from date of issue'}.</li>
+                <li style={{ paddingLeft: '4px', marginBottom: '8px' }}>
+                  {renderField('term_1', 'This quotation is subject to final confirmation by the seller.', { multiline: true })}
+                </li>
+                <li style={{ paddingLeft: '4px', marginBottom: '8px' }}>
+                  {renderField('term_2', 'Prices are based on current market rates and are subject to change after the validity period.', { multiline: true })}
+                </li>
+                <li style={{ paddingLeft: '4px' }}>
+                  {renderField('term_3', `Valid until: ${quotation.validUntil ? new Date(quotation.validUntil).toLocaleDateString('en-US') : '7 Days from date of issue'}.`)}
+                </li>
               </ol>
             </div>
 
             <div style={{ marginBottom: '30px' }}>
-              <div style={{ color: theme.purple, fontSize: '14px', fontWeight: 700, marginBottom: '8px' }}>Additional Notes</div>
-              <p style={{ fontSize: '10px', color: theme.textMuted, margin: 0, lineHeight: '1.6', maxWidth: '90%' }}>
-                Thank you for your business inquiry. Please contact us for any further clarification regarding shipping terms, documentation, or payment schedules.
-              </p>
+              <div style={{ color: theme.purple, fontSize: '14px', fontWeight: 700, marginBottom: '8px' }}>
+                {renderField('notesHeading', 'Additional Notes', { style: { color: theme.purple, fontWeight: 700 } })}
+              </div>
+              <div style={{ fontSize: '10px', color: theme.textMuted, margin: 0, lineHeight: '1.6', maxWidth: '90%' }}>
+                {renderField('additionalNotes', 'Thank you for your business inquiry. Please contact us for any further clarification regarding shipping terms, documentation, or payment schedules.', { multiline: true })}
+              </div>
             </div>
 
             <div style={{ fontSize: '10px', fontWeight: 500 }}>
-              For any enquiries, email us on <strong style={{ color: theme.textMain }}>{companyEmail}</strong>
+              For any enquiries, email us on <strong style={{ color: theme.textMain }}>
+                {renderField('companyEmail', companyEmail, { style: { width: 'auto', display: 'inline-block', fontWeight: 600 } })}
+              </strong>
               {companyPhone && (
                 <>
-                  <br />call us on <strong style={{ color: theme.textMain }}>{companyPhone}</strong>
+                  <br />call us on <strong style={{ color: theme.textMain }}>
+                    {renderField('companyPhone', companyPhone, { style: { width: 'auto', display: 'inline-block', fontWeight: 600 } })}
+                  </strong>
                 </>
               )}
             </div>
@@ -292,9 +456,11 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation 
 
             {/* Totals Box */}
             <div style={{ paddingBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 500, marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 500, marginBottom: '12px', alignItems: 'center' }}>
                 <div>Sub Total (Per MT)</div>
-                <div>{currencyCode} {priceDisplay}</div>
+                <div style={{ width: '150px', textAlign: 'right' }}>
+                  {renderField('subTotal', `${currencyCode} ${priceDisplay}`, { style: { textAlign: 'right', fontWeight: 500 } })}
+                </div>
               </div>
               {discountAmount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 500, color: theme.green, marginBottom: '12px' }}>
@@ -305,13 +471,15 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation 
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '16px 0' }}>
                 <div style={{ fontSize: '14px', fontWeight: 600 }}>Total</div>
-                <div style={{ fontSize: '20px', fontWeight: 800 }}>{currencyCode} {priceDisplay}</div>
+                <div style={{ width: '200px', textAlign: 'right' }}>
+                  {renderField('total', `${currencyCode} ${priceDisplay}`, { style: { textAlign: 'right', fontWeight: 800, fontSize: '20px' } })}
+                </div>
               </div>
 
               <div style={{ marginTop: '12px', fontSize: '10px', color: theme.textMuted }}>
                 Invoice Total (in words)<br />
                 <strong style={{ color: theme.textMain, display: 'block', marginTop: '4px', fontSize: '11px' }}>
-                  {wordsDisplay}
+                  {renderField('invoiceTotalWords', wordsDisplay, { multiline: true, style: { fontWeight: 700 } })}
                 </strong>
               </div>
             </div>
@@ -331,7 +499,7 @@ const QuotationPreview = React.forwardRef(function QuotationPreview({ quotation 
                 />
               </div>
               <div style={{ fontSize: '10px', fontWeight: 600, color: theme.textMain, marginTop: '8px' }}>
-                Authorized Signature
+                {renderField('authorizedSignatureLabel', 'Authorized Signature', { style: { textAlign: 'right', fontWeight: 600 } })}
               </div>
             </div>
 

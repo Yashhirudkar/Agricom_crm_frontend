@@ -129,6 +129,7 @@ function PartnerDrawer({
       financialStatus: "",
       isActive: true,
       productIds: [],
+      productNotes: "",
       contacts: [],
     },
   });
@@ -142,6 +143,24 @@ function PartnerDrawer({
 
   const [citySearchInput, setCitySearchInput] = useState("");
   const [dnbDraft, setDnbDraft] = useState(null);
+  const [productInfoText, setProductInfoText] = useState("");
+  const [savingProductInfo, setSavingProductInfo] = useState(false);
+
+  const handleSaveProductInfo = async () => {
+    if (!editData?.id) return;
+    setSavingProductInfo(true);
+    try {
+      await axiosClient.put(`/masters/partners/${editData.id}`, {
+        productNotes: productInfoText,
+      });
+      toast.success("Product information saved successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save product information.");
+    } finally {
+      setSavingProductInfo(false);
+    }
+  };
 
   // Reset city search input when country changes
   useEffect(() => {
@@ -273,6 +292,7 @@ function PartnerDrawer({
           innNo: editData.innNo || "",
           financialStatus: editData.financialStatus || "",
           isActive: editData.isActive,
+          productNotes: editData.productNotes || "",
           productIds: editData.products ? editData.products.map((p) => p.id) : [],
           contacts: editData.contacts
             ? editData.contacts.map((c) => ({
@@ -285,6 +305,7 @@ function PartnerDrawer({
             }))
             : [],
         });
+        setProductInfoText(editData.productNotes || "");
       } else {
         reset({
           entityName: "",
@@ -300,9 +321,11 @@ function PartnerDrawer({
           innNo: "",
           financialStatus: "",
           isActive: true,
+          productNotes: "",
           productIds: [],
           contacts: [],
         });
+        setProductInfoText("");
       }
     }
   }, [isOpen, editData, reset]);
@@ -522,14 +545,24 @@ function PartnerDrawer({
                         Associations Summary
                       </span>
                       <div className="flex items-center gap-3 mt-2 text-xs font-semibold text-gray-600">
-                        <span className="flex items-center gap-1 bg-blue-50 text-[#007aff] px-2 py-0.5 rounded">
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("contacts")}
+                          className="flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-[#007aff] px-2 py-0.5 rounded cursor-pointer transition-colors"
+                          title="Switch to Contacts tab"
+                        >
                           <Users2 className="h-3.5 w-3.5" />
                           {editData.contacts?.length || 0} Contacts
-                        </span>
-                        <span className="flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 rounded">
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("products")}
+                          className="flex items-center gap-1 bg-purple-50 hover:bg-purple-100 text-purple-700 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                          title="Switch to Products tab"
+                        >
                           <Package className="h-3.5 w-3.5" />
                           {editData.products?.length || 0} Products
-                        </span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -810,21 +843,45 @@ function PartnerDrawer({
 
               {/* Products List Tab */}
               {activeTab === "products" && (
-                <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-4 shadow-xs animate-in fade-in duration-200">
-                  <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-4 border-b border-dashed border-gray-300 pb-2">
-                    Authorized Products ({editData.products?.length || 0})
-                  </h3>
-                  {(!editData.products || editData.products.length === 0) ? (
-                    <p className="text-xs text-gray-400 font-semibold py-4 text-center">No authorized products mapped to this business partner.</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {editData.products.map((p) => (
-                        <span key={p.id} className="px-3 py-1 bg-slate-50 border border-blue-300 text-gray-700 rounded-lg text-xs font-semibold shadow-lg">
-                          {p.name}
-                        </span>
-                      ))}
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-5 shadow-xs">
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-4 border-b border-dashed border-gray-300 pb-2">
+                      Authorized Products ({editData.products?.length || 0})
+                    </h3>
+                    {(!editData.products || editData.products.length === 0) ? (
+                      <p className="text-xs text-gray-400 font-semibold py-4 text-center">No authorized products mapped to this business partner.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {editData.products.map((p) => (
+                          <span key={p.id} className="px-3 py-1 bg-slate-50 border border-blue-300 text-gray-700 rounded-lg text-xs font-semibold shadow-xs">
+                            {p.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Product Info / Sales Specs Display Box */}
+                  <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+                      <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#007aff]" />
+                        Product Information / Sales Notes
+                      </label>
+                      <span className="text-[10px] text-gray-400 font-medium">Sales Notes</span>
                     </div>
-                  )}
+                    <div className="p-3.5 bg-gray-50/50 rounded-xl border border-gray-100">
+                      {editData?.productNotes ? (
+                        <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap font-normal">
+                          {editData.productNotes}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-400 font-normal italic">
+                          No product information or sales notes provided.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1304,6 +1361,22 @@ function PartnerDrawer({
                     <p className="text-[10px] text-gray-400 font-medium mt-2">
                       Select the exact products this partner is authorized to supply or buy. This mapping
                       restricts their available products in transactions.
+                    </p>
+                  </div>
+
+                  {/* Product Info / Sales Specs Input Field */}
+                  <div className="bg-white p-5 rounded-xl border border-gray-200 space-y-2">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                      Product Information / Sales Notes
+                    </label>
+                    <textarea
+                      {...register("productNotes")}
+                      rows={3}
+                      placeholder="Enter product details, specifications, quality requirements, or sales remarks..."
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white transition-all resize-y placeholder:text-gray-400"
+                    />
+                    <p className="text-[10px] text-gray-400 font-medium">
+                      Sales team can reference and save custom product info and remarks for this partner.
                     </p>
                   </div>
                 </div>
