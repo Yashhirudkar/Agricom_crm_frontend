@@ -141,14 +141,14 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => onView?.(e)}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                       title="View Details"
                     >
                       <Eye className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => onOpenTransport?.(e)}
-                      className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-[#46493f] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                       title="Transport Details (View Only)"
                     >
                       <Truck className="h-3.5 w-3.5" />
@@ -156,7 +156,7 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                     {e.status === "CONFIRMED" && (
                       <button
                         onClick={() => onExecute?.(e)}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-[#601cb1] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                         title="Execute Contract"
                       >
                         <FileSignature className="h-3.5 w-3.5" />
@@ -164,21 +164,21 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                     )}
                     <button
                       onClick={() => onEdit?.(e)}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-[#dd5656] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                       title="Edit"
                     >
                       <Edit2 className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => onFollowUp(e)}
-                      className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-emerald-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
                       title="Follow Up (Chat)"
                     >
                       <MessageCircle className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => onDelete(e)}
-                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                       title="Delete"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

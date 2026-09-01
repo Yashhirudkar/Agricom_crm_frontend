@@ -84,14 +84,14 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => onView(c)}
-                    className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-[#007aff] hover:text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                     title="View"
                   >
                     <Eye className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => onEdit(c)}
-                    className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-amber-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
                     title="Edit"
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -99,7 +99,7 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                   {c.documents?.length > 0 && (
                     <button
                       onClick={() => onDocuments?.(c)}
-                      className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-emerald-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
                       title="Manage Documents"
                     >
                       <FolderOpen className="h-3.5 w-3.5" />
