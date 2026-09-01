@@ -662,7 +662,7 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                   {[
                     { id: "quotes", label: "Freight Comparison Matrix", count: quotes.length },
                     { id: "docs", label: "Documents & Files", count: attachments.length },
-                    { id: "timeline", label: "Operational Audit Logs" },
+                    ...(!isReadOnly ? [{ id: "timeline", label: "Operational Audit Logs" }] : []),
                   ].map((tab) => (
                     <button
                       key={tab.id}
