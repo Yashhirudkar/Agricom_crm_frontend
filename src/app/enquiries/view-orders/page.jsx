@@ -13,6 +13,7 @@ import Pagination from "@/components/common/Pagination";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import PartnerFollowUpDrawer from "@/components/masters/partners/PartnerFollowUpDrawer";
 import EnquiryDrawer from "@/modules/enquiries/components/EnquiryDrawer";
+import TransportDrawer from "@/modules/logistics/components/TransportDrawer";
 
 export default function CompletedEnquiriesListPage() {
   const router = useRouter();
@@ -31,6 +32,10 @@ export default function CompletedEnquiriesListPage() {
   // Form Drawer states
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editEnquiry, setEditEnquiry] = useState(null);
+  const [isViewMode, setIsViewMode] = useState(false);
+
+  // Transport Drawer state (View Only)
+  const [transportEnquiry, setTransportEnquiry] = useState(null);
 
   const completedQuery = useEnquiries(activeCompanyId, completedTab, search);
 
@@ -140,8 +145,15 @@ export default function CompletedEnquiriesListPage() {
           onExecute={(e) => router.push(`/sales-contracts/new?enquiryId=${e.id}`)}
           onView={(e) => {
             setEditEnquiry(e);
+            setIsViewMode(true);
             setIsFormOpen(true);
           }}
+          onEdit={(e) => {
+            setEditEnquiry(e);
+            setIsViewMode(false);
+            setIsFormOpen(true);
+          }}
+          onOpenTransport={(e) => setTransportEnquiry(e)}
         />
 
         <Pagination
@@ -174,7 +186,7 @@ export default function CompletedEnquiriesListPage() {
         }}
       />
 
-      {/* Enquiry View Drawer */}
+      {/* Enquiry View/Edit Drawer */}
       <EnquiryDrawer
         isOpen={isFormOpen}
         onClose={() => {
@@ -182,7 +194,19 @@ export default function CompletedEnquiriesListPage() {
           setEditEnquiry(null);
         }}
         editData={editEnquiry}
-        isViewMode={true}
+        isViewMode={isViewMode}
+        onSaveSuccess={() => {
+          completedQuery.fetchEnquiries();
+          showToast("Enquiry updated successfully");
+        }}
+      />
+
+      {/* Transport Drawer (View Only Mode) */}
+      <TransportDrawer
+        isOpen={transportEnquiry !== null}
+        onClose={() => setTransportEnquiry(null)}
+        enquiry={transportEnquiry}
+        isReadOnly={true}
       />
     </div>
   );

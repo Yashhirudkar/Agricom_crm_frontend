@@ -13,6 +13,7 @@ import Pagination from "@/components/common/Pagination";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import PartnerFollowUpDrawer from "@/components/masters/partners/PartnerFollowUpDrawer";
 import EnquiryDrawer from "../components/EnquiryDrawer";
+import TransportDrawer from "@/modules/logistics/components/TransportDrawer";
 
 export default function EnquiriesListPage() {
   const router = useRouter();
@@ -34,6 +35,9 @@ export default function EnquiriesListPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editEnquiry, setEditEnquiry] = useState(null);
   const [isViewMode, setIsViewMode] = useState(false);
+
+  // Transport Drawer state (View Only)
+  const [transportEnquiry, setTransportEnquiry] = useState(null);
 
   const activeQuery = useEnquiries(activeCompanyId, "NEW,PENDING,WAITING_RESPONSE,IN_PROGRESS", search);
 
@@ -171,6 +175,7 @@ export default function EnquiriesListPage() {
             setIsViewMode(true);
             setIsFormOpen(true);
           }}
+          onOpenTransport={(e) => setTransportEnquiry(e)}
         />
 
         <Pagination currentPage={activeQuery.page} totalPages={activeQuery.totalPages} onPageChange={activeQuery.setPage} />
@@ -212,6 +217,14 @@ export default function EnquiriesListPage() {
           activeQuery.fetchEnquiries();
           showToast(editEnquiry ? "Enquiry updated successfully" : "Enquiry created successfully");
         }}
+      />
+
+      {/* Transport Drawer (View Only Mode) */}
+      <TransportDrawer
+        isOpen={transportEnquiry !== null}
+        onClose={() => setTransportEnquiry(null)}
+        enquiry={transportEnquiry}
+        isReadOnly={true}
       />
     </div>
   );

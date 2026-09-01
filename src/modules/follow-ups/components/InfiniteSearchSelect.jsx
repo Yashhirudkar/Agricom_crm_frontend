@@ -207,7 +207,6 @@ function InfiniteSearchSelect({
     setIsOpen(true);
     setPage(1);
     setOptions([]);
-    fetchPage(search, 1, false);
     setTimeout(() => searchInputRef.current?.focus(), 50);
   };
 

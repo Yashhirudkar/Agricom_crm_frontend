@@ -145,7 +145,13 @@ axiosClient.interceptors.response.use(
       !originalRequest?.url?.includes("/auth/login") &&
       !originalRequest?.url?.includes("/auth/refresh");
 
-    if (!isRefreshable401 && !isBackgroundPolling) {
+    const shouldLogConsole =
+      !isRefreshable401 &&
+      !isBackgroundPolling &&
+      !originalRequest?.suppressErrorLog &&
+      error.response?.status !== 404;
+
+    if (shouldLogConsole) {
       if (error.response) {
         console.error("[Axios Error]", originalRequest?.url, error.response.status, error.response.data);
       } else if (!axios.isCancel(error)) {

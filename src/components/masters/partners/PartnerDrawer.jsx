@@ -194,9 +194,27 @@ function PartnerDrawer({
   useEffect(() => {
     setIsEditMode(initialEditMode);
     if (isOpen) {
-      setActiveTab(initialEditMode ? "general" : (initialTab || "overview"));
+      const targetTab = initialTab || (initialEditMode ? "general" : "overview");
+      setActiveTab(targetTab);
+
+      // Auto-open contact form card if opened on contacts tab and no contacts exist
+      if (targetTab === "contacts") {
+        setTimeout(() => {
+          const currentContacts = control._formValues?.contacts || [];
+          if (!currentContacts || currentContacts.length === 0) {
+            append({
+              name: "",
+              designation: "",
+              phone: "",
+              email: "",
+              communicationType: "Phone",
+              isPrimary: true,
+            });
+          }
+        }, 50);
+      }
     }
-  }, [isOpen, initialEditMode, initialTab]);
+  }, [isOpen, initialEditMode, initialTab, append, control]);
 
   // Load dynamic schema and values for existing partner
   useEffect(() => {
@@ -349,13 +367,19 @@ function PartnerDrawer({
     });
 
     if (payload.contacts) {
-      payload.contacts = payload.contacts.map((c) => {
-        const contact = { ...c };
-        ["designation", "phone", "email", "communicationType"].forEach((k) => {
-          if (contact[k] === "") delete contact[k];
+      payload.contacts = payload.contacts
+        .filter((c) => c.name && c.name.trim().length > 0)
+        .map((c) => {
+          const contact = { ...c, name: c.name.trim() };
+          ["designation", "phone", "email", "communicationType"].forEach((k) => {
+            if (contact[k] === "" || contact[k] === null || contact[k] === undefined) {
+              delete contact[k];
+            } else if (typeof contact[k] === "string") {
+              contact[k] = contact[k].trim();
+            }
+          });
+          return contact;
         });
-        return contact;
-      });
     }
 
     if (payload.yearOfEstablishment) {

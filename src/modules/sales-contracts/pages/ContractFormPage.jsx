@@ -328,6 +328,7 @@ export default function ContractFormPage({ editId, viewId }) {
     const totalAmount = validItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
 
     const payload = {
+      enquiryId: enquiryId || null,
       financialYear: form.financialYear,
       contractNumber: form.contractNumber.trim(),
       contractDate: form.contractDate,

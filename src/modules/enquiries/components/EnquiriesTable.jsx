@@ -1,7 +1,7 @@
 import React from "react";
-import { MessageCircle, Trash2, FileSignature, Edit2, Eye } from "lucide-react";
+import { MessageCircle, Trash2, FileSignature, Edit2, Eye, Truck } from "lucide-react";
 
-export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelete, onExecute, onEdit, onView }) {
+export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelete, onExecute, onEdit, onView, onOpenTransport }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -145,6 +145,13 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                       title="View Details"
                     >
                       <Eye className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onOpenTransport?.(e)}
+                      className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                      title="Transport Details (View Only)"
+                    >
+                      <Truck className="h-3.5 w-3.5" />
                     </button>
                     {e.status === "CONFIRMED" && (
                       <button

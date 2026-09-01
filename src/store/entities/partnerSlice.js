@@ -27,6 +27,14 @@ export const updatePartner = createAsyncThunk("partners/update", async ({ id, ..
     const res = await axiosClient.patch(`/masters/partners/${id}`, data);
     return res.data;
   } catch (err) {
+    if (err.response?.status === 404) {
+      try {
+        const createRes = await axiosClient.post("/masters/partners", data);
+        return createRes.data;
+      } catch (createErr) {
+        return rejectWithValue(createErr.response?.data?.message || "Failed to save partner");
+      }
+    }
     return rejectWithValue(err.response?.data?.message || "Failed to update partner");
   }
 });
