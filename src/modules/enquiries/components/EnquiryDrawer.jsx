@@ -43,9 +43,13 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     podPort: "",
     originState: "",
     originCity: "",
+    originZipCode: "",
+    originStationCode: "",
     destinationCountry: "",
     destinationState: "",
     destinationCity: "",
+    destinationZipCode: "",
+    destinationStationCode: "",
     purity: "",
     packingTypeId: "",
     shipmentType: "",
@@ -98,9 +102,13 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           podPort: editData.destinationPort || editData.podName || "",
           originState: editData.originState || "",
           originCity: editData.originCity || "",
+          originZipCode: editData.originZipCode || "",
+          originStationCode: editData.originStationCode || "",
           destinationCountry: editData.destinationCountry || "",
           destinationState: editData.destinationState || "",
           destinationCity: editData.destinationCity || "",
+          destinationZipCode: editData.destinationZipCode || "",
+          destinationStationCode: editData.destinationStationCode || "",
           purity: editData.purity || "",
           packingTypeId: editData.packingTypeId || "",
           shipmentType: editData.shipmentType || "",
@@ -132,9 +140,13 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                 podPort: fresh.destinationPort || fresh.podPort || fresh.podName || "",
                 originState: fresh.originState || "",
                 originCity: fresh.originCity || "",
+                originZipCode: fresh.originZipCode || "",
+                originStationCode: fresh.originStationCode || "",
                 destinationCountry: fresh.destinationCountry || "",
                 destinationState: fresh.destinationState || "",
                 destinationCity: fresh.destinationCity || "",
+                destinationZipCode: fresh.destinationZipCode || "",
+                destinationStationCode: fresh.destinationStationCode || "",
                 purity: fresh.purity || "",
                 packingTypeId: fresh.packingTypeId || "",
                 shipmentType: fresh.shipmentType || "",
@@ -164,9 +176,13 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           podPort: "",
           originState: "",
           originCity: "",
+          originZipCode: "",
+          originStationCode: "",
           destinationCountry: "",
           destinationState: "",
           destinationCity: "",
+          destinationZipCode: "",
+          destinationStationCode: "",
           purity: "",
           packingTypeId: "",
           shipmentType: "",
@@ -317,15 +333,39 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     setForm((f) => {
       const updated = { ...f, shipmentMode: val };
       if (val === "SHIP") {
-        // Clear state & city fields (Country and Port are active)
+        // Clear state, city, zip, station fields
         updated.originState = "";
         updated.originCity = "";
+        updated.originZipCode = "";
+        updated.originStationCode = "";
         updated.destinationState = "";
         updated.destinationCity = "";
+        updated.destinationZipCode = "";
+        updated.destinationStationCode = "";
+      } else if (val === "ROAD") {
+        updated.originPort = "";
+        updated.destinationPort = "";
+        updated.podPort = "";
+        updated.originStationCode = "";
+        updated.destinationStationCode = "";
+      } else if (val === "RAIL") {
+        updated.originPort = "";
+        updated.destinationPort = "";
+        updated.podPort = "";
+        updated.originZipCode = "";
+        updated.destinationZipCode = "";
       } else {
         updated.originPort = "";
         updated.destinationPort = "";
         updated.podPort = "";
+        updated.originState = "";
+        updated.originCity = "";
+        updated.originZipCode = "";
+        updated.originStationCode = "";
+        updated.destinationState = "";
+        updated.destinationCity = "";
+        updated.destinationZipCode = "";
+        updated.destinationStationCode = "";
       }
       return updated;
     });
@@ -351,6 +391,16 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       if (!form.destinationCountry) newErrors.destinationCountry = "Destination Country is required";
       if (!form.destinationState) newErrors.destinationState = "Destination State is required";
       if (!form.destinationCity) newErrors.destinationCity = "Destination City is required";
+      
+      if (form.shipmentMode === "ROAD") {
+        // ZIP / Postal Code is optional
+      } else if (form.shipmentMode === "RAIL") {
+        if (!form.originStationCode) newErrors.originStationCode = "Origin Station Code is required";
+        else if (form.originStationCode.length < 3) newErrors.originStationCode = "Must be at least 3 characters";
+        
+        if (!form.destinationStationCode) newErrors.destinationStationCode = "Destination Station Code is required";
+        else if (form.destinationStationCode.length < 3) newErrors.destinationStationCode = "Must be at least 3 characters";
+      }
     }
 
     if (form.buyingInterest !== undefined && form.buyingInterest !== null && form.buyingInterest !== "") {
@@ -396,11 +446,22 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       if (payload.shipmentMode === "SHIP") {
         delete payload.originState;
         delete payload.originCity;
+        delete payload.originZipCode;
+        delete payload.originStationCode;
         delete payload.destinationState;
         delete payload.destinationCity;
-      } else {
+        delete payload.destinationZipCode;
+        delete payload.destinationStationCode;
+      } else if (payload.shipmentMode === "ROAD") {
         delete payload.originPort;
         delete payload.destinationPort;
+        delete payload.originStationCode;
+        delete payload.destinationStationCode;
+      } else if (payload.shipmentMode === "RAIL") {
+        delete payload.originPort;
+        delete payload.destinationPort;
+        delete payload.originZipCode;
+        delete payload.destinationZipCode;
       }
 
       if (editData) {
@@ -641,6 +702,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                         setForm={setForm}
                         errors={errors}
                         isView={isViewMode}
+                        shipmentMode={form.shipmentMode}
                       />
                       
                       {/* Spacer to separate origin and destination visually in 3-column grid */}
@@ -653,6 +715,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                         setForm={setForm}
                         errors={errors}
                         isView={isViewMode}
+                        shipmentMode={form.shipmentMode}
                       />
                     </>
                   )}

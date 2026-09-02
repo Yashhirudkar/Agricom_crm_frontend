@@ -1,16 +1,21 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import { useSelector } from "react-redux";
 import { Truck, Search } from "lucide-react";
 import { toast } from "sonner";
 import { logisticsApi } from "../services/logisticsApi";
 import LogisticsQueueTable from "../components/LogisticsQueueTable";
 import TransportDrawer from "../components/TransportDrawer";
 import Pagination from "@/components/common/Pagination";
+import { selectActiveCompany } from "@/store/slices/companyContextSlice";
 
 export default function LogisticsQueuePage() {
+  const company = useSelector(selectActiveCompany);
+  const companyCountry = company?.country;
+
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [mode, setMode] = useState("All"); // All, Domestic, International
+  const [mode, setMode] = useState("All"); // All, Domestic, Export, Merchant Export
   const [statusFilter, setStatusFilter] = useState("Active"); // Active, Closed
   const [page, setPage] = useState(1);
   const [data, setData] = useState([]);
@@ -107,15 +112,14 @@ export default function LogisticsQueuePage() {
         <div className="flex flex-wrap items-center gap-3">
           {/* Mode Tabs */}
           <div className="flex items-center bg-gray-50/80 p-1 rounded-xl border border-gray-100">
-            {["All", "Domestic", "International"].map((t) => (
+            {["All", "Domestic", "Export", "Merchant Export"].map((t) => (
               <button
                 key={t}
                 onClick={() => setMode(t)}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  mode === t
+                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${mode === t
                     ? "bg-white text-gray-900 shadow-xs border border-gray-200/50"
                     : "text-gray-400 hover:text-gray-600"
-                }`}
+                  }`}
               >
                 {t}
               </button>
@@ -131,13 +135,12 @@ export default function LogisticsQueuePage() {
               <button
                 key={st.id}
                 onClick={() => setStatusFilter(st.id)}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  statusFilter === st.id
+                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${statusFilter === st.id
                     ? st.id === "Closed"
                       ? "bg-slate-800 text-white shadow-xs"
                       : "bg-white text-gray-900 shadow-xs border border-gray-200/50"
                     : "text-gray-400 hover:text-gray-600"
-                }`}
+                  }`}
               >
                 {st.label}
               </button>
@@ -162,6 +165,7 @@ export default function LogisticsQueuePage() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-2xs overflow-hidden">
         <LogisticsQueueTable
           data={data}
+          mode={mode}
           loading={loading}
           onManage={handleOpenDrawer}
         />

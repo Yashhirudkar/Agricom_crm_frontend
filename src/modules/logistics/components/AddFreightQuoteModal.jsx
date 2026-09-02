@@ -16,29 +16,100 @@ import {
   User,
   Phone,
   Plus,
+  Check,
 } from "lucide-react";
 import SearchablePartnerSelect from "@/components/common/SearchablePartnerSelect";
 import { useCurrencyMaster } from "@/modules/enquiries/hooks/useCurrencyMaster";
 import axiosClient from "@/lib/axios";
 
-const VEHICLE_OPTIONS = [
+const ROAD_TRUCK_TYPES = [
   "Mini Truck",
-  "10 MT Truck",
-  "15 MT Truck",
-  "20 MT Truck",
-  "25 MT Truck",
-  "Trailer 32 FT",
-  "Container Truck",
-  "Other",
+  "Pickup",
+  "Tata Ace",
+  "14 FT Truck",
+  "17 FT Truck",
+  "20 FT Truck",
+  "22 FT Truck",
+  "24 FT Truck",
+  "32 FT Single Axle",
+  "32 FT Multi Axle",
+  "Trailer",
+  "Flatbed Trailer",
+  "Low Bed Trailer",
+  "Hydraulic Trailer",
+  "Tanker",
+  "Refrigerated Truck",
+  "Open Body Truck",
+  "Closed Body Truck",
 ];
-const CONTAINER_OPTIONS = ["20 GP", "40 GP", "40 HC", "20 RF", "40 RF", "Other"];
-const CONTAINER_SIZES = ["20 FT", "40 FT", "Other"];
+
+const ROAD_TRUCK_CAPACITIES = [
+  "1 MT",
+  "2 MT",
+  "3 MT",
+  "5 MT",
+  "7 MT",
+  "9 MT",
+  "10 MT",
+  "12 MT",
+  "15 MT",
+  "18 MT",
+  "20 MT",
+  "25 MT",
+  "30 MT",
+  "35 MT",
+  "40 MT",
+];
+
+const SEA_CONTAINER_TYPES = [
+  "Standard (Dry)",
+  "High Cube",
+  "Open Top",
+  "Hard Top",
+  "Flat Rack",
+  "Platform",
+  "Reefer",
+  "Ventilated",
+  "Tank Container",
+];
+
+const SEA_CONTAINER_SIZES = [
+  "10 FT",
+  "20 FT",
+  "40 FT",
+  "40 FT High Cube",
+  "45 FT High Cube",
+];
+
+const RAIL_WAGON_TYPES = [
+  "BOXN",
+  "BOXNHL",
+  "BCN",
+  "BTPN",
+  "BRN",
+  "Flat Wagon",
+  "Covered Wagon",
+  "Tank Wagon",
+  "Hopper Wagon",
+  "Parcel Van",
+];
+
+const RAIL_WAGON_CAPACITIES = [
+  "20 MT",
+  "30 MT",
+  "40 MT",
+  "50 MT",
+  "60 MT",
+  "70 MT",
+  "80 MT",
+];
 
 export default function AddFreightQuoteModal({
   isOpen,
   onClose,
   onSave,
   quote = null,
+  lastQuote = null,
   transportMode = "Road",
   mode = "Domestic",
   onOpenCreatePartner,
@@ -58,8 +129,203 @@ export default function AddFreightQuoteModal({
   const [containerSize, setContainerSize] = useState("");
   const [shippingLine, setShippingLine] = useState("");
 
+  const [truckType, setTruckType] = useState("");
+  const [truckCapacity, setTruckCapacity] = useState("");
+  const [wagonType, setWagonType] = useState("");
+  const [wagonCapacity, setWagonCapacity] = useState("");
+
+  // Extensible Equipment Master Options state
+  const [equipmentOptionsMap, setEquipmentOptionsMap] = useState({
+    TRUCK_TYPE: ROAD_TRUCK_TYPES,
+    TRUCK_CAPACITY: ROAD_TRUCK_CAPACITIES,
+    CONTAINER_TYPE: SEA_CONTAINER_TYPES,
+    CONTAINER_SIZE: SEA_CONTAINER_SIZES,
+    WAGON_TYPE: RAIL_WAGON_TYPES,
+    WAGON_CAPACITY: RAIL_WAGON_CAPACITIES,
+  });
+
+  const [activeInlineCategory, setActiveInlineCategory] = useState(null);
+  const [inlineValue, setInlineValue] = useState("");
+  const [inlineLoading, setInlineLoading] = useState(false);
+  const [inlineError, setInlineError] = useState("");
+
+  const fetchEquipmentOptions = async () => {
+    try {
+      const res = await axiosClient.get("/masters/equipment-options");
+      const list = res.data?.data || res.data || [];
+      if (Array.isArray(list) && list.length > 0) {
+        const grouped = {
+          TRUCK_TYPE: [],
+          TRUCK_CAPACITY: [],
+          CONTAINER_TYPE: [],
+          CONTAINER_SIZE: [],
+          WAGON_TYPE: [],
+          WAGON_CAPACITY: [],
+        };
+        list.forEach((item) => {
+          if (grouped[item.category]) {
+            grouped[item.category].push(item.value);
+          }
+        });
+        setEquipmentOptionsMap((prev) => ({
+          TRUCK_TYPE: grouped.TRUCK_TYPE.length ? grouped.TRUCK_TYPE : prev.TRUCK_TYPE,
+          TRUCK_CAPACITY: grouped.TRUCK_CAPACITY.length ? grouped.TRUCK_CAPACITY : prev.TRUCK_CAPACITY,
+          CONTAINER_TYPE: grouped.CONTAINER_TYPE.length ? grouped.CONTAINER_TYPE : prev.CONTAINER_TYPE,
+          CONTAINER_SIZE: grouped.CONTAINER_SIZE.length ? grouped.CONTAINER_SIZE : prev.CONTAINER_SIZE,
+          WAGON_TYPE: grouped.WAGON_TYPE.length ? grouped.WAGON_TYPE : prev.WAGON_TYPE,
+          WAGON_CAPACITY: grouped.WAGON_CAPACITY.length ? grouped.WAGON_CAPACITY : prev.WAGON_CAPACITY,
+        }));
+      }
+    } catch (err) {
+      console.warn("Failed to load equipment options:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchEquipmentOptions();
+      setActiveInlineCategory(null);
+      setInlineValue("");
+      setInlineError("");
+    }
+  }, [isOpen]);
+
+  const handleSaveInline = async (category, setter) => {
+    if (!inlineValue || !inlineValue.trim()) {
+      setInlineError("Please enter an option value.");
+      return;
+    }
+    setInlineLoading(true);
+    setInlineError("");
+    try {
+      const res = await axiosClient.post("/masters/equipment-options", {
+        category,
+        value: inlineValue.trim(),
+      });
+      const created = res.data?.data || res.data;
+      const createdVal = created?.value || inlineValue.trim();
+      await fetchEquipmentOptions();
+      setter(createdVal);
+      setActiveInlineCategory(null);
+      setInlineValue("");
+    } catch (err) {
+      console.error(err);
+      setInlineError(err.response?.data?.message || "Failed to save option.");
+    } finally {
+      setInlineLoading(false);
+    }
+  };
+
+  const renderEquipmentSelectField = (label, value, setter, category, defaultOptions, placeholder) => {
+    const isInline = activeInlineCategory === category;
+    const options = equipmentOptionsMap[category] || defaultOptions;
+
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-[11px] font-bold text-slate-700">
+            {label} <span className="text-rose-500">*</span>
+          </label>
+          {!isInline && !isReadOnly && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveInlineCategory(category);
+                setInlineValue("");
+                setInlineError("");
+              }}
+              className="text-[10px] font-extrabold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-0.5 cursor-pointer"
+            >
+              <Plus className="h-3 w-3" /> Add Custom
+            </button>
+          )}
+        </div>
+
+        {isInline ? (
+          <div className="space-y-1 animate-in fade-in duration-150">
+            <div className="flex items-center gap-1.5 w-full">
+              <input
+                type="text"
+                value={inlineValue}
+                onChange={(e) => setInlineValue(e.target.value)}
+                placeholder={`New ${label}...`}
+                maxLength={100}
+                autoFocus
+                className="min-w-0 flex-1 px-2.5 py-1.5 border border-blue-500 rounded-xl text-xs font-bold focus:outline-none bg-white text-slate-900 shadow-xs"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSaveInline(category, setter);
+                  }
+                  if (e.key === "Escape") {
+                    setActiveInlineCategory(null);
+                    setInlineError("");
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => handleSaveInline(category, setter)}
+                disabled={inlineLoading}
+                title="Save option"
+                className="p-2 bg-blue-600 text-white rounded-xl text-xs font-extrabold hover:bg-blue-700 transition-colors shadow-xs shrink-0 flex items-center justify-center cursor-pointer disabled:opacity-50"
+              >
+                {inlineLoading ? (
+                  <div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                ) : (
+                  <Check className="h-3.5 w-3.5" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveInlineCategory(null);
+                  setInlineError("");
+                }}
+                title="Cancel"
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {inlineError && (
+              <p className="text-[10px] font-bold text-rose-600 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3 shrink-0" /> {inlineError}
+              </p>
+            )}
+          </div>
+        ) : (
+          <select
+            value={value}
+            onChange={(e) => {
+              if (e.target.value === "__ADD_NEW__") {
+                setActiveInlineCategory(category);
+                setInlineValue("");
+                setInlineError("");
+              } else {
+                setter(e.target.value);
+              }
+            }}
+            disabled={isReadOnly}
+            className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600 bg-white cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed text-xs"
+          >
+            <option value="">{placeholder}</option>
+            {options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+            <option value="__ADD_NEW__" className="font-extrabold text-blue-600 bg-blue-50">
+              + Add Custom...
+            </option>
+          </select>
+        )}
+      </div>
+    );
+  };
+
   const [freightAmount, setFreightAmount] = useState("");
-  const [currency, setCurrency] = useState(mode === "International" ? "USD" : "INR");
+  const [currency, setCurrency] = useState(mode === "International" || mode === "Export" || mode === "Merchant Export" ? "USD" : "INR");
 
   const [transitDays, setTransitDays] = useState("");
   const [validityDate, setValidityDate] = useState("");
@@ -125,6 +391,7 @@ export default function AddFreightQuoteModal({
 
   // Sync quote data on open/edit
   useEffect(() => {
+    const modeNorm = (transportMode || "").toLowerCase();
     if (quote) {
       setSellerId(quote.sellerId || "");
       setContactPerson(quote.contactPerson || quote.seller?.contacts?.[0]?.name || "");
@@ -137,8 +404,13 @@ export default function AddFreightQuoteModal({
       setContainerSize(quote.containerSize || "");
       setShippingLine(quote.shippingLine || "");
 
+      setTruckType(quote.truckType || (modeNorm === "road" ? quote.vehicleType : "") || "");
+      setTruckCapacity(quote.truckCapacity || "");
+      setWagonType(quote.wagonType || (modeNorm === "rail" ? quote.vehicleType : "") || "");
+      setWagonCapacity(quote.wagonCapacity || "");
+
       setFreightAmount(quote.freightAmount ? String(quote.freightAmount) : "");
-      setCurrency(quote.currency || (mode === "International" ? "USD" : "INR"));
+      setCurrency(quote.currency || (mode === "International" || mode === "Export" || mode === "Merchant Export" ? "USD" : "INR"));
 
       setTransitDays(quote.transitDays || "");
       setValidityDate(quote.validityDate ? quote.validityDate.split("T")[0] : "");
@@ -167,8 +439,13 @@ export default function AddFreightQuoteModal({
       setContainerSize("");
       setShippingLine("");
 
+      setTruckType("");
+      setTruckCapacity("");
+      setWagonType("");
+      setWagonCapacity("");
+
       setFreightAmount("");
-      setCurrency(mode === "International" ? "USD" : "INR");
+      setCurrency(mode === "International" || mode === "Export" || mode === "Merchant Export" ? "USD" : "INR");
 
       setTransitDays("");
       setValidityDate("");
@@ -186,7 +463,7 @@ export default function AddFreightQuoteModal({
       setVoyage("");
     }
     setError("");
-  }, [quote, mode, transportMode, isOpen]);
+  }, [quote, lastQuote, mode, transportMode, isOpen]);
 
   const [partnerContactsList, setPartnerContactsList] = useState([]);
 
@@ -305,6 +582,36 @@ export default function AddFreightQuoteModal({
       return;
     }
 
+    const modeNorm = (transportMode || "").toLowerCase();
+    if (modeNorm === "road") {
+      if (!truckType) {
+        setError("Truck Type is required.");
+        return;
+      }
+      if (!truckCapacity) {
+        setError("Truck Capacity is required.");
+        return;
+      }
+    } else if (modeNorm === "sea") {
+      if (!containerType) {
+        setError("Container Type is required.");
+        return;
+      }
+      if (!containerSize) {
+        setError("Container Size is required.");
+        return;
+      }
+    } else if (modeNorm === "rail") {
+      if (!wagonType) {
+        setError("Wagon Type is required.");
+        return;
+      }
+      if (!wagonCapacity) {
+        setError("Wagon Capacity is required.");
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const payload = {
@@ -322,16 +629,25 @@ export default function AddFreightQuoteModal({
         ...(paymentTerms && paymentTerms.trim() && { paymentTerms: paymentTerms.trim() }),
         ...(remarks && remarks.trim() && { remarks: remarks.trim() }),
 
-        // Mode specific
-        ...(transportMode === "Road" && vehicleType && { vehicleType: vehicleType.trim() }),
-        ...(transportMode === "Sea" && {
-          ...(containerType && { containerType: containerType.trim() }),
-          ...(containerSize && { containerSize: containerSize.trim() }),
+        // Mode specific equipment specifications
+        ...(modeNorm === "road" && {
+          truckType: truckType.trim(),
+          truckCapacity: truckCapacity.trim(),
+          vehicleType: truckType.trim(),
+        }),
+        ...(modeNorm === "sea" && {
+          containerType: containerType.trim(),
+          containerSize: containerSize.trim(),
           ...(shippingLine && { shippingLine: shippingLine.trim() }),
+        }),
+        ...(modeNorm === "rail" && {
+          wagonType: wagonType.trim(),
+          wagonCapacity: wagonCapacity.trim(),
+          vehicleType: wagonType.trim(),
         }),
 
         // International
-        ...(mode === "International" && {
+        ...((mode === "International" || mode === "Export" || mode === "Merchant Export") && {
           ...(pol && { pol: pol.trim() }),
           ...(pod && { pod: pod.trim() }),
           ...(etd && { etd }),
@@ -343,6 +659,22 @@ export default function AddFreightQuoteModal({
           ...(shippingLine && { shippingLine: shippingLine.trim() }),
         }),
       };
+
+      // Save equipment selection memory per transport mode
+      try {
+        localStorage.setItem(
+          `agricom_last_equipment_${modeNorm}`,
+          JSON.stringify({
+            truckType: (truckType || "").trim(),
+            truckCapacity: (truckCapacity || "").trim(),
+            containerType: (containerType || "").trim(),
+            containerSize: (containerSize || "").trim(),
+            wagonType: (wagonType || "").trim(),
+            wagonCapacity: (wagonCapacity || "").trim(),
+            shippingLine: (shippingLine || "").trim(),
+          })
+        );
+      } catch (err) { }
 
       await onSave(payload);
       onClose();
@@ -522,86 +854,94 @@ export default function AddFreightQuoteModal({
             </div>
 
             {/* Section 2: Mode Specific Equipment */}
-            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-4">
-              <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                2. Vehicle & Equipment Specifications ({transportMode})
-              </h4>
+            {(() => {
+              const modeNorm = (transportMode || "").toLowerCase();
+              return (
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-4">
+                  <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                    {modeNorm === "road" && "Vehicle & Equipment Specifications (Road)"}
+                    {modeNorm === "sea" && "Vehicle & Equipment Specifications (Sea)"}
+                    {modeNorm === "rail" && "Vehicle & Equipment Specifications (Rail)"}
+                    {modeNorm !== "road" && modeNorm !== "sea" && modeNorm !== "rail" && `Vehicle & Equipment Specifications (${transportMode})`}
+                  </h4>
 
-              {transportMode === "Road" && (
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
-                    Vehicle Type / Capacity
-                  </label>
-                  <select
-                    value={vehicleType}
-                    onChange={(e) => setVehicleType(e.target.value)}
-                    disabled={isReadOnly}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600 bg-white cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
-                  >
-                    <option value="">Select Vehicle Type</option>
-                    {VEHICLE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+                  {modeNorm === "road" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {renderEquipmentSelectField(
+                        "Truck Type",
+                        truckType,
+                        (val) => {
+                          setTruckType(val);
+                          if (val && !truckCapacity) {
+                            const defaultCap = (equipmentOptionsMap.TRUCK_CAPACITY || ROAD_TRUCK_CAPACITIES)[0] || "10 MT";
+                            setTruckCapacity(defaultCap);
+                          }
+                        },
+                        "TRUCK_TYPE",
+                        ROAD_TRUCK_TYPES,
+                        "Select Truck Type"
+                      )}
+                      {renderEquipmentSelectField("Truck Capacity", truckCapacity, setTruckCapacity, "TRUCK_CAPACITY", ROAD_TRUCK_CAPACITIES, "Select Truck Capacity")}
+                    </div>
+                  )}
 
-              {transportMode === "Sea" && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
-                      Container Type
-                    </label>
-                    <select
-                      value={containerType}
-                      onChange={(e) => setContainerType(e.target.value)}
-                      disabled={isReadOnly}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600 bg-white cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
-                    >
-                      <option value="">Select Type</option>
-                      {CONTAINER_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
-                      Container Size
-                    </label>
-                    <select
-                      value={containerSize}
-                      onChange={(e) => setContainerSize(e.target.value)}
-                      disabled={isReadOnly}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600 bg-white cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
-                    >
-                      <option value="">Select Size</option>
-                      {CONTAINER_SIZES.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
-                      Shipping Line
-                    </label>
-                    <input
-                      type="text"
-                      value={shippingLine}
-                      onChange={(e) => setShippingLine(e.target.value)}
-                      disabled={isReadOnly}
-                      placeholder="e.g. Maersk, MSC, CMA CGM"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold focus:outline-none focus:border-blue-600 bg-white text-slate-800 disabled:opacity-75 disabled:cursor-not-allowed"
-                    />
-                  </div>
+                  {modeNorm === "sea" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {renderEquipmentSelectField(
+                        "Container Type",
+                        containerType,
+                        (val) => {
+                          setContainerType(val);
+                          if (val && !containerSize) {
+                            const defaultSize = (equipmentOptionsMap.CONTAINER_SIZE || SEA_CONTAINER_SIZES)[0] || "40 FT";
+                            setContainerSize(defaultSize);
+                          }
+                        },
+                        "CONTAINER_TYPE",
+                        SEA_CONTAINER_TYPES,
+                        "Select Type"
+                      )}
+                      {renderEquipmentSelectField("Container Size", containerSize, setContainerSize, "CONTAINER_SIZE", SEA_CONTAINER_SIZES, "Select Size")}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-[11px] font-bold text-slate-700">
+                            Shipping Line
+                          </label>
+                        </div>
+                        <input
+                          type="text"
+                          value={shippingLine}
+                          onChange={(e) => setShippingLine(e.target.value)}
+                          disabled={isReadOnly}
+                          placeholder="e.g. Maersk, MSC, CMA CGM"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold focus:outline-none focus:border-blue-600 bg-white text-slate-800 disabled:opacity-75 disabled:cursor-not-allowed text-xs"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {modeNorm === "rail" && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {renderEquipmentSelectField(
+                        "Wagon Type",
+                        wagonType,
+                        (val) => {
+                          setWagonType(val);
+                          if (val && !wagonCapacity) {
+                            const defaultCap = (equipmentOptionsMap.WAGON_CAPACITY || RAIL_WAGON_CAPACITIES)[0] || "60 MT";
+                            setWagonCapacity(defaultCap);
+                          }
+                        },
+                        "WAGON_TYPE",
+                        RAIL_WAGON_TYPES,
+                        "Select Wagon Type"
+                      )}
+                      {renderEquipmentSelectField("Wagon Capacity", wagonCapacity, setWagonCapacity, "WAGON_CAPACITY", RAIL_WAGON_CAPACITIES, "Select Wagon Capacity")}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              );
+            })()}
 
             {/* Section 3: Freight Amount & Dynamic Currency */}
             <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-4 shadow-xs">
@@ -728,7 +1068,7 @@ export default function AddFreightQuoteModal({
             </div>
 
             {/* Section 5: International Shipping Details */}
-            {mode === "International" && (
+            {(mode === "International" || mode === "Export" || mode === "Merchant Export") && (
               <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-4">
                 <h4 className="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider">
                   5. International Sea Shipping Details

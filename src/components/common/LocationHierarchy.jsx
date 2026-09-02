@@ -3,7 +3,7 @@ import Select from "react-select";
 import { State, City } from "country-state-city";
 import { getAllCountryOptions, getAlpha2Code } from "@/lib/countryUtils";
 
-export default function LocationHierarchy({ prefix, form, setForm, errors, isView }) {
+export default function LocationHierarchy({ prefix, form, setForm, errors, isView, shipmentMode }) {
   const labelPrefix = prefix === "origin" ? "Origin" : "Destination";
   const countryKey = prefix === "origin" ? "originCountryId" : "destinationCountry";
   const stateKey = `${prefix}State`;
@@ -17,6 +17,12 @@ export default function LocationHierarchy({ prefix, form, setForm, errors, isVie
   const countryValue = form[countryKey] || "";
   const stateValue = form[stateKey] || "";
   const cityValue = form[cityKey] || "";
+
+  const zipKey = `${prefix}ZipCode`;
+  const stationKey = `${prefix}StationCode`;
+
+  const zipValue = form[zipKey] || "";
+  const stationValue = form[stationKey] || "";
 
   // 1. Generate sorted country options once
   const countryOptions = useMemo(() => {
@@ -148,6 +154,19 @@ export default function LocationHierarchy({ prefix, form, setForm, errors, isVie
           <label className={lbl}>{labelPrefix} City</label>
           <div className={inp}>{cityValue || "—"}</div>
         </div>
+        {/* ZIP / Station */}
+        {shipmentMode === "ROAD" && (
+          <div>
+            <label className={lbl}>{labelPrefix} ZIP / Postal Code</label>
+            <div className={inp}>{zipValue || "—"}</div>
+          </div>
+        )}
+        {shipmentMode === "RAIL" && (
+          <div>
+            <label className={lbl}>{labelPrefix} Railway Station Code</label>
+            <div className={inp}>{stationValue || "—"}</div>
+          </div>
+        )}
       </>
     );
   }
@@ -206,6 +225,37 @@ export default function LocationHierarchy({ prefix, form, setForm, errors, isVie
         />
         {errors[cityKey] && <p className={err}>{errors[cityKey]}</p>}
       </div>
+
+      {/* ZIP / Postal Code (Road) */}
+      {shipmentMode === "ROAD" && (
+        <div>
+          <label className={lbl}>{labelPrefix} ZIP / Postal Code</label>
+          <input
+            type="text"
+            value={zipValue}
+            onChange={(e) => setForm((f) => ({ ...f, [zipKey]: e.target.value }))}
+            placeholder="e.g. 90001"
+            className={`${inp} ${errors[zipKey] ? "border-red-300" : ""}`}
+          />
+          {errors[zipKey] && <p className={err}>{errors[zipKey]}</p>}
+        </div>
+      )}
+
+      {/* Railway Station Code (Rail) */}
+      {shipmentMode === "RAIL" && (
+        <div>
+          <label className={lbl}>{labelPrefix} Railway Station Code <span className="text-red-500">*</span></label>
+          <input
+            type="text"
+            value={stationValue}
+            onChange={(e) => setForm((f) => ({ ...f, [stationKey]: e.target.value.toUpperCase() }))}
+            placeholder="e.g. NDLS"
+            maxLength={8}
+            className={`${inp} uppercase ${errors[stationKey] ? "border-red-300" : ""}`}
+          />
+          {errors[stationKey] && <p className={err}>{errors[stationKey]}</p>}
+        </div>
+      )}
     </>
   );
 }

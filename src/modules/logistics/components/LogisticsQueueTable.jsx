@@ -13,7 +13,7 @@ const LOGISTICS_STATUS_CLASSES = {
   "Closed": "bg-gray-100 text-gray-700 border-gray-300",
 };
 
-export default function LogisticsQueueTable({ data, loading, onManage }) {
+export default function LogisticsQueueTable({ data, loading, onManage, mode = "All" }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -24,12 +24,15 @@ export default function LogisticsQueueTable({ data, loading, onManage }) {
   }
 
   if (!data.length) {
+    const scopeText = mode === "All" ? "" : `${mode} `;
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="h-14 w-14 rounded-2xl bg-slate-50 flex items-center justify-center mb-4">
           <Truck className="h-7 w-7 text-gray-400" />
         </div>
-        <p className="text-sm font-bold text-gray-700">No Enquiries in Logistics Queue</p>
+        <p className="text-sm font-bold text-gray-700">
+          {mode === "All" ? "No Enquiries in Logistics Queue" : `No ${scopeText}enquiries found.`}
+        </p>
         <p className="text-xs text-gray-400 mt-1">Pending enquiries will appear here for transport management.</p>
       </div>
     );
@@ -74,7 +77,7 @@ export default function LogisticsQueueTable({ data, loading, onManage }) {
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Enquiry No.", "Date", "Buyer Partner", "Product", "Qty (MT)", "Origin", "Destination", "Mode", "Logistics Status", "Action"].map((h) => (
+            {["Enquiry No.", "Date", "Product", "Qty (MT)", "Origin", "Destination", "Mode", "Logistics Status", "Action"].map((h) => (
               <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">
                 {h}
               </th>
@@ -95,9 +98,6 @@ export default function LogisticsQueueTable({ data, loading, onManage }) {
                   {e.enquiryDate
                     ? new Date(e.enquiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                     : "—"}
-                </td>
-                <td className="px-4 py-4.5 text-gray-800 font-semibold whitespace-nowrap max-w-[200px] truncate" title={e.partner?.entityName || ""}>
-                  {e.partner?.entityName || "—"}
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap max-w-[150px] truncate" title={e.product?.name || ""}>
                   {e.product?.name || "—"}

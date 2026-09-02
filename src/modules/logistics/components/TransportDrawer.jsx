@@ -39,6 +39,8 @@ import PartnerDrawer from "@/components/masters/partners/PartnerDrawer";
 import VirtualizedAuditLogTimeline from "./VirtualizedAuditLogTimeline";
 import axiosClient from "@/lib/axios";
 import { resolvePhone } from "@/lib/contactUtils";
+import { useSelector } from "react-redux";
+import { selectActiveCompany } from "@/store/slices/companyContextSlice";
 
 const STATUS_STEPS = [
   "Pending",
@@ -64,6 +66,9 @@ const DOC_CATEGORIES = [
 ];
 
 export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly = false }) {
+  const company = useSelector(selectActiveCompany);
+  const companyCountry = company?.country;
+
   const [activeTab, setActiveTab] = useState("quotes");
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -411,6 +416,22 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
       .toUpperCase();
   };
 
+  const getDisplayMode = () => {
+    if (!enquiry) return details?.logistics?.mode || "Domestic";
+    const origin = enquiry.originCountryId;
+    const destination = enquiry.destinationCountry;
+
+    if (origin && destination && companyCountry) {
+      const isOriginDomestic = origin === companyCountry;
+      const isDestinationDomestic = destination === companyCountry;
+      if (isOriginDomestic && isDestinationDomestic) return "Domestic";
+      if (isOriginDomestic && !isDestinationDomestic) return "Export";
+      if (!isOriginDomestic && !isDestinationDomestic) return "Merchant Export";
+    }
+    return details?.logistics?.mode || "Domestic";
+  };
+  const displayMode = getDisplayMode();
+
   return (
     <>
       <div
@@ -436,7 +457,7 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                   </span>
                 </h2>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-purple-100 text-purple-700 border border-purple-200">
-                  {details?.logistics?.mode || "Domestic"} Mode
+                  {displayMode} Mode
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-700 border border-amber-200">
                   Normal Priority
@@ -568,27 +589,51 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100 text-xs">
                       <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Origin</span>
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Origin</span>
                         <p className="font-extrabold text-slate-800 mt-0.5 truncate" title={enquiry?.originCity || enquiry?.originPort || "—"}>
                           📍 {enquiry?.originCity || enquiry?.originPort || "—"}
                         </p>
+                        {enquiry?.originZipCode && (
+                          <div className="mt-1 inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded-md border border-slate-200 text-[10px] font-semibold text-slate-600 shadow-2xs">
+                            <span className="text-slate-400">ZIP:</span>
+                            <span className="font-mono font-bold text-slate-800">{enquiry.originZipCode}</span>
+                          </div>
+                        )}
+                        {enquiry?.shipmentMode === "RAIL" && enquiry?.originStationCode && (
+                          <div className="mt-1 inline-flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 text-[10px] font-semibold text-blue-700">
+                            <span>Station:</span>
+                            <span className="font-mono font-extrabold uppercase">{enquiry.originStationCode}</span>
+                          </div>
+                        )}
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Destination</span>
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Destination</span>
                         <p className="font-extrabold text-slate-800 mt-0.5 truncate" title={enquiry?.destinationCity || enquiry?.destinationPort || "—"}>
                           🏁 {enquiry?.destinationCity || enquiry?.destinationPort || "—"}
                         </p>
+                        {enquiry?.destinationZipCode && (
+                          <div className="mt-1 inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded-md border border-slate-200 text-[10px] font-semibold text-slate-600 shadow-2xs">
+                            <span className="text-slate-400">ZIP:</span>
+                            <span className="font-mono font-bold text-slate-800">{enquiry.destinationZipCode}</span>
+                          </div>
+                        )}
+                        {enquiry?.shipmentMode === "RAIL" && enquiry?.destinationStationCode && (
+                          <div className="mt-1 inline-flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 text-[10px] font-semibold text-blue-700">
+                            <span>Station:</span>
+                            <span className="font-mono font-extrabold uppercase">{enquiry.destinationStationCode}</span>
+                          </div>
+                        )}
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Commodity</span>
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Commodity</span>
                         <p className="font-extrabold text-slate-800 mt-0.5 truncate" title={enquiry?.product?.name || "—"}>
-                          {enquiry?.product?.name || "—"}
+                          📦 {enquiry?.product?.name || "—"}
                         </p>
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Quantity</span>
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Quantity</span>
                         <p className="font-extrabold text-slate-900 mt-0.5 tabular-nums">
-                          {Number(enquiry?.quantity || 0).toLocaleString()} MT
+                          ⚖️ {Number(enquiry?.quantity || 0).toLocaleString()} MT
                         </p>
                       </div>
                     </div>
@@ -812,9 +857,26 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                                     </td>
 
                                     <td className="px-4 py-3.5 font-bold text-slate-800">
-                                      {transportMode === "Road" && (q.vehicleType || "Standard Truck")}
-                                      {transportMode === "Sea" && `${q.shippingLine || "—"} (${q.containerType || "20 FT"})`}
-                                      {transportMode !== "Road" && transportMode !== "Sea" && (q.vehicleType || "—")}
+                                      {(() => {
+                                        const modeNorm = (transportMode || "").toLowerCase();
+                                        if (modeNorm === "road") {
+                                          const type = q.truckType || q.vehicleType || "Standard Truck";
+                                          const cap = q.truckCapacity;
+                                          return cap ? `${type} (${cap})` : type;
+                                        }
+                                        if (modeNorm === "sea") {
+                                          const line = q.shippingLine ? `${q.shippingLine} • ` : "";
+                                          const type = q.containerType || "Container";
+                                          const size = q.containerSize ? ` (${q.containerSize})` : "";
+                                          return `${line}${type}${size}`;
+                                        }
+                                        if (modeNorm === "rail") {
+                                          const type = q.wagonType || q.vehicleType || "Wagon";
+                                          const cap = q.wagonCapacity;
+                                          return cap ? `${type} (${cap})` : type;
+                                        }
+                                        return q.vehicleType || "—";
+                                      })()}
                                     </td>
 
                                     <td className="px-4 py-3.5 text-center">
@@ -1069,8 +1131,9 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
           }}
           onSave={handleSaveQuote}
           quote={selectedQuote}
+          lastQuote={quotes && quotes.length > 0 ? quotes[0] : null}
           transportMode={transportMode}
-          mode={details?.logistics?.mode || "Domestic"}
+          mode={displayMode}
           onOpenCreatePartner={handleOpenCreatePartner}
           onOpenAddContact={handleOpenAddContact}
           autoSelectPartner={autoSelectPartner}
