@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   X,
   Plus,
@@ -31,6 +31,10 @@ import {
   Layers,
   Package,
   Eye,
+  Search,
+  Filter,
+  Tag,
+  FolderPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logisticsApi } from "../services/logisticsApi";
@@ -55,7 +59,7 @@ const STATUS_STEPS = [
   "Closed",
 ];
 
-const DOC_CATEGORIES = [
+const DEFAULT_DOC_CATEGORIES = [
   "Freight Quotation",
   "Rate Sheet",
   "Booking Confirmation",
@@ -78,10 +82,31 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
 
-  // Attachments
+  // Attachments & Custom Document Categories
   const [attachments, setAttachments] = useState([]);
   const [uploadCategory, setUploadCategory] = useState("Freight Quotation");
   const [uploading, setUploading] = useState(false);
+
+  const [docCategories, setDocCategories] = useState(() => {
+    try {
+      const saved = localStorage.getItem("agricom_custom_doc_categories");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return Array.from(new Set([...DEFAULT_DOC_CATEGORIES, ...parsed]));
+        }
+      }
+    } catch (e) {}
+    return DEFAULT_DOC_CATEGORIES;
+  });
+
+  const [isAddingDocCategory, setIsAddingDocCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
+  // Search & Category Filter for Documents tab
+  const [docSearchQuery, setDocSearchQuery] = useState("");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All");
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   // Timeline
   const [activities, setActivities] = useState([]);
@@ -327,26 +352,118 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
     }
   };
 
-  // Upload Document
-  const handleUploadFile = async (e) => {
-    const file = e.target.files[0];
-    if (isReadOnly || !file || !details?.logistics?.id) return;
+  // Add Custom Document Category
+  const handleAddCustomCategory = () => {
+    if (!newCategoryName || !newCategoryName.trim()) return;
+    const trimmed = newCategoryName.trim();
+    if (!docCategories.includes(trimmed)) {
+      const updated = [...docCategories, trimmed];
+      setDocCategories(updated);
+      try {
+        const customOnly = updated.filter((c) => !DEFAULT_DOC_CATEGORIES.includes(c));
+        localStorage.setItem("agricom_custom_doc_categories", JSON.stringify(customOnly));
+      } catch (e) {}
+      toast.success(`Added document category "${trimmed}"`);
+    }
+    setUploadCategory(trimmed);
+    setNewCategoryName("");
+    setIsAddingDocCategory(false);
+  };
 
+  // Upload Document(s) - Supports Single/Multiple files & Drag-and-Drop
+  const handleUploadFiles = async (files) => {
+    if (isReadOnly || !files || files.length === 0 || !details?.logistics?.id) return;
+
+    const fileList = Array.from(files);
     setUploading(true);
+    let successCount = 0;
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("category", uploadCategory);
+      for (const file of fileList) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("category", uploadCategory);
 
-      await logisticsApi.uploadAttachment(details.logistics.id, formData);
-      toast.success("Document uploaded successfully.");
+        await logisticsApi.uploadAttachment(details.logistics.id, formData);
+        successCount++;
+      }
+      if (successCount === 1) {
+        toast.success("Document uploaded successfully.");
+      } else {
+        toast.success(`${successCount} documents uploaded successfully.`);
+      }
       loadAttachments();
     } catch (err) {
-      toast.error("Failed to upload document.");
+      toast.error("Failed to upload document(s).");
     } finally {
       setUploading(false);
     }
   };
+
+  const handleFileInputChange = (e) => {
+    handleUploadFiles(e.target.files);
+    e.target.value = "";
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isReadOnly) setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    if (!isReadOnly && e.dataTransfer?.files?.length > 0) {
+      handleUploadFiles(e.dataTransfer.files);
+    }
+  };
+
+  const parseAttachmentMeta = useCallback((att) => {
+    const rawName = att.fileName || "";
+    let displayCat = att.category || "General";
+    let displayName = rawName;
+
+    const dashIdx = rawName.indexOf(" - ");
+    if (dashIdx > 0 && dashIdx < 40) {
+      const possibleCat = rawName.substring(0, dashIdx).trim();
+      const possibleName = rawName.substring(dashIdx + 3).trim();
+      if (possibleCat && possibleName) {
+        displayCat = possibleCat;
+        displayName = possibleName;
+      }
+    }
+    return { displayCat, displayName };
+  }, []);
+
+  const filteredAttachments = useMemo(() => {
+    return attachments.filter((att) => {
+      const { displayCat, displayName } = parseAttachmentMeta(att);
+      const matchesSearch =
+        !docSearchQuery ||
+        displayName.toLowerCase().includes(docSearchQuery.toLowerCase()) ||
+        displayCat.toLowerCase().includes(docSearchQuery.toLowerCase());
+      const matchesCategory =
+        selectedCategoryFilter === "All" ||
+        displayCat.toLowerCase() === selectedCategoryFilter.toLowerCase();
+      return matchesSearch && matchesCategory;
+    });
+  }, [attachments, docSearchQuery, selectedCategoryFilter, parseAttachmentMeta]);
+
+  const activeAttachmentCategories = useMemo(() => {
+    const set = new Set();
+    attachments.forEach((att) => {
+      const { displayCat } = parseAttachmentMeta(att);
+      if (displayCat) set.add(displayCat);
+    });
+    return Array.from(set);
+  }, [attachments, parseAttachmentMeta]);
 
   const handleDeleteAttachment = async (attId) => {
     if (isReadOnly || !details?.logistics?.id) return;
@@ -1002,105 +1119,266 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                 {/* --------------------------------------------------------------------------------- */}
                 {activeTab === "docs" && (
                   <div className="space-y-6">
+                    {/* UPLOAD & CATEGORY SELECTION HEADER CARD */}
                     {!isReadOnly && (
-                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center shrink-0">
-                            <UploadCloud className="h-5 w-5" />
+                      <div
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        className={`border rounded-2xl p-5 transition-all shadow-xs ${isDraggingOver
+                          ? "bg-blue-50/90 border-blue-500 border-dashed ring-4 ring-blue-100"
+                          : "bg-slate-50 border-slate-200"
+                          }`}
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-600/20">
+                              <UploadCloud className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-tight">
+                                Upload Transportation Document
+                              </h4>
+                              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                                Attach rate quotes, PODs, LR copies, booking confirmations, or custom documents.
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="text-xs font-extrabold text-slate-900 uppercase">
-                              Upload Transportation Document
-                            </h4>
-                            <p className="text-[11px] text-slate-500 font-medium">
-                              Attach rate quotes, PODs, LR copies, or booking confirmations.
-                            </p>
+
+                          {/* CATEGORY & UPLOAD CONTROLS */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                              <select
+                                value={uploadCategory}
+                                onChange={(e) => {
+                                  if (e.target.value === "__ADD_NEW_CAT__") {
+                                    setIsAddingDocCategory(true);
+                                  } else {
+                                    setUploadCategory(e.target.value);
+                                  }
+                                }}
+                                className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white font-bold text-xs text-slate-800 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs"
+                              >
+                                {docCategories.map((cat) => (
+                                  <option key={cat} value={cat}>
+                                    {cat}
+                                  </option>
+                                ))}
+                                <option value="__ADD_NEW_CAT__" className="font-extrabold text-blue-600 bg-blue-50">
+                                  + Add Custom Category...
+                                </option>
+                              </select>
+
+                            </div>
+
+                            <label className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl flex items-center gap-2 cursor-pointer shadow-md shadow-blue-600/20 active:scale-95 transition-all">
+                              {uploading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Paperclip className="h-4 w-4" />
+                              )}
+                              Choose Files & Upload
+                              <input
+                                type="file"
+                                multiple
+                                className="hidden"
+                                onChange={handleFileInputChange}
+                                disabled={uploading}
+                              />
+                            </label>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <select
-                            value={uploadCategory}
-                            onChange={(e) => setUploadCategory(e.target.value)}
-                            className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white font-bold text-xs text-slate-800 focus:outline-none cursor-pointer shadow-sm"
-                          >
-                            {DOC_CATEGORIES.map((cat) => (
-                              <option key={cat} value={cat}>
-                                {cat}
-                              </option>
-                            ))}
-                          </select>
-
-                          <label className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl flex items-center gap-2 cursor-pointer shadow-md shadow-blue-500/20 active:scale-95 transition-all">
-                            {uploading ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Paperclip className="h-4 w-4" />
-                            )}
-                            Choose File & Upload
+                        {/* INLINE CUSTOM CATEGORY INPUT FORM */}
+                        {isAddingDocCategory && (
+                          <div className="mt-4 pt-3 border-t border-slate-200 flex items-center gap-2 animate-in fade-in duration-150 max-w-lg">
                             <input
-                              type="file"
-                              className="hidden"
-                              onChange={handleUploadFile}
-                              disabled={uploading}
+                              type="text"
+                              value={newCategoryName}
+                              onChange={(e) => setNewCategoryName(e.target.value)}
+                              placeholder="Enter custom category name (e.g. Packing List, Duty Bill)..."
+                              className="flex-1 px-3 py-1.5 border border-blue-500 rounded-xl text-xs font-bold text-slate-900 bg-white focus:outline-none shadow-xs"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleAddCustomCategory();
+                                }
+                                if (e.key === "Escape") {
+                                  setIsAddingDocCategory(false);
+                                  setNewCategoryName("");
+                                }
+                              }}
                             />
-                          </label>
+                            <button
+                              type="button"
+                              onClick={handleAddCustomCategory}
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl flex items-center gap-1 shadow-xs cursor-pointer"
+                            >
+                              <Check className="h-3.5 w-3.5" /> Add
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsAddingDocCategory(false);
+                                setNewCategoryName("");
+                              }}
+                              className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs rounded-xl flex items-center gap-1 cursor-pointer"
+                            >
+                              <X className="h-3.5 w-3.5" /> Cancel
+                            </button>
+                          </div>
+                        )}
+
+                        {/* DRAG AND DROP HINT */}
+                        <div className="mt-3 text-center text-[10px] text-slate-400 font-semibold flex items-center justify-center gap-1.5">
+                          <UploadCloud className="h-3.5 w-3.5 text-blue-500" />
+                          <span>Tip: You can drag and drop multiple files directly into this area to upload.</span>
                         </div>
                       </div>
                     )}
 
+                    {/* SEARCH & CATEGORY FILTER PILLS BAR */}
+                    {attachments.length > 0 && (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+                        {/* Search Input */}
+                        <div className="relative flex-1 max-w-xs">
+                          <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type="text"
+                            value={docSearchQuery}
+                            onChange={(e) => setDocSearchQuery(e.target.value)}
+                            placeholder="Search documents..."
+                            className="w-full pl-8 pr-3 py-1.5 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 text-slate-800"
+                          />
+                          {docSearchQuery && (
+                            <button
+                              onClick={() => setDocSearchQuery("")}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Category Filter Pills */}
+                        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 max-w-full scrollbar-none">
+                          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+                            <Filter className="h-3 w-3" /> Filter:
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCategoryFilter("All")}
+                            className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition-all cursor-pointer ${selectedCategoryFilter === "All"
+                              ? "bg-blue-600 text-white shadow-2xs"
+                              : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                              }`}
+                          >
+                            All ({attachments.length})
+                          </button>
+
+                          {activeAttachmentCategories.map((cat) => {
+                            const count = attachments.filter((att) => {
+                              const { displayCat } = parseAttachmentMeta(att);
+                              return displayCat.toLowerCase() === cat.toLowerCase();
+                            }).length;
+                            const isSel = selectedCategoryFilter.toLowerCase() === cat.toLowerCase();
+
+                            return (
+                              <button
+                                key={cat}
+                                type="button"
+                                onClick={() => setSelectedCategoryFilter(cat)}
+                                className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition-all cursor-pointer whitespace-nowrap ${isSel
+                                  ? "bg-blue-600 text-white shadow-2xs"
+                                  : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                                  }`}
+                              >
+                                {cat} ({count})
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* DOCUMENT CARDS GRID */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {attachments.map((att) => (
-                        <div
-                          key={att.id}
-                          className="border border-slate-200 hover:border-slate-300 bg-white rounded-2xl p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-all group"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-3 overflow-hidden">
-                              <div className="h-10 w-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center shrink-0">
-                                <FileText className="h-5 w-5" />
+                      {filteredAttachments.map((att) => {
+                        const { displayCat, displayName } = parseAttachmentMeta(att);
+
+                        return (
+                          <div
+                            key={att.id}
+                            className="border border-slate-200 hover:border-slate-300 bg-white rounded-2xl p-4 flex flex-col justify-between shadow-xs hover:shadow-md transition-all group"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="h-10 w-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center shrink-0 shadow-2xs">
+                                  <FileText className="h-5 w-5" />
+                                </div>
+                                <div className="overflow-hidden">
+                                  <h5 className="font-extrabold text-slate-900 text-xs truncate" title={displayName}>
+                                    {displayName}
+                                  </h5>
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 font-extrabold text-[9px] mt-1">
+                                    <Tag className="h-2.5 w-2.5 text-blue-600" />
+                                    {displayCat}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="overflow-hidden">
-                                <h5 className="font-extrabold text-slate-900 text-xs truncate" title={att.fileName}>
-                                  {att.fileName}
-                                </h5>
-                                <span className="inline-block px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-600 font-bold text-[9px] mt-1">
-                                  {att.category || "General"}
-                                </span>
-                              </div>
+
+                              {!isReadOnly && (
+                                <button
+                                  onClick={() => handleDeleteAttachment(att.id)}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer opacity-80 group-hover:opacity-100"
+                                  title="Delete Document"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
 
-                            {!isReadOnly && (
-                              <button
-                                onClick={() => handleDeleteAttachment(att.id)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer opacity-80 group-hover:opacity-100"
+                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+                              <span>{(att.fileSize / 1024).toFixed(1)} KB</span>
+                              <span>{new Date(att.createdAt).toLocaleDateString()}</span>
+                              <a
+                                href={`${axiosClient.defaults.baseURL}${att.downloadUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1 font-extrabold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100 rounded-xl flex items-center gap-1 transition-colors"
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            )}
+                                <Download className="h-3 w-3" /> Download
+                              </a>
+                            </div>
                           </div>
+                        );
+                      })}
 
-                          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                            <span>{(att.fileSize / 1024).toFixed(1)} KB</span>
-                            <span>{new Date(att.createdAt).toLocaleDateString()}</span>
-                            <a
-                              href={`${axiosClient.defaults.baseURL}${att.downloadUrl}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-3 py-1 font-extrabold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100 rounded-xl flex items-center gap-1 transition-colors"
-                            >
-                              <Download className="h-3 w-3" /> Download
-                            </a>
-                          </div>
+                      {attachments.length > 0 && filteredAttachments.length === 0 && (
+                        <div className="col-span-full py-12 border border-dashed border-slate-200 rounded-2xl text-center bg-slate-50 space-y-2">
+                          <Search className="h-7 w-7 text-slate-400 mx-auto" />
+                          <h4 className="text-xs font-extrabold text-slate-700">No matching documents found</h4>
+                          <p className="text-[11px] text-slate-500 font-medium">
+                            Try adjusting your search query or category filter.
+                          </p>
                         </div>
-                      ))}
+                      )}
 
                       {attachments.length === 0 && (
-                        <div className="col-span-full py-16 border-2 border-dashed border-slate-200 rounded-2xl text-center bg-slate-50 space-y-2">
+                        <div
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          className={`col-span-full py-16 border-2 border-dashed rounded-2xl text-center transition-all ${isDraggingOver
+                            ? "bg-blue-50 border-blue-500 ring-4 ring-blue-100"
+                            : "bg-slate-50 border-slate-200"
+                            } space-y-2`}
+                        >
                           <FileText className="h-8 w-8 text-slate-400 mx-auto" />
                           <h4 className="text-xs font-extrabold text-slate-700">No Documents Uploaded</h4>
-                          <p className="text-[11px] text-slate-500 font-medium">
-                            Select a category above and upload quotation PDFs, LR copies, or rate sheets.
+                          <p className="text-[11px] text-slate-500 font-medium max-w-sm mx-auto">
+                            Select or create a document category above and upload quotation PDFs, LR copies, or rate sheets.
                           </p>
                         </div>
                       )}
