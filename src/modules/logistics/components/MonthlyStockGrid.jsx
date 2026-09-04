@@ -360,7 +360,7 @@ export default function MonthlyStockGrid({
             const isTotalRow = r.isTotalRow;
             return (
               <tr
-                key={r.id || rIdx}
+                key={r.id != null ? `row-${r.id}` : `row-idx-${rIdx}`}
                 className={`transition-none h-8 ${
                   isTotalRow ? "bg-[#f1f5f9] font-bold" : "hover:bg-gray-50/50"
                 }`}
@@ -490,7 +490,7 @@ export default function MonthlyStockGrid({
 
                   return (
                     <td
-                      key={colKey || cIdx}
+                      key={colKey != null ? `col-${colKey}` : `col-idx-${cIdx}`}
                       className="p-0 relative"
                       style={{ width: `${colW}px`, minWidth: `${colW}px`, maxWidth: `${colW}px` }}
                     >
