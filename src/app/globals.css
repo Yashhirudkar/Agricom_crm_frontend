@@ -198,6 +198,7 @@ table {
   outline-offset: 2px;
 }
 
+
 /* Message Bubble Tail CSS Styles */
 .bubble-tail-out::after {
   content: "";
@@ -221,4 +222,161 @@ table {
   clip-path: polygon(100% 0, 0 100%, 100% 100%);
   border-left: inherit;
   border-bottom: inherit;
+}
+
+/* ── Production Print Layout Styles (Matches Excel Report Exactly) ─────────── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm;
+  }
+
+  /* Reset all parent container positioning so position: absolute attaches to body root */
+  html,
+  body,
+  main,
+  div {
+    position: static !important;
+    transform: none !important;
+    filter: none !important;
+    perspective: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  /* Hide everything on body during print except .report-print-container */
+  body * {
+    visibility: hidden;
+  }
+
+  .report-print-container,
+  .report-print-container * {
+    visibility: visible !important;
+  }
+
+  .report-print-container {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    z-index: 999999 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Print Header styling */
+  .report-print-header {
+    text-align: center !important;
+    margin-bottom: 20px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 2px solid #000000 !important;
+    width: 100% !important;
+  }
+
+  .report-print-title {
+    font-size: 18pt !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: #0f172a !important;
+    margin: 0 0 4px 0 !important;
+  }
+
+  .report-print-subtitle {
+    font-size: 12pt !important;
+    font-weight: 700 !important;
+    color: #475569 !important;
+    margin: 0 !important;
+  }
+
+  /* Individual Print Section (Stacked one below another) */
+  .report-print-section {
+    width: 100% !important;
+    margin-bottom: 24px !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    display: block !important;
+  }
+
+  /* Printable Table Styling */
+  .report-print-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    border: 1px solid #000000 !important;
+    background: #ffffff !important;
+  }
+
+  .report-print-section-title {
+    font-size: 11pt !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    text-align: center !important;
+    background-color: #e2e8f0 !important;
+    color: #0f172a !important;
+    border: 1px solid #000000 !important;
+    padding: 6px 8px !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .report-print-th {
+    background-color: #1e3a8a !important;
+    color: #ffffff !important;
+    font-size: 10pt !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    border: 1px solid #000000 !important;
+    padding: 5px 8px !important;
+  }
+
+  .report-print-td {
+    font-size: 9.5pt !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    padding: 4px 8px !important;
+    background: #ffffff !important;
+  }
+
+  .report-print-td-sr {
+    font-size: 9.5pt !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    padding: 4px 8px !important;
+    background: #ffffff !important;
+  }
+
+  .report-print-total-td {
+    font-size: 9.5pt !important;
+    font-weight: 800 !important;
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    border: 1px solid #000000 !important;
+    border-bottom: 3px double #000000 !important;
+    padding: 5px 8px !important;
+  }
+
+  .report-print-total-sr {
+    font-size: 9.5pt !important;
+    font-weight: 800 !important;
+    background-color: #e2e8f0 !important;
+    color: #107c41 !important;
+    text-align: center !important;
+    border: 1px solid #000000 !important;
+    border-bottom: 3px double #000000 !important;
+    padding: 5px 8px !important;
+  }
 }
