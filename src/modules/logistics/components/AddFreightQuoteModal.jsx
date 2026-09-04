@@ -310,8 +310,8 @@ export default function AddFreightQuoteModal({
             className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600 bg-white cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed text-xs"
           >
             <option value="">{placeholder}</option>
-            {options.map((opt) => (
-              <option key={opt} value={opt}>
+            {options.map((opt, idx) => (
+              <option key={`${opt}-${idx}`} value={opt}>
                 {opt}
               </option>
             ))}
