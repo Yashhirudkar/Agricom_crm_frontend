@@ -1,7 +1,9 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { Ship, ClipboardCheck, AlertCircle, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Ship, ClipboardCheck, AlertCircle, RefreshCw, Rocket } from "lucide-react";
 import { shipmentsApi } from "../services/shipmentsApi";
+import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 import ShipmentsFilter from "../components/ShipmentsFilter";
 import ShipmentsTable from "../components/ShipmentsTable";
 import ShipmentDetailsDrawer from "../components/ShipmentDetailsDrawer";
@@ -12,6 +14,7 @@ import Pagination from "@/components/common/Pagination";
 
 
 export default function ShipmentListPage({ preSelectedShipmentId }) {
+  const router = useRouter();
   // Filters State
   const [filters, setFilters] = useState({
     page: 1,
@@ -265,6 +268,30 @@ export default function ShipmentListPage({ preSelectedShipmentId }) {
           setFilters={setFilters}
           onReset={handleResetFilters}
           total={total}
+          selectedShipments={selectedShipments}
+          onDeselect={() => setSelectedShipments([])}
+          onExecuteBulk={async () => {
+            try {
+              const selectedObjs = shipments.filter((s) => selectedShipments.includes(s.id));
+              const salesContractId = selectedObjs[0]?.salesContractId || selectedObjs[0]?.salesContract?.id;
+              if (!salesContractId) {
+                showToast("Could not determine Sales Contract for selected shipments", "error");
+                return;
+              }
+              const targetIds = selectedShipments.map(Number);
+              const res = await purchaseContractApi.create({
+                salesContractId: Number(salesContractId),
+                shipmentIds: targetIds,
+              });
+              const pcId = res.data?.id;
+              if (pcId) {
+                router.push(`/sales/purchase-contracts/${pcId}?shipmentIds=${targetIds.join(",")}`);
+              }
+            } catch (err) {
+              console.error("Failed bulk purchase contract execution", err);
+              showToast("Failed to execute purchase contract workspace", "error");
+            }
+          }}
         />
       </div>
 

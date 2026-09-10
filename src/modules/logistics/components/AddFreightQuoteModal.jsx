@@ -17,6 +17,9 @@ import {
   Phone,
   Plus,
   Check,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import SearchablePartnerSelect from "@/components/common/SearchablePartnerSelect";
 import { useCurrencyMaster } from "@/modules/enquiries/hooks/useCurrencyMaster";
@@ -327,6 +330,245 @@ export default function AddFreightQuoteModal({
   const [freightAmount, setFreightAmount] = useState("");
   const [currency, setCurrency] = useState(mode === "International" || mode === "Export" || mode === "Merchant Export" ? "USD" : "INR");
 
+  // Dynamic Freight Charges State
+  const [chargeMasterList, setChargeMasterList] = useState([]);
+  const [charges, setCharges] = useState([]);
+
+  // Add Charge Type Popup Modal State
+  const [isAddChargeModalOpen, setIsAddChargeModalOpen] = useState(false);
+  const [newChargeName, setNewChargeName] = useState("");
+  const [newChargeMode, setNewChargeMode] = useState(transportMode || "Road");
+  const [newChargeLoading, setNewChargeLoading] = useState(false);
+  const [newChargeError, setNewChargeError] = useState("");
+  const [targetChargeIndex, setTargetChargeIndex] = useState(null);
+
+  // Fetch charge master for active transport mode
+  const fetchChargeMaster = async () => {
+    try {
+      const res = await axiosClient.get("/logistics/charge-master", {
+        params: { mode: transportMode || "Road" },
+      });
+      const list = res.data?.data || res.data || [];
+      if (Array.isArray(list) && list.length > 0) {
+        setChargeMasterList(list);
+      } else {
+        setChargeMasterList(getDefaultChargeList(transportMode));
+      }
+    } catch (err) {
+      console.warn("Failed to load charge master from server, using fallback defaults:", err);
+      setChargeMasterList(getDefaultChargeList(transportMode));
+    }
+  };
+
+  const getDefaultChargeList = (modeStr) => {
+    const modeNorm = (modeStr || "").toLowerCase();
+    let names = [];
+    if (modeNorm === "sea") {
+      names = [
+        "Ocean Freight",
+        "THC (Terminal Handling Charges)",
+        "Documentation Charges",
+        "ISPS Charges",
+        "Seal Charges",
+        "Detention Charges",
+        "Demurrage Charges",
+      ];
+    } else if (modeNorm === "rail") {
+      names = [
+        "Basic Freight",
+        "Loading Charges",
+        "Unloading Charges",
+        "Handling Charges",
+        "Documentation Charges",
+        "Wagon Detention Charges",
+        "Insurance",
+        "GST",
+      ];
+    } else {
+      names = [
+        "Basic Freight",
+        "Loading Charges",
+        "Unloading Charges",
+        "Toll Charges",
+        "Documentation Charges",
+        "Fuel Surcharge (FSC)",
+        "Handling Charges",
+        "Insurance",
+        "Waiting / Detention Charges",
+        "Warehouse Charges",
+        "GST",
+      ];
+    }
+    return names.map((name, idx) => ({ id: idx + 1, chargeName: name, mode: modeStr || "Road" }));
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchChargeMaster();
+    }
+  }, [isOpen, transportMode]);
+
+  // Sync charges on quote change or open
+  useEffect(() => {
+    if (!isOpen) return;
+    if (quote && Array.isArray(quote.charges) && quote.charges.length > 0) {
+      setCharges(
+        quote.charges.map((c, idx) => ({
+          id: c.id || Date.now() + idx,
+          chargeMasterId: c.chargeMasterId || null,
+          chargeName: c.chargeName || "",
+          amount: c.amount ? String(c.amount) : "",
+          remarks: c.remarks || "",
+        }))
+      );
+    } else if (quote && quote.freightAmount && Number(quote.freightAmount) > 0) {
+      // Legacy single freight quote fallback
+      const defaultName = (transportMode || "").toLowerCase() === "sea" ? "Ocean Freight" : "Basic Freight";
+      setCharges([
+        {
+          id: Date.now(),
+          chargeMasterId: null,
+          chargeName: defaultName,
+          amount: String(quote.freightAmount),
+          remarks: quote.remarks || "",
+        },
+      ]);
+    } else {
+      // Clean empty state for new quotes per requirement
+      setCharges([]);
+    }
+  }, [quote, isOpen, transportMode]);
+
+  // Dynamic Freight Row Actions
+  const handleAddChargeRow = () => {
+    setCharges((prev) => [
+      ...prev,
+      {
+        id: Date.now() + Math.random(),
+        chargeMasterId: null,
+        chargeName: "",
+        amount: "",
+        remarks: "",
+      },
+    ]);
+  };
+
+  const handleRemoveChargeRow = (index) => {
+    setCharges((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleMoveRowUp = (index) => {
+    if (index === 0) return;
+    setCharges((prev) => {
+      const arr = [...prev];
+      const temp = arr[index - 1];
+      arr[index - 1] = arr[index];
+      arr[index] = temp;
+      return arr;
+    });
+  };
+
+  const handleMoveRowDown = (index) => {
+    setCharges((prev) => {
+      if (index >= prev.length - 1) return prev;
+      const arr = [...prev];
+      const temp = arr[index + 1];
+      arr[index + 1] = arr[index];
+      arr[index] = temp;
+      return arr;
+    });
+  };
+
+  const handleChargeRowChange = (index, field, value) => {
+    if (field === "chargeName" && value === "__ADD_NEW_CHARGE_TYPE__") {
+      setTargetChargeIndex(index);
+      setNewChargeName("");
+      setNewChargeMode(transportMode || "Road");
+      setNewChargeError("");
+      setIsAddChargeModalOpen(true);
+      return;
+    }
+
+    setCharges((prev) => {
+      const arr = [...prev];
+      const updated = { ...arr[index], [field]: value };
+
+      if (field === "chargeName") {
+        const match = chargeMasterList.find((m) => m.chargeName === value);
+        if (match) {
+          updated.chargeMasterId = match.id;
+        }
+      }
+
+      arr[index] = updated;
+      return arr;
+    });
+  };
+
+  // Live Totals Calculations
+  const calculatedGrandTotal = useMemo(() => {
+    return charges.reduce((acc, row) => {
+      const val = parseFloat(row.amount);
+      return acc + (isNaN(val) ? 0 : val);
+    }, 0);
+  }, [charges]);
+
+  const calculatedSubtotal = useMemo(() => {
+    return charges.reduce((acc, row) => {
+      if ((row.chargeName || "").toUpperCase().includes("GST")) return acc;
+      const val = parseFloat(row.amount);
+      return acc + (isNaN(val) ? 0 : val);
+    }, 0);
+  }, [charges]);
+
+  const calculatedTaxTotal = useMemo(() => {
+    return charges.reduce((acc, row) => {
+      if ((row.chargeName || "").toUpperCase().includes("GST")) {
+        const val = parseFloat(row.amount);
+        return acc + (isNaN(val) ? 0 : val);
+      }
+      return acc;
+    }, 0);
+  }, [charges]);
+
+  // Keep legacy freightAmount state synced with calculatedGrandTotal
+  useEffect(() => {
+    setFreightAmount(calculatedGrandTotal > 0 ? String(calculatedGrandTotal) : "");
+  }, [calculatedGrandTotal]);
+
+  // Save custom charge type via popup modal
+  const handleSaveNewChargeType = async (e) => {
+    e.preventDefault();
+    if (!newChargeName || !newChargeName.trim()) {
+      setNewChargeError("Charge Name is required.");
+      return;
+    }
+    setNewChargeLoading(true);
+    setNewChargeError("");
+    try {
+      const res = await axiosClient.post("/logistics/charge-master", {
+        chargeName: newChargeName.trim(),
+        mode: newChargeMode || transportMode || "Road",
+      });
+      const created = res.data?.data || res.data;
+      const createdName = created?.chargeName || newChargeName.trim();
+      await fetchChargeMaster();
+
+      if (targetChargeIndex !== null) {
+        handleChargeRowChange(targetChargeIndex, "chargeName", createdName);
+      }
+
+      setIsAddChargeModalOpen(false);
+      setNewChargeName("");
+      setNewChargeError("");
+    } catch (err) {
+      console.error(err);
+      setNewChargeError(err.response?.data?.message || "Failed to save charge type.");
+    } finally {
+      setNewChargeLoading(false);
+    }
+  };
+
   const [transitDays, setTransitDays] = useState("");
   const [validityDate, setValidityDate] = useState("");
   const [quoteDate, setQuoteDate] = useState(new Date().toISOString().split("T")[0]);
@@ -565,9 +807,20 @@ export default function AddFreightQuoteModal({
       setError("Please enter a valid phone number (digits, spaces, +, - allowed).");
       return;
     }
-    if (!freightAmount || parseFloat(freightAmount) <= 0) {
-      setError("Please enter a valid freight amount.");
+    if (!charges || charges.length === 0) {
+      setError("Please add at least one freight charge line item.");
       return;
+    }
+    for (let i = 0; i < charges.length; i++) {
+      const c = charges[i];
+      if (!c.chargeName || !c.chargeName.trim()) {
+        setError(`Please select Charge Type for row #${i + 1}.`);
+        return;
+      }
+      if (!c.amount || parseFloat(c.amount) <= 0) {
+        setError(`Please enter a valid amount (> 0) for "${c.chargeName}".`);
+        return;
+      }
     }
     if (!currency) {
       setError("Please select currency.");
@@ -617,7 +870,14 @@ export default function AddFreightQuoteModal({
       const payload = {
         quoteDate,
         sellerId: Number(sellerId),
-        freightAmount: parseFloat(freightAmount),
+        freightAmount: calculatedGrandTotal,
+        charges: charges.map((c, idx) => ({
+          ...(c.chargeMasterId && { chargeMasterId: c.chargeMasterId }),
+          chargeName: c.chargeName.trim(),
+          amount: parseFloat(c.amount),
+          ...(c.remarks && { remarks: c.remarks.trim() }),
+          displayOrder: idx + 1,
+        })),
         currency: currency || "INR",
         fuelCharges: 0,
         additionalCharges: 0,
@@ -943,46 +1203,32 @@ export default function AddFreightQuoteModal({
               );
             })()}
 
-            {/* Section 3: Freight Amount & Dynamic Currency */}
+            {/* Section 3: Dynamic Freight Charges */}
             <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-4 shadow-xs">
-              <h4 className="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
-                <Calculator className="h-4 w-4" /> 3. Freight Cost & Currency
-              </h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Freight Amount with Financial Formatting */}
-                <div>
-                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">
-                    Freight Base Amount <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={freightAmount}
-                      onChange={(e) => setFreightAmount(e.target.value)}
-                      disabled={isReadOnly}
-                      placeholder="0.00"
-                      className="w-full px-3 py-2 text-right font-mono text-sm font-extrabold text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 tabular-nums shadow-xs disabled:opacity-75 disabled:cursor-not-allowed"
-                    />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                    <Calculator className="h-4 w-4" />
                   </div>
-                  {freightAmount && (
-                    <p className="text-[10px] text-emerald-700 font-bold text-right mt-1 tabular-nums">
-                      Formatted: {currency} {Number(freightAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  <div>
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-tight">
+                      3. Freight Charges ({transportMode} Transport)
+                    </h4>
+                    <p className="text-[10px] text-slate-500 font-medium">
+                      Itemized charge components and currency selection
                     </p>
-                  )}
+                  </div>
                 </div>
 
-                {/* Currency Select using useCurrencyMaster */}
-                <div>
+                {/* Currency Selection */}
+                <div className="w-full sm:w-64">
                   <label className="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">
-                    Currency <span className="text-rose-500">*</span>
+                    Quotation Currency <span className="text-rose-500">*</span>
                   </label>
                   {currenciesLoading ? (
-                    <div className="px-3 py-2 border border-slate-200 rounded-xl bg-white text-slate-400 text-xs flex items-center gap-2">
+                    <div className="px-3 py-1.5 border border-slate-200 rounded-xl bg-white text-slate-400 text-xs flex items-center gap-2">
                       <div className="h-3 w-3 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
-                      Loading currencies...
+                      Loading...
                     </div>
                   ) : (
                     <Select
@@ -999,6 +1245,167 @@ export default function AddFreightQuoteModal({
                   )}
                 </div>
               </div>
+
+              {/* Dynamic Line Item Table or Empty State */}
+              {charges.length === 0 ? (
+                <div className="text-center py-8 px-4 bg-white border border-dashed border-slate-200 rounded-2xl space-y-3">
+                  <div className="h-10 w-10 mx-auto rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <DollarSign className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-extrabold text-slate-800">No freight charges added yet.</p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      Click "+ Add Charge" below to build quotation line items for {transportMode} transport.
+                    </p>
+                  </div>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={handleAddChargeRow}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95"
+                    >
+                      <Plus className="h-4 w-4" /> Add Charge
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="overflow-x-auto bg-white rounded-xl border border-slate-200/80 shadow-2xs">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                        <tr>
+                          <th className="px-3 py-2.5 w-[38%]">Charge Type *</th>
+                          <th className="px-3 py-2.5 w-[28%] text-right">Amount ({currency}) *</th>
+                          <th className="px-3 py-2.5">Remarks</th>
+                          {!isReadOnly && <th className="px-3 py-2.5 text-center w-[90px]">Actions</th>}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {charges.map((row, idx) => (
+                          <tr key={row.id || idx} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-2">
+                              <select
+                                value={row.chargeName}
+                                onChange={(e) => handleChargeRowChange(idx, "chargeName", e.target.value)}
+                                disabled={isReadOnly}
+                                className="w-full px-2.5 py-1.5 border border-slate-200 rounded-xl font-bold text-xs text-slate-900 bg-white focus:outline-none focus:border-blue-600 disabled:opacity-75 cursor-pointer"
+                              >
+                                <option value="">Select Charge Type...</option>
+                                {chargeMasterList.map((m) => (
+                                  <option key={m.id || m.chargeName} value={m.chargeName}>
+                                    {m.chargeName}
+                                  </option>
+                                ))}
+                                {!isReadOnly && (
+                                  <option value="__ADD_NEW_CHARGE_TYPE__" className="font-extrabold text-blue-600 bg-blue-50">
+                                    + Add New Charge Type...
+                                  </option>
+                                )}
+                              </select>
+                            </td>
+
+                            <td className="p-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={row.amount}
+                                onChange={(e) => handleChargeRowChange(idx, "amount", e.target.value)}
+                                disabled={isReadOnly}
+                                placeholder="0.00"
+                                className="w-full px-2.5 py-1.5 border border-slate-200 rounded-xl font-mono text-xs font-extrabold text-slate-900 text-right bg-white focus:outline-none focus:border-blue-600 disabled:opacity-75 tabular-nums"
+                              />
+                            </td>
+
+                            <td className="p-2">
+                              <input
+                                type="text"
+                                value={row.remarks || ""}
+                                onChange={(e) => handleChargeRowChange(idx, "remarks", e.target.value)}
+                                disabled={isReadOnly}
+                                placeholder="Optional remarks..."
+                                className="w-full px-2.5 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 bg-white focus:outline-none focus:border-blue-600 disabled:opacity-75"
+                              />
+                            </td>
+
+                            {!isReadOnly && (
+                              <td className="p-2 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveRowUp(idx)}
+                                    disabled={idx === 0}
+                                    className="p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                                    title="Move Up"
+                                  >
+                                    <ArrowUp className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveRowDown(idx)}
+                                    disabled={idx === charges.length - 1}
+                                    className="p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+                                    title="Move Down"
+                                  >
+                                    <ArrowDown className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveChargeRow(idx)}
+                                    className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
+                                    title="Remove Charge"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Add Charge & Totals Summary Bar */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                    <div>
+                      {!isReadOnly && (
+                        <button
+                          type="button"
+                          onClick={handleAddChargeRow}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-extrabold text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-xl transition-colors cursor-pointer shadow-2xs"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Add Charge
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs flex items-center justify-end gap-5 text-xs">
+                      {calculatedTaxTotal > 0 && (
+                        <>
+                          <div className="text-right">
+                            <span className="text-[10px] font-bold text-slate-400 block uppercase">Subtotal</span>
+                            <span className="font-mono font-extrabold text-slate-700">
+                              {currency} {calculatedSubtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="text-right border-l border-slate-200 pl-4">
+                            <span className="text-[10px] font-bold text-slate-400 block uppercase">Tax / GST</span>
+                            <span className="font-mono font-extrabold text-slate-700">
+                              {currency} {calculatedTaxTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      <div className="text-right border-l border-slate-200 pl-4">
+                        <span className="text-[10px] font-extrabold text-emerald-600 block uppercase">Grand Total</span>
+                        <span className="font-mono font-black text-sm text-emerald-700 tabular-nums">
+                          {currency} {calculatedGrandTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Section 4: SLA & Validity */}
@@ -1073,35 +1480,6 @@ export default function AddFreightQuoteModal({
                 <h4 className="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider">
                   5. International Sea Shipping Details
                 </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
-                      Port of Loading (POL)
-                    </label>
-                    <input
-                      type="text"
-                      value={pol}
-                      onChange={(e) => setPol(e.target.value)}
-                      disabled={isReadOnly}
-                      placeholder="e.g. Nhava Sheva"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold focus:outline-none focus:border-blue-600 bg-white text-slate-800 disabled:opacity-75 disabled:cursor-not-allowed"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
-                      Port of Discharge (POD)
-                    </label>
-                    <input
-                      type="text"
-                      value={pod}
-                      onChange={(e) => setPod(e.target.value)}
-                      disabled={isReadOnly}
-                      placeholder="e.g. Port of Rotterdam"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold focus:outline-none focus:border-blue-600 bg-white text-slate-800 disabled:opacity-75 disabled:cursor-not-allowed"
-                    />
-                  </div>
-                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
@@ -1200,6 +1578,86 @@ export default function AddFreightQuoteModal({
           </div>
         </form>
       </div>
+      {/* Modal Dialog: Add Custom Charge Type */}
+      {isAddChargeModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md p-6 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                <Plus className="h-4 w-4 text-blue-600" /> Add Charge Type
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAddChargeModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {newChargeError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-bold flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+                <span>{newChargeError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveNewChargeType} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
+                  Charge Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newChargeName}
+                  onChange={(e) => setNewChargeName(e.target.value)}
+                  placeholder="e.g. Storage Fee, Toll Charges"
+                  autoFocus
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
+                  Applicable Mode <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={newChargeMode}
+                  onChange={(e) => setNewChargeMode(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600 bg-white cursor-pointer"
+                >
+                  <option value="Road">Road</option>
+                  <option value="Sea">Sea</option>
+                  <option value="Rail">Rail</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAddChargeModalOpen(false)}
+                  className="px-4 py-2 border border-slate-200 text-slate-700 font-extrabold rounded-xl hover:bg-slate-100 transition-colors shadow-2xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={newChargeLoading}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-md shadow-blue-500/20 disabled:opacity-50 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  {newChargeLoading ? (
+                    <div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5" />
+                  )}
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -8,6 +8,7 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  Plus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -67,13 +68,22 @@ export default function PurchaseContractListPage() {
           </div>
         </div>
 
-        <button
-          onClick={() => refetchList()}
-          className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 border border-gray-200 rounded-lg transition-colors"
-          title="Refresh List"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.push("/sales/purchase-contracts/new")}
+            className="px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Create Purchase Contract</span>
+          </button>
+          <button
+            onClick={() => refetchList()}
+            className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 border border-gray-200 rounded-lg transition-colors cursor-pointer"
+            title="Refresh List"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Dashboard KPI Row (Ultra Compact) */}

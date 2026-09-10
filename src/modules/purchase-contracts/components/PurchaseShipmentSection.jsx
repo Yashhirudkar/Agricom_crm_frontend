@@ -101,6 +101,10 @@ export default function PurchaseShipmentSection({
                   })
                 : "—";
 
+              const availStock = Number(s.availableStock ?? s.currentStock ?? s.stockBalance ?? 0);
+              const shpQty = Number(s.quantity || 0);
+              const rowStockBalance = availStock - shpQty;
+
               return (
                 <tr key={s.id} className="hover:bg-blue-50/20 transition-colors">
                   {/* Index */}
@@ -174,24 +178,24 @@ export default function PurchaseShipmentSection({
 
                   {/* Qty (MT) */}
                   <td className="px-3 py-2 text-right font-mono font-bold text-gray-900 whitespace-nowrap">
-                    {Number(s.quantity || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    {shpQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </td>
 
-                  {/* Stock Balance (Readonly Column) */}
+                  {/* Stock Balance (Individual Row Calculation: Available Stock - Shipment Qty) */}
                   <td className="px-3 py-2 text-right whitespace-nowrap font-mono font-bold">
-                    {isOverAllocated ? (
+                    {rowStockBalance < 0 ? (
                       <span
                         className="text-red-600 inline-flex items-center gap-1"
                         title="Shortfall"
                       >
-                        -{Number(overAllocatedQty).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT 🔴
+                        -{Math.abs(rowStockBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT
                       </span>
                     ) : (
                       <span
                         className="text-emerald-600 inline-flex items-center gap-1"
                         title="Stock Available"
                       >
-                        +{Number(remainingBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT 🟢
+                        +{rowStockBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT
                       </span>
                     )}
                   </td>
@@ -234,28 +238,36 @@ export default function PurchaseShipmentSection({
               </tr>
             )}
           </tbody>
-          {shipments.length > 0 && (
-            <tfoot>
-              <tr className="bg-gray-50/80 border-t border-gray-200 font-bold text-xs">
-                <td colSpan={3} className="px-3 py-2.5 text-right text-gray-600">Total:</td>
-                <td className="px-3 py-2.5 text-center font-mono text-gray-900">{totalContainers}</td>
-                <td colSpan={4}></td>
-                <td className="px-3 py-2.5 text-right font-mono text-gray-900">{totalQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT</td>
-                <td className="px-3 py-2.5 text-right whitespace-nowrap font-mono font-bold">
-                  {isOverAllocated ? (
-                    <span className="text-red-600" title="Shortfall">
-                      -{Number(overAllocatedQty).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT 🔴
-                    </span>
-                  ) : (
-                    <span className="text-emerald-600" title="Stock Available">
-                      +{Number(remainingBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT 🟢
-                    </span>
-                  )}
-                </td>
-                <td colSpan={2}></td>
-              </tr>
-            </tfoot>
-          )}
+          {shipments.length > 0 && (() => {
+            const totalStockBalance = shipments.reduce((sum, s) => {
+              const avail = Number(s.availableStock ?? s.currentStock ?? s.stockBalance ?? 0);
+              const qty = Number(s.quantity || 0);
+              return sum + (avail - qty);
+            }, 0);
+
+            return (
+              <tfoot>
+                <tr className="bg-gray-50/80 border-t border-gray-200 font-bold text-xs">
+                  <td colSpan={3} className="px-3 py-2.5 text-right text-gray-600">Total:</td>
+                  <td className="px-3 py-2.5 text-center font-mono text-gray-900">{totalContainers}</td>
+                  <td colSpan={4}></td>
+                  <td className="px-3 py-2.5 text-right font-mono text-gray-900">{totalQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT</td>
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap font-mono font-bold">
+                    {totalStockBalance < 0 ? (
+                      <span className="text-red-600" title="Total Shortfall">
+                        -{Math.abs(totalStockBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT
+                      </span>
+                    ) : (
+                      <span className="text-emerald-600" title="Total Stock Available">
+                        +{totalStockBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT
+                      </span>
+                    )}
+                  </td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
+            );
+          })()}
         </table>
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Search, X, ChevronDown, Filter, RotateCcw } from "lucide-react";
+import { Search, X, ChevronDown, Filter, RotateCcw, Rocket } from "lucide-react";
 import { mastersApi, salesContractApi } from "@/modules/sales-contracts/services/salesContractApi";
 import CountrySelect from "@/components/common/CountrySelect";
 
@@ -45,6 +45,9 @@ export default function ShipmentsFilter({
   setFilters,
   onReset,
   total,
+  selectedShipments = [],
+  onExecuteBulk,
+  onDeselect,
 }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [buyers, setBuyers] = useState([]);
@@ -153,6 +156,29 @@ export default function ShipmentsFilter({
             </select>
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
           </div>
+
+          {/* Bulk Execute Workspace Action */}
+          {selectedShipments.length > 0 && (
+            <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
+              <button
+                type="button"
+                onClick={onExecuteBulk}
+                className="px-3.5 py-2 bg-[#007aff] hover:bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-blue-500/20 whitespace-nowrap"
+                title="Execute workspace for selected shipments"
+              >
+                <Rocket className="h-3.5 w-3.5 text-purple-200 animate-pulse" />
+                <span>Execute Workspace ({selectedShipments.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={onDeselect}
+                className="px-2 py-2 text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
+                title="Clear selected shipments"
+              >
+                Clear
+              </button>
+            </div>
+          )}
 
           {/* Toggle Advanced */}
           <button

@@ -1,5 +1,7 @@
 "use client";
 import React from "react";
+import { useRouter } from "next/navigation";
+import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 import {
   X,
   Ship,
@@ -10,10 +12,12 @@ import {
   Layers,
   FileCheck2,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Rocket
 } from "lucide-react";
 
 export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContract }) {
+  const router = useRouter();
   if (!shipment) return null;
 
   const contract = shipment.salesContract || {};
@@ -56,9 +60,35 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
               <p className="text-[10px] text-gray-400 font-mono mt-0.5">{shipment.shipmentReference || "DRAFT"}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const salesContractId = shipment.salesContractId || shipment.salesContract?.id;
+                  if (!salesContractId) return;
+                  const res = await purchaseContractApi.create({
+                    salesContractId: Number(salesContractId),
+                    shipmentIds: [Number(shipment.id)],
+                  });
+                  const pcId = res.data?.id;
+                  if (pcId) {
+                    router.push(`/sales/purchase-contracts/${pcId}?shipmentId=${shipment.id}`);
+                  }
+                } catch (err) {
+                  console.error("Failed to open Purchase Contract workspace", err);
+                }
+              }}
+              className="px-2.5 py-1.5 bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Execute + Workspace"
+            >
+              <Rocket className="h-3.5 w-3.5 text-purple-600 animate-pulse" />
+              <span>Execute Workspace</span>
+            </button>
+            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Body */}

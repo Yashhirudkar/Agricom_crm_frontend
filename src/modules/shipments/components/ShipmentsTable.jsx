@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Ship, Clipboard, User, Eye, Loader2, Check } from "lucide-react";
+import { Ship, Clipboard, User, Eye, Loader2, Check, Rocket } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 
 // Category Emoji Mapper
 const getProductEmoji = (productName) => {
@@ -62,6 +63,7 @@ export default function ShipmentsTable({
   onEditShipment,
   onManageDocuments,
   onPrintShipment,
+  onExecutePurchase,
   selectedShipments = [],
   setSelectedShipments,
 }) {
@@ -272,15 +274,57 @@ export default function ShipmentsTable({
                     : "—"}
                 </td>
 
-                {/* Open Drawer */}
-                <td className="px-3 py-3 w-10" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => onRowClick(s)}
-                    className="p-1.5 rounded-lg text-gray-300 hover:text-[#007aff] hover:bg-blue-50 transition-colors"
-                    title="View Details"
-                  >
-                    <Eye className="h-3.5 w-3.5 text-gray-700" />
-                  </button>
+                {/* Actions */}
+                <td className="px-3 py-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => onRowClick(s)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors"
+                      title="View Details"
+                    >
+                      <Eye className="h-3.5 w-3.5 text-gray-700" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (onExecutePurchase) {
+                          onExecutePurchase(s);
+                        } else {
+                          try {
+                            const salesContractId = s.salesContractId || s.salesContract?.id;
+                            if (!salesContractId) {
+                              console.error("Sales Contract ID missing for shipment", s);
+                              return;
+                            }
+                            let targetShipmentIds = [Number(s.id)];
+                            if (selectedShipments.includes(s.id) && selectedShipments.length > 1) {
+                              targetShipmentIds = selectedShipments.map(Number);
+                            }
+
+                            const res = await purchaseContractApi.create({
+                              salesContractId: Number(salesContractId),
+                              shipmentIds: targetShipmentIds,
+                            });
+                            const pcId = res.data?.id;
+                            if (pcId) {
+                              if (targetShipmentIds.length > 1) {
+                                router.push(`/sales/purchase-contracts/${pcId}?shipmentIds=${targetShipmentIds.join(",")}`);
+                              } else {
+                                router.push(`/sales/purchase-contracts/${pcId}?shipmentId=${s.id}`);
+                              }
+                            }
+                          } catch (err) {
+                            console.error("Failed to open Purchase Contract workspace", err);
+                          }
+                        }
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
+                      title="Execute + Workspace"
+                    >
+                      <Rocket className="h-3.5 w-3.5 text-purple-600 animate-pulse" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             );

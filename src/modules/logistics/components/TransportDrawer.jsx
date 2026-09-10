@@ -1021,8 +1021,20 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
 
                                     <td className="px-4 py-3.5 text-right">
                                       <div className="text-sm font-extrabold text-emerald-600 tabular-nums">
-                                        {q.currency} {totalCost.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                        {q.currency} {totalCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </div>
+
+                                      {Array.isArray(q.charges) && q.charges.length > 0 && (
+                                        <div className="text-[10px] text-slate-500 font-medium mt-1 space-y-0.5 text-right bg-slate-50/80 p-1.5 rounded-lg border border-slate-100">
+                                          {q.charges.map((c, idx) => (
+                                            <div key={c.id || idx} className="flex items-center justify-end gap-1.5">
+                                              <span className="text-slate-500 truncate max-w-[130px]">{c.chargeName}:</span>
+                                              <span className="font-mono font-bold text-slate-800">{q.currency} {Number(c.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+
                                       <div className="flex items-center justify-end gap-1 mt-1">
                                         {isLowest && (
                                           <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 text-[9px] font-extrabold flex items-center gap-0.5">

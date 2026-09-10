@@ -14,12 +14,16 @@ export default function PurchaseCommercialInformationSection({
   const inp =
     "w-full text-xs bg-gray-50/60 border border-gray-200 rounded-xl p-2.5 font-medium text-gray-900 focus:bg-white focus:border-[#007aff] focus:ring-2 focus:ring-[#007aff]/20 focus:outline-none transition-all disabled:opacity-75 disabled:bg-gray-100";
 
-  const products = summary?.productSummary || contract?.salesContract?.items || [];
-  const productName = products.map((p) => p.product?.name || p.productName || "Commodity").join(", ") || "—";
-  const totalQuantity = products.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
-  const paymentTermName = summary?.commercialInfo?.paymentTerm?.name || contract?.salesContract?.paymentTerm?.name || "—";
+  const isManual = contract?.purchaseType === "MTT" || !contract?.salesContractId;
+  const productsMaster = masters?.products || [];
+  const paymentTermsMaster = masters?.paymentTerms || [];
+  const brokersMaster = masters?.brokers || masters?.partners || [];
 
-  // Master-driven dropdown option builder — ZERO frontend hardcoded fallbacks
+  const existingProducts = summary?.productSummary || contract?.items || contract?.salesContract?.items || [];
+  const defaultProductName = existingProducts.map((p) => p.product?.name || p.productName || "Commodity").join(", ") || "";
+  const defaultPaymentTermName = summary?.commercialInfo?.paymentTerm?.name || contract?.salesContract?.paymentTerm?.name || "";
+
+  // Master-driven dropdown option builder
   const getDropdownOptions = (masterList, currentValue) => {
     let options = (masterList && Array.isArray(masterList))
       ? masterList.map((item) => ({
@@ -44,26 +48,15 @@ export default function PurchaseCommercialInformationSection({
     return options;
   };
 
-  // Packing Options
   const packingOptions = getDropdownOptions(masters?.packingTypes, form.packing);
-
-  // Bag Type Options
   const bagTypeOptions = getDropdownOptions(masters?.bagTypes, form.bagType);
-
-  // Bag Spec Options
   const bagSpecMasterList = masters?.bagSpecifications?.map((b) => {
     const label = [(b.width && b.length) ? `${b.width}x${b.length}` : '', b.emptyBagWeight ? `${b.emptyBagWeight}g` : ''].filter(Boolean).join(' - ') || `Spec #${b.id}`;
     return { id: b.id, name: label };
   });
   const bagSpecOptions = getDropdownOptions(bagSpecMasterList, form.bagSpec);
-
-  // Stitching Options
   const stitchingOptions = getDropdownOptions(masters?.stitchingTypes, form.stitching);
-
-  // Marking Options
   const markingOptions = getDropdownOptions(masters?.markingTypes, form.marking);
-
-  // Incoterm / Shipment Type Options
   const incotermOptions = getDropdownOptions(masters?.shipmentTypes, form.incoterm);
 
   return (
@@ -83,23 +76,81 @@ export default function PurchaseCommercialInformationSection({
         {/* Row 1: Product, Quantity, Quality, Packing */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div>
-            <label className={lbl}>Product (Readonly from SC)</label>
-            <input
-              type="text"
-              value={productName}
-              readOnly
-              className={`${inp} bg-gray-50 font-bold text-gray-900`}
-            />
+            <label className={lbl}>Product *</label>
+            {isManual && productsMaster.length > 0 ? (
+              <div className="relative">
+                <select
+                  value={form.productId || ""}
+                  onChange={(e) => {
+                    const pId = Number(e.target.value);
+                    const pObj = productsMaster.find((p) => p.id === pId);
+                    setForm((f) => {
+                      const updatedItems = [...(f.items || [])];
+                      if (updatedItems.length === 0) {
+                        updatedItems.push({
+                          productId: pId,
+                          productName: pObj?.name || "",
+                          quantity: f.quantity || 0,
+                          productQuality: f.productQuality || "",
+                          packing: f.packing || "",
+                        });
+                      } else {
+                        updatedItems[0] = {
+                          ...updatedItems[0],
+                          productId: pId,
+                          productName: pObj?.name || "",
+                        };
+                      }
+                      return {
+                        ...f,
+                        productId: pId || null,
+                        productName: pObj?.name || "",
+                        items: updatedItems,
+                      };
+                    });
+                  }}
+                  disabled={isView}
+                  className={`${inp} appearance-none pr-8 font-bold text-gray-900`}
+                >
+                  <option value="">Select Product Item</option>
+                  {productsMaster.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} {p.code ? `(${p.code})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={form.productName || defaultProductName}
+                onChange={(e) => setForm((f) => ({ ...f, productName: e.target.value }))}
+                readOnly={!isManual}
+                disabled={isView}
+                className={`${inp} ${!isManual ? "bg-gray-50" : ""} font-bold text-gray-900`}
+              />
+            )}
           </div>
 
           <div>
             <label className={lbl}>Qty (MT) *</label>
             <input
-              type="text"
+              type="number"
+              step="0.01"
               value={form.quantity ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+              onChange={(e) => {
+                const val = e.target.value;
+                setForm((f) => {
+                  const updatedItems = [...(f.items || [])];
+                  if (updatedItems.length > 0) {
+                    updatedItems[0] = { ...updatedItems[0], quantity: parseFloat(val) || 0 };
+                  }
+                  return { ...f, quantity: val, items: updatedItems };
+                });
+              }}
               disabled={isView}
-              placeholder="e.g. 21"
+              placeholder="e.g. 200"
               className={`${inp} font-bold text-gray-900 tabular-nums`}
             />
           </div>
@@ -223,9 +274,7 @@ export default function PurchaseCommercialInformationSection({
         {/* Row 3: Incoterms, Delivery Place & Date, Payment Terms */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-gray-100">
           <div>
-            <label className={lbl}>
-              Shipment Type <span className="text-red-500">*</span>
-            </label>
+            <label className={lbl}>Shipment Type / Incoterm</label>
             <div className="relative">
               <select
                 value={
@@ -240,7 +289,7 @@ export default function PurchaseCommercialInformationSection({
                 disabled={isView}
                 className={`${inp} appearance-none pr-8 font-semibold text-gray-800`}
               >
-                <option value="">Select Shipment Type</option>
+                <option value="">Select Incoterm</option>
                 {incotermOptions.map((opt) => (
                   <option key={opt.id || opt.name} value={opt.name}>
                     {opt.name}
@@ -276,27 +325,83 @@ export default function PurchaseCommercialInformationSection({
 
           <div>
             <label className={lbl}>Payment Terms</label>
-            <input
-              type="text"
-              value={paymentTermName}
-              readOnly
-              className={`${inp} bg-gray-50 font-semibold text-gray-800`}
-            />
+            {isManual && paymentTermsMaster.length > 0 ? (
+              <div className="relative">
+                <select
+                  value={form.paymentTermId || ""}
+                  onChange={(e) => {
+                    const ptId = Number(e.target.value);
+                    const ptObj = paymentTermsMaster.find((p) => p.id === ptId);
+                    setForm((f) => ({
+                      ...f,
+                      paymentTermId: ptId || null,
+                      paymentTermName: ptObj?.name || "",
+                    }));
+                  }}
+                  disabled={isView}
+                  className={`${inp} appearance-none pr-8 font-semibold text-gray-800`}
+                >
+                  <option value="">Select Payment Terms</option>
+                  {paymentTermsMaster.map((pt) => (
+                    <option key={pt.id} value={pt.id}>
+                      {pt.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={form.paymentTermName || defaultPaymentTermName}
+                onChange={(e) => setForm((f) => ({ ...f, paymentTermName: e.target.value }))}
+                readOnly={!isManual}
+                disabled={isView}
+                className={`${inp} ${!isManual ? "bg-gray-50" : ""} font-semibold text-gray-800`}
+              />
+            )}
           </div>
         </div>
 
-        {/* Row 4 (Last Row): Broker / Agent & Broker Commission */}
+        {/* Row 4: Broker / Agent & Broker Commission */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-gray-100">
           <div>
             <label className={lbl}>Broker / Agent</label>
-            <input
-              type="text"
-              value={form.brokerName || ""}
-              onChange={(e) => setForm((f) => ({ ...f, brokerName: e.target.value }))}
-              disabled={isView}
-              className={`${inp} font-medium text-gray-900`}
-              placeholder="Select or Enter Broker"
-            />
+            {isManual && brokersMaster.length > 0 ? (
+              <div className="relative">
+                <select
+                  value={form.brokerId || ""}
+                  onChange={(e) => {
+                    const brId = Number(e.target.value);
+                    const brObj = brokersMaster.find((b) => b.id === brId);
+                    setForm((f) => ({
+                      ...f,
+                      brokerId: brId || null,
+                      brokerName: brObj?.entityName || brObj?.name || "",
+                    }));
+                  }}
+                  disabled={isView}
+                  className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
+                >
+                  <option value="">Select Broker</option>
+                  {brokersMaster.map((br) => (
+                    <option key={br.id} value={br.id}>
+                      {br.entityName || br.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={form.brokerName || ""}
+                onChange={(e) => setForm((f) => ({ ...f, brokerName: e.target.value }))}
+                disabled={isView}
+                className={`${inp} font-medium text-gray-900`}
+                placeholder="Enter Broker Name"
+              />
+            )}
           </div>
 
           <div>
