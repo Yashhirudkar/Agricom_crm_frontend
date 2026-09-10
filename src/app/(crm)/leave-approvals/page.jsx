@@ -7,37 +7,22 @@ import { selectUser } from "@/store/slices/authSlice";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import {
   fetchLeaveRequests,
-  fetchMonthlyLeaveSummary,
   approveLeave,
   rejectLeave,
   selectLeaveRequestsData,
-  selectMonthlyLeaveSummary,
   selectLeaveRequestsLoading
 } from "@/store/entities/leaveRequestsSlice";
 import { subscribeToSocketEvent, unsubscribeFromSocketEvent } from "@/lib/socket";
 import Modal from "@/components/modals/Modal";
 import HasPermission from "@/components/rbac/HasPermission";
 import {
-  Check, AlertCircle, X, CheckCircle2, XCircle, FileText, Calendar, Building2, User as UserIcon, Shield, Loader2, Users, Layers, Clock, Palmtree, BarChart2, ChevronDown
+  Check, AlertCircle, X, CheckCircle2, XCircle, FileText, Calendar, Building2, User as UserIcon, Shield, Loader2, Users, Layers, Clock, Palmtree, BarChart2
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import Image from "next/image";
 import { getFriendlyError } from "@/lib/errorMessages";
 
-// Generate last 12 months list for selector
-function getLast12Months() {
-  const months = [];
-  const now = new Date();
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = d.toLocaleString("default", { month: "long", year: "numeric" });
-    months.push({ value, label });
-  }
-  return months;
-}
 
-const MONTHS_LIST = getLast12Months();
 
 function LeaveApprovalsContent() {
   const dispatch = useDispatch();
@@ -47,8 +32,24 @@ function LeaveApprovalsContent() {
   const requestId = searchParams.get("requestId");
 
   const { data: allLeaves } = useSelector(selectLeaveRequestsData) || { data: [] };
-  const monthlySummary = useSelector(selectMonthlyLeaveSummary);
   const isLoading = useSelector(selectLeaveRequestsLoading);
+
+  // Compute summary stats directly from loaded data (no month restriction)
+  const todayStr = new Date().toISOString().split('T')[0];
+  const summaryStats = {
+    totalRequests: allLeaves.length,
+    approved: allLeaves.filter(l => l.status === 'APPROVED').length,
+    pending: allLeaves.filter(l => l.status === 'PENDING').length,
+    rejected: allLeaves.filter(l => l.status === 'REJECTED').length,
+    totalLeaveDays: allLeaves
+      .filter(l => l.status === 'APPROVED')
+      .reduce((sum, l) => sum + Number(l.totalDays || 0), 0),
+    onLeaveToday: new Set(
+      allLeaves
+        .filter(l => l.status === 'APPROVED' && l.fromDate <= todayStr && l.toDate >= todayStr)
+        .map(l => l.employeeId)
+    ).size,
+  };
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = "success") => {
@@ -60,27 +61,23 @@ function LeaveApprovalsContent() {
   const [highlightedId, setHighlightedId] = useState(null);
   const cardRefs = useRef({});
 
-  // Default to current month
-  const [selectedMonth, setSelectedMonth] = useState(MONTHS_LIST[0].value);
-
   useEffect(() => {
     if (activeCompanyId) {
-      dispatch(fetchLeaveRequests({ month: selectedMonth, limit: 1000 }));
-      dispatch(fetchMonthlyLeaveSummary({ month: selectedMonth }));
+      dispatch(fetchLeaveRequests({ limit: 1000 }));
     }
-  }, [dispatch, activeCompanyId, selectedMonth]);
+  }, [dispatch, activeCompanyId]);
 
   // Realtime: refetch when any LEAVE_REQUEST notification arrives on the socket
   useEffect(() => {
     const handleNotification = (payload) => {
       const entityType = (payload?.entityType || '').toUpperCase();
       if (entityType === 'LEAVE_REQUEST') {
-        dispatch(fetchLeaveRequests({ month: selectedMonth, limit: 1000 }));
+        dispatch(fetchLeaveRequests({ limit: 1000 }));
       }
     };
     subscribeToSocketEvent('notification', handleNotification);
     return () => unsubscribeFromSocketEvent('notification', handleNotification);
-  }, [dispatch, selectedMonth]);
+  }, [dispatch]);
 
   // Deep-link: auto-switch tab and highlight the requested leave card
   useEffect(() => {
@@ -119,7 +116,7 @@ function LeaveApprovalsContent() {
     try {
       await dispatch(approveLeave({ id: leaveId, remarks: "Approved by manager" })).unwrap();
       showToast("Leave approved successfully");
-      dispatch(fetchLeaveRequests({ month: selectedMonth, limit: 1000 }));
+      dispatch(fetchLeaveRequests({ limit: 1000 }));
     } catch (err) {
       showToast(getFriendlyError(err), "error");
     } finally {
@@ -138,7 +135,7 @@ function LeaveApprovalsContent() {
       showToast("Leave rejected successfully");
       setRejectTarget(null);
       setRejectRemarks("");
-      dispatch(fetchLeaveRequests({ month: selectedMonth, limit: 1000 }));
+      dispatch(fetchLeaveRequests({ limit: 1000 }));
     } catch (err) {
       showToast(getFriendlyError(err), "error");
     } finally {
@@ -170,63 +167,38 @@ function LeaveApprovalsContent() {
           Leave Approvals & Manager Analytics
         </h1>
         <p className="text-xs text-gray-400 font-medium mt-1">
-          Review and take action on leave requests from your team ({monthlySummary?.monthLabel || format(new Date(), "MMMM yyyy")}).
+          Review and take action on all leave requests from your team.
         </p>
       </div>
 
-      {/* Month Selector + Summary Cards Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Month Picker */}
-        <div className="relative">
-          <label className="text-[9.5px] font-bold uppercase tracking-wider text-gray-400 block mb-1">Filter by Month</label>
-          <div className="relative">
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="appearance-none bg-white border border-gray-200 rounded-xl px-3 py-2 pr-8 text-sm font-semibold text-gray-800 shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all"
-            >
-              {MONTHS_LIST.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-          </div>
+
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
+          <span className="text-[9.5px] font-bold uppercase tracking-wider text-purple-600 block">On Leave Today</span>
+          <span className="text-xl font-black text-purple-700 block mt-0.5">{summaryStats.onLeaveToday}</span>
+        </div>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
+          <span className="text-[9.5px] font-bold uppercase tracking-wider text-gray-400 block">Total Requests</span>
+          <span className="text-xl font-black text-gray-900 block mt-0.5">{summaryStats.totalRequests}</span>
+        </div>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
+          <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-600 block">Approved</span>
+          <span className="text-xl font-black text-emerald-600 block mt-0.5">{summaryStats.approved}</span>
+        </div>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
+          <span className="text-[9.5px] font-bold uppercase tracking-wider text-amber-600 block">Pending</span>
+          <span className="text-xl font-black text-amber-600 block mt-0.5">{summaryStats.pending}</span>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-3.5 shadow-xs">
+          <span className="text-[9.5px] font-bold uppercase tracking-wider text-blue-100 block">Total Leave Days</span>
+          <span className="text-xl font-black text-white block mt-0.5">{summaryStats.totalLeaveDays} <span className="text-[10px] font-normal">Days</span></span>
         </div>
       </div>
-
-      {monthlySummary && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
-            <span className="text-[9.5px] font-bold uppercase tracking-wider text-gray-400 block">Period</span>
-            <span className="text-xs font-bold text-gray-900 truncate block mt-1">{monthlySummary.monthLabel}</span>
-          </div>
-
-          <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
-            <span className="text-[9.5px] font-bold uppercase tracking-wider text-purple-600 block">On Leave Today</span>
-            <span className="text-xl font-black text-purple-700 block mt-0.5">{monthlySummary.summaryCards?.employeesOnLeaveToday || 0}</span>
-          </div>
-
-          <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
-            <span className="text-[9.5px] font-bold uppercase tracking-wider text-gray-400 block">Total Requests</span>
-            <span className="text-xl font-black text-gray-900 block mt-0.5">{monthlySummary.summaryCards?.totalRequests || 0}</span>
-          </div>
-
-          <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
-            <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-600 block">Approved</span>
-            <span className="text-xl font-black text-emerald-600 block mt-0.5">{monthlySummary.summaryCards?.approvedLeaves || 0}</span>
-          </div>
-
-          <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
-            <span className="text-[9.5px] font-bold uppercase tracking-wider text-amber-600 block">Pending</span>
-            <span className="text-xl font-black text-amber-600 block mt-0.5">{monthlySummary.summaryCards?.pendingApprovals || 0}</span>
-          </div>
-
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-3.5 shadow-xs">
-            <span className="text-[9.5px] font-bold uppercase tracking-wider text-blue-100 block">Total Leave Days</span>
-            <span className="text-xl font-black text-white block mt-0.5">{monthlySummary.summaryCards?.totalLeaveDaysTaken || 0} <span className="text-[10px] font-normal">Days</span></span>
-          </div>
-        </div>
-      )}
 
       <div className="flex gap-4 border-b border-gray-200">
         <button
