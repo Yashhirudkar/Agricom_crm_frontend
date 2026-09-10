@@ -398,7 +398,7 @@ export default function FreightManagementPage() {
 
       {/* ── Filters & Search ─────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-2xs p-4 flex flex-col gap-3.5">
-        
+
         {/* Row 1: Search Box */}
         <div className="relative w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -421,10 +421,10 @@ export default function FreightManagementPage() {
 
         {/* Row 2: Filter Dropdowns & Right Action Buttons */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          
+
           {/* Dropdown Filters Group */}
           <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
-            
+
             {/* Product Dropdown */}
             <div className="relative min-w-[130px] flex-1 sm:flex-none">
               <select
@@ -480,7 +480,6 @@ export default function FreightManagementPage() {
                 <option value="All">All Modes</option>
                 <option value="Road">Road</option>
                 <option value="Sea">Sea Freight</option>
-                <option value="Air">Air Freight</option>
                 <option value="Rail">Rail</option>
               </select>
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
@@ -606,9 +605,8 @@ export default function FreightManagementPage() {
                   return (
                     <tr
                       key={quote.id}
-                      className={`group hover:bg-blue-50/30 transition-colors ${
-                        quote.isPreferred ? "bg-amber-50/20" : ""
-                      }`}
+                      className={`group hover:bg-blue-50/30 transition-colors ${quote.isPreferred ? "bg-amber-50/20" : ""
+                        }`}
                     >
                       {/* Product */}
                       <td className="px-5 py-3.5">
@@ -640,11 +638,10 @@ export default function FreightManagementPage() {
 
                       {/* Transit Days */}
                       <td className="px-5 py-3.5 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold ${
-                          quote.transitDays > 0
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold ${quote.transitDays > 0
                             ? "bg-blue-50 text-[#007aff]"
                             : "text-gray-400"
-                        }`}>
+                          }`}>
                           {quote.transitDays > 0 ? `${quote.transitDays}d` : "—"}
                         </span>
                       </td>
