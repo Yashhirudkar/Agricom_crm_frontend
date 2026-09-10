@@ -18,11 +18,26 @@ import { subscribeToSocketEvent, unsubscribeFromSocketEvent } from "@/lib/socket
 import Modal from "@/components/modals/Modal";
 import HasPermission from "@/components/rbac/HasPermission";
 import {
-  Check, AlertCircle, X, CheckCircle2, XCircle, FileText, Calendar, Building2, User as UserIcon, Shield, Loader2, Users, Layers, Clock, Palmtree, BarChart2
+  Check, AlertCircle, X, CheckCircle2, XCircle, FileText, Calendar, Building2, User as UserIcon, Shield, Loader2, Users, Layers, Clock, Palmtree, BarChart2, ChevronDown
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import Image from "next/image";
 import { getFriendlyError } from "@/lib/errorMessages";
+
+// Generate last 12 months list for selector
+function getLast12Months() {
+  const months = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("default", { month: "long", year: "numeric" });
+    months.push({ value, label });
+  }
+  return months;
+}
+
+const MONTHS_LIST = getLast12Months();
 
 function LeaveApprovalsContent() {
   const dispatch = useDispatch();
@@ -45,24 +60,27 @@ function LeaveApprovalsContent() {
   const [highlightedId, setHighlightedId] = useState(null);
   const cardRefs = useRef({});
 
+  // Default to current month
+  const [selectedMonth, setSelectedMonth] = useState(MONTHS_LIST[0].value);
+
   useEffect(() => {
     if (activeCompanyId) {
-      dispatch(fetchLeaveRequests({}));
-      dispatch(fetchMonthlyLeaveSummary({}));
+      dispatch(fetchLeaveRequests({ month: selectedMonth, limit: 1000 }));
+      dispatch(fetchMonthlyLeaveSummary({ month: selectedMonth }));
     }
-  }, [dispatch, activeCompanyId]);
+  }, [dispatch, activeCompanyId, selectedMonth]);
 
   // Realtime: refetch when any LEAVE_REQUEST notification arrives on the socket
   useEffect(() => {
     const handleNotification = (payload) => {
       const entityType = (payload?.entityType || '').toUpperCase();
       if (entityType === 'LEAVE_REQUEST') {
-        dispatch(fetchLeaveRequests({}));
+        dispatch(fetchLeaveRequests({ month: selectedMonth, limit: 1000 }));
       }
     };
     subscribeToSocketEvent('notification', handleNotification);
     return () => unsubscribeFromSocketEvent('notification', handleNotification);
-  }, [dispatch]);
+  }, [dispatch, selectedMonth]);
 
   // Deep-link: auto-switch tab and highlight the requested leave card
   useEffect(() => {
@@ -101,7 +119,7 @@ function LeaveApprovalsContent() {
     try {
       await dispatch(approveLeave({ id: leaveId, remarks: "Approved by manager" })).unwrap();
       showToast("Leave approved successfully");
-      dispatch(fetchLeaveRequests({}));
+      dispatch(fetchLeaveRequests({ month: selectedMonth, limit: 1000 }));
     } catch (err) {
       showToast(getFriendlyError(err), "error");
     } finally {
@@ -120,7 +138,7 @@ function LeaveApprovalsContent() {
       showToast("Leave rejected successfully");
       setRejectTarget(null);
       setRejectRemarks("");
-      dispatch(fetchLeaveRequests({}));
+      dispatch(fetchLeaveRequests({ month: selectedMonth, limit: 1000 }));
     } catch (err) {
       showToast(getFriendlyError(err), "error");
     } finally {
@@ -156,7 +174,26 @@ function LeaveApprovalsContent() {
         </p>
       </div>
 
-      {/* Summary Cards Banner */}
+      {/* Month Selector + Summary Cards Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Month Picker */}
+        <div className="relative">
+          <label className="text-[9.5px] font-bold uppercase tracking-wider text-gray-400 block mb-1">Filter by Month</label>
+          <div className="relative">
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="appearance-none bg-white border border-gray-200 rounded-xl px-3 py-2 pr-8 text-sm font-semibold text-gray-800 shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#007aff]/30 focus:border-[#007aff] transition-all"
+            >
+              {MONTHS_LIST.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          </div>
+        </div>
+      </div>
+
       {monthlySummary && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-xs">
