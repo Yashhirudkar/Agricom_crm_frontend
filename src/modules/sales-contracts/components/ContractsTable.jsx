@@ -1,11 +1,12 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { currencies } from "@/constants/currenciesData";
-import { Eye, Pencil, Trash2, FolderOpen } from "lucide-react";
+import { Eye, Pencil, Trash2, Rocket, FolderOpen } from "lucide-react";
 import ContractStatusBadge from "./ContractStatusBadge";
 import ScheduleBadge from "./ScheduleBadge";
+import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 
-export default function ContractsTable({ contracts, loading, onView, onEdit, onDelete, onDocuments }) {
+export default function ContractsTable({ contracts, loading, onView, onEdit, onDelete, onDocuments, onExecutePurchase }) {
   const router = useRouter();
   if (loading) {
     return (
@@ -83,14 +84,14 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => onView(c)}
-                    className="p-1.5 text-[#007aff] hover:text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                     title="View"
                   >
                     <Eye className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => onEdit(c)}
-                    className="p-1.5 text-amber-500 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
                     title="Edit"
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -98,12 +99,35 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                   {c.documents?.length > 0 && (
                     <button
                       onClick={() => onDocuments?.(c)}
-                      className="p-1.5 text-emerald-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
                       title="Manage Documents"
                     >
                       <FolderOpen className="h-3.5 w-3.5" />
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (onExecutePurchase) {
+                        onExecutePurchase(c);
+                      } else {
+                        try {
+                          const res = await purchaseContractApi.create({ salesContractId: c.id });
+                          const pcId = res.data?.id;
+                          if (pcId) {
+                            router.push(`/sales/purchase-contracts/${pcId}`);
+                          }
+                        } catch (err) {
+                          console.error("Failed to open Purchase Contract workspace", err);
+                        }
+                      }
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
+                    title="Execute + Workspace"
+                  >
+                    <Rocket className="h-3.5 w-3.5 text-purple-600 animate-pulse" />
+                  </button>
                   {(c.status === "Draft" || c.status === "Cancelled") && (
                     <button
                       onClick={() => onDelete(c)}

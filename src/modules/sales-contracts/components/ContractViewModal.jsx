@@ -337,10 +337,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                                 src={contract.sellerSignature}
                                 alt="Seller Signature"
                                 className="absolute inset-0 m-auto max-h-15 max-w-[140px] object-contain z-10 pointer-events-none"
-                                style={{
-                                  mixBlendMode: "multiply",
-                                  filter: "grayscale(100%) contrast(250%) brightness(115%)"
-                                }}
+                                style={{ mixBlendMode: "multiply" }}
                               />
                             )}
                           </div>
@@ -386,10 +383,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                                 src={contract.buyerSignature}
                                 alt="Buyer Signature"
                                 className="absolute inset-0 m-auto max-h-14 max-w-[140px] object-contain z-10 pointer-events-none"
-                                style={{
-                                  mixBlendMode: "multiply",
-                                  filter: "grayscale(100%) contrast(250%) brightness(115%)"
-                                }}
+                                style={{ mixBlendMode: "multiply" }}
                               />
                             )}
                           </div>
@@ -675,10 +669,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                                   src={contract.sellerSignature}
                                   alt="Seller Signature"
                                   className="absolute inset-0 m-auto max-h-15 max-w-[140px] object-contain z-10 pointer-events-none"
-                                  style={{
-                                    mixBlendMode: "multiply",
-                                    filter: "grayscale(100%) contrast(250%) brightness(115%)"
-                                  }}
+                                  style={{ mixBlendMode: "multiply" }}
                                 />
                               )}
                             </div>
@@ -720,10 +711,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                                   src={contract.buyerSignature}
                                   alt="Buyer Signature"
                                   className="absolute inset-0 m-auto max-h-14 max-w-[140px] object-contain z-10 pointer-events-none"
-                                  style={{
-                                    mixBlendMode: "multiply",
-                                    filter: "grayscale(100%) contrast(250%) brightness(115%)"
-                                  }}
+                                  style={{ mixBlendMode: "multiply" }}
                                 />
                               )}
                             </div>
