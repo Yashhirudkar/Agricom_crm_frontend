@@ -62,7 +62,7 @@ export default function EditSidebarItemModal({ isOpen, onClose, onSave, item, tr
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col space-y-6">
-            
+
             {/* General Information Group */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -140,7 +140,7 @@ export default function EditSidebarItemModal({ isOpen, onClose, onSave, item, tr
                 {/* Icon Selection */}
                 <div>
                   <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Item Icon</label>
-                  <div 
+                  <div
                     onClick={() => setIsIconPickerOpen(true)}
                     className="w-full h-[60px] rounded-lg border border-gray-200 bg-white shadow-sm flex items-center justify-between px-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all group"
                   >
@@ -161,9 +161,9 @@ export default function EditSidebarItemModal({ isOpen, onClose, onSave, item, tr
                 {/* Color Behavior */}
                 <div className="space-y-2">
                   <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Color Behavior</label>
-                  
+
                   {/* Toggle */}
-                  <div 
+                  <div
                     onClick={() => setUseFolderColor(!useFolderColor)}
                     className="w-full h-[30px] flex items-center justify-between px-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
                   >
@@ -197,7 +197,7 @@ export default function EditSidebarItemModal({ isOpen, onClose, onSave, item, tr
               <label className="block text-[13px] font-semibold text-gray-700 mb-2">Live Preview</label>
               <div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
                 <div className="w-full bg-gray-50/50 rounded-md border border-gray-100 p-2">
-                  
+
                   {/* Parent Context */}
                   {selectedFolder && (
                     <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-md mb-1 opacity-60">

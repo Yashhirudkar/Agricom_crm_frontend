@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import { useEffect, useState, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -172,7 +172,7 @@ function DepartmentsContent() {
       if (selectedDept?.id === deleteTarget.id) {
         setDrawerOpen(false);
       }
-      
+
       // Bug Fix: Fix pagination boundary when deleting
       const newTotal = departments.length - 1;
       const newTotalPages = Math.ceil(newTotal / itemsPerPage) || 1;
@@ -203,9 +203,8 @@ function DepartmentsContent() {
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6">
       {toast && (
         <div
-          className={`fixed top-5 right-5 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
-            toast.type === "error" ? "bg-red-500" : "bg-green-500"
-          }`}
+          className={`fixed top-5 right-5 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${toast.type === "error" ? "bg-red-500" : "bg-green-500"
+            }`}
         >
           {toast.type === "error" ? (
             <AlertCircle className="h-4 w-4" />
@@ -237,41 +236,41 @@ function DepartmentsContent() {
         </div>
       </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-          <DepartmentFilters
-            search={search}
-            setSearch={setSearch}
-            setCurrentPage={setCurrentPage}
-            viewMode={viewMode}
-            setViewMode={setViewMode}
-            total={total}
-          />
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+        <DepartmentFilters
+          search={search}
+          setSearch={setSearch}
+          setCurrentPage={setCurrentPage}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          total={total}
+        />
 
-          {viewMode === "list" ? (
-            <>
-              <DepartmentsTable
-                departments={departments}
-                selectedDept={selectedDept}
-                handleOpenDrawer={handleOpenDrawer}
-                openEdit={openEdit}
-                setDeleteTarget={setDeleteTarget}
-                isLoading={isLoading}
-              />
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </>
-          ) : (
-            <div className="p-8 overflow-auto flex justify-center min-h-[400px]">
-              <DepartmentsTree
-                departmentTree={departmentTree}
-                handleOpenDrawer={handleOpenDrawer}
-              />
-            </div>
-          )}
-        </div>
+        {viewMode === "list" ? (
+          <>
+            <DepartmentsTable
+              departments={departments}
+              selectedDept={selectedDept}
+              handleOpenDrawer={handleOpenDrawer}
+              openEdit={openEdit}
+              setDeleteTarget={setDeleteTarget}
+              isLoading={isLoading}
+            />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </>
+        ) : (
+          <div className="p-8 overflow-auto flex justify-center min-h-[400px]">
+            <DepartmentsTree
+              departmentTree={departmentTree}
+              handleOpenDrawer={handleOpenDrawer}
+            />
+          </div>
+        )}
+      </div>
 
       <DepartmentDetailsDrawer
         drawerOpen={drawerOpen}

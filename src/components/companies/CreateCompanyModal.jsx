@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Modal from "@/components/modals/Modal";
 import { UploadCloud, X, Image as ImageIcon, ChevronRight, ChevronLeft } from "lucide-react";
 import axiosClient, { getAvatarUrl } from "@/lib/axios";
+import CreatableSelect from "react-select/creatable";
 
 const TABS = [
   { id: "general", label: "General" },
@@ -214,17 +215,43 @@ export default function CreateCompanyModal({
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Industry Type</label>
-                    <select
-                      name="industryType"
-                      value={form.industryType || ""}
-                      onChange={handleChange}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-gray-50/50 hover:bg-white transition-colors"
-                    >
-                      <option value="">Select Industry</option>
-                      {options?.companies?.industryTypes?.map((ind) => (
-                        <option key={ind} value={ind}>{ind}</option>
-                      ))}
-                    </select>
+                    <CreatableSelect
+                      isClearable
+                      options={(options?.companies?.industryTypes || []).map((ind) => ({ value: ind, label: ind }))}
+                      value={form.industryType ? { value: form.industryType, label: form.industryType } : null}
+                      onChange={(selected) =>
+                        setForm((prev) => ({ ...prev, industryType: selected ? selected.value : "" }))
+                      }
+                      onCreateOption={(inputValue) =>
+                        setForm((prev) => ({ ...prev, industryType: inputValue.trim() }))
+                      }
+                      placeholder="Select or type industry..."
+                      formatCreateLabel={(val) => `➕ Add "${val}" as custom industry`}
+                      noOptionsMessage={() => "Type to search or add a custom industry"}
+                      menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                      menuPosition="fixed"
+                      styles={{
+                        control: (base, state) => ({
+                          ...base,
+                          borderColor: state.isFocused ? "#007aff" : "#e2e8f0",
+                          borderRadius: "0.75rem",
+                          fontSize: "12px",
+                          boxShadow: "none",
+                          minHeight: "36px",
+                          backgroundColor: "rgba(249,250,251,0.5)",
+                          "&:hover": { borderColor: state.isFocused ? "#007aff" : "#cbd5e1", backgroundColor: "white" },
+                        }),
+                        option: (base, state) => ({
+                          ...base,
+                          backgroundColor: state.isSelected ? "#007aff" : state.isFocused ? "#f8fafc" : "white",
+                          color: state.isSelected ? "white" : "#334155",
+                          fontSize: "12px",
+                          cursor: "pointer",
+                        }),
+                        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                      }}
+                      className="text-xs"
+                    />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Registration Number</label>

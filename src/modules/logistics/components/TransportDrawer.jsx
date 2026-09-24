@@ -96,7 +96,7 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
           return Array.from(new Set([...DEFAULT_DOC_CATEGORIES, ...parsed]));
         }
       }
-    } catch (e) {}
+    } catch (e) { }
     return DEFAULT_DOC_CATEGORIES;
   });
 
@@ -362,7 +362,7 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
       try {
         const customOnly = updated.filter((c) => !DEFAULT_DOC_CATEGORIES.includes(c));
         localStorage.setItem("agricom_custom_doc_categories", JSON.stringify(customOnly));
-      } catch (e) {}
+      } catch (e) { }
       toast.success(`Added document category "${trimmed}"`);
     }
     setUploadCategory(trimmed);
@@ -1444,4 +1444,4 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
       </div>
     </>
   );
-}
+}  

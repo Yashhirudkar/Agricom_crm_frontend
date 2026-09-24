@@ -110,8 +110,8 @@ export default function MonthlyStockSectionCard({
           const colKey = c.id || c.columnKey;
           const val = r.cellsMap
             ? (r.cellsMap[colKey] !== undefined
-                ? r.cellsMap[colKey]
-                : (c.id ? r.cellsMap[c.id] || "" : ""))
+              ? r.cellsMap[colKey]
+              : (c.id ? r.cellsMap[c.id] || "" : ""))
             : "";
           return {
             columnId: c.id || undefined,
@@ -417,16 +417,14 @@ export default function MonthlyStockSectionCard({
         width: `${size.width}px`,
         minHeight: `${size.height}px`,
       }}
-      className={`print-section-card bg-white py-2 space-y-2 border border-gray-300 shadow-md rounded-lg z-20 print:static print:left-auto print:top-auto print:w-full print:min-w-0 print:max-w-full print:h-auto print:min-h-0 print:shadow-none print:border print:border-gray-400 print:break-inside-avoid print:mb-0 ${
-        isDragging ? "opacity-90 shadow-2xl ring-2 ring-[#107c41] z-30" : ""
-      }`}
+      className={`print-section-card bg-white py-2 space-y-2 border border-gray-300 shadow-md rounded-lg z-20 print:static print:left-auto print:top-auto print:w-full print:min-w-0 print:max-w-full print:h-auto print:min-h-0 print:shadow-none print:border print:border-gray-400 print:break-inside-avoid print:mb-0 ${isDragging ? "opacity-90 shadow-2xl ring-2 ring-[#107c41] z-30" : ""
+        }`}
     >
       {/* Section Header Bar - Drag Handle */}
       <div
         onMouseDown={handleDragMouseDown}
-        className={`px-3 py-2 bg-[#f8fafc] border-l-4 border-[#107c41] border-b border-[#cbd5e1] flex flex-wrap items-center justify-between gap-2 rounded-t-md select-none print:py-1 print:bg-gray-100 print:border-l-4 print:border-gray-800 ${
-          !isReadOnly ? "cursor-grab active:cursor-grabbing" : ""
-        }`}
+        className={`px-3 py-2 bg-[#f8fafc] border-l-4 border-[#107c41] border-b border-[#cbd5e1] flex flex-wrap items-center justify-between gap-2 rounded-t-md select-none print:py-1 print:bg-gray-100 print:border-l-4 print:border-gray-800 ${!isReadOnly ? "cursor-grab active:cursor-grabbing" : ""
+          }`}
         title="Drag header to move section block"
       >
         <div className="flex items-center gap-2">
@@ -532,11 +530,10 @@ export default function MonthlyStockSectionCard({
                 type="button"
                 onClick={handleSave}
                 disabled={saving || !isDirty}
-                className={`px-2.5 py-0.5 text-[10px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                  isDirty
+                className={`px-2.5 py-0.5 text-[10px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${isDirty
                     ? "bg-[#107c41] hover:bg-emerald-700 text-white shadow-2xs"
                     : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
-                }`}
+                  }`}
               >
                 {saving ? (
                   <div className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -560,75 +557,75 @@ export default function MonthlyStockSectionCard({
 
               {menuOpen && (
                 <div className="absolute right-0 top-8 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-1.5 z-50 text-xs">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditingTitle(true);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full px-4 py-1.5 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer"
-                >
-                  <Edit2 className="h-3.5 w-3.5 text-blue-500" />
-                  Rename Section
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    onDuplicateSection(section.id);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full px-4 py-1.5 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer"
-                >
-                  <Copy className="h-3.5 w-3.5 text-indigo-500" />
-                  Duplicate Structure
-                </button>
-
-                {index > 0 && (
                   <button
                     type="button"
                     onClick={() => {
-                      onMoveUpSection(index);
+                      setIsEditingTitle(true);
                       setMenuOpen(false);
                     }}
                     className="w-full px-4 py-1.5 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer"
                   >
-                    <ArrowUp className="h-3.5 w-3.5 text-gray-500" />
-                    Move Up
+                    <Edit2 className="h-3.5 w-3.5 text-blue-500" />
+                    Rename Section
                   </button>
-                )}
 
-                {index < totalSections - 1 && (
                   <button
                     type="button"
                     onClick={() => {
-                      onMoveDownSection(index);
+                      onDuplicateSection(section.id);
                       setMenuOpen(false);
                     }}
                     className="w-full px-4 py-1.5 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer"
                   >
-                    <ArrowDown className="h-3.5 w-3.5 text-gray-500" />
-                    Move Down
+                    <Copy className="h-3.5 w-3.5 text-indigo-500" />
+                    Duplicate Structure
                   </button>
-                )}
 
-                <div className="my-1 border-t border-gray-100" />
+                  {index > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onMoveUpSection(index);
+                        setMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-1.5 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer"
+                    >
+                      <ArrowUp className="h-3.5 w-3.5 text-gray-500" />
+                      Move Up
+                    </button>
+                  )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    onDeleteSection(section.id);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full px-4 py-1.5 text-left text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
-                >
-                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                  Delete Section
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+                  {index < totalSections - 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onMoveDownSection(index);
+                        setMenuOpen(false);
+                      }}
+                      className="w-full px-4 py-1.5 text-left text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer"
+                    >
+                      <ArrowDown className="h-3.5 w-3.5 text-gray-500" />
+                      Move Down
+                    </button>
+                  )}
+
+                  <div className="my-1 border-t border-gray-100" />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDeleteSection(section.id);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-1.5 text-left text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    Delete Section
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

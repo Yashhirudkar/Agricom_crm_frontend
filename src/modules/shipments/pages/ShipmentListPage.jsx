@@ -1,7 +1,8 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Ship, ClipboardCheck, AlertCircle, RefreshCw, Rocket } from "lucide-react";
+import { Ship, AlertCircle, RefreshCw, Rocket, ChevronRight, Boxes } from "lucide-react";
+import Link from "next/link";
 import { shipmentsApi } from "../services/shipmentsApi";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 import ShipmentsFilter from "../components/ShipmentsFilter";
@@ -11,9 +12,9 @@ import ShipmentEditModal from "../components/ShipmentEditModal";
 import ContractViewModal from "@/modules/sales-contracts/components/ContractViewModal";
 import DocumentUploadDrawer from "@/modules/sales-contracts/components/DocumentUploadDrawer";
 import Pagination from "@/components/common/Pagination";
+import CargoAvailabilityDrawer from "@/modules/cargo-availability/components/CargoAvailabilityDrawer";
 
-
-export default function ShipmentListPage({ preSelectedShipmentId }) {
+export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, contextContractNo }) {
   const router = useRouter();
   // Filters State
   const [filters, setFilters] = useState({
@@ -65,10 +66,12 @@ export default function ShipmentListPage({ preSelectedShipmentId }) {
 
   // Modal / Drawer Active States
   const [activeShipment, setActiveShipment] = useState(null); // Detail drawer target
+  const [cargoShipment, setCargoShipment] = useState(null);   // Cargo availability drawer target
   const [editShipment, setEditShipment] = useState(null);     // Edit modal target
   const [viewContractId, setViewContractId] = useState(null); // Contract modal target
   const [docContract, setDocContract] = useState(null);       // Document drawer target
   const [selectedShipments, setSelectedShipments] = useState([]); // Bulk actions checkbox tracker
+
 
   // API Fetches
   const fetchShipments = useCallback(async () => {
@@ -105,7 +108,7 @@ export default function ShipmentListPage({ preSelectedShipmentId }) {
     fetchStats();
   }, [fetchShipments, fetchStats]);
 
-  // Deep Link Selection Handler
+  // Deep Link Selection Handler (supports ?shipmentId=X&openCargo=true)
   useEffect(() => {
     if (preSelectedShipmentId) {
       const loadPreselected = async () => {
@@ -114,12 +117,14 @@ export default function ShipmentListPage({ preSelectedShipmentId }) {
           if (res?.data?.data) {
             const match = res.data.data.find(s => String(s.id) === String(preSelectedShipmentId));
             if (match) {
-              // Inject timeline & checklist mapping before opening drawer
               const timelineRes = await shipmentsApi.getShipments({ search: match.shipmentReference });
-              if (timelineRes?.data?.data?.[0]) {
-                setActiveShipment(timelineRes.data.data[0]);
+              const resolved = timelineRes?.data?.data?.[0] || match;
+              if (preOpenCargo) {
+                // Auto-open CargoAvailabilityDrawer when ?openCargo=true
+                setCargoShipment(resolved);
               } else {
-                setActiveShipment(match);
+                // Default: open ShipmentDetailsDrawer
+                setActiveShipment(resolved);
               }
             }
           }
@@ -129,7 +134,7 @@ export default function ShipmentListPage({ preSelectedShipmentId }) {
       };
       loadPreselected();
     }
-  }, [preSelectedShipmentId]);
+  }, [preSelectedShipmentId, preOpenCargo]);
 
   // Reset Filters Handler
   const handleResetFilters = () => {
@@ -224,6 +229,25 @@ export default function ShipmentListPage({ preSelectedShipmentId }) {
         </div>
       )}
 
+      {/* Smart Context Breadcrumb Banner (shown when navigated via URL params) */}
+      {(preSelectedShipmentId || contextContractNo) && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50/80 border border-indigo-100 rounded-xl text-xs font-semibold text-indigo-700 print:hidden">
+          <Boxes className="h-3.5 w-3.5 text-indigo-500 flex-shrink-0" />
+          <Link href="/sales/cargo-availability" className="hover:underline text-indigo-600">Cargo Availability</Link>
+          <ChevronRight className="h-3 w-3 text-indigo-400" />
+          <span className="text-indigo-800">Shipments Registry</span>
+          {contextContractNo && (
+            <>
+              <ChevronRight className="h-3 w-3 text-indigo-400" />
+              <span className="text-indigo-900 font-bold">{contextContractNo}</span>
+            </>
+          )}
+          {preOpenCargo && (
+            <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-100 text-cyan-800 border border-cyan-200">🚚 Auto-Opening Cargo</span>
+          )}
+        </div>
+      )}
+
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
@@ -307,6 +331,7 @@ export default function ShipmentListPage({ preSelectedShipmentId }) {
           onEditShipment={(s) => setEditShipment(s)}
           onManageDocuments={(contractObj) => setDocContract(contractObj)}
           onPrintShipment={handlePrintSingleShipment}
+          onOpenCargoDrawer={(s) => setCargoShipment(s)}
         />
 
         <div className="print:hidden">
@@ -322,12 +347,21 @@ export default function ShipmentListPage({ preSelectedShipmentId }) {
         </div>
       </div>
 
-      {/* Shipment Details Drawer */}
+      {/* Shipment Details Drawer (Commercial Document) */}
       {activeShipment && (
         <ShipmentDetailsDrawer
           shipment={activeShipment}
           onClose={() => setActiveShipment(null)}
           onViewContract={(id) => setViewContractId(id)}
+          onOpenCargoDrawer={(s) => setCargoShipment(s)}
+        />
+      )}
+
+      {/* Cargo Availability Dedicated Drawer (Operational Execution Workspace) */}
+      {cargoShipment && (
+        <CargoAvailabilityDrawer
+          shipment={cargoShipment}
+          onClose={() => setCargoShipment(null)}
         />
       )}
 
@@ -367,3 +401,4 @@ export default function ShipmentListPage({ preSelectedShipmentId }) {
     </div>
   );
 }
+

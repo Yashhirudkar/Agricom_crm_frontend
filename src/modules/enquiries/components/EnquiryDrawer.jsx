@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Drawer from "@/components/common/Drawer";
 import Select from "react-select";
-import { 
-  FileText, 
-  MapPin, 
-  Package, 
-  Save, 
-  AlertCircle, 
-  Loader2, 
-  Search, 
-  X, 
+import {
+  FileText,
+  MapPin,
+  Package,
+  Save,
+  AlertCircle,
+  Loader2,
+  Search,
+  X,
   ChevronDown,
   User
 } from "lucide-react";
@@ -250,7 +250,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           if (res.data?.entityName) {
             setSelectedPartnerName(res.data.entityName);
           }
-        }).catch(() => {});
+        }).catch(() => { });
       }
     } else {
       setSelectedPartnerName("");
@@ -299,8 +299,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     const found = currencies.find(
       (c) => c.code.toUpperCase() === form.bidCurrency.toUpperCase()
     );
-    return found 
-      ? { value: found.code, label: `${found.code} - ${found.name}` } 
+    return found
+      ? { value: found.code, label: `${found.code} - ${found.name}` }
       : { value: form.bidCurrency, label: form.bidCurrency };
   }, [form.bidCurrency, currencies]);
 
@@ -377,31 +377,6 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     if (!form.partnerRoleId) newErrors.partnerRoleId = "Role is required";
     if (!form.partnerId) newErrors.partnerId = "Partner is required";
     if (!form.productId) newErrors.productId = "Product is required";
-    if (!form.shipmentMode) newErrors.shipmentMode = "Shipment Mode is required";
-
-    if (form.shipmentMode === "SHIP") {
-      if (!form.originCountryId) newErrors.originCountryId = "Origin Country is required";
-      if (!form.originPort) newErrors.originPort = "Origin Port is required";
-      if (!form.destinationCountry) newErrors.destinationCountry = "Destination Country is required";
-      if (!form.destinationPort) newErrors.destinationPort = "Destination Port is required";
-    } else if (form.shipmentMode === "ROAD" || form.shipmentMode === "RAIL") {
-      if (!form.originCountryId) newErrors.originCountryId = "Origin Country is required";
-      if (!form.originState) newErrors.originState = "Origin State is required";
-      if (!form.originCity) newErrors.originCity = "Origin City is required";
-      if (!form.destinationCountry) newErrors.destinationCountry = "Destination Country is required";
-      if (!form.destinationState) newErrors.destinationState = "Destination State is required";
-      if (!form.destinationCity) newErrors.destinationCity = "Destination City is required";
-      
-      if (form.shipmentMode === "ROAD") {
-        // ZIP / Postal Code is optional
-      } else if (form.shipmentMode === "RAIL") {
-        if (!form.originStationCode) newErrors.originStationCode = "Origin Station Code is required";
-        else if (form.originStationCode.length < 3) newErrors.originStationCode = "Must be at least 3 characters";
-        
-        if (!form.destinationStationCode) newErrors.destinationStationCode = "Destination Station Code is required";
-        else if (form.destinationStationCode.length < 3) newErrors.destinationStationCode = "Must be at least 3 characters";
-      }
-    }
 
     if (form.buyingInterest !== undefined && form.buyingInterest !== null && form.buyingInterest !== "") {
       if (Number(form.buyingInterest) < 0) {
@@ -477,8 +452,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       console.error(err);
       let errMsg = "Failed to save enquiry";
       if (err.response?.data?.message) {
-        errMsg = Array.isArray(err.response.data.message) 
-          ? err.response.data.message.join(", ") 
+        errMsg = Array.isArray(err.response.data.message)
+          ? err.response.data.message.join(", ")
           : err.response.data.message;
       } else if (err.message) {
         errMsg = err.message;
@@ -497,10 +472,10 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     }
   };
 
-  const titleText = isViewMode 
-    ? "Enquiry Details" 
-    : editData 
-      ? `Edit Enquiry: ${form.enquiryNo}` 
+  const titleText = isViewMode
+    ? "Enquiry Details"
+    : editData
+      ? `Edit Enquiry: ${form.enquiryNo}`
       : "New Enquiry";
 
   const {
@@ -536,7 +511,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
             </div>
           ) : (
             <div className="space-y-6">
-              
+
               {/* SECTION 1: Basic Information */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
                 <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2.5 bg-gray-50/50">
@@ -581,7 +556,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                   </div>
 
                   <div>
-                    <label className={lbl}>Shipment Mode <span className="text-red-500">*</span></label>
+                    <label className={lbl}>Shipment Mode</label>
                     <div className="relative">
                       <select
                         value={form.shipmentMode || ""}
@@ -615,7 +590,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                     <>
                       {/* Origin Country */}
                       <div>
-                        <label className={lbl}>Origin Country <span className="text-red-500">*</span></label>
+                        <label className={lbl}>Origin Country</label>
                         {isViewMode ? (
                           <div className={inp}>{form.originCountryId || "—"}</div>
                         ) : (
@@ -655,7 +630,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
 
                       {/* Destination Country */}
                       <div>
-                        <label className={lbl}>Destination Country <span className="text-red-500">*</span></label>
+                        <label className={lbl}>Destination Country</label>
                         {isViewMode ? (
                           <div className={inp}>{form.destinationCountry || "—"}</div>
                         ) : (
@@ -704,7 +679,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                         isView={isViewMode}
                         shipmentMode={form.shipmentMode}
                       />
-                      
+
                       {/* Spacer to separate origin and destination visually in 3-column grid */}
                       <div className="col-span-full border-t border-dashed border-gray-100 my-2" />
 
@@ -832,11 +807,10 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                                       setSelectedPartnerName(p.entityName);
                                       setIsPartnerOpen(false);
                                     }}
-                                    className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${
-                                      form.partnerId === p.id
+                                    className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${form.partnerId === p.id
                                         ? "bg-blue-50 text-blue-600 font-semibold"
                                         : "hover:bg-gray-50 text-gray-700"
-                                    }`}
+                                      }`}
                                   >
                                     <span className="truncate">{p.entityName}</span>
                                   </button>

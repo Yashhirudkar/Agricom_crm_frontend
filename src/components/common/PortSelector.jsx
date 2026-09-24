@@ -107,7 +107,7 @@ export default function PortSelector({ value, onChange, label, placeholder, isVi
 
   return (
     <div>
-      <label className={lbl}>{label} <span className="text-red-500">*</span></label>
+      <label className={lbl}>{label}</label>
       <CreatableSelect
         isClearable
         options={options}
