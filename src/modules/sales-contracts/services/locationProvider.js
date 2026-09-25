@@ -16,7 +16,6 @@
 
 import { PORTS_BY_COUNTRY } from '@/constants/portsData';
 import { City } from 'country-state-city';
-import axiosClient from "@/lib/axios";
 
 // ---------------------------------------------------------------------------
 // Transport Mode config — labels, placeholders, validation messages per mode
@@ -39,7 +38,7 @@ export const TRANSPORT_MODE_CONFIG = {
     destError: 'Port of Discharge is required',
     noCountryHint: 'Select origin country first',
     noDestCountryHint: 'Select destination country first',
-    isSearchable: false,
+    isSearchable: true,
   },
   air: {
     originLabel: 'Origin Airport',
@@ -80,30 +79,63 @@ export const TRANSPORT_MODE_CONFIG = {
 // Main API
 // ---------------------------------------------------------------------------
 
-/**
- * getLocations({ countryCode, transportMode })
- *
- * @param {string} countryCode    ISO 3166-1 alpha-2 code (e.g. "IN", "AE")
- * @param {string} transportMode  One of: "sea" | "air" | "road" | "rail"
- * @returns {Promise<Array<{ value: string, label: string }>>}
- */
+function fetchCustomLocations(countryCode, transportMode) {
+  try {
+    const local = localStorage.getItem("customLocations_" + countryCode + "_" + transportMode);
+    if (local) {
+      const parsed = JSON.parse(local);
+      return parsed.map(c => ({ value: c.cityName, label: c.cityName }));
+    }
+  } catch (e) {}
+  return [];
+}
+
+export function saveCustomLocation(countryCode, countryName, transportMode, cityName) {
+  try {
+    const key = "customLocations_" + countryCode + "_" + transportMode;
+    const local = localStorage.getItem(key);
+    let parsed = [];
+    if (local) parsed = JSON.parse(local);
+    if (!parsed.find(p => p.cityName === cityName)) {
+      parsed.push({ cityName });
+      localStorage.setItem(key, JSON.stringify(parsed));
+    }
+  } catch (e) {}
+}
+
 export async function getLocations({ countryCode, transportMode, search = '' }) {
   if (!countryCode) return [];
+  const custom = fetchCustomLocations(countryCode, transportMode);
 
+  let local = [];
   switch (transportMode) {
     case 'sea':
-      return getSeaPorts(countryCode);
-
+      local = getSeaPorts(countryCode, search);
+      break;
     case 'air':
-      return await getAirports(countryCode, search);
-
+      local = await getAirports(countryCode, search);
+      break;
     case 'road':
     case 'rail':
-      return getCities(countryCode, search);
-
+      local = getCities(countryCode, search);
+      break;
     default:
-      return getSeaPorts(countryCode, search);
+      local = getSeaPorts(countryCode, search);
   }
+
+  const q = search.toLowerCase();
+  const filteredCustom = custom.filter(c => c.label.toLowerCase().includes(q));
+
+  const all = [...filteredCustom, ...local];
+  const unique = [];
+  const map = new Map();
+  for (const item of all) {
+      if (!map.has(item.value)) {
+          map.set(item.value, true);
+          unique.push(item);
+      }
+  }
+  return unique.slice(0, 50);
 }
 
 // ---------------------------------------------------------------------------
@@ -120,27 +152,16 @@ function getSeaPorts(countryCode, search = "") {
 }
 
 async function getAirports(countryCode, search = "") {
-  try {
-    const { data } = await axiosClient.get("/locations/airports", {
-      params: { countryCode, search, limit: 10 }
-    });
-    return (data || [])
-      .map((a) => ({
-        value: `${a.name} (${a.code})`,
-        label: `${a.name} (${a.code})`,
-      }));
-  } catch (err) {
-    console.warn("Failed to load airports:", err);
-    return [];
-  }
+  // Custom airports stored locally (same pattern as ports)
+  return fetchCustomLocations(countryCode, 'air').filter(a =>
+    a.label.toLowerCase().includes(search.toLowerCase())
+  );
 }
 
 function getCities(countryCode, search = "") {
-  // Exact same provider as PartnerDrawer — country-state-city package
   const cities = City.getCitiesOfCountry(countryCode) || [];
   const q = search.toLowerCase();
   
-  // We only return the top 20 matches for lightning-fast dropdown rendering
   return cities
     .filter((city) => city.name.toLowerCase().includes(q))
     .slice(0, 20)

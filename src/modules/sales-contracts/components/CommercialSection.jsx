@@ -1,13 +1,16 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { DollarSign, ChevronDown, Truck, Plane, Ship, Train, MapPin } from "lucide-react";
+import { DollarSign, ChevronDown, Truck, Plane, Ship, Train, MapPin, Plus } from "lucide-react";
 import Select from "react-select";
+import CreatableSelect from "react-select/creatable";
 import AsyncSelect from "react-select/async";
+import AsyncCreatableSelect from "react-select/async-creatable";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   TRANSPORT_MODES,
   TRANSPORT_MODE_CONFIG,
   getLocations,
+  saveCustomLocation,
 } from "../services/locationProvider";
 import CountrySelect from "@/components/common/CountrySelect";
 import { getAlpha2Code } from "@/lib/countryUtils";
@@ -114,12 +117,27 @@ const selectStyles = {
 // ---------------------------------------------------------------------------
 // LocationSelect — shared dropdown for all transport mode routing fields
 // ---------------------------------------------------------------------------
-function LocationSelect({ value, onChange, options, loadOptions, placeholder, isDisabled, isSearchable, hasError }) {
-  const selectedOption = options.find((o) => o.value === value) || (value ? { value, label: value } : null);
+function LocationSelect({ value, onChange, options, loadOptions, placeholder, isDisabled, isSearchable, hasError, onCreateCustom }) {
+  const combinedOptions = React.useMemo(() => {
+    if (!value) return options;
+    const exists = options.some((o) => o.value === value);
+    if (!exists) {
+      return [{ value, label: value }, ...options];
+    }
+    return options;
+  }, [options, value]);
+
+  const selectedOption = combinedOptions.find((o) => o.value === value) || null;
 
   const selectProps = {
     value: selectedOption,
-    onChange: (opt) => onChange(opt ? opt.value : ""),
+    onChange: (opt, actionMeta) => {
+      const val = opt ? opt.value : "";
+      onChange(val);
+      if (actionMeta && actionMeta.action === 'create-option' && onCreateCustom) {
+        onCreateCustom(val);
+      }
+    },
     placeholder,
     isDisabled,
     isSearchable,
@@ -143,17 +161,31 @@ function LocationSelect({ value, onChange, options, loadOptions, placeholder, is
       isDisabled ? "Select a country first" : "No options found",
   };
 
+  const formatCreateLabel = (inputValue) => (
+    <div className="flex items-center text-[#007aff]">
+      <Plus className="h-4 w-4 mr-1.5 text-purple-600" />
+      Create "{inputValue}"
+    </div>
+  );
+
   if (loadOptions) {
     return (
-      <AsyncSelect
+      <AsyncCreatableSelect
         {...selectProps}
         loadOptions={loadOptions}
         defaultOptions
+        formatCreateLabel={formatCreateLabel}
       />
     );
   }
 
-  return <Select {...selectProps} options={options} />;
+  return (
+    <CreatableSelect 
+      {...selectProps} 
+      options={combinedOptions} 
+      formatCreateLabel={formatCreateLabel}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -352,6 +384,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
                     isDisabled={!originCode}
                     isSearchable={originConfig.isSearchable}
                     hasError={!!errors.originLocationName}
+                    onCreateCustom={(val) => saveCustomLocation(originCode, form.originCountry, originTransportMode, val)}
                   />
                 )}
                 {errors.originLocationName && (
@@ -436,6 +469,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
                     isDisabled={!destCode}
                     isSearchable={destConfig.isSearchable}
                     hasError={!!errors.destinationLocationName}
+                    onCreateCustom={(val) => saveCustomLocation(destCode, form.destinationCountry, destTransportMode, val)}
                   />
                 )}
                 {errors.destinationLocationName && (

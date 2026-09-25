@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import CreatableSelect from "react-select/creatable";
 import {
   getAllCountryOptions,
@@ -9,11 +9,25 @@ import {
 
 export default function CountrySelect({ value, onChange, error, className }) {
   const [inputValue, setInputValue] = useState("");
+  const [customCountries, setCustomCountries] = useState([]);
 
-  // 1. Generate sorted country options once and cache it via useMemo
-  const countryOptions = useMemo(() => {
-    return getAllCountryOptions();
+  // Load custom countries from localStorage on mount
+  useEffect(() => {
+    try {
+      const local = localStorage.getItem("customCountries");
+      if (local) {
+        setCustomCountries(JSON.parse(local));
+      }
+    } catch (e) {}
   }, []);
+
+  // 1. Generate sorted country options combining base and custom
+  const countryOptions = useMemo(() => {
+    const base = getAllCountryOptions();
+    const seen = new Set(base.map((o) => o.label.toLowerCase()));
+    const extras = customCountries.filter((o) => !seen.has(o.label.toLowerCase()));
+    return [...base, ...extras].sort((a, b) => a.label.localeCompare(b.label));
+  }, [customCountries]);
 
   // 2. Dynamically filter & rank options based on search query so prefix & ISO matches come first
   const filteredOptions = useMemo(() => {
@@ -99,6 +113,20 @@ export default function CountrySelect({ value, onChange, error, className }) {
     }
   };
 
+  const handleCreate = async (val) => {
+    const name = val.trim();
+    if (!name) return;
+    
+    const newOpt = { label: name, value: name, alpha2: "", alpha3: "", isCustom: true };
+    setCustomCountries((prev) => {
+      const next = [...prev, newOpt];
+      localStorage.setItem("customCountries", JSON.stringify(next));
+      return next;
+    });
+    
+    onChange({ name: name, iso2Code: "", iso3Code: "", isCustom: true });
+  };
+
   const handleInputChange = (val, { action }) => {
     if (action === "input-change") {
       setInputValue(val);
@@ -137,6 +165,7 @@ export default function CountrySelect({ value, onChange, error, className }) {
       options={filteredOptions}
       value={selectedOption}
       onChange={handleChange}
+      onCreateOption={handleCreate}
       onInputChange={handleInputChange}
       inputValue={inputValue}
       filterOption={() => true}

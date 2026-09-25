@@ -1,7 +1,7 @@
 import React from "react";
 import { MessageCircle, Trash2, FileSignature, Edit2, Eye, Truck } from "lucide-react";
 
-export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelete, onExecute, onEdit, onView, onOpenTransport }) {
+export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelete, onExecute, onEdit, onView, onOpenTransport, isOrderMode }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -26,15 +26,21 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
   }
 
   const getOriginText = (e) => {
-    if (e.shipmentMode === "SHIP") {
-      return e.originPort ? `🚢 ${e.originPort}` : "—";
+    let icon = "";
+    if (e.shipmentMode === "SHIP") icon = "🚢 ";
+    else if (e.shipmentMode === "ROAD") icon = "🚛 ";
+    else if (e.shipmentMode === "RAIL") icon = "🚆 ";
+    
+    const country = e.originCountryName || e.originCountry || e.originCountryId;
+    
+    // If we have a country, show it. Otherwise fallback to port if it's a ship, else '—'
+    if (country) {
+      return `${icon}${country}`;
     }
-    if (e.shipmentMode === "ROAD" || e.shipmentMode === "RAIL") {
-      const icon = e.shipmentMode === "ROAD" ? "🚛 " : "🚆 ";
-      const parts = [e.originCity, e.originState, e.originCountryId].filter(Boolean);
-      return parts.length > 0 ? `${icon}${parts.join(", ")}` : "—";
-    }
-    return e.originCountryName || "—";
+    
+    // Fallback if country is missing for some reason
+    if (e.shipmentMode === "SHIP" && e.originPort) return `🚢 ${e.originPort}`;
+    return "—";
   };
 
   const getDestinationText = (e) => {
@@ -77,7 +83,7 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Enquiry No.", "Date", "Partner", "Product", "Origin", "Qty (MT)", "Shipment Date", "Bid", "Created By", "Potential", "Actions"].map((h, index) => {
+            {["Enquiry No.", "Date", "Partner", "Product", "Origin", "Qty (MT)", "Shipment Date", isOrderMode ? "Price" : "Bid", "Created By", "Potential", "Actions"].map((h, index) => {
               let stickyClass = "";
               if (index === 0) {
                 stickyClass = "sticky left-0 z-30 bg-[#f9fafb] w-[120px] min-w-[120px] max-w-[120px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none";

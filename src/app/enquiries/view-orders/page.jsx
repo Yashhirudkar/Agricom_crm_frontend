@@ -138,6 +138,7 @@ export default function CompletedEnquiriesListPage() {
         </div>
 
         <EnquiriesTable
+          isOrderMode={true}
           enquiries={completedQuery.enquiries}
           loading={completedQuery.loading}
           onFollowUp={handleFollowUp}
