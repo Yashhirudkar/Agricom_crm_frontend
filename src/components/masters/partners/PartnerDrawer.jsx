@@ -351,7 +351,7 @@ function PartnerDrawer({
   const onFormSubmit = (data) => {
     const payload = { ...data };
 
-    // Sanitize empty strings to respect backend DTO @IsOptional
+    // Convert empty string fields to null so backend updates the DB column to NULL
     const optionalStringFields = [
       "address",
       "city",
@@ -361,9 +361,15 @@ function PartnerDrawer({
       "panNo",
       "innNo",
       "financialStatus",
+      "productNotes",
     ];
     optionalStringFields.forEach((k) => {
-      if (payload[k] === "") delete payload[k];
+      if (payload[k] === "" || payload[k] === undefined) {
+        payload[k] = null;
+      } else if (typeof payload[k] === "string") {
+        const trimmed = payload[k].trim();
+        payload[k] = trimmed === "" ? null : trimmed;
+      }
     });
 
     if (payload.contacts) {
@@ -373,9 +379,10 @@ function PartnerDrawer({
           const contact = { ...c, name: c.name.trim() };
           ["designation", "phone", "email", "communicationType"].forEach((k) => {
             if (contact[k] === "" || contact[k] === null || contact[k] === undefined) {
-              delete contact[k];
+              contact[k] = null;
             } else if (typeof contact[k] === "string") {
-              contact[k] = contact[k].trim();
+              const trimmed = contact[k].trim();
+              contact[k] = trimmed === "" ? null : trimmed;
             }
           });
           return contact;
@@ -385,7 +392,7 @@ function PartnerDrawer({
     if (payload.yearOfEstablishment) {
       payload.yearOfEstablishment = parseInt(payload.yearOfEstablishment, 10);
     } else {
-      delete payload.yearOfEstablishment;
+      payload.yearOfEstablishment = null;
     }
 
     payload.partnerRoleId = parseInt(payload.partnerRoleId, 10);
