@@ -416,6 +416,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       if (!payload.purity) delete payload.purity;
       if (!payload.shipmentType) delete payload.shipmentType;
       if (!payload.shipmentDate) delete payload.shipmentDate;
+      if (!payload.shipmentMode) delete payload.shipmentMode; // empty string fails enum validation
       delete payload.enquiryNo;
 
       if (payload.shipmentMode === "SHIP") {
@@ -576,7 +577,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                 </div>
               </div>
 
-              {/* SECTION 2: Logistics & Locations */}
+              {/* SECTION 2: Logistics & Locations — hidden temporarily */}
+              {false && (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
                 <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2.5 bg-gray-50/50">
                   <div className="h-6 w-6 rounded-lg bg-emerald-50 flex items-center justify-center">
@@ -702,6 +704,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                   )}
                 </div>
               </div>
+              )}
 
               {/* SECTION 3: Product, Packaging & Commercials */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
