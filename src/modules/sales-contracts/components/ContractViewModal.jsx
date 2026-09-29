@@ -198,9 +198,21 @@ export default function ContractViewModal({ contractId, onClose }) {
       ? contract.documents.map((d) => d.tradeDocument?.name).filter(Boolean).join(", ")
       : "";
 
+  const handlePrint = () => {
+    const originalTitle = document.title;
+    document.title = contract?.contractNumber ? `Contract_${contract.contractNumber}` : "Sales_Contract";
+    window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1000);
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-[100] flex justify-center items-start bg-slate-200/90 overflow-y-auto print:bg-transparent print:overflow-visible print:static print:block">
+    <div
+      id="contract-modal-backdrop"
+      className="fixed inset-0 z-[100] flex justify-center items-start bg-slate-200/90 overflow-y-auto print:bg-white print:overflow-visible print:static print:block"
+    >
 
       {/* Print page rules */}
       <style jsx global>{`
@@ -208,14 +220,35 @@ export default function ContractViewModal({ contractId, onClose }) {
           font-family: "Times New Roman", Times, serif !important;
         }
         @media print {
-          @page { size: A4; margin: 12mm 12mm 0mm 12mm; }
+          @page {
+            size: A4;
+            margin: 10mm 14mm 14mm 14mm;
+            @top-left { content: none; }
+            @top-center { content: none; }
+            @top-right { content: none; }
+            @bottom-left { content: none; }
+            @bottom-center { content: none; }
+            @bottom-right { content: none; }
+          }
           html, body {
-            margin: 0 !important; padding: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
             height: auto !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          body * { visibility: hidden; }
+          #contract-modal-backdrop {
+            position: static !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          body * {
+            visibility: hidden;
+          }
           #contract-print-area, #contract-print-area * {
             visibility: visible;
             font-family: "Times New Roman", Times, serif !important;
@@ -223,21 +256,37 @@ export default function ContractViewModal({ contractId, onClose }) {
             print-color-adjust: exact !important;
           }
           #contract-print-area {
-            position: absolute !important; left: 0; top: 0;
-            width: 100% !important; min-height: 0 !important;
-            box-shadow: none !important; border-radius: 0 !important;
-            margin: 0 !important; padding: 0 !important;
+            position: absolute !important;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            min-height: 100% !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
           }
-          /* Table-based repeating footer */
+          /* Table-based repeating header & footer */
           #contract-print-table {
             width: 100%;
             border-collapse: collapse;
+          }
+          #contract-print-table thead {
+            display: table-header-group;
+          }
+          #contract-print-table thead td {
+            padding: 0;
+            border: none;
           }
           #contract-print-table tfoot {
             display: table-footer-group;
           }
           #contract-print-table tfoot td {
             padding: 0;
+            border: none;
           }
           .print-avoid-break { break-inside: avoid !important; page-break-inside: avoid !important; }
           .print-page-break-before { break-before: page !important; page-break-before: always !important; }
@@ -282,7 +331,7 @@ export default function ContractViewModal({ contractId, onClose }) {
           <Pencil className="h-4.5 w-4.5" />
         </button> */}
         <button
-          onClick={() => window.print()}
+          onClick={handlePrint}
           className="h-10 w-10 flex items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 text-[#007aff] transition-colors cursor-pointer"
           title="Print / PDF Export"
         >
@@ -304,10 +353,37 @@ export default function ContractViewModal({ contractId, onClose }) {
         className="my-8 bg-white w-full max-w-[1024px] h-fit rounded-2xl shadow-2xl print:my-0 print:shadow-none print:max-w-none print:w-full"
       >
         {/*
-          TABLE TRICK: tfoot repeats on every printed page automatically.
-          thead could repeat at top too, but we only want footer here.
+          TABLE TRICK: thead and tfoot repeat on every printed page automatically.
         */}
         <table id="contract-print-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <td style={{ padding: 0, border: "none" }}>
+                {/* ── REPEATING LETTERHEAD (on every printed page) ───── */}
+                <div className="px-8 md:px-10 pt-8 md:pt-10 print:px-0 print:pt-0 text-slate-900 mb-8">
+                  <div className="flex justify-between items-center print-avoid-break">
+                    <div>
+                      <img src="/agri_logo.png" alt="Agricom Impex" className="h-32 object-contain" />
+                    </div>
+                    <div className="text-right text-[12px] text-gray-900 leading-tight">
+                      <h1 className="text-base font-bold text-gray-900 uppercase mb-0.5 ">Agricom Impex</h1>
+                      <p>202, Amaltas apartment, Rajnagar</p>
+                      <p>Nagpur (MH), India 440013</p>
+                      <p>+91 712 2591130 / 34</p>
+                      <p>info@agricomimpex.com</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center mb-4">
+                    <span className="text-[10px] text-gray-600 uppercase whitespace-nowrap leading-none">
+                      EXPORT & IMPORT OF AGRICULTURAL COMMODITIES
+                    </span>
+
+                    <div className="flex-1 border-b border-gray-300 ml-3" />
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </thead>
           <tfoot>
             <tr>
               <td>
@@ -400,7 +476,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                   )}
 
                   {/* Website footer line */}
-                  <div className="mx-8 md:mx-10 mt-3 mb-4 pt-2 border-t-2 border-[#8dc63f] text-center print:mx-0">
+                  <div className="mx-8 md:mx-10 mt-3 mb-4 pt-2 border-t-2 border-[#8dc63f] text-center print:mx-0 print:mb-1">
                     <p className="text-[11px] text-gray-500 font-medium">www.agricomimpex.com</p>
                   </div>
                 </div>
@@ -411,22 +487,7 @@ export default function ContractViewModal({ contractId, onClose }) {
           <tbody>
             <tr>
               <td>
-                <div className="p-8 md:p-10 print:p-0 text-slate-900">
-
-                  {/* ── LETTERHEAD ───────────────────────────────────────── */}
-                  <div className="flex justify-between items-center print-avoid-break">
-                    <div>
-                      <img src="/agri_logo.png" alt="Agricom Impex" className="h-32 object-contain" />
-                    </div>
-                    <div className="text-right text-[10px] text-gray-900 leading-tight">
-                      <h1 className="text-base font-bold text-gray-900 uppercase mb-0.5 ">Agricom Impex</h1>
-                      <p>202, Amaltas apartment, Rajnagar</p>
-                      <p>Nagpur (MH), India 440013</p>
-                      <p>+91 712 2591130 / 34</p>
-                      <p>info@agricomimpex.com</p>
-                    </div>
-                  </div>
-                  <div className="border-b border-gray-300 mb-4" />
+                <div className="px-8 md:px-10 pb-8 md:pb-10 print:px-0 print:pb-0 print:pt-0 text-slate-900">
 
                   {/* ── TITLE & META ─────────────────────────────────────── */}
                   <div className="flex justify-between items-start mb-6 print-avoid-break">
@@ -436,40 +497,26 @@ export default function ContractViewModal({ contractId, onClose }) {
                         Sales Contract
                       </h2>
                     </div>
-                    <div className="text-right text-[10px] w-1/4">
-                      <table className="ml-auto">
-                        <tbody>
-                          <tr>
-                            <td className="pr-2 text-slate-900 font-semibold uppercase">Reference No :</td>
-                            <td className="font-bold text-slate-900 uppercase text-left">{contract.contractNumber || "—"}</td>
-                          </tr>
-                          <tr>
-                            <td className="pr-2 text-slate-900 font-semibold uppercase">Contract Date :</td>
-                            <td className="font-bold text-slate-900 text-left">{formatDate(contract.contractDate)}</td>
-                          </tr>
-                          <tr>
-                            <td className="pr-2 text-slate-900 font-semibold uppercase">Financial Year :</td>
-                            <td className="font-bold text-slate-900 uppercase text-left">{contract.financialYear || "—"}</td>
-                          </tr>
-                          <tr>
-                            <td className="pr-2 text-slate-900 font-semibold uppercase">Created On :</td>
-                            <td className="font-bold text-slate-900 text-left">{formatDate(contract.createdAt)}</td>
-                          </tr>
-                          {contract.status && (
-                            <tr>
-                              <td className="pr-2 text-slate-900 font-semibold uppercase">Status :</td>
-                              <td className="font-bold text-slate-900 uppercase text-left">{contract.status}</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                    <div className="w-1/4" />
                   </div>
 
                   {/* ── BODY ─────────────────────────────────────────────── */}
                   <div className="font-serif text-[13px] leading-snug text-black mt-8">
+                    {/* Reference No + Contract Date */}
+                    <table className="mb-3 text-[13px]">
+                      <tbody>
+                        <tr>
+                          <td className="pr-8 pb-2 font-bold uppercase text-slate-900 whitespace-nowrap">Reference No :</td>
+                          <td className="font-bold pb-2 text-slate-900 uppercase">{contract.contractNumber || "—"}</td>
+                        </tr>
+                        <tr>
+                          <td className="pr-8 font-bold uppercase text-slate-900 whitespace-nowrap">Contract Date :</td>
+                          <td className="font-bold text-slate-900">{formatDate(contract.contractDate)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
 
-                    <p className="font-bold uppercase mb-6">
+                    <p className="font-bold uppercase mb-4">
                       We Herewith Confirm The Following Transaction Between Following:
                     </p>
 

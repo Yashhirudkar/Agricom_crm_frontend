@@ -3,6 +3,16 @@ import React, { useEffect } from "react";
 import { Ship, ChevronDown } from "lucide-react";
 import { getShipmentReferencePreview } from "../utils/shipmentReference";
 
+// Returns the unit label based on transport mode
+function getTransportUnitLabel(mode) {
+  if (!mode) return "Containers";
+  const m = mode.toLowerCase();
+  if (m.includes("road")) return "Trucks";
+  if (m.includes("rail") || m.includes("wagon")) return "Wagons";
+  if (m.includes("air")) return "Flights";
+  return "Containers"; // sea or default
+}
+
 // currencyCode is intentionally omitted — it is always derived from form.currencyCode (Contract Currency)
 const emptyShipment = (no) => ({
   shipmentNo: no,
@@ -19,6 +29,7 @@ const emptyShipment = (no) => ({
 export default function ShipmentTable({ form, setForm, errors, masters, isView }) {
   const shipments = form.shipments || [];
   const numShipments = form.numShipments || 3;
+  const transportUnitLabel = getTransportUnitLabel(form.originTransportMode || form.destinationTransportMode);
 
   // Regenerate rows when count changes — new rows always inherit the Contract Currency
   useEffect(() => {
@@ -67,7 +78,7 @@ export default function ShipmentTable({ form, setForm, errors, masters, isView }
           </div>
           <div>
             <h2 className="text-sm font-bold text-gray-900">Shipment Schedule</h2>
-            <p className="text-[10px] text-gray-400">Delivery schedule and container details</p>
+            <p className="text-[10px] text-gray-400">Delivery schedule and {transportUnitLabel.toLowerCase()} details</p>
           </div>
         </div>
         {!isView && (
@@ -96,7 +107,7 @@ export default function ShipmentTable({ form, setForm, errors, masters, isView }
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                {["Ship #", "Shipment Ref", "Date", "Containers", "Rate/MT", "Currency", "Purchase Rate", "Forex", "Freight", "Qty (MT)", "Remarks"].map(h => (
+                {["Ship #", "Shipment Ref", "Date", transportUnitLabel, "Rate/MT", "Currency", "Purchase Rate", "Forex", "Freight", "Qty (MT)", "Remarks"].map(h => (
                   <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-500 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -121,7 +132,7 @@ export default function ShipmentTable({ form, setForm, errors, masters, isView }
                       <input type="date" value={s.shipmentDate || ""} onChange={e => updateShipment(idx, "shipmentDate", e.target.value)} disabled={isView} className={inpCls} />
                     </td>
                     <td className="px-3 py-2 min-w-[80px]">
-                      <input type="number" min="0" value={s.noOfContainers || ""} onChange={e => updateShipment(idx, "noOfContainers", e.target.value)} disabled={isView} className={inpCls} placeholder="0" />
+                      <input type="number" min="0" value={s.noOfContainers || ""} onChange={e => updateShipment(idx, "noOfContainers", e.target.value)} disabled={isView} className={inpCls} placeholder={transportUnitLabel === "Containers" ? "0" : `No. of ${transportUnitLabel}`} title={transportUnitLabel} />
                     </td>
                     <td className="px-3 py-2 min-w-[90px]">
                       <input type="number" min="0" step="0.01" value={s.ratePerMt || ""} onChange={e => updateShipment(idx, "ratePerMt", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />

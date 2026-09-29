@@ -325,7 +325,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
             
             <div className="mb-4">
               <label className={lbl}>
-                Transport Mode <span className="text-red-500">*</span>
+                Transport Mode
               </label>
               <div className="relative">
                 <select
@@ -349,7 +349,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
               {/* Origin Country */}
               <div>
                 <label className={lbl}>
-                  Country <span className="text-red-500">*</span>
+                  Country
                 </label>
                 {isView ? (
                   <div className={`${inp} text-gray-700 bg-gray-50/50`}>
@@ -367,7 +367,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
               {/* Origin Location */}
               <div>
                 <label className={lbl}>
-                  {originConfig.originLabel} <span className="text-red-500">*</span>
+                  {originConfig.originLabel}
                 </label>
                 {isView ? (
                   <div className={`${inp} text-gray-700`}>
@@ -408,7 +408,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
             
             <div className="mb-4">
               <label className={lbl}>
-                Transport Mode <span className="text-red-500">*</span>
+                Transport Mode
               </label>
               <div className="relative">
                 <select
@@ -432,7 +432,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
               {/* Destination Country */}
               <div>
                 <label className={lbl}>
-                  Country <span className="text-red-500">*</span>
+                  Country
                 </label>
                 {isView ? (
                   <div className={`${inp} text-gray-700 bg-gray-50/50`}>
@@ -452,7 +452,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
               {/* Destination Location */}
               <div>
                 <label className={lbl}>
-                  {destConfig.destLabel} <span className="text-red-500">*</span>
+                  {destConfig.destLabel}
                 </label>
                 {isView ? (
                   <div className={`${inp} text-gray-700`}>
@@ -492,7 +492,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
           {/* Shipment Type */}
           <div>
             <label className={lbl}>
-              Shipment Type <span className="text-red-500">*</span>
+              Shipment Type
             </label>
             <div className="relative">
               <select
@@ -522,7 +522,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
           {/* Payment Terms */}
           <div>
             <label className={lbl}>
-              Payment Terms <span className="text-red-500">*</span>
+              Payment Terms
             </label>
             <div className="relative">
               <select
@@ -552,7 +552,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
           {/* Currency */}
           <div>
             <label className={lbl}>
-              Currency <span className="text-red-500">*</span>
+              Currency
             </label>
             <div className="relative">
               <select

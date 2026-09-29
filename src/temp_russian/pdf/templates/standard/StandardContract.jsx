@@ -50,39 +50,26 @@ export default function StandardContract({ contract, renderValue, isCustomizing 
             Sales Contract
           </h2>
         </div>
-        <div className="text-right text-[10px] w-1/4">
-          <table className="ml-auto">
-            <tbody>
-              <tr>
-                <td className="pr-2 text-slate-900 font-semibold uppercase">Reference No :</td>
-                <td className="font-bold text-slate-900 uppercase text-left">{contract.contractNumber || "—"}</td>
-              </tr>
-              <tr>
-                <td className="pr-2 text-slate-900 font-semibold uppercase">Contract Date :</td>
-                <td className="font-bold text-slate-900 text-left">{formatDate(contract.contractDate)}</td>
-              </tr>
-              <tr>
-                <td className="pr-2 text-slate-900 font-semibold uppercase">Financial Year :</td>
-                <td className="font-bold text-slate-900 uppercase text-left">{contract.financialYear || "—"}</td>
-              </tr>
-              <tr>
-                <td className="pr-2 text-slate-900 font-semibold uppercase">Created On :</td>
-                <td className="font-bold text-slate-900 text-left">{formatDate(contract.createdAt)}</td>
-              </tr>
-              {contract.status && (
-                <tr>
-                  <td className="pr-2 text-slate-900 font-semibold uppercase">Status :</td>
-                  <td className="font-bold text-slate-900 uppercase text-left">{contract.status}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <div className="w-1/4" />
       </div>
 
       {/* ── BODY ─────────────────────────────────────────────── */}
       <div className="font-serif text-[13px] leading-snug text-black mt-8">
-        <p className="font-bold uppercase mb-6">
+        {/* Reference No + Contract Date */}
+        <table className="mb-3 text-[13px]">
+          <tbody>
+            <tr>
+              <td className="pr-8 pb-2 font-bold uppercase text-slate-900 whitespace-nowrap">Reference No :</td>
+              <td className="font-bold pb-2 text-slate-900 uppercase">{contract.contractNumber || "—"}</td>
+            </tr>
+            <tr>
+              <td className="pr-8 font-bold uppercase text-slate-900 whitespace-nowrap">Contract Date :</td>
+              <td className="font-bold text-slate-900">{formatDate(contract.contractDate)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p className="font-bold uppercase mb-4">
           We Herewith Confirm The Following Transaction Between Following:
         </p>
 
@@ -271,6 +258,7 @@ export default function StandardContract({ contract, renderValue, isCustomizing 
           <SignatureBlock contract={contract} variant="standard" />
           <div className="mt-6 pt-2 border-t-2 border-[#8dc63f] text-center">
             <p className="text-[11px] text-gray-500 font-medium">www.agricomimpex.com</p>
+            <p className="text-[10px] text-gray-500 mt-1">Page 1 of 1</p>
           </div>
         </div>
       </div>

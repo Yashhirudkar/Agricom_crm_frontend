@@ -67,32 +67,7 @@ function validate(form) {
   if (!form.contractNumber?.trim()) e.contractNumber = "Contract No. is required";
   if (!form.contractDate) e.contractDate = "Contract Date is required";
   if (!form.buyerId) e.buyerId = "Buyer is required";
-  if (!form.currencyCode) e.currencyCode = "Currency is required";
-  if (!form.shipmentTypeId) e.shipmentTypeId = "Shipment Type is required";
-  if (!form.paymentTermId) e.paymentTermId = "Payment Terms are required";
-  if (!form.originCountry?.trim()) e.originCountry = "Origin country is required";
-  if (!form.destinationCountry?.trim()) e.destinationCountry = "Destination country is required";
-
-  // Transport-mode-aware location validation
-  const modeLabels = {
-    sea: { origin: "Port of Loading", dest: "Port of Discharge" },
-    air: { origin: "Origin Airport", dest: "Destination Airport" },
-    road: { origin: "Pickup City", dest: "Delivery City" },
-    rail: { origin: "Origin Railway Station", dest: "Destination Railway Station" },
-  };
-
-  const originMode = form.originTransportMode || "sea";
-  const destMode = form.destinationTransportMode || "sea";
-
-  const originLabel = modeLabels[originMode]?.origin || modeLabels.sea.origin;
-  const destLabel = modeLabels[destMode]?.dest || modeLabels.sea.dest;
-
-  if (!form.originLocationName?.trim()) {
-    e.originLocationName = `${originLabel} is required`;
-  }
-  if (!form.destinationLocationName?.trim()) {
-    e.destinationLocationName = `${destLabel} is required`;
-  }
+  // Commercial Details fields are optional (not required)
 
   if (!form.items || form.items.length === 0) {
     e.items = "At least one product item is required";
