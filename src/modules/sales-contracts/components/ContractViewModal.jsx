@@ -363,7 +363,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                 <div className="px-8 md:px-10 pt-8 md:pt-10 print:px-0 print:pt-0 text-slate-900 mb-8">
                   <div className="flex justify-between items-center print-avoid-break">
                     <div>
-                      <img src="/agri_logo.png" alt="Agricom Impex" className="h-32 object-contain" />
+                      <img src="/agricom impex.png" alt="Agricom Impex" className="h-20 object-contain" />
                     </div>
                     <div className="text-right text-[12px] text-gray-900 leading-tight">
                       <h1 className="text-base font-bold text-gray-900 uppercase mb-0.5 ">Agricom Impex</h1>
