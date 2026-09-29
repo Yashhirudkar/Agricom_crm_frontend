@@ -49,6 +49,9 @@ const defaultFormState = {
   state: "",
   country: "",
   pincode: "",
+  whatsappEnabled: false,
+  whatsappGroupName: "",
+  whatsappGroupId: "",
 };
 
 function CompaniesContent() {
@@ -201,6 +204,11 @@ function CompaniesContent() {
       state: company.state || "",
       country: company.country || "",
       pincode: company.pincode || "",
+      whatsappEnabled: company.whatsappEnabled || false,
+      whatsappGroupName: company.whatsappGroupName || "",
+      whatsappGroupId: company.whatsappGroupId || "",
+      whatsappConnectedAt: company.whatsappConnectedAt || null,
+      id: company.id,
     });
     setIsEditMode(true);
     setEditCompanyId(company.id);
@@ -240,6 +248,9 @@ function CompaniesContent() {
       if (payload.companyCode) {
         payload.companyCode = payload.companyCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
       }
+
+      // Remove UI-only fields that shouldn't be sent to backend
+      delete payload.whatsappConnectedAt;
 
       if (isEditMode) {
         // Backend UpdateCompanyDto doesn't accept clientId

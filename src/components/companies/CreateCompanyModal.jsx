@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import Modal from "@/components/modals/Modal";
-import { UploadCloud, X, Image as ImageIcon, ChevronRight, ChevronLeft } from "lucide-react";
+import { UploadCloud, X, Image as ImageIcon, ChevronRight, ChevronLeft, AlertCircle, MessageCircle, Clock, Link as LinkIcon } from "lucide-react";
 import axiosClient, { getAvatarUrl } from "@/lib/axios";
 import CreatableSelect from "react-select/creatable";
 
-const TABS = [
+const BASE_TABS = [
   { id: "general", label: "General" },
   { id: "business", label: "Business" },
   { id: "branding", label: "Branding" },
@@ -29,13 +29,31 @@ export default function CreateCompanyModal({
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingFavicon, setIsUploadingFavicon] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
+  const [waStatus, setWaStatus] = useState(null);
+
+  const TABS = React.useMemo(() => {
+    if (userType === "super_admin") {
+      return [...BASE_TABS, { id: "whatsapp", label: "WhatsApp" }];
+    }
+    return BASE_TABS;
+  }, [userType]);
 
   useEffect(() => {
     if (isOpen) {
       setActiveTab("general");
       setErrors({});
+      setWaStatus(null);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (activeTab === "whatsapp" && isEditMode && form.id) {
+      axiosClient.get('/whatsapp/status')
+        .then(res => setWaStatus(res.data?.data || res.data))
+        .catch(() => {});
+    }
+  }, [activeTab, isEditMode, form.id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -107,6 +125,19 @@ export default function CreateCompanyModal({
     e.preventDefault();
     if (!validateCurrentTab()) return;
     handleSubmit(e);
+  };
+
+  const handleTestMessage = async () => {
+    if (!form.id) return;
+    setIsTestingWhatsapp(true);
+    try {
+      const res = await axiosClient.post(`/UpdateCompany/${form.id}/test-whatsapp`);
+      alert(res.data?.message || "Test message sent");
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Failed to send test message");
+    } finally {
+      setIsTestingWhatsapp(false);
+    }
   };
 
   return (
@@ -510,6 +541,111 @@ export default function CreateCompanyModal({
                 </div>
               </div>
             )}
+            {/* WHATSAPP TAB */}
+            {activeTab === "whatsapp" && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4 flex gap-3">
+                  <AlertCircle className="h-5 w-5 text-[#007aff] shrink-0 mt-0.5" />
+                  <div className="text-xs text-blue-900">
+                    <p className="font-bold mb-1">Super Admin Configuration</p>
+                    <p className="opacity-80">Configure WhatsApp notifications for this enterprise workspace. Enquiries and other events will be dispatched here.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl bg-gray-50/50 mb-5">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="whatsappEnabled"
+                      className="sr-only peer"
+                      checked={form.whatsappEnabled || false}
+                      onChange={(e) => setForm(prev => ({ ...prev, whatsappEnabled: e.target.checked }))}
+                    />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#007aff]"></div>
+                  </label>
+                  <div>
+                    <span className="text-xs font-bold text-gray-700">Enable WhatsApp Notifications</span>
+                    <p className="text-[10px] text-gray-500">Master toggle for all outbound WhatsApp messages</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Group Name</label>
+                    <input
+                      type="text"
+                      name="whatsappGroupName"
+                      value={form.whatsappGroupName || ""}
+                      onChange={handleChange}
+                      disabled={!form.whatsappEnabled}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-gray-50/50 hover:bg-white transition-colors disabled:opacity-50"
+                      placeholder="e.g. Sales Team Group"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">Bot will auto-resolve the ID from this name.</p>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Group ID (Optional)</label>
+                    <input
+                      type="text"
+                      name="whatsappGroupId"
+                      value={form.whatsappGroupId || ""}
+                      onChange={handleChange}
+                      disabled={!form.whatsappEnabled}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-gray-50/50 hover:bg-white transition-colors disabled:opacity-50"
+                      placeholder="e.g. 1234567890@g.us"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">Overrides Group Name if provided explicitly.</p>
+                  </div>
+                </div>
+
+                {isEditMode && form.id && (
+                  <div className="mt-6 border-t border-gray-100 pt-5">
+                    <h4 className="text-xs font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <LinkIcon className="h-4 w-4 text-gray-400" /> Connection Status
+                    </h4>
+                    
+                    <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${form.whatsappGroupId ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                          {form.whatsappGroupId ? <MessageCircle className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-800">
+                            {form.whatsappGroupId ? 'Connected & Resolved' : 'Pending Resolution'}
+                          </p>
+                          <p className="text-[10px] text-gray-500 mt-0.5">
+                            {form.whatsappConnectedAt ? (
+                              <>Last connected: {new Date(form.whatsappConnectedAt).toLocaleString()}</>
+                            ) : (
+                              'Waiting for the first message to resolve group ID.'
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-1">
+                        <button
+                          type="button"
+                          onClick={handleTestMessage}
+                          disabled={!form.whatsappEnabled || isTestingWhatsapp || (waStatus && !waStatus.connected)}
+                          className="px-4 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 shadow-sm whitespace-nowrap"
+                        >
+                          {isTestingWhatsapp ? (
+                            <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <MessageCircle className="h-4 w-4" />
+                          )}
+                          Send Test Message
+                        </button>
+                        {waStatus && !waStatus.connected && (
+                          <p className="text-[10px] text-red-500 font-bold">❌ Disabled: WhatsApp not connected</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {error && (
@@ -540,7 +676,7 @@ export default function CreateCompanyModal({
               >
                 Cancel
               </button>
-              {activeTab !== "address" ? (
+              {activeTab !== TABS[TABS.length - 1].id ? (
                 <button
                   type="button"
                   onClick={nextTab}

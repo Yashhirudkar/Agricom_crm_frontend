@@ -21,6 +21,7 @@ import {
   User as UserIcon,
   Globe
 } from "lucide-react";
+import WhatsAppConnectionCard from "@/components/common/WhatsAppConnectionCard";
 
 export default function Home() {
   const dispatch = useDispatch();
@@ -230,6 +231,13 @@ export default function Home() {
                 You are executing in a Global Platform Administrator scope. Changes made here will modify multi-tenant clients database states.
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Third Row: System Status & Integrations */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-1">
+            <WhatsAppConnectionCard />
           </div>
         </div>
       </div>
