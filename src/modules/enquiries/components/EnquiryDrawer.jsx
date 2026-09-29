@@ -112,9 +112,9 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           purity: editData.purity || "",
           packingTypeId: editData.packingTypeId || "",
           shipmentType: editData.shipmentType || "",
-          quantity: editData.quantity || "",
+          quantity: editData.quantity != null && editData.quantity !== "" ? parseFloat(editData.quantity) : "",
           shipmentDate: editData.shipmentDate ? editData.shipmentDate.split("T")[0] : "",
-          buyingInterest: editData.buyingInterest || "",
+          buyingInterest: editData.buyingInterest != null && editData.buyingInterest !== "" ? parseFloat(editData.buyingInterest) : "",
           bidCurrency: editData.bidCurrency || "",
           potentialEnquiry: editData.potentialEnquiry || false,
         };
@@ -150,9 +150,9 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                 purity: fresh.purity || "",
                 packingTypeId: fresh.packingTypeId || "",
                 shipmentType: fresh.shipmentType || "",
-                quantity: fresh.quantity || "",
+                quantity: fresh.quantity != null && fresh.quantity !== "" ? parseFloat(fresh.quantity) : "",
                 shipmentDate: fresh.shipmentDate ? fresh.shipmentDate.split("T")[0] : "",
-                buyingInterest: fresh.buyingInterest || "",
+                buyingInterest: fresh.buyingInterest != null && fresh.buyingInterest !== "" ? parseFloat(fresh.buyingInterest) : "",
                 bidCurrency: fresh.bidCurrency || "",
                 potentialEnquiry: fresh.potentialEnquiry || false,
               };
@@ -926,11 +926,11 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                     <input
                       type="number"
                       min="0"
-                      step="0.01"
+                      step="1"
                       value={form.quantity || ""}
-                      onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value ? Number(e.target.value) : "" }))}
+                      onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value ? parseFloat(e.target.value) : "" }))}
                       disabled={isViewMode}
-                      placeholder="0.00"
+                      placeholder="0"
                       className={inp}
                     />
                   </div>
@@ -974,6 +974,22 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                       />
                     )}
                     {errors.bidCurrency && <p className={err}>{errors.bidCurrency}</p>}
+                  </div>
+
+                  {/* Destination */}
+                  <div>
+                    <label className={lbl}>Destination</label>
+                    {isViewMode ? (
+                      <div className={inp}>{form.destinationCountry || "—"}</div>
+                    ) : (
+                      <input
+                        type="text"
+                        className={inp}
+                        placeholder="e.g. Rotterdam, Netherlands"
+                        value={form.destinationCountry}
+                        onChange={(e) => setForm((f) => ({ ...f, destinationCountry: e.target.value }))}
+                      />
+                    )}
                   </div>
 
                   {/* Mark as High Potential */}
