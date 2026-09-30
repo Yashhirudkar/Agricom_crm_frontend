@@ -57,6 +57,13 @@ const entitiesReducer = combineReducers({
   tradeDocuments: tradeDocumentReducer,
 });
 
+const rootEntitiesReducer = (state, action) => {
+  if (action.type === 'companyContext/switch/fulfilled') {
+    state = undefined;
+  }
+  return entitiesReducer(state, action);
+};
+
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -66,7 +73,7 @@ export const store = configureStore({
     users: usersReducer,
     clients: clientsReducer,
     notifications: notificationsReducer,
-    entities: entitiesReducer,
+    entities: rootEntitiesReducer,
     chat: chatReducer,
   },
   devTools: false,

@@ -5,6 +5,7 @@ import { Bell, Check, LogOut, ChevronDown, Building2, Search, Menu, CheckSquare,
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { logoutUser, selectUser, fetchCurrentUser } from "@/store/slices/authSlice";
 import axiosClient from "@/lib/axios";
 import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
@@ -71,6 +72,7 @@ export function Header() {
 
   const dispatch = useDispatch();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const user = useSelector(selectUser);
 
   const notifications = useSelector(selectNotifications);
@@ -89,6 +91,7 @@ export function Header() {
   const handleSwitchWorkspace = async (companyId) => {
     try {
       await dispatch(switchCompanyContext(companyId)).unwrap();
+      queryClient.removeQueries();
       setIsSwitcherOpen(false);
     } catch (err) {
       console.error("Failed to switch workspace:", err);
