@@ -412,7 +412,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                               <img
                                 src={contract.sellerSignature}
                                 alt="Seller Signature"
-                                className="absolute inset-0 m-auto max-h-15 max-w-[140px] object-contain z-10 pointer-events-none"
+                                className="absolute inset-0 m-auto max-h-65 max-w-[140px] object-contain z-10 pointer-events-none"
                                 style={{ mixBlendMode: "multiply" }}
                               />
                             )}
@@ -715,7 +715,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                                 <img
                                   src={contract.sellerSignature}
                                   alt="Seller Signature"
-                                  className="absolute inset-0 m-auto max-h-15 max-w-[140px] object-contain z-10 pointer-events-none"
+                                  className="absolute inset-0 m-auto max-h-65 max-w-[140px] object-contain z-10 pointer-events-none"
                                   style={{ mixBlendMode: "multiply" }}
                                 />
                               )}
