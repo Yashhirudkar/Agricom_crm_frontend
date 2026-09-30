@@ -7,6 +7,26 @@ import RichTextEditor from "@/components/editor/RichTextEditor";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
+const COMPANY_CONFIG = {
+  "AGRICOM IMPEX": {
+    name: "AGRICOM IMPEX",
+    logo: "/agricom impex.png",
+    logoClass: "h-20 object-contain",
+    address: "202, Amaltas Apartment, Rajnagar",
+    city: "Nagpur (MH), India 440013",
+    phone: "+91 712 2591130 / 34",
+    email: "info@agricomimpex.com",
+  },
+  "AGRICOM IMPEX PRIVATE LIMITED": {
+    name: "AGRICOM IMPEX PVT LTD",
+    logo: "/agri_logo.png",
+    logoClass: "h-20 object-contain scale-[1.7] origin-left",
+    address: "202, Amaltas Apartment, Rajnagar",
+    city: "Nagpur (MH), India 440013",
+    phone: "+91 712 2591130 / 34",
+    email: "info@agricomimpex.com",
+  },
+};
 const formatDate = (dateString) => {
   if (!dateString) return "—";
   return new Date(dateString)
@@ -198,6 +218,17 @@ export default function ContractViewModal({ contractId, onClose }) {
       ? contract.documents.map((d) => d.tradeDocument?.name).filter(Boolean).join(", ")
       : "";
 
+  const sellerNameForHeader = (contract?.sellerCompanyName || contract?.seller?.entityName || "").toUpperCase();
+
+  let selectedCompanyKey = "AGRICOM IMPEX";
+  if (sellerNameForHeader.includes("PRIVATE LIMITED") || sellerNameForHeader.includes("PVT LTD") || sellerNameForHeader.includes("PVT. LTD.")) {
+    selectedCompanyKey = "AGRICOM IMPEX PRIVATE LIMITED";
+  } else if (sellerNameForHeader.includes("AGRICOM IMPEX")) {
+    selectedCompanyKey = "AGRICOM IMPEX";
+  }
+
+  const selectedCompany = COMPANY_CONFIG[selectedCompanyKey] ?? COMPANY_CONFIG["AGRICOM IMPEX"];
+
   const handlePrint = () => {
     const originalTitle = document.title;
     document.title = contract?.contractNumber ? `Contract_${contract.contractNumber}` : "Sales_Contract";
@@ -363,14 +394,14 @@ export default function ContractViewModal({ contractId, onClose }) {
                 <div className="px-8 md:px-10 pt-8 md:pt-10 print:px-0 print:pt-0 text-slate-900 mb-8">
                   <div className="flex justify-between items-center print-avoid-break">
                     <div>
-                      <img src="/agricom impex.png" alt="Agricom Impex" className="h-20 object-contain" />
+                      <img src={selectedCompany.logo} alt={selectedCompany.name} className={selectedCompany.logoClass} />
                     </div>
                     <div className="text-right text-[12px] text-gray-900 leading-tight">
-                      <h1 className="text-base font-bold text-gray-900 uppercase mb-0.5 ">Agricom Impex</h1>
-                      <p>202, Amaltas apartment, Rajnagar</p>
-                      <p>Nagpur (MH), India 440013</p>
-                      <p>+91 712 2591130 / 34</p>
-                      <p>info@agricomimpex.com</p>
+                      <h1 className="text-base font-bold text-gray-900 uppercase mb-0.5 ">{selectedCompany.name}</h1>
+                      <p>{selectedCompany.address}</p>
+                      <p>{selectedCompany.city}</p>
+                      <p>{selectedCompany.phone}</p>
+                      <p>{selectedCompany.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center mb-4">
