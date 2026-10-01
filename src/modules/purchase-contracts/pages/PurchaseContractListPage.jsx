@@ -9,6 +9,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  Truck,
+  Pencil,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -165,22 +167,26 @@ export default function PurchaseContractListPage() {
                   <th className="px-3.5 py-2.5">Contract Number</th>
                   <th className="px-3.5 py-2.5">Status</th>
                   <th className="px-3.5 py-2.5">Buyer</th>
-                  <th className="px-3.5 py-2.5 text-right">Shipments</th>
-                  <th className="px-3.5 py-2.5">Created Date</th>
+                  <th className="px-3.5 py-2.5">Product</th>
+                  <th className="px-3.5 py-2.5">Packing</th>
+                  <th className="px-3.5 py-2.5 text-right">Total Purchase Value</th>
+                  <th className="px-3.5 py-2.5 text-right">Total Containers</th>
                   <th className="px-3.5 py-2.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {contracts.map((pc) => {
                   const pcNo = pc.contractNumber || `PC-${pc.salesContract?.contractNumber || pc.id}`;
-                  const buyerName = pc.salesContract?.buyer?.entityName || "—";
-                  const dateStr = pc.createdAt
-                    ? new Date(pc.createdAt).toLocaleDateString("en-GB", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })
-                    : "—";
+                  const buyerName = pc.salesContract?.buyer?.entityName || pc.buyer?.entityName || "—";
+                  const productNames = (pc.productNames && pc.productNames.length > 0)
+                    ? pc.productNames.join(", ")
+                    : (pc.salesContract?.items?.map((i) => i.product?.name).filter(Boolean).join(", ") || "—");
+                  const packings = (pc.packings && pc.packings.length > 0)
+                    ? pc.packings.join(", ")
+                    : (pc.packing || "—");
+                  const totalValue = pc.totalPurchaseValue ?? 0;
+                  const totalContainers = pc.totalContainers ?? 0;
+                  const currency = pc.salesContract?.currencyCode || "USD";
 
                   return (
                     <tr
@@ -202,26 +208,53 @@ export default function PurchaseContractListPage() {
                         </span>
                       </td>
 
-                      <td className="px-3.5 py-2.5 font-semibold text-gray-800">
+                      <td className="px-3.5 py-2.5 font-semibold text-gray-800 max-w-[140px] truncate">
                         {buyerName}
                       </td>
 
-                      <td className="px-3.5 py-2.5 text-right font-mono font-bold text-gray-800">
-                        {pc.shipmentCount ?? 0}
+                      <td className="px-3.5 py-2.5 text-gray-700 max-w-[120px] truncate" title={productNames}>
+                        {productNames}
                       </td>
 
-                      <td className="px-3.5 py-2.5 text-gray-500 whitespace-nowrap">
-                        {dateStr}
+                      <td className="px-3.5 py-2.5 text-gray-600 max-w-[100px] truncate" title={packings}>
+                        {packings}
+                      </td>
+
+                      <td className="px-3.5 py-2.5 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
+                        {totalValue > 0
+                          ? `${currency} ${Number(totalValue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : <span className="text-gray-400 font-normal">—</span>}
+                      </td>
+
+                      <td className="px-3.5 py-2.5 text-right font-mono font-bold text-gray-800">
+                        {totalContainers > 0 ? totalContainers : <span className="text-gray-400 font-normal">—</span>}
                       </td>
 
                       <td className="px-3.5 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => router.push(`/sales/purchase-contracts/${pc.id}`)}
-                          className="px-2.5 py-1 text-[11px] font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors inline-flex items-center gap-1 border border-purple-200/50"
-                        >
-                          <Eye className="h-3 w-3" />
-                          <span>Open</span>
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => router.push(`/sales/cargo-availability?purchaseContractId=${pc.id}`)}
+                            className="px-2 py-1 text-[10px] font-bold text-cyan-700 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-colors inline-flex items-center gap-1 border border-cyan-200/60"
+                            title="Open Cargo Availability"
+                          >
+                            <Truck className="h-3 w-3" />
+                            <span>Cargo</span>
+                          </button>
+                          <button
+                            onClick={() => router.push(`/sales/purchase-contracts/${pc.id}?mode=view`)}
+                            className="p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors inline-flex items-center border border-purple-200/50"
+                            title="View"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => router.push(`/sales/purchase-contracts/${pc.id}`)}
+                            className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors inline-flex items-center border border-gray-200/50"
+                            title="Edit"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -229,7 +262,7 @@ export default function PurchaseContractListPage() {
 
                 {contracts.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-gray-400">
+                    <td colSpan={8} className="text-center py-8 text-gray-400">
                       <FileText className="h-6 w-6 mx-auto mb-1 text-gray-300 stroke-[1.2]" />
                       <p className="text-xs font-semibold text-gray-600">No purchase contracts found</p>
                     </td>

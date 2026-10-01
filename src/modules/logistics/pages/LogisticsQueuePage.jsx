@@ -1,13 +1,15 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Truck, Search } from "lucide-react";
 import { toast } from "sonner";
 import { logisticsApi } from "../services/logisticsApi";
 import LogisticsQueueTable from "../components/LogisticsQueueTable";
 import TransportDrawer from "../components/TransportDrawer";
+import { useRouter } from "next/navigation";
 import Pagination from "@/components/common/Pagination";
 import { selectActiveCompany } from "@/store/slices/companyContextSlice";
+import { selectPendingTransportEnquiryId, selectLatestTransportUpdate, setPendingTransportEnquiryId, setLatestTransportUpdate } from "@/store/slices/notificationsSlice";
 
 export default function LogisticsQueuePage() {
   const company = useSelector(selectActiveCompany);
@@ -24,6 +26,14 @@ export default function LogisticsQueuePage() {
   const [loading, setLoading] = useState(false);
 
   const [refreshKey, setRefreshKey] = useState(0);
+  
+  const router = useRouter();
+  const dispatch = useDispatch();
+  
+  const pendingTransportEnquiryId = useSelector(selectPendingTransportEnquiryId);
+  const latestTransportUpdate = useSelector(selectLatestTransportUpdate);
+  
+  const [highlightedRowId, setHighlightedRowId] = useState(null);
 
   // Selected Enquiry for Transport Drawer
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
@@ -81,9 +91,41 @@ export default function LogisticsQueuePage() {
     return () => { cancelled = true; };
   }, [page, debouncedSearch, mode, statusFilter, refreshKey]);
 
+  // Handle Redux pending navigation state
+  useEffect(() => {
+    if (pendingTransportEnquiryId && data.length > 0 && !drawerOpen) {
+      const target = data.find(item => item.id === pendingTransportEnquiryId || item.id === Number(pendingTransportEnquiryId));
+      if (target) {
+        setSelectedEnquiry(target);
+        setDrawerOpen(true);
+        // Clear it so it doesn't reopen unexpectedly
+        dispatch(setPendingTransportEnquiryId(null));
+      }
+    }
+  }, [pendingTransportEnquiryId, data, drawerOpen, dispatch]);
+
+  // Handle real-time transport updates from Redux
+  useEffect(() => {
+    if (latestTransportUpdate) {
+      const payload = latestTransportUpdate;
+      setRefreshKey(k => k + 1);
+      
+      if (payload.enquiryId) {
+        setHighlightedRowId(payload.enquiryId);
+        setTimeout(() => {
+          setHighlightedRowId(null);
+        }, 5000);
+      }
+      
+      // Clear the update so it doesn't re-trigger continuously
+      dispatch(setLatestTransportUpdate(null));
+    }
+  }, [latestTransportUpdate, dispatch]);
+
   const handleOpenDrawer = (enquiry) => {
     setSelectedEnquiry(enquiry);
     setDrawerOpen(true);
+    toast.dismiss("new-transport-toast");
   };
 
   const handleCloseDrawer = () => {
@@ -168,6 +210,7 @@ export default function LogisticsQueuePage() {
           mode={mode}
           loading={loading}
           onManage={handleOpenDrawer}
+          highlightedRowId={highlightedRowId}
         />
 
         <Pagination

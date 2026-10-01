@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { EyeIcon } from "@heroicons/react/24/outline";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUser, fetchCurrentUser } from "@/store/slices/authSlice";
@@ -10,7 +11,7 @@ import CommandPalette from "@/components/CommandPalette";
 import FollowUpHeaderDrawer from "@/modules/follow-ups/components/FollowUpHeaderDrawer";
 import { getSocketInstance } from "@/lib/socket";
 import { handleSocketBatchUpdate, fetchCorrections } from "@/store/entities/attendanceSlice";
-import { fetchNotifications, addSocketNotification } from "@/store/slices/notificationsSlice";
+import { fetchNotifications, addSocketNotification, setPendingTransportEnquiryId, setLatestTransportUpdate } from "@/store/slices/notificationsSlice";
 import { useQueryClient } from "@tanstack/react-query";
 import { fetchCompanies, selectCompanies } from "@/store/slices/companiesSlice";
 import axiosClient from "@/lib/axios";
@@ -53,6 +54,10 @@ export default function AppShellClient({ children }) {
   // without causing the socket effect to re-run on every navigation.
   const routerRef = useRef(router);
   useEffect(() => { routerRef.current = router; }, [router]);
+  
+  const transportQueueRef = useRef([]);
+  const transportTimeoutRef = useRef(null);
+  const processedEnquiriesRef = useRef(new Set());
 
   // 1. Fetch companies list if Super Admin
   useEffect(() => {
@@ -155,6 +160,38 @@ export default function AppShellClient({ children }) {
       }
     }
 
+    const showOSNotification = (title, bodyMessage, targetUrl) => {
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        try {
+          if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.ready.then((registration) => {
+              registration.showNotification(title, {
+                body: bodyMessage,
+                icon: '/agri_logo.png',
+                badge: '/maple-leaf.png',
+                vibrate: [200, 100, 200],
+                data: { url: targetUrl }
+              });
+            }).catch(() => {
+              new Notification(title, { body: bodyMessage, icon: '/agri_logo.png' });
+            });
+          } else {
+            const osNotification = new Notification(title, {
+              body: bodyMessage,
+              icon: '/agri_logo.png',
+            });
+            osNotification.onclick = () => {
+              window.focus();
+              if (targetUrl && targetUrl !== "/") routerRef.current.push(targetUrl);
+              osNotification.close();
+            };
+          }
+        } catch (err) {
+          console.error("[AppShell] Error creating Notification:", err);
+        }
+      }
+    };
+
     // ── Notification handler (named so it can be precisely removed) ──
     const handleSocketNotification = (payload) => {
       console.log("[AppShell] Received socket notification payload:", payload);
@@ -175,35 +212,7 @@ export default function AppShellClient({ children }) {
         queryClient.invalidateQueries({ queryKey: ['attendance'] });
       }
 
-      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-        try {
-          if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.ready.then((registration) => {
-              registration.showNotification(payload.title, {
-                body: bodyMessage,
-                icon: '/agri_logo.png',
-                badge: '/maple-leaf.png',
-                vibrate: [200, 100, 200],
-                data: { url: targetUrl }
-              });
-            }).catch(() => {
-              new Notification(payload.title, { body: bodyMessage, icon: '/agri_logo.png' });
-            });
-          } else {
-            const osNotification = new Notification(payload.title, {
-              body: bodyMessage,
-              icon: '/agri_logo.png',
-            });
-            osNotification.onclick = () => {
-              window.focus();
-              if (targetUrl && targetUrl !== "/") routerRef.current.push(targetUrl);
-              osNotification.close();
-            };
-          }
-        } catch (err) {
-          console.error("[AppShell] Error creating Notification:", err);
-        }
-      }
+      showOSNotification(payload.title, bodyMessage, targetUrl);
     };
 
     // ── Attendance handlers (named for precise removal) ──
@@ -228,12 +237,95 @@ export default function AppShellClient({ children }) {
       dispatch(fetchCorrections());
     };
 
+    // ── Transport Notifications (Aggregated) ──
+    const handleTransportNewEnquiry = (payload) => {
+      if (!payload || !payload.enquiryId) return;
+      
+      // Cleanup stale localStorage entries to prevent leaks
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('transport_enquiry_')) {
+            const time = localStorage.getItem(key);
+            if (time && Date.now() - parseInt(time, 10) > 10000) {
+              localStorage.removeItem(key);
+            }
+          }
+        }
+      } catch (e) {}
+
+      // Multi-tab deduplication: prevent same event firing across tabs within 5 seconds
+      const lsKey = `transport_enquiry_${payload.enquiryId}`;
+      const handledTime = localStorage.getItem(lsKey);
+      if (handledTime && Date.now() - parseInt(handledTime, 10) < 5000) return;
+      localStorage.setItem(lsKey, Date.now().toString());
+
+      if (processedEnquiriesRef.current.has(payload.enquiryId)) return;
+      processedEnquiriesRef.current.add(payload.enquiryId);
+      
+      if (window.location.pathname.includes('/logistics/transport-management')) {
+        dispatch(setLatestTransportUpdate(payload));
+        // Intentionally NOT returning here so the toast still shows up
+      }
+      
+      transportQueueRef.current.push(payload);
+      if (transportTimeoutRef.current) clearTimeout(transportTimeoutRef.current);
+      
+      transportTimeoutRef.current = setTimeout(() => {
+        const queue = [...transportQueueRef.current];
+        transportQueueRef.current = [];
+        
+        if (queue.length === 1) {
+          const item = queue[0];
+          showOSNotification("New Transport Request", `A new transport request is available.`, `/logistics/transport-management`);
+          toast.success("New Transport Request", {
+            id: "new-transport-toast",
+            action: {
+              label: <EyeIcon className="w-5 h-5" />,
+              onClick: () => {
+                dispatch(setPendingTransportEnquiryId(item.enquiryId));
+                routerRef.current.push(`/logistics/transport-management`);
+              }
+            },
+            actionButtonStyle: {
+              backgroundColor: 'transparent',
+              color: 'currentColor',
+              border: 'none',
+              boxShadow: 'none',
+            },
+            duration: Infinity,
+            position: 'top-right'
+          });
+        } else if (queue.length > 1) {
+          showOSNotification("New Transport Requests", `You have ${queue.length} new transport requests.`, `/logistics/transport-management`);
+          toast.success(`${queue.length} New Transport Requests`, {
+            id: "new-transport-toast",
+            action: {
+              label: <EyeIcon className="w-5 h-5" />,
+              onClick: () => {
+                routerRef.current.push(`/logistics/transport-management`);
+              }
+            },
+            actionButtonStyle: {
+              backgroundColor: 'transparent',
+              color: 'currentColor',
+              border: 'none',
+              boxShadow: 'none',
+            },
+            duration: Infinity,
+            position: 'top-right'
+          });
+        }
+      }, 1500);
+    };
+
     socket.on("notification",            handleSocketNotification);
     socket.on("attendance-batch-update", handleAttendanceBatchUpdate);
     socket.on("attendance-checkin",      handleAttendanceSingleUpdate);
     socket.on("attendance-checkout",     handleAttendanceSingleUpdate);
     socket.on("attendance-update",       handleAttendanceUpdate);
     socket.on("regularization-update",  handleRegularizationUpdate);
+    socket.on("transport:new-enquiry",   handleTransportNewEnquiry);
 
     return () => {
       // Remove only AppShell's named handlers — do NOT call disconnectSocket().
@@ -244,6 +336,7 @@ export default function AppShellClient({ children }) {
       socket.off("attendance-checkout",     handleAttendanceSingleUpdate);
       socket.off("attendance-update",       handleAttendanceUpdate);
       socket.off("regularization-update",  handleRegularizationUpdate);
+      socket.off("transport:new-enquiry",   handleTransportNewEnquiry);
     };
     // NOTE: `router` intentionally excluded — see routerRef above.
     // eslint-disable-next-line react-hooks/exhaustive-deps

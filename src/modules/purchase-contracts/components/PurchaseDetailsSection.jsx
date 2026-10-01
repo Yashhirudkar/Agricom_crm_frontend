@@ -104,18 +104,8 @@ export default function PurchaseDetailsSection({
           </div>
         </div>
 
-        {/* Row 3: Incoterm & Payment Terms */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Incoterm */}
-          <div>
-            <label className={lbl}>Incoterm</label>
-            <input
-              type="text"
-              value={form.incoterm || ""}
-              readOnly
-              className={`${inp} bg-gray-50 font-medium text-gray-800`}
-            />
-          </div>
+        {/* Row 3: Payment Terms */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
           {/* Payment Terms */}
           <div>

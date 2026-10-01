@@ -44,6 +44,8 @@ const notificationsSlice = createSlice({
     unreadCount: 0,
     isLoading: false,
     error: null,
+    pendingTransportEnquiryId: null,
+    latestTransportUpdate: null,
   },
   reducers: {
     clearNotificationsError(state) {
@@ -61,6 +63,12 @@ const notificationsSlice = createSlice({
           state.list = state.list.slice(0, 100);
         }
       }
+    },
+    setPendingTransportEnquiryId(state, action) {
+      state.pendingTransportEnquiryId = action.payload;
+    },
+    setLatestTransportUpdate(state, action) {
+      state.latestTransportUpdate = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -98,11 +106,13 @@ const notificationsSlice = createSlice({
   },
 });
 
-export const { clearNotificationsError, addSocketNotification } = notificationsSlice.actions;
+export const { clearNotificationsError, addSocketNotification, setPendingTransportEnquiryId, setLatestTransportUpdate } = notificationsSlice.actions;
 
 export const selectNotifications = (state) => state.notifications.list;
 export const selectUnreadCount = (state) => state.notifications.unreadCount;
 export const selectNotificationsLoading = (state) => state.notifications.isLoading;
 export const selectNotificationsError = (state) => state.notifications.error;
+export const selectPendingTransportEnquiryId = (state) => state.notifications.pendingTransportEnquiryId;
+export const selectLatestTransportUpdate = (state) => state.notifications.latestTransportUpdate;
 
 export default notificationsSlice.reducer;

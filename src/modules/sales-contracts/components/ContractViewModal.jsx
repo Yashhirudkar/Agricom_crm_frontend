@@ -248,7 +248,7 @@ export default function ContractViewModal({ contractId, onClose }) {
       {/* Print page rules */}
       <style jsx global>{`
         #contract-print-area, #contract-print-area * {
-          font-family: "Times New Roman", Times, serif !important;
+           
         }
         @media print {
           @page {

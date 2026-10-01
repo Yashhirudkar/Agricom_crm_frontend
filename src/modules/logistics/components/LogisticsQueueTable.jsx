@@ -13,7 +13,7 @@ const LOGISTICS_STATUS_CLASSES = {
   "Closed": "bg-gray-100 text-gray-700 border-gray-300",
 };
 
-export default function LogisticsQueueTable({ data, loading, onManage, mode = "All" }) {
+export default function LogisticsQueueTable({ data, loading, onManage, mode = "All", highlightedRowId }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -88,9 +88,10 @@ export default function LogisticsQueueTable({ data, loading, onManage, mode = "A
           {data.map((e) => {
             const logisticsStatus = e.logistics?.status || "Pending";
             const badgeClass = LOGISTICS_STATUS_CLASSES[logisticsStatus] || "bg-gray-50 text-gray-600 border-gray-100";
+            const isHighlighted = highlightedRowId === e.id;
 
             return (
-              <tr key={e.id} className="transition-colors group hover:bg-gray-50/70">
+              <tr key={e.id} className={`transition-all duration-500 group hover:bg-gray-50/70 ${isHighlighted ? "bg-blue-50/50 shadow-inner" : ""}`}>
                 <td className="px-4 py-4.5 font-mono font-bold text-[#007aff] whitespace-nowrap">
                   {e.enquiryNo}
                 </td>

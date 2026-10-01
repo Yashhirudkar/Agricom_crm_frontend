@@ -43,7 +43,7 @@ export default function RootLayout({ children }) {
             </AuthGuard>
           </ReduxProvider>
         </QueryProvider>
-        <Toaster position="top-right" richColors closeButton />
+        <Toaster position="top-right" richColors closeButton style={{ marginTop: '64px' }} />
       </body>
     </html>
   );

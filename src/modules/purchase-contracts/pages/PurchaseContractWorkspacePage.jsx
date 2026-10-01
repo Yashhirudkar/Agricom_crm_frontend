@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { AlertCircle, ArrowLeft, Save, CheckCircle, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Save, CheckCircle, X, Pencil } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -27,6 +27,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
   const router = useRouter();
   const searchParams = useSearchParams();
   const targetShipmentIdParam = searchParams?.get("shipmentId");
+  const isViewMode = searchParams?.get("mode") === "view";
   const id = contractId ? Number(contractId) : null;
 
   // Queries (only execute if not isNew)
@@ -82,11 +83,15 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     bagSpec: "",
     stitching: "",
     marking: "",
-    incoterm: "",
     deliveryPlace: "",
     deliveryDate: "",
     paymentTermId: null,
     paymentTermName: "",
+    paymentTermsText: "",
+    advancePercent: "",
+    balancePercent: "",
+    penaltyPercent: "",
+    paymentDueDate: "",
     brokerId: null,
     brokerName: "",
     brokerCommission: "",
@@ -153,10 +158,14 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         stitching: contract.stitching || f.stitching || "",
         marking: contract.marking || firstItem.marking || f.marking || "",
         notes: contract.notes || f.notes || "",
-        incoterm: contract.incoterm || salesContract.shipmentType?.name || f.incoterm || "",
         deliveryPlace: contract.deliveryPlace || salesContract.portOfLoading || f.deliveryPlace || "",
         paymentTermId: contract.paymentTermId || salesContract.paymentTermId || f.paymentTermId || null,
         paymentTermName: contract.paymentTerm?.name || salesContract.paymentTerm?.name || f.paymentTermName || "",
+        paymentTermsText: contract.paymentTermsText || f.paymentTermsText || "",
+        advancePercent: contract.advancePercent ?? f.advancePercent ?? "",
+        balancePercent: contract.advancePercent != null ? Math.max(0, 100 - Number(contract.advancePercent)) : (f.balancePercent ?? ""),
+        penaltyPercent: contract.penaltyPercent ?? f.penaltyPercent ?? "",
+        paymentDueDate: contract.paymentDueDate ? contract.paymentDueDate.split("T")[0] : (f.paymentDueDate || ""),
         terms: (contract.terms && contract.terms.length > 0) ? contract.terms : (salesContract.terms || []),
         items: itemsList.map((it) => ({
           id: it.id,
@@ -281,9 +290,13 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         sellerId: form.sellerId || null,
         sellerContractNo: form.sellerContractNo || null,
         paymentTermId: form.paymentTermId || null,
+        paymentTermsText: form.paymentTermsText || null,
+        advancePercent: form.advancePercent !== "" && form.advancePercent != null ? parseFloat(form.advancePercent) : null,
+        balancePercent: form.balancePercent !== "" && form.balancePercent != null ? parseFloat(form.balancePercent) : null,
+        penaltyPercent: form.penaltyPercent !== "" && form.penaltyPercent != null ? parseFloat(form.penaltyPercent) : null,
+        paymentDueDate: form.paymentDueDate || null,
         brokerId: form.brokerId || null,
         brokerCommission: form.brokerCommission || null,
-        incoterm: form.incoterm || null,
         deliveryPlace: form.deliveryPlace || null,
         dispatchDate: form.deliveryDate || null,
         notes: form.notes || null,
@@ -410,6 +423,218 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     ? "New Manual MTT Contract"
     : (contract?.contractNumber || (contract?.salesContract?.contractNumber ? `PC-${contract.salesContract.contractNumber}` : `PC-${id}`));
 
+  /* ─────────────── VIEW MODE: Clean Read-Only Layout ─────────────── */
+  if (isViewMode && contract) {
+    const sc = contract.salesContract || {};
+    const buyerName = form.buyerName || sc.buyer?.entityName || "—";
+    const sellerName = form.supplierName || sc.seller?.entityName || "—";
+    const brokerName = form.brokerName || "—";
+    const STATUS_COLORS = {
+      Draft: "bg-gray-100 text-gray-700 border-gray-200",
+      "In Progress": "bg-blue-50 text-blue-700 border-blue-200",
+      Completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      Cancelled: "bg-red-50 text-red-700 border-red-200",
+    };
+    const statusClass = STATUS_COLORS[contract.status] || "bg-gray-100 text-gray-700 border-gray-200";
+
+    const Field = ({ label, value }) => (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</span>
+        <span className="text-sm font-semibold text-gray-800">{value || "—"}</span>
+      </div>
+    );
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 pb-16">
+
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-gray-100 shadow-xs">
+          <div className="w-full max-w-[1400px] mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push("/sales/purchase-contracts")}
+                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-sm font-bold text-gray-900">Purchase Contract</h1>
+                  <span className="font-mono font-extrabold text-[#007aff] text-xs bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
+                    {contractDisplayNo}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>
+                    {contract.status}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {isManual ? "Merchant Trading (MTT Manual)" : `Linked SC: SC-${sc.contractNumber}`}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push(`/sales/purchase-contracts/${id}`)}
+              className="px-4 py-2 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl transition-colors shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              <span>Edit Contract</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="w-full max-w-[1400px] mx-auto px-6 py-8 space-y-6">
+
+          {/* Section 1 — Contract Parties */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-purple-50/60 to-white flex items-center gap-2">
+              <div className="w-1.5 h-5 rounded-full bg-purple-400" />
+              <h2 className="text-sm font-bold text-gray-800">Contract Parties & Identification</h2>
+            </div>
+            <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+              <Field label="Contract Number" value={contractDisplayNo} />
+              <Field label="Status" value={contract.status} />
+              <Field label="Purchase Type" value={contract.purchaseType} />
+              <Field label="Seller Contract No." value={form.sellerContractNo} />
+              <Field label="Buyer" value={buyerName} />
+              <Field label="Seller / Supplier" value={sellerName} />
+              <Field label="Broker / Agent" value={brokerName} />
+              <Field label="Broker Commission" value={form.brokerCommission ? `${form.brokerCommission}%` : "—"} />
+            </div>
+          </div>
+
+          {/* Section 2 — Commercial Details */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-blue-50/60 to-white flex items-center gap-2">
+              <div className="w-1.5 h-5 rounded-full bg-blue-400" />
+              <h2 className="text-sm font-bold text-gray-800">Commercial & Product Details</h2>
+            </div>
+            <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+              <Field label="Product" value={form.productName} />
+              <Field label="Quantity" value={form.quantity ? `${form.quantity} MT` : "—"} />
+              <Field label="Product Quality" value={form.productQuality} />
+              <Field label="Packing" value={form.packing} />
+              <Field label="Bag Type" value={form.bagType} />
+              <Field label="Bag Spec" value={form.bagSpec} />
+              <Field label="Stitching" value={form.stitching} />
+              <Field label="Marking" value={form.marking} />
+              <Field label="Delivery Place" value={form.deliveryPlace} />
+              <Field label="Dispatch Date" value={form.deliveryDate} />
+            </div>
+          </div>
+
+          {/* Section 3 — Payment Terms */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-emerald-50/60 to-white flex items-center gap-2">
+              <div className="w-1.5 h-5 rounded-full bg-emerald-400" />
+              <h2 className="text-sm font-bold text-gray-800">Payment Terms</h2>
+            </div>
+            <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+              <Field label="Payment Term" value={form.paymentTermName} />
+              <Field label="Advance (%)" value={form.advancePercent ? `${form.advancePercent}%` : "—"} />
+              <Field label="Balance (%)" value={form.balancePercent ? `${form.balancePercent}%` : "—"} />
+              <Field label="Penalty (%)" value={form.penaltyPercent ? `${form.penaltyPercent}%` : "—"} />
+              <div className="col-span-2 md:col-span-4">
+                <Field label="Payment Terms Text" value={form.paymentTermsText} />
+              </div>
+              <Field label="Payment Due Date" value={form.paymentDueDate} />
+            </div>
+          </div>
+
+          {/* Section 4 — Shipment Schedule */}
+          {shipments && shipments.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-indigo-50/60 to-white flex items-center gap-2">
+                <div className="w-1.5 h-5 rounded-full bg-indigo-400" />
+                <h2 className="text-sm font-bold text-gray-800">Shipment Schedule</h2>
+                <span className="ml-auto text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                  {shipments.length} Shipment{shipments.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50/80 text-gray-500 font-bold uppercase tracking-wider text-[9px]">
+                      <th className="px-4 py-3 text-left">#</th>
+                      <th className="px-4 py-3 text-left">Shipment Ref</th>
+                      <th className="px-4 py-3 text-left">Date</th>
+                      <th className="px-4 py-3 text-right">Containers</th>
+                      <th className="px-4 py-3 text-left">Currency</th>
+                      <th className="px-4 py-3 text-right">Purchase Rate</th>
+                      <th className="px-4 py-3 text-right">Forex</th>
+                      <th className="px-4 py-3 text-right">Freight</th>
+                      <th className="px-4 py-3 text-right">Qty (MT)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {shipments.map((s, idx) => (
+                      <tr key={s.id || idx} className="hover:bg-gray-50/50">
+                        <td className="px-4 py-3 text-gray-400 font-mono">{idx + 1}</td>
+                        <td className="px-4 py-3 font-mono font-bold text-indigo-700">{s.shipmentReference || s.shipment?.shipmentReference || "—"}</td>
+                        <td className="px-4 py-3 text-gray-600">{s.shipmentDate || s.shipment?.shipmentDate || "—"}</td>
+                        <td className="px-4 py-3 text-right font-bold text-gray-800">{s.containers ?? "—"}</td>
+                        <td className="px-4 py-3 text-gray-600">{s.currency || "INR"}</td>
+                        <td className="px-4 py-3 text-right font-bold text-gray-800">{s.purchaseRate ?? "—"}</td>
+                        <td className="px-4 py-3 text-right text-gray-600">{s.forexRate ?? "—"}</td>
+                        <td className="px-4 py-3 text-right text-gray-600">{s.freightCost ?? "—"}</td>
+                        <td className="px-4 py-3 text-right font-bold text-gray-800">{Number(s.allocatedQuantity || s.quantity || 0).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Section 5 — Terms & Conditions */}
+          {form.terms && form.terms.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-amber-50/60 to-white flex items-center gap-2">
+                <div className="w-1.5 h-5 rounded-full bg-amber-400" />
+                <h2 className="text-sm font-bold text-gray-800">Terms & Conditions</h2>
+                <span className="ml-auto text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
+                  {form.terms.length} Condition{form.terms.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="p-6 space-y-2">
+                {form.terms.map((t, i) => (
+                  <div key={i} className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
+                    <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 border border-amber-100 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">{i + 1}</span>
+                    <span className="text-sm text-gray-700">{typeof t === "string" ? t : t.text || t.description || JSON.stringify(t)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section 6 — Notes */}
+          {form.notes && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-50 flex items-center gap-2">
+                <div className="w-1.5 h-5 rounded-full bg-gray-300" />
+                <h2 className="text-sm font-bold text-gray-800">Notes & Additional Remarks</h2>
+              </div>
+              <div className="p-6">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{form.notes}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Section 7 — Financial Summary */}
+          {summary && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-green-50/60 to-white flex items-center gap-2">
+                <div className="w-1.5 h-5 rounded-full bg-green-400" />
+                <h2 className="text-sm font-bold text-gray-800">Financial Summary</h2>
+              </div>
+              <PurchaseFinancialSummary summary={summary} loading={loadingSummary} />
+            </div>
+          )}
+
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50/50 space-y-6 pb-28">
 
@@ -443,28 +668,40 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => router.push("/sales/purchase-contracts")}
-              className="px-3 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleSaveContract(null)}
-              disabled={saving}
-              className="px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
-            >
-              <Save className="h-3.5 w-3.5" />
-              <span>Save Draft</span>
-            </button>
-            <button
-              onClick={() => handleSaveContract("In Progress")}
-              disabled={saving}
-              className="px-4.5 py-2 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl transition-colors shadow-xs disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
-            >
-              <CheckCircle className="h-3.5 w-3.5" />
-              <span>Save & Activate</span>
-            </button>
+            {isViewMode ? (
+              <button
+                onClick={() => router.push(`/sales/purchase-contracts/${id}`)}
+                className="px-4 py-2 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl transition-colors shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                <span>Edit</span>
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => router.push("/sales/purchase-contracts")}
+                  className="px-3 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleSaveContract(null)}
+                  disabled={saving}
+                  className="px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  <span>Save Draft</span>
+                </button>
+                <button
+                  onClick={() => handleSaveContract("In Progress")}
+                  disabled={saving}
+                  className="px-4.5 py-2 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl transition-colors shadow-xs disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  <span>Save & Activate</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -479,6 +716,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           form={form}
           setForm={setForm}
           masters={masters}
+          isView={isViewMode}
         />
 
         {/* 2. Commercial Information */}
@@ -488,6 +726,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           form={form}
           setForm={setForm}
           masters={masters}
+          isView={isViewMode}
         />
 
         {/* 3. Against Shipment (Product-wise & Partial Allocations) */}
@@ -551,7 +790,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Enter any additional remarks, special terms, or conditions..."
-              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white resize-none"
+              disabled={isViewMode}
+              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white resize-none disabled:opacity-75 disabled:bg-gray-50"
             />
           </div>
         </div>
@@ -560,7 +800,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         <TermsSection
           form={form}
           setForm={setForm}
-          isView={false}
+          isView={isViewMode}
         />
 
         {/* 7. Attachments Section */}
@@ -584,31 +824,32 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           />
         )}
 
-        {/* Page Action Buttons Footer */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-          <button
-            onClick={() => router.push("/sales/purchase-contracts")}
-            className="px-4 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => handleSaveContract(null)}
-            disabled={saving}
-            className="px-5 py-2.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
-          >
-            <Save className="h-3.5 w-3.5" />
-            <span>Save Draft</span>
-          </button>
-          <button
-            onClick={() => handleSaveContract("In Progress")}
-            disabled={saving}
-            className="px-6 py-2.5 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl transition-colors shadow-xs disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
-          >
-            <CheckCircle className="h-3.5 w-3.5" />
-            <span>Save &amp; Activate</span>
-          </button>
-        </div>
+        {!isViewMode && (
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+            <button
+              onClick={() => router.push("/sales/purchase-contracts")}
+              className="px-4 py-2.5 text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleSaveContract(null)}
+              disabled={saving}
+              className="px-5 py-2.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Save className="h-3.5 w-3.5" />
+              <span>Save Draft</span>
+            </button>
+            <button
+              onClick={() => handleSaveContract("In Progress")}
+              disabled={saving}
+              className="px-6 py-2.5 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl transition-colors shadow-xs disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <CheckCircle className="h-3.5 w-3.5" />
+              <span>Save &amp; Activate</span>
+            </button>
+          </div>
+        )}
 
       </div>
     </div>

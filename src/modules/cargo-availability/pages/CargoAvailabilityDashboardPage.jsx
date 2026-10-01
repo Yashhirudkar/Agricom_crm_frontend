@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Boxes, CheckCircle2, Truck, RefreshCw, ChevronRight, ArrowLeft } from "lucide-react";
 import { cargoAvailabilityApi } from "../services/cargoAvailabilityApi";
-import CargoDashboardKpis from "../components/CargoDashboardKpis";
 import CargoAvailabilityFilter from "../components/CargoAvailabilityFilter";
 import CargoMainGrid from "../components/CargoMainGrid";
 import MttReadinessTab from "../components/MttReadinessTab";
@@ -26,7 +25,6 @@ function CargoAvailabilityContent() {
 
   const [activeTab, setActiveTab] = useState(queryTab || "grid");
   const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState({});
   const [records, setRecords] = useState([]);
   const [selectedRecordId, setSelectedRecordId] = useState(queryCargoId || null);
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -47,15 +45,13 @@ function CargoAvailabilityContent() {
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [statsRes, listRes, loadingRes] = await Promise.all([
-        cargoAvailabilityApi.getStats(),
+      const [listRes, loadingRes] = await Promise.all([
         cargoAvailabilityApi.getCargoAvailabilityList(filters),
         cargoAvailabilityApi.getAllLoadingEntries().catch(() => ({ data: [] })),
       ]);
-      setStats(statsRes.data || statsRes);
-      const dataList = listRes.data?.data || listRes.data || [];
-      setRecords(dataList);
+      setRecords(listRes.data?.data || listRes.data || []);
       setAllLoadingEntries(loadingRes.data || loadingRes || []);
+      const dataList = listRes.data?.data || listRes.data || [];
 
       let targetId = selectedRecordId;
       if (!targetId && queryCargoId) {
@@ -178,9 +174,6 @@ function CargoAvailabilityContent() {
           </button>
         </div>
       </div>
-
-      {/* KPI Cards */}
-      <CargoDashboardKpis stats={stats} isLoading={isLoading} />
 
       {/* Tabs Bar */}
       <div className="flex items-center justify-between border-b border-slate-200">

@@ -89,6 +89,12 @@ export const ROUTE_MAPPERS = {
     const id = notif.entityId;
     return id ? `/masters/partners?partnerId=${id}` : '/masters/partners';
   },
+
+  // ── Transport Notifications ───────────────────────────────────────────────
+  TRANSPORT_NEW_ENQUIRY: (notif) => {
+    const id = notif.payload?.enquiryId || notif.entityId;
+    return id && id !== 0 ? `/logistics/transport-management?enquiryId=${id}` : `/logistics/transport-management`;
+  },
 };
 
 /**

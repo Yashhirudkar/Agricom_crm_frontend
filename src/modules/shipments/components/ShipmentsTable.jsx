@@ -76,23 +76,6 @@ export default function ShipmentsTable({
   const [selectorShipment, setSelectorShipment] = useState(null);
   const [selectorAllocations, setSelectorAllocations] = useState([]);
 
-  const getCargoStatusBadge = (shipment) => {
-    const status = shipment.status || "Scheduled";
-    if (status === "Delivered") return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">✅ Delivered</span>;
-    if (status === "Dispatched" || status === "Sailed") return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#007aff]/10 text-[#007aff] border border-[#007aff]/20">✅ Dispatched</span>;
-    if (status === "Stuffing" || status === "Ready") return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-50 text-cyan-700 border border-cyan-200">🟡 Partial Cargo</span>;
-    return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">🟢 Ready</span>;
-  };
-
-  const handleCargoAction = (e, s) => {
-    e.stopPropagation();
-    if (onOpenCargoDrawer) {
-      onOpenCargoDrawer(s);
-    } else {
-      router.push(`/sales/cargo-availability?shipmentId=${s.id}`);
-    }
-  };
-
 
   const handleCopy = (e, text, id) => {
     e.stopPropagation();
@@ -155,7 +138,6 @@ export default function ShipmentsTable({
             <th className="px-4 py-3.5 whitespace-nowrap">Shipment Ref</th>
             <th className="px-4 py-3.5 whitespace-nowrap">Timeline</th>
             <th className="px-4 py-3.5 whitespace-nowrap">Status</th>
-            <th className="px-4 py-3.5 whitespace-nowrap">Cargo Status</th>
             <th className="px-4 py-3.5 whitespace-nowrap">Shipment Date</th>
             <th className="px-4 py-3.5 whitespace-nowrap">Buyer</th>
             <th className="px-4 py-3.5 whitespace-nowrap">Seller</th>
@@ -237,10 +219,6 @@ export default function ShipmentsTable({
                   </span>
                 </td>
 
-                {/* Cargo Status */}
-                <td className="px-4 py-3 whitespace-nowrap">
-                  {getCargoStatusBadge(s)}
-                </td>
 
                 {/* Shipment Date */}
                 <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
@@ -307,14 +285,6 @@ export default function ShipmentsTable({
                 {/* Actions */}
                 <td className="px-3 py-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-end gap-1">
-                    <button
-                      type="button"
-                      onClick={(e) => handleCargoAction(e, s)}
-                      className="px-2 py-1 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 border border-cyan-200 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                      title="Open Cargo Availability Workflow"
-                    >
-                      <span>🚚 Cargo</span>
-                    </button>
                     <button
                       onClick={() => onRowClick(s)}
                       className="p-1.5 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors"

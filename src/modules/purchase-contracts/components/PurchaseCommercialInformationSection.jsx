@@ -1,6 +1,6 @@
 "use client";
-import React from "react";
-import { DollarSign, ChevronDown } from "lucide-react";
+import React, { useRef } from "react";
+import { DollarSign, ChevronDown, CreditCard, CalendarDays } from "lucide-react";
 
 export default function PurchaseCommercialInformationSection({
   contract,
@@ -14,6 +14,7 @@ export default function PurchaseCommercialInformationSection({
   const inp =
     "w-full text-xs bg-gray-50/60 border border-gray-200 rounded-xl p-2.5 font-medium text-gray-900 focus:bg-white focus:border-[#007aff] focus:ring-2 focus:ring-[#007aff]/20 focus:outline-none transition-all disabled:opacity-75 disabled:bg-gray-100";
 
+  const paymentDueDateRef = useRef(null);
   const isManual = contract?.purchaseType === "MTT" || !contract?.salesContractId;
   const productsMaster = masters?.products || [];
   const paymentTermsMaster = masters?.paymentTerms || [];
@@ -27,10 +28,10 @@ export default function PurchaseCommercialInformationSection({
   const getDropdownOptions = (masterList, currentValue) => {
     let options = (masterList && Array.isArray(masterList))
       ? masterList.map((item) => ({
-          id: item.id || item.code || item.name || item,
-          name: item.name || item.code || item,
-          code: item.code,
-        }))
+        id: item.id || item.code || item.name || item,
+        name: item.name || item.code || item,
+        code: item.code,
+      }))
       : [];
 
     if (currentValue) {
@@ -57,7 +58,6 @@ export default function PurchaseCommercialInformationSection({
   const bagSpecOptions = getDropdownOptions(bagSpecMasterList, form.bagSpec);
   const stitchingOptions = getDropdownOptions(masters?.stitchingTypes, form.stitching);
   const markingOptions = getDropdownOptions(masters?.markingTypes, form.marking);
-  const incotermOptions = getDropdownOptions(masters?.shipmentTypes, form.incoterm);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
@@ -271,35 +271,8 @@ export default function PurchaseCommercialInformationSection({
           </div>
         </div>
 
-        {/* Row 3: Incoterms, Delivery Place & Date, Payment Terms */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-gray-100">
-          <div>
-            <label className={lbl}>Shipment Type / Incoterm</label>
-            <div className="relative">
-              <select
-                value={
-                  incotermOptions.find(
-                    (opt) =>
-                      opt.name === form.incoterm ||
-                      opt.code === form.incoterm ||
-                      String(opt.id) === String(form.incoterm)
-                  )?.name || form.incoterm || ""
-                }
-                onChange={(e) => setForm((f) => ({ ...f, incoterm: e.target.value }))}
-                disabled={isView}
-                className={`${inp} appearance-none pr-8 font-semibold text-gray-800`}
-              >
-                <option value="">Select Incoterm</option>
-                {incotermOptions.map((opt) => (
-                  <option key={opt.id || opt.name} value={opt.name}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-            </div>
-          </div>
-
+        {/* Row 3: Delivery Place & Date */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
           <div>
             <label className={lbl}>Delivery Place</label>
             <input
@@ -322,44 +295,134 @@ export default function PurchaseCommercialInformationSection({
               className={`${inp}`}
             />
           </div>
+        </div>
 
-          <div>
-            <label className={lbl}>Payment Terms</label>
-            {isManual && paymentTermsMaster.length > 0 ? (
-              <div className="relative">
-                <select
-                  value={form.paymentTermId || ""}
+        {/* Payment Terms Sub-Section */}
+        <div className="bg-blue-50/40 rounded-xl border border-blue-100 overflow-hidden">
+          {/* Sub-header */}
+          <div className="px-4 py-2.5 border-b border-blue-100 flex items-center gap-2">
+            <div className="h-5 w-5 rounded-md bg-blue-100 flex items-center justify-center flex-shrink-0">
+              <CreditCard className="h-3 w-3 text-blue-600" />
+            </div>
+            <span className="text-[11px] font-bold text-blue-800 uppercase tracking-wider">Payment Terms</span>
+          </div>
+
+          <div className="p-4 flex flex-col gap-4">
+
+            {/* Row 1: Payment Terms text — full width */}
+            <div>
+              <label className={lbl} htmlFor="pc-paymentTermsText">
+                Payment Terms Condition
+              </label>
+              <input
+                id="pc-paymentTermsText"
+                type="text"
+                value={form.paymentTermsText || ""}
+                onChange={(e) => setForm((f) => ({ ...f, paymentTermsText: e.target.value }))}
+                disabled={isView}
+                placeholder="e.g. 100% Before Unloading, 100% CAD Against Documents, 20% Advance + 80% Before Dispatch"
+                className={inp}
+              />
+            </div>
+
+            {/* Row 2: Advance / Penalty (auto) / Due Date */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+              {/* Advance % */}
+              <div>
+                <label className={lbl} htmlFor="pc-advancePercent">Advance (%)</label>
+                <input
+                  id="pc-advancePercent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={form.advancePercent ?? ""}
                   onChange={(e) => {
-                    const ptId = Number(e.target.value);
-                    const ptObj = paymentTermsMaster.find((p) => p.id === ptId);
-                    setForm((f) => ({
-                      ...f,
-                      paymentTermId: ptId || null,
-                      paymentTermName: ptObj?.name || "",
-                    }));
+                    const raw = e.target.value;
+                    const val = raw === "" ? "" : Math.min(100, Math.max(0, Number(raw)));
+                    const penalty = val === "" ? "" : Math.max(0, 100 - Number(val));
+                    setForm((f) => ({ ...f, advancePercent: val, penaltyPercent: penalty }));
                   }}
                   disabled={isView}
-                  className={`${inp} appearance-none pr-8 font-semibold text-gray-800`}
-                >
-                  <option value="">Select Payment Terms</option>
-                  {paymentTermsMaster.map((pt) => (
-                    <option key={pt.id} value={pt.id}>
-                      {pt.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                  placeholder="Enter Advance %"
+                  className={inp}
+                />
               </div>
-            ) : (
-              <input
-                type="text"
-                value={form.paymentTermName || defaultPaymentTermName}
-                onChange={(e) => setForm((f) => ({ ...f, paymentTermName: e.target.value }))}
-                readOnly={!isManual}
-                disabled={isView}
-                className={`${inp} ${!isManual ? "bg-gray-50" : ""} font-semibold text-gray-800`}
-              />
+
+              {/* Penalty % — read-only, auto-calculated as 100 - Advance */}
+              <div>
+                <label className={lbl} htmlFor="pc-penaltyPercent">
+                  Penalty (%)
+                  <span className="ml-1.5 text-[9px] font-normal text-gray-400 normal-case tracking-normal">auto</span>
+                </label>
+                <input
+                  id="pc-penaltyPercent"
+                  type="number"
+                  readOnly
+                  tabIndex={-1}
+                  value={form.penaltyPercent ?? ""}
+                  className={`${inp} !bg-gray-100 text-gray-500 cursor-not-allowed`}
+                  style={{ WebkitUserSelect: "none" }}
+                />
+              </div>
+
+              {/* Payment Due Date */}
+              <div>
+                <label className={lbl} htmlFor="pc-paymentDueDate">Payment Due Date</label>
+                <div className="relative">
+                  <input
+                    id="pc-paymentDueDate"
+                    ref={paymentDueDateRef}
+                    type="date"
+                    value={form.paymentDueDate || ""}
+                    onChange={(e) => setForm((f) => ({ ...f, paymentDueDate: e.target.value }))}
+                    onClick={() => paymentDueDateRef.current?.showPicker?.()}
+                    disabled={isView}
+                    className={`${inp} pr-9 cursor-pointer`}
+                  />
+                  <CalendarDays
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 cursor-pointer hover:text-blue-500 transition-colors"
+                    onClick={() => !isView && paymentDueDateRef.current?.showPicker?.()}
+                  />
+                </div>
+              </div>
+
+            </div>
+
+            {/* Payment Terms Master Dropdown (optional override for MTT) */}
+            {isManual && paymentTermsMaster.length > 0 && (
+              <div className="pt-3 border-t border-blue-100">
+                <label className={lbl}>Payment Term (Master)</label>
+                <div className="relative">
+                  <select
+                    value={form.paymentTermId || ""}
+                    onChange={(e) => {
+                      const ptId = Number(e.target.value);
+                      const ptObj = paymentTermsMaster.find((p) => p.id === ptId);
+                      setForm((f) => ({
+                        ...f,
+                        paymentTermId: ptId || null,
+                        paymentTermName: ptObj?.name || "",
+                        paymentTermsText: f.paymentTermsText || ptObj?.name || "",
+                      }));
+                    }}
+                    disabled={isView}
+                    className={`${inp} appearance-none pr-8 font-semibold text-gray-800`}
+                  >
+                    <option value="">Select from Master (optional)</option>
+                    {paymentTermsMaster.map((pt) => (
+                      <option key={pt.id} value={pt.id}>
+                        {pt.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">Selecting a master term will auto-fill the Payment Terms text above if empty.</p>
+              </div>
             )}
+
           </div>
         </div>
 
