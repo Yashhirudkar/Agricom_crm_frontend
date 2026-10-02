@@ -362,8 +362,8 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
           <input
             type="number"
             min="0"
-            step="0.01"
-            value={form.quantity || ""}
+            step="any"
+            value={form.quantity !== "" && form.quantity != null ? parseFloat(String(form.quantity)) : ""}
             onChange={e => setForm(f => ({ ...f, quantity: e.target.value ? Number(e.target.value) : "" }))}
             disabled={isView}
             placeholder="0.00"
@@ -378,7 +378,7 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
             type="number"
             min="0"
             max="100"
-            value={form.buyingInterest || ""}
+            value={form.buyingInterest !== "" && form.buyingInterest != null ? parseFloat(String(form.buyingInterest)) : ""}
             onChange={e => setForm(f => ({ ...f, buyingInterest: e.target.value ? Number(e.target.value) : "" }))}
             disabled={isView}
             placeholder="e.g. 75"

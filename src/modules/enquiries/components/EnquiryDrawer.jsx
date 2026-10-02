@@ -114,9 +114,9 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           purity: editData.purity || "",
           packingTypeId: editData.packingTypeId || "",
           shipmentType: editData.shipmentType || "",
-          quantity: editData.quantity != null && editData.quantity !== "" ? parseFloat(editData.quantity) : "",
+          quantity: editData.quantity != null && editData.quantity !== "" ? parseFloat(String(editData.quantity)) : "",
           shipmentDate: editData.shipmentDate ? editData.shipmentDate.split("T")[0] : "",
-          buyingInterest: editData.buyingInterest != null && editData.buyingInterest !== "" ? parseFloat(editData.buyingInterest) : "",
+          buyingInterest: editData.buyingInterest != null && editData.buyingInterest !== "" ? parseFloat(String(editData.buyingInterest)) : "",
           bidCurrency: editData.bidCurrency || "",
           potentialEnquiry: editData.potentialEnquiry || false,
           bidType: editData.bidType || "TARGET",
@@ -154,9 +154,9 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                 purity: fresh.purity || "",
                 packingTypeId: fresh.packingTypeId || "",
                 shipmentType: fresh.shipmentType || "",
-                quantity: fresh.quantity != null && fresh.quantity !== "" ? parseFloat(fresh.quantity) : "",
+                quantity: fresh.quantity != null && fresh.quantity !== "" ? parseFloat(String(fresh.quantity)) : "",
                 shipmentDate: fresh.shipmentDate ? fresh.shipmentDate.split("T")[0] : "",
-                buyingInterest: fresh.buyingInterest != null && fresh.buyingInterest !== "" ? parseFloat(fresh.buyingInterest) : "",
+                buyingInterest: fresh.buyingInterest != null && fresh.buyingInterest !== "" ? parseFloat(String(fresh.buyingInterest)) : "",
                 bidCurrency: fresh.bidCurrency || "",
                 potentialEnquiry: fresh.potentialEnquiry || false,
                 bidType: fresh.bidType || "TARGET",
@@ -934,8 +934,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                     <input
                       type="number"
                       min="0"
-                      step="1"
-                      value={form.quantity || ""}
+                      step="any"
+                      value={form.quantity !== "" && form.quantity != null ? parseFloat(String(form.quantity)) : ""}
                       onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value ? parseFloat(e.target.value) : "" }))}
                       disabled={isViewMode}
                       placeholder="0"
@@ -976,7 +976,13 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                     </div>
                     <input
                       type="text"
-                      value={form.buyingInterest || ""}
+                      value={
+                        form.buyingInterest !== "" && form.buyingInterest != null
+                          ? (typeof form.buyingInterest === "number"
+                              ? String(parseFloat(form.buyingInterest.toString()))
+                              : form.buyingInterest)
+                          : ""
+                      }
                       onChange={(e) => {
                         const val = e.target.value;
                         if (val === "" || (/^\d*\.?\d{0,4}$/.test(val) && val.length <= 15)) {
