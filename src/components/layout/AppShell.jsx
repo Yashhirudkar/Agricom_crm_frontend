@@ -18,6 +18,7 @@ import axiosClient from "@/lib/axios";
 import { TASK_QUERY_KEYS } from "@/modules/tasks/constants/query-keys";
 import { CHAT_QUERY_KEYS } from "@/modules/chat/constants/query-keys";
 import {
+  selectActiveCompany,
   selectActiveCompanyId,
   selectCompanyContextLoading,
   switchCompanyContext,
@@ -37,6 +38,7 @@ export default function AppShellClient({ children }) {
   const dispatch = useDispatch();
   const isPublic = PUBLIC_ROUTES.includes(pathname);
 
+  const activeCompany = useSelector(selectActiveCompany);
   const activeCompanyId = useSelector(selectActiveCompanyId);
   const [isFollowUpsOpen, setIsFollowUpsOpen] = useState(false);
 
@@ -84,7 +86,7 @@ export default function AppShellClient({ children }) {
         if (!isValid) {
           const firstCompanyId = companies[0].id.toString();
           dispatch(switchCompanyContext(firstCompanyId));
-        } else if (activeCompanyId !== stored) {
+        } else if (activeCompanyId !== stored || !activeCompany) {
           dispatch(setActiveCompany(companies.find(c => c.id.toString() === stored.toString()) || stored));
         }
       }
@@ -99,11 +101,11 @@ export default function AppShellClient({ children }) {
         } else if (user.companyId) {
           dispatch(switchCompanyContext(user.companyId.toString()));
         }
-      } else if (activeCompanyId !== stored) {
+      } else if (activeCompanyId !== stored || !activeCompany) {
         dispatch(setActiveCompany(workspaces.find(w => w.id.toString() === stored.toString()) || stored));
       }
     }
-  }, [user, companies, activeCompanyId, isPublic, dispatch]);
+  }, [user, companies, activeCompanyId, activeCompany, isPublic, dispatch]);
 
   // 3. Company-context React Query invalidation
   // Uses actual root query keys from each module so only relevant cache entries
@@ -260,8 +262,7 @@ export default function AppShellClient({ children }) {
       if (handledTime && Date.now() - parseInt(handledTime, 10) < 5000) return;
       localStorage.setItem(lsKey, Date.now().toString());
 
-      if (processedEnquiriesRef.current.has(payload.enquiryId)) return;
-      processedEnquiriesRef.current.add(payload.enquiryId);
+
       
       if (window.location.pathname.includes('/logistics/transport-management')) {
         dispatch(setLatestTransportUpdate(payload));

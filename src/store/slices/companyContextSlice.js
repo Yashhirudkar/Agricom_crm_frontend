@@ -82,10 +82,14 @@ const companyContextSlice = createSlice({
         (state, action) => {
           const user = action.payload.user || action.payload;
           if (user?.company) {
-            state.activeCompany = user.company;
-            state.activeCompanyId = user.company.id?.toString() || null;
-            if (state.activeCompanyId && typeof window !== "undefined") {
-              localStorage.setItem("activeCompanyId", state.activeCompanyId);
+            if (action.type === "auth/login/fulfilled" || !state.activeCompanyId) {
+              state.activeCompany = user.company;
+              state.activeCompanyId = user.company.id?.toString() || null;
+              if (state.activeCompanyId && typeof window !== "undefined") {
+                localStorage.setItem("activeCompanyId", state.activeCompanyId);
+              }
+            } else if (state.activeCompanyId === user.company.id?.toString()) {
+              state.activeCompany = user.company;
             }
           }
           state.isInitialized = true;

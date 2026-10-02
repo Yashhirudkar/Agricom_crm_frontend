@@ -6,7 +6,16 @@ export const enquiriesApi = {
   create: (data) => axiosClient.post("/enquiries", data),
   update: (id, data) => axiosClient.patch(`/enquiries/${id}`, data),
   remove: (id, reason) => axiosClient.delete(`/enquiries/${id}`, { params: { reason } }),
+  getLoadingPoints: (id) =>
+    axiosClient.get(`/enquiries/${id}/loading-points`).then((res) => res.data?.data ?? res.data ?? []),
+  updateLoadingPoints: (id, loadingPoints) =>
+    axiosClient.put(`/enquiries/${id}/loading-points`, { loadingPoints }),
+  getDestinations: (id) =>
+    axiosClient.get(`/enquiries/${id}/destinations`).then((res) => res.data?.data ?? res.data ?? []),
+  updateDestinations: (id, destinations) =>
+    axiosClient.put(`/enquiries/${id}/destinations`, { destinations }),
 };
+
 
 export const mastersApi = {
   getPartnerRoles: (params) =>

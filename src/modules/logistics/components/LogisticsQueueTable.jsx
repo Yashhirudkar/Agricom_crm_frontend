@@ -64,6 +64,32 @@ export default function LogisticsQueueTable({ data, loading, onManage, mode = "A
     return e.destinationPort || e.podPort || e.destinationCity || e.destinationState || e.destinationCountry || "—";
   };
 
+  const getRoutes = (e) => {
+    const origins = e.loadingPoints?.length 
+      ? e.loadingPoints.map(p => p.loadingPoint)
+      : [getOriginText(e)].filter(x => x && x !== "—");
+      
+    const destinations = e.destinations?.length
+      ? e.destinations.map(d => d.destination)
+      : [getDestinationText(e)].filter(x => x && x !== "—");
+
+    const routes = [];
+    if (origins.length && destinations.length) {
+      origins.forEach(orig => {
+        destinations.forEach(dest => {
+          routes.push(`${orig} → ${dest}`);
+        });
+      });
+    } else if (origins.length) {
+      origins.forEach(orig => routes.push(`${orig} → —`));
+    } else if (destinations.length) {
+      destinations.forEach(dest => routes.push(`— → ${dest}`));
+    }
+    
+    if (routes.length === 0) return ["— → —"];
+    return routes;
+  };
+
   const getModeIcon = (mode) => {
     switch (mode) {
       case "SHIP": return <Ship className="h-3.5 w-3.5 text-blue-500" />;
@@ -77,7 +103,7 @@ export default function LogisticsQueueTable({ data, loading, onManage, mode = "A
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Enquiry No.", "Date", "Product", "Qty (MT)", "Origin", "Destination", "Mode", "Logistics Status", "Action"].map((h) => (
+            {["Enquiry No.", "Date", "Product", "Qty (MT)", "Route", "Mode", "Logistics Status", "Action"].map((h) => (
               <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">
                 {h}
               </th>
@@ -93,7 +119,14 @@ export default function LogisticsQueueTable({ data, loading, onManage, mode = "A
             return (
               <tr key={e.id} className={`transition-all duration-500 group hover:bg-gray-50/70 ${isHighlighted ? "bg-blue-50/50 shadow-inner" : ""}`}>
                 <td className="px-4 py-4.5 font-mono font-bold text-[#007aff] whitespace-nowrap">
-                  {e.enquiryNo}
+                  <div className="flex items-center gap-1.5">
+                    <span>{e.enquiryNo}</span>
+                    {(!e.logistics || e.logistics.isViewed === false) && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-red-100 text-red-600 border border-red-200">
+                        New
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
                   {e.enquiryDate
@@ -106,11 +139,23 @@ export default function LogisticsQueueTable({ data, loading, onManage, mode = "A
                 <td className="px-4 py-4.5 text-gray-800 font-bold tabular-nums">
                   {Number(e.quantity || 0).toLocaleString("en-IN")}
                 </td>
-                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap max-w-[180px] truncate" title={getOriginText(e)}>
-                  {getOriginText(e)}
-                </td>
-                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap max-w-[180px] truncate" title={getDestinationText(e)}>
-                  {getDestinationText(e)}
+                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
+                  {(() => {
+                    const routes = getRoutes(e);
+                    const firstRoute = routes[0];
+                    return (
+                      <div className="flex flex-col">
+                        <span className="max-w-[200px] truncate" title={firstRoute}>
+                          {firstRoute}
+                        </span>
+                        {routes.length > 1 && (
+                          <span className="text-[10px] text-blue-600 font-semibold mt-0.5">
+                            +{routes.length - 1} More
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
                   <div className="flex items-center gap-1.5 font-semibold text-gray-700 capitalize">

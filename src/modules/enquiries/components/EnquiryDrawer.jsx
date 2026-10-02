@@ -58,6 +58,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     buyingInterest: "",
     bidCurrency: "",
     potentialEnquiry: false,
+    bidType: "TARGET",
+    note: "",
   });
 
   const [initialFormState, setInitialFormState] = useState({});
@@ -117,6 +119,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           buyingInterest: editData.buyingInterest != null && editData.buyingInterest !== "" ? parseFloat(editData.buyingInterest) : "",
           bidCurrency: editData.bidCurrency || "",
           potentialEnquiry: editData.potentialEnquiry || false,
+          bidType: editData.bidType || "TARGET",
+          note: editData.note || "",
         };
         setForm(initialForm);
         setInitialFormState(initialForm);
@@ -155,6 +159,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                 buyingInterest: fresh.buyingInterest != null && fresh.buyingInterest !== "" ? parseFloat(fresh.buyingInterest) : "",
                 bidCurrency: fresh.bidCurrency || "",
                 potentialEnquiry: fresh.potentialEnquiry || false,
+                bidType: fresh.bidType || "TARGET",
+                note: fresh.note || "",
               };
               setForm(freshForm);
               setInitialFormState(freshForm);
@@ -191,6 +197,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           buyingInterest: "",
           bidCurrency: "",
           potentialEnquiry: false,
+          bidType: "TARGET",
+          note: "",
         };
         setForm(emptyForm);
         setInitialFormState(emptyForm);
@@ -935,15 +943,42 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                     />
                   </div>
 
-                  {/* Bid Amount (Decimal restricted text input) */}
+                  {/* Bid Amount with Target / Bid Amount toggle */}
                   <div>
-                    <label className={lbl}>Bid Amount</label>
+                    {/* Toggle label pill */}
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="flex rounded-lg border border-gray-200 overflow-hidden text-[10px] font-bold">
+                        <button
+                          type="button"
+                          disabled={isViewMode}
+                          onClick={() => setForm((f) => ({ ...f, bidType: "TARGET" }))}
+                          className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${
+                            form.bidType === "TARGET" || !form.bidType
+                              ? "bg-[#007aff] text-white"
+                              : "bg-white text-gray-500 hover:bg-gray-50"
+                          }`}
+                        >
+                          Target
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isViewMode}
+                          onClick={() => setForm((f) => ({ ...f, bidType: "BID" }))}
+                          className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${
+                            form.bidType === "BID"
+                              ? "bg-[#007aff] text-white"
+                              : "bg-white text-gray-500 hover:bg-gray-50"
+                          }`}
+                        >
+                          Bid Amount
+                        </button>
+                      </div>
+                    </div>
                     <input
                       type="text"
                       value={form.buyingInterest || ""}
                       onChange={(e) => {
                         const val = e.target.value;
-                        // Limit to max 4 decimal digits and total digits limit (max 15 characters, allowing digits and a single decimal point)
                         if (val === "" || (/^\d*\.?\d{0,4}$/.test(val) && val.length <= 15)) {
                           setForm((f) => ({ ...f, buyingInterest: val }));
                         }
@@ -992,8 +1027,24 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                     )}
                   </div>
 
+                  {/* Note */}
+                  <div className="col-span-full">
+                    <label className={lbl}>Note</label>
+                    {isViewMode ? (
+                      <div className={`${inp} min-h-[72px] whitespace-pre-wrap`}>{form.note || "—"}</div>
+                    ) : (
+                      <textarea
+                        value={form.note || ""}
+                        onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                        placeholder="Add any relevant notes for this enquiry..."
+                        rows={3}
+                        className={`${inp} resize-none`}
+                      />
+                    )}
+                  </div>
+
                   {/* Mark as High Potential */}
-                  <div className="flex items-center pt-5 col-span-full">
+                  <div className="flex items-center col-span-full">
                     <label className="flex items-center gap-2 cursor-pointer group">
                       <div className="relative flex items-center justify-center">
                         <input

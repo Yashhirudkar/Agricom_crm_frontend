@@ -108,6 +108,28 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All");
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
+  // Route Selection
+  const [selectedRoute, setSelectedRoute] = useState(null);
+
+  const availableRoutes = useMemo(() => {
+    if (!details?.logistics?.routes || details.logistics.routes.length === 0) {
+      return [{ id: "all", origin: "—", destination: "—", label: "— → —" }];
+    }
+    
+    return details.logistics.routes.map(r => ({
+      id: r.id,
+      origin: r.origin,
+      destination: r.destination,
+      label: `${r.origin} → ${r.destination}`
+    }));
+  }, [details]);
+
+  useEffect(() => {
+    if (availableRoutes.length > 0 && (!selectedRoute || !availableRoutes.find(r => r.id === selectedRoute.id))) {
+      setSelectedRoute(availableRoutes[0]);
+    }
+  }, [availableRoutes, selectedRoute]);
+
   // Timeline
   const [activities, setActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
@@ -235,6 +257,7 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
     if (isOpen && enquiry?.id) {
       loadDetails();
       setActiveTab("quotes");
+      setSelectedRoute(null);
     }
   }, [isOpen, enquiry, loadDetails]);
 
@@ -481,35 +504,10 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
   const currentStepIndex = STATUS_STEPS.indexOf(logisticsStatus);
 
   // Quote Badges & Intelligence Logic
-  const quotes = details?.logistics?.quotes || [];
-  let lowestPriceId = null;
-  let fastestTransitId = null;
-  let bestValueId = null;
+  const quotes = details?.logistics?.quotes?.filter(q => selectedRoute?.id === 'all' || q.routeId === selectedRoute?.id || (!q.routeId && availableRoutes.length === 1)) || [];
   const expiringSoonIds = [];
 
   if (quotes.length > 0) {
-    const quoteTotals = quotes.map((q) => ({
-      id: q.id,
-      transit: Number(q.transitDays || 999),
-      total: Number(q.freightAmount) + Number(q.fuelCharges || 0) + Number(q.additionalCharges || 0),
-    }));
-
-    const minVal = Math.min(...quoteTotals.map((x) => x.total));
-    lowestPriceId = quoteTotals.find((x) => x.total === minVal)?.id;
-
-    const minTransit = Math.min(...quoteTotals.map((x) => x.transit));
-    fastestTransitId = quoteTotals.find((x) => x.transit === minTransit)?.id;
-
-    if (quotes.length > 1) {
-      const maxVal = Math.max(...quoteTotals.map((x) => x.total)) || 1;
-      const maxTransit = Math.max(...quoteTotals.map((x) => x.transit)) || 1;
-      const scored = quoteTotals.map((x) => ({
-        id: x.id,
-        score: x.total / maxVal + x.transit / maxTransit,
-      }));
-      const minScore = Math.min(...scored.map((s) => s.score));
-      bestValueId = scored.find((s) => s.score === minScore)?.id;
-    }
 
     const now = new Date();
     quotes.forEach((q) => {
@@ -620,223 +618,173 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
         ) : (
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* ================================================================================= */}
-            {/* 2. HORIZONTAL VISUAL STEPPER */}
+            {/* 2. MINIMAL PROGRESS BAR & PREMIUM ROUTE BOARD */}
             {/* ================================================================================= */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 overflow-x-auto">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
-                  Shipment Execution Lifecycle Progress
-                </h4>
-                <span className="text-[10px] text-slate-400 font-medium italic">
-                  {isReadOnly ? "Read-Only View" : "Click any stage to update status"}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-2 min-w-[950px]">
-                {STATUS_STEPS.map((step, idx) => {
-                  const isActive = step === logisticsStatus;
-                  const isCompleted = idx < currentStepIndex;
-
-                  let nodeBg =
-                    "bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200 hover:text-slate-700 hover:border-slate-300";
-                  if (isActive)
-                    nodeBg =
-                      "bg-blue-600 text-white border-blue-600 ring-4 ring-blue-100 font-extrabold shadow-md shadow-blue-500/30";
-                  else if (isCompleted)
-                    nodeBg =
-                      "bg-emerald-500 text-white border-emerald-500 shadow-sm shadow-emerald-500/20 hover:bg-emerald-600";
-
-                  return (
-                    <React.Fragment key={step}>
-                      <button
-                        type="button"
-                        onClick={() => handleStepClick(step)}
-                        disabled={isReadOnly || savingStatus}
-                        className={`flex flex-col items-center text-center space-y-1.5 shrink-0 group focus:outline-none transition-transform ${isReadOnly ? "cursor-default" : "cursor-pointer active:scale-95"} disabled:opacity-75`}
-                        title={isReadOnly ? `Current status: ${step}` : `Click to mark status as "${step}"`}
-                      >
-                        <div
-                          className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-extrabold border transition-all ${nodeBg}`}
-                        >
-                          {isCompleted ? <Check className="h-4 w-4" /> : idx + 1}
-                        </div>
-                        <span
-                          className={`text-[11px] font-bold max-w-[100px] truncate transition-colors ${isActive
-                            ? "text-blue-600 font-extrabold"
-                            : isCompleted
-                              ? "text-emerald-700 font-bold group-hover:text-emerald-800"
-                              : "text-slate-400 group-hover:text-slate-700"
-                            }`}
-                        >
-                          {step}
-                        </span>
-                      </button>
-
-                      {idx < STATUS_STEPS.length - 1 && (
-                        <div
-                          className={`h-0.5 flex-1 rounded-full transition-all ${idx < currentStepIndex ? "bg-emerald-500" : "bg-slate-200"
-                            }`}
-                        />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
+              {STATUS_STEPS.map((step, idx) => {
+                const isActive = step === logisticsStatus;
+                const isCompleted = idx < currentStepIndex;
+                
+                return (
+                  <div key={step} onClick={() => !isReadOnly && !savingStatus && handleStepClick(step)} className={`flex items-center shrink-0 ${isReadOnly ? '' : 'cursor-pointer'}`}>
+                    <div className={`px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider transition-all border ${
+                      isActive ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm' : 
+                      isCompleted ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 
+                      'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                    }`}>
+                      {isCompleted && <Check className="w-3 h-3 inline-block mr-1" />}
+                      {step}
+                    </div>
+                    {idx < STATUS_STEPS.length - 1 && (
+                      <div className={`w-6 h-px mx-1.5 ${isCompleted ? 'bg-emerald-300' : 'bg-slate-200'}`} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
-            {/* ================================================================================= */}
-            {/* 3. MERGED COMPACT CARD: SHIPMENT SUMMARY & STATUS CONTROLS (Hide in View-Only) */}
-            {/* ================================================================================= */}
-            {!isReadOnly && (
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5">
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-center">
-                  {/* Left Side: Summary Meta Grid */}
-                  <div className="xl:col-span-7 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-                        <Layers className="h-4 w-4" />
-                      </div>
-                      <span className="text-xs font-extrabold text-slate-900 uppercase tracking-tight">
-                        Shipment Details
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-extrabold border border-slate-200">
-                        {enquiry?.shipmentType || "FOB"}
-                      </span>
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 flex flex-col xl:flex-row gap-6">
+              {/* Left Side: Route Details */}
+              <div className="flex-1 flex flex-col justify-center">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                      <MapPin className="h-4 w-4 text-blue-600" />
                     </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100 text-xs">
-                      <div>
-                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Origin</span>
-                        <p className="font-extrabold text-slate-800 mt-0.5 truncate" title={enquiry?.originCity || enquiry?.originPort || "—"}>
-                          📍 {enquiry?.originCity || enquiry?.originPort || "—"}
-                        </p>
-                        {enquiry?.originZipCode && (
-                          <div className="mt-1 inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded-md border border-slate-200 text-[10px] font-semibold text-slate-600 shadow-2xs">
-                            <span className="text-slate-400">ZIP:</span>
-                            <span className="font-mono font-bold text-slate-800">{enquiry.originZipCode}</span>
-                          </div>
-                        )}
-                        {enquiry?.shipmentMode === "RAIL" && enquiry?.originStationCode && (
-                          <div className="mt-1 inline-flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 text-[10px] font-semibold text-blue-700">
-                            <span>Station:</span>
-                            <span className="font-mono font-extrabold uppercase">{enquiry.originStationCode}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Destination</span>
-                        <p className="font-extrabold text-slate-800 mt-0.5 truncate" title={enquiry?.destinationCity || enquiry?.destinationPort || "—"}>
-                          🏁 {enquiry?.destinationCity || enquiry?.destinationPort || "—"}
-                        </p>
-                        {enquiry?.destinationZipCode && (
-                          <div className="mt-1 inline-flex items-center gap-1 bg-white px-2 py-0.5 rounded-md border border-slate-200 text-[10px] font-semibold text-slate-600 shadow-2xs">
-                            <span className="text-slate-400">ZIP:</span>
-                            <span className="font-mono font-bold text-slate-800">{enquiry.destinationZipCode}</span>
-                          </div>
-                        )}
-                        {enquiry?.shipmentMode === "RAIL" && enquiry?.destinationStationCode && (
-                          <div className="mt-1 inline-flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 text-[10px] font-semibold text-blue-700">
-                            <span>Station:</span>
-                            <span className="font-mono font-extrabold uppercase">{enquiry.destinationStationCode}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Commodity</span>
-                        <p className="font-extrabold text-slate-800 mt-0.5 truncate" title={enquiry?.product?.name || "—"}>
-                          📦 {enquiry?.product?.name || "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Quantity</span>
-                        <p className="font-extrabold text-slate-900 mt-0.5 tabular-nums">
-                          ⚖️ {Number(enquiry?.quantity || 0).toLocaleString()} MT
-                        </p>
-                      </div>
-                    </div>
+                    <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest">Active Route</span>
                   </div>
-
-                  {/* Right Side: Mode & Status Controls */}
-                  <div className="xl:col-span-5 flex flex-col justify-between space-y-3 xl:border-l xl:border-slate-100 xl:pl-6">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold text-slate-900 uppercase tracking-tight flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-blue-600" /> Pipeline Settings
-                      </span>
-                      <button
-                        onClick={handleUpdateHeader}
-                        disabled={savingStatus}
-                        className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer active:scale-95 transition-all disabled:opacity-50"
-                      >
-                        {savingStatus ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        )}
-                        Save Settings
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                          Transport Mode
-                        </label>
-                        <select
-                          value={transportMode}
-                          onChange={(e) => setTransportMode(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-bold text-xs text-slate-800 focus:outline-none focus:border-blue-600 cursor-pointer"
-                        >
-                          <option value="Road">Road Logistics</option>
-                          <option value="Sea">Sea Freight</option>
-                          <option value="Rail">Rail Cargo</option>
-                          <option value="Air">Air Express</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                          Logistics Status
-                        </label>
-                        <select
-                          value={logisticsStatus}
-                          onChange={(e) => setLogisticsStatus(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 font-bold text-xs text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer"
-                        >
-                          {STATUS_STEPS.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                  <div className="flex-1 max-w-sm relative">
+                    <select
+                      value={selectedRoute?.id || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "all") {
+                          setSelectedRoute(availableRoutes.find(r => r.id === "all"));
+                        } else {
+                          const r = availableRoutes.find(ar => ar.id === Number(val));
+                          if (r) setSelectedRoute(r);
+                        }
+                      }}
+                      className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 appearance-none cursor-pointer transition-all truncate"
+                    >
+                      {availableRoutes.map((r, i) => (
+                        <option key={r.id || i} value={r.id}>{r.label}</option>
+                      ))}
+                    </select>
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-center pl-2">
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Loading Point</p>
+                    <p className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 truncate">
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" /> {selectedRoute ? selectedRoute.origin : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Destination</p>
+                    <p className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 truncate">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" /> {selectedRoute ? selectedRoute.destination : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Commodity</p>
+                    <p className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 truncate">
+                      <Package className="h-3.5 w-3.5 text-slate-400 shrink-0" /> {enquiry?.product?.name || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Quantity</p>
+                    <p className="font-extrabold text-xs text-slate-800 tabular-nums">{Number(enquiry?.quantity || 0).toLocaleString()} MT</p>
+                  </div>
+                </div>
               </div>
-            )}
+
+              {/* Right Side: Pipeline Control */}
+              {!isReadOnly && (
+                <div className="xl:w-[400px] xl:border-l xl:border-slate-100 xl:pl-6 flex flex-col justify-center">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-[10px] font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <Zap className="h-3 w-3 text-blue-600" /> Pipeline Control
+                    </h4>
+                    <button
+                      onClick={handleUpdateHeader}
+                      disabled={savingStatus}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-lg text-[10px] flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      {savingStatus ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-3 w-3" />
+                      )}
+                      Apply
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 relative">
+                      <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <Truck className="h-3.5 w-3.5" />
+                      </div>
+                      <select
+                        value={transportMode}
+                        onChange={(e) => setTransportMode(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg bg-slate-50 font-bold text-xs text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer transition-all hover:bg-slate-100 appearance-none truncate"
+                      >
+                        <option value="Road">Road</option>
+                        <option value="Sea">Sea</option>
+                        <option value="Rail">Rail</option>
+                        <option value="Air">Air</option>
+                      </select>
+                    </div>
+
+                    <div className="flex-1 relative">
+                      <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      </div>
+                      <select
+                        value={logisticsStatus}
+                        onChange={(e) => setLogisticsStatus(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg bg-slate-50 font-bold text-xs text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer transition-all hover:bg-slate-100 appearance-none truncate"
+                      >
+                        {STATUS_STEPS.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* ================================================================================= */}
             {/* 4. TAB NAVIGATION & CONTENT PANELS */}
             {/* ================================================================================= */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-              <div className="px-6 border-b border-slate-200/80 flex items-center justify-between">
-                <div className="flex items-center gap-6">
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col h-full">
+              <div className="p-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-2 bg-slate-200/60 p-1.5 rounded-xl border border-slate-300/30">
                   {[
-                    { id: "quotes", label: "Freight Comparison Matrix", count: quotes.length },
-                    { id: "docs", label: "Documents & Files", count: attachments.length },
-                    ...(!isReadOnly ? [{ id: "timeline", label: "Operational Audit Logs" }] : []),
+                    { id: "quotes", label: "Freight Matrix", icon: <Package className="h-3.5 w-3.5" />, count: quotes.length },
+                    { id: "docs", label: "Documents", icon: <Paperclip className="h-3.5 w-3.5" />, count: attachments.length },
+                    ...(!isReadOnly ? [{ id: "timeline", label: "Audit Logs", icon: <Clock className="h-3.5 w-3.5" /> }] : []),
                   ].map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`py-4 text-xs font-extrabold border-b-2 transition-all cursor-pointer flex items-center gap-2 ${activeTab === tab.id
-                        ? "border-blue-600 text-blue-600"
-                        : "border-transparent text-slate-500 hover:text-slate-900"
+                      className={`px-4 py-2 text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 rounded-lg ${activeTab === tab.id
+                        ? "bg-white text-blue-600 shadow-sm ring-1 ring-slate-900/5"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-white/40"
                         }`}
                     >
+                      {tab.icon}
                       {tab.label}
                       {tab.count !== undefined && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${activeTab === tab.id ? 'bg-blue-100 text-blue-700' : 'bg-slate-300 text-slate-600'}`}>
                           {tab.count}
                         </span>
                       )}
@@ -846,18 +794,18 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
               </div>
 
               {/* TAB PANELS */}
-              <div className="p-6">
+              <div className="p-4">
                 {/* --------------------------------------------------------------------------------- */}
                 {/* TAB 1: FREIGHT MATRIX */}
                 {/* --------------------------------------------------------------------------------- */}
                 {activeTab === "quotes" && (
-                  <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-tight">
+                        <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-tight">
                           Freight Quote Evaluation Matrix
                         </h3>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">
                           Compare logistics partner quotations by price, transit days, and expiration validity.
                         </p>
                       </div>
@@ -906,16 +854,16 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
                         <div className="overflow-x-auto">
                           <table className="w-full text-left text-xs text-slate-700 border-collapse">
-                            <thead className="bg-slate-50/80 border-b border-slate-200 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                            <thead className="bg-slate-50/80 border-b border-slate-200 text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
                               <tr>
-                                <th className="px-4 py-3.5">Transport Partner</th>
-                                <th className="px-4 py-3.5">Contact Person</th>
-                                <th className="px-4 py-3.5">Equipment / Mode</th>
-                                <th className="px-4 py-3.5 text-center">Transit</th>
-                                <th className="px-4 py-3.5">Validity</th>
-                                <th className="px-4 py-3.5 text-right">Freight Amount</th>
-                                <th className="px-4 py-3.5 text-center">Preferred</th>
-                                <th className="px-4 py-3.5 text-right">Actions</th>
+                                <th className="px-3 py-2.5">Transport Partner</th>
+                                <th className="px-3 py-2.5">Contact Person</th>
+                                <th className="px-3 py-2.5">Equipment / Mode</th>
+                                <th className="px-3 py-2.5 text-center">Transit</th>
+                                <th className="px-3 py-2.5">Validity</th>
+                                <th className="px-3 py-2.5 text-right">Freight Amount</th>
+                                <th className="px-3 py-2.5 text-center">Preferred</th>
+                                <th className="px-3 py-2.5 text-right">Actions</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 font-medium">
@@ -926,9 +874,6 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                                   Number(q.additionalCharges || 0);
 
                                 const isPreferred = q.isPreferred;
-                                const isLowest = q.id === lowestPriceId;
-                                const isFastest = q.id === fastestTransitId;
-                                const isBestValue = q.id === bestValueId;
                                 const isExpiring = expiringSoonIds.includes(q.id);
 
                                 const initials = getPartnerInitials(q.seller?.entityName);
@@ -939,21 +884,21 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                                     className={`transition-colors hover:bg-slate-50/80 ${isPreferred ? "bg-purple-50/30 font-semibold" : ""
                                       }`}
                                   >
-                                    <td className="px-4 py-3.5">
+                                    <td className="px-3 py-2">
                                       <div className="flex items-center gap-3">
-                                        <div className="h-8 w-8 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-extrabold text-[11px] flex items-center justify-center shrink-0 shadow-xs">
+                                        <div className="h-7 w-7 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 shadow-xs">
                                           {initials}
                                         </div>
                                         <div>
-                                          <div className="font-extrabold text-slate-900 flex items-center gap-1.5">
+                                          <div className="font-extrabold text-slate-900 flex items-center gap-1.5 text-xs">
                                             <span>{q.seller?.entityName || "Logistics Seller"}</span>
                                             {isPreferred && (
-                                              <span className="px-1.5 py-0.2 rounded-md bg-purple-600 text-white text-[9px] font-extrabold flex items-center gap-0.5">
-                                                <Star className="h-2.5 w-2.5 fill-white" /> Preferred
+                                              <span className="px-1.5 py-0.2 rounded bg-purple-600 text-white text-[9px] font-extrabold flex items-center gap-0.5">
+                                                <Star className="h-2 w-2 fill-white" /> Preferred
                                               </span>
                                             )}
                                           </div>
-                                          <div className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5">
+                                          <div className="text-[9px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5">
                                             <span className="font-mono text-slate-700">{q.quoteNumber}</span>
                                             <span>•</span>
                                             <span>v{q.version}</span>
@@ -962,18 +907,18 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                                       </div>
                                     </td>
 
-                                    <td className="px-4 py-3.5">
+                                    <td className="px-3 py-2">
                                       <div>
-                                        <div className="font-bold text-slate-800">
+                                        <div className="font-bold text-slate-800 text-[11px]">
                                           {q.contactPerson || "—"}
                                         </div>
-                                        <div className="text-[11px] font-mono text-slate-500 mt-0.5">
+                                        <div className="text-[10px] font-mono text-slate-500 mt-0.5">
                                           {q.contactNumber ? `📞 ${q.contactNumber}` : "—"}
                                         </div>
                                       </div>
                                     </td>
 
-                                    <td className="px-4 py-3.5 font-bold text-slate-800">
+                                    <td className="px-3 py-2 font-bold text-slate-800 text-[11px]">
                                       {(() => {
                                         const modeNorm = (transportMode || "").toLowerCase();
                                         if (modeNorm === "road") {
@@ -996,14 +941,14 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                                       })()}
                                     </td>
 
-                                    <td className="px-4 py-3.5 text-center">
-                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 text-slate-800 font-extrabold text-xs">
+                                    <td className="px-3 py-2 text-center">
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 font-extrabold text-[10px]">
                                         <Clock className="h-3 w-3 text-blue-600" /> {q.transitDays} Days
                                       </span>
                                     </td>
 
-                                    <td className="px-4 py-3.5">
-                                      <div className="font-bold text-slate-800">
+                                    <td className="px-3 py-2">
+                                      <div className="font-bold text-slate-800 text-[11px]">
                                         {q.validityDate
                                           ? new Date(q.validityDate).toLocaleDateString("en-IN", {
                                             day: "2-digit",
@@ -1019,13 +964,13 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                                       )}
                                     </td>
 
-                                    <td className="px-4 py-3.5 text-right">
+                                    <td className="px-3 py-2 text-right">
                                       <div className="text-sm font-extrabold text-emerald-600 tabular-nums">
                                         {q.currency} {totalCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </div>
 
                                       {Array.isArray(q.charges) && q.charges.length > 0 && (
-                                        <div className="text-[10px] text-slate-500 font-medium mt-1 space-y-0.5 text-right bg-slate-50/80 p-1.5 rounded-lg border border-slate-100">
+                                        <div className="text-[9px] text-slate-500 font-medium mt-1 space-y-0.5 text-right bg-slate-50/80 p-1.5 rounded-lg border border-slate-100">
                                           {q.charges.map((c, idx) => (
                                             <div key={c.id || idx} className="flex items-center justify-end gap-1.5">
                                               <span className="text-slate-500 truncate max-w-[130px]">{c.chargeName}:</span>
@@ -1035,42 +980,26 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                                         </div>
                                       )}
 
-                                      <div className="flex items-center justify-end gap-1 mt-1">
-                                        {isLowest && (
-                                          <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 text-[9px] font-extrabold flex items-center gap-0.5">
-                                            <Zap className="h-2.5 w-2.5 text-emerald-600" /> Lowest
-                                          </span>
-                                        )}
-                                        {isFastest && (
-                                          <span className="px-1.5 py-0.2 rounded bg-blue-50 text-blue-800 border border-blue-300 text-[9px] font-extrabold flex items-center gap-0.5">
-                                            <Clock className="h-2.5 w-2.5 text-blue-600" /> Fastest
-                                          </span>
-                                        )}
-                                        {isBestValue && (
-                                          <span className="px-1.5 py-0.2 rounded bg-purple-50 text-purple-800 border border-purple-300 text-[9px] font-extrabold flex items-center gap-0.5">
-                                            <ShieldCheck className="h-2.5 w-2.5 text-purple-600" /> Best Value
-                                          </span>
-                                        )}
-                                      </div>
+
                                     </td>
 
-                                    <td className="px-4 py-3.5 text-center">
+                                    <td className="px-3 py-2 text-center">
                                       <button
                                         onClick={() => !isReadOnly && handleSetPreferred(q.id)}
                                         disabled={isReadOnly}
-                                        className={`px-3 py-1.5 rounded-xl font-extrabold text-[11px] transition-all inline-flex items-center gap-1.5 ${isPreferred
+                                        className={`px-2 py-1 rounded-lg font-extrabold text-[10px] transition-all inline-flex items-center gap-1.5 ${isPreferred
                                           ? "bg-purple-600 text-white shadow-sm"
                                           : isReadOnly
                                             ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
                                             : "bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 cursor-pointer"
                                           }`}
                                       >
-                                        <Star className={`h-3 w-3 ${isPreferred ? "fill-white" : ""}`} />
+                                        <Star className={`h-2.5 w-2.5 ${isPreferred ? "fill-white" : ""}`} />
                                         {isPreferred ? "Selected" : "Select"}
                                       </button>
                                     </td>
 
-                                    <td className="px-4 py-3.5 text-right">
+                                    <td className="px-3 py-2 text-right">
                                       <div className="flex items-center justify-end gap-1">
                                         {isReadOnly ? (
                                           <button
@@ -1421,6 +1350,7 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
           }}
           onSave={handleSaveQuote}
           quote={selectedQuote}
+          selectedRoute={selectedRoute}
           lastQuote={quotes && quotes.length > 0 ? quotes[0] : null}
           transportMode={transportMode}
           mode={displayMode}

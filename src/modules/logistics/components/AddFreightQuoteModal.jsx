@@ -119,6 +119,7 @@ export default function AddFreightQuoteModal({
   onOpenAddContact,
   autoSelectPartner = null, // { partnerId, contactName, phoneNumber, focusContactField }
   isReadOnly = false,
+  selectedRoute = null,
 }) {
   // Form State
   const [sellerId, setSellerId] = useState("");
@@ -888,6 +889,7 @@ export default function AddFreightQuoteModal({
         ...(contactNumber && contactNumber.trim() && { contactNumber: contactNumber.trim() }),
         ...(paymentTerms && paymentTerms.trim() && { paymentTerms: paymentTerms.trim() }),
         ...(remarks && remarks.trim() && { remarks: remarks.trim() }),
+        ...(selectedRoute?.id && selectedRoute.id !== 'all' && { routeId: selectedRoute.id }),
 
         // Mode specific equipment specifications
         ...(modeNorm === "road" && {
@@ -1003,6 +1005,37 @@ export default function AddFreightQuoteModal({
               <div className="flex items-center gap-2.5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 font-bold">
                 <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
                 <span>{error}</span>
+              </div>
+            )}
+
+            {/* Route Context Banner */}
+            {selectedRoute?.id && selectedRoute.id !== "all" && (
+              <div className="bg-blue-50/50 border border-blue-200/60 rounded-2xl p-4 flex items-center justify-between shadow-xs">
+                <div>
+                  <h4 className="text-[10px] font-extrabold text-blue-500 uppercase tracking-wider mb-1">
+                    Route Context
+                  </h4>
+                  <div className="flex items-center gap-4 text-slate-800">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Origin</span>
+                      <span className="font-extrabold text-sm flex items-center gap-1.5">
+                        📍 {selectedRoute.origin || "—"}
+                      </span>
+                    </div>
+                    <div className="text-slate-300">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Destination</span>
+                      <span className="font-extrabold text-sm flex items-center gap-1.5">
+                        🏁 {selectedRoute.destination || "—"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-3 py-1.5 bg-blue-100/50 border border-blue-200 rounded-lg text-[10px] font-extrabold text-blue-700">
+                  Read-only
+                </div>
               </div>
             )}
 
