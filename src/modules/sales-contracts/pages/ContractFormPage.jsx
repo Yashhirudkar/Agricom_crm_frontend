@@ -306,6 +306,7 @@ export default function ContractFormPage({ editId, viewId }) {
       financialYear: form.financialYear,
       contractNumber: form.contractNumber.trim(),
       contractDate: form.contractDate,
+      contractType: form.contractType || "Export",
       buyerId: Number(form.buyerId),
       sellerId: form.sellerId ? Number(form.sellerId) : null,
       brokerId: form.brokerId ? Number(form.brokerId) : null,
