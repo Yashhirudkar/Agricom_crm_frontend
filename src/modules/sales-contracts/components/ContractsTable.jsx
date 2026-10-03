@@ -36,7 +36,7 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Contract No.", "Date", "Schedule", "Buyer", "Currency", "Total Qty (MT)", "Total Amount", "Documents", "Status", "Actions"].map(h => (
+            {["Contract No.", "Date", "Schedule", "Buyer", "Product", "Total Qty (MT)", "Documents", "Status", "Actions"].map(h => (
               <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">{h}</th>
             ))}
           </tr>
@@ -56,14 +56,11 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
               <td className="px-4 py-3 text-gray-800 font-medium whitespace-nowrap">
                 {c.buyer?.name || c.buyer?.entityName || "—"}
               </td>
-              <td className="px-4 py-3 text-gray-600">
-                {c.currencyCode || "—"}
+              <td className="px-4 py-3 text-gray-600 font-medium truncate max-w-[200px]" title={c.items?.map(i => i.product?.name).filter(Boolean).join(", ") || "—"}>
+                {c.items?.map(i => i.product?.name).filter(Boolean).join(", ") || "—"}
               </td>
               <td className="px-4 py-3 text-gray-800 font-semibold tabular-nums">
                 {Number(c.totalQuantity || 0).toLocaleString("en-IN")}
-              </td>
-              <td className="px-4 py-3 text-gray-800 font-semibold tabular-nums">
-                {currencies[c.currencyCode]?.symbol || ""} {Number(c.totalAmount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </td>
               <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                 {c.documents?.length > 0 ? (

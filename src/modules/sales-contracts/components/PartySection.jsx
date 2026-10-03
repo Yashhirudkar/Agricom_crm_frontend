@@ -31,8 +31,7 @@ export default function PartySection({ form, setForm, errors, masters = {}, isVi
           required
           value={form.buyerId}
           onChange={(val) => setForm((f) => ({ ...f, buyerId: val ? Number(val) : "" }))}
-          partnerRoleId={buyerRoleId}
-          initialPartners={buyers}
+          roleNames={["IMPORTER", "EXPORTER"]}
           disabled={isView}
           error={errors.buyerId}
           placeholder="Select Buyer"
@@ -45,12 +44,12 @@ export default function PartySection({ form, setForm, errors, masters = {}, isVi
           required
           value={form.sellerId}
           onChange={(val) => setForm((f) => ({ ...f, sellerId: val ? Number(val) : "" }))}
-          partnerRoleId={sellerRoleId}
-          initialPartners={sellers}
+          requireRoleId={false}
           disabled={isView}
           error={errors.sellerId}
           placeholder="Select Seller"
           searchPlaceholder="Search partner by name..."
+          allowedPrefixes={['agricom', 'ace trade link', 'ragini commodities']}
         />
 
         {/* Broker */}
@@ -59,8 +58,7 @@ export default function PartySection({ form, setForm, errors, masters = {}, isVi
           optionalText="Optional"
           value={form.brokerId}
           onChange={(val) => setForm((f) => ({ ...f, brokerId: val ? Number(val) : null }))}
-          partnerRoleId={brokerRoleId}
-          initialPartners={brokers}
+          initialPartners={masters.partners || []}
           disabled={isView}
           placeholder="Select Broker (Optional)"
           searchPlaceholder="Search partner by name..."

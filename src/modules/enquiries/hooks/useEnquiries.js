@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { enquiriesApi, mastersApi } from "../services/enquiriesApi";
 
-export function useEnquiries(companyId, status = "", externalSearch = null) {
+export function useEnquiries(companyId, status = "", externalSearch = null, withoutSalesContract = false) {
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -21,6 +21,7 @@ export function useEnquiries(companyId, status = "", externalSearch = null) {
         limit,
         ...(currentSearch && { search: currentSearch }),
         ...(status && { status }),
+        ...(withoutSalesContract && { withoutSalesContract: true }),
       };
       const res = await enquiriesApi.getAll(params);
       setEnquiries(res.data.data || []);
@@ -31,7 +32,7 @@ export function useEnquiries(companyId, status = "", externalSearch = null) {
     } finally {
       setLoading(false);
     }
-  }, [page, currentSearch, limit, companyId, status]);
+  }, [page, currentSearch, limit, companyId, status, withoutSalesContract]);
 
   useEffect(() => {
     fetchEnquiries();

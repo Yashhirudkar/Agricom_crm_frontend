@@ -21,6 +21,7 @@ import ForceMajeureSection from "../components/ForceMajeureSection";
 import ContractAcceptanceSection from "../components/ContractAcceptanceSection";
 
 const defaultForm = () => ({
+  enquiryId: null,
   financialYear: getCurrentFinancialYear(),
   contractNumber: "",
   contractDate: "",
@@ -115,6 +116,7 @@ export default function ContractFormPage({ editId, viewId }) {
         const res = await salesContractApi.getOne(contractId);
         const c = res.data;
         setForm({
+          enquiryId: c.enquiryId || null,
           // financialYear is now a plain string from the server
           financialYear: c.financialYear || getCurrentFinancialYear(),
           contractNumber: c.contractNumber || "",
@@ -217,6 +219,7 @@ export default function ContractFormPage({ editId, viewId }) {
           : getCurrentFinancialYear();
 
         setForm({
+          enquiryId: enquiryId,
           financialYear: derivedFY,
           contractNumber: "",
           contractDate: new Date().toISOString().split("T")[0],
@@ -303,6 +306,7 @@ export default function ContractFormPage({ editId, viewId }) {
     const totalAmount = validItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
 
     const payload = {
+      enquiryId: form.enquiryId || null,
       financialYear: form.financialYear,
       contractNumber: form.contractNumber.trim(),
       contractDate: form.contractDate,

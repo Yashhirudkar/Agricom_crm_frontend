@@ -15,12 +15,14 @@ export default function PurchaseContractInformationSection({
 
   const isManual = contract?.purchaseType === "MTT" || !contract?.salesContractId;
   const contractNo = form.contractNumber || summary?.contractInfo?.contractNumber || (contract?.salesContract?.contractNumber ? `PC-${contract.salesContract.contractNumber}` : (contract?.id ? `PC-${contract.id}` : "PC-NEW"));
-  const defaultBuyer = summary?.commercialInfo?.buyer?.entityName || contract?.salesContract?.buyer?.entityName || "";
-  const defaultSeller = summary?.commercialInfo?.seller?.entityName || contract?.salesContract?.seller?.entityName || "";
+  const defaultBuyer = contract?.salesContract?.seller?.entityName || summary?.commercialInfo?.buyer?.entityName || "";
+  const defaultSeller = summary?.commercialInfo?.seller?.entityName || "";
   const contractTypeDisplay = isManual ? "MTT (Manual Trade)" : (contract?.salesContract?.contractType || "SC (Sales Contract)");
 
   const buyersOptions = masters?.buyers || masters?.partners || [];
-  const sellersOptions = masters?.sellers || masters?.partners || [];
+  const sellersOptions = [
+    ...new Map([...(masters?.sellers || []), ...(masters?.suppliers || [])].map((item) => [item.id, item])).values()
+  ];
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
@@ -108,41 +110,30 @@ export default function PurchaseContractInformationSection({
           {/* Seller / Supplier Entity */}
           <div>
             <label className={lbl}>Seller / Supplier *</label>
-            {isManual && sellersOptions.length > 0 ? (
-              <div className="relative">
-                <select
-                  value={form.sellerId || ""}
-                  onChange={(e) => {
-                    const sId = Number(e.target.value);
-                    const sObj = sellersOptions.find((s) => s.id === sId);
-                    setForm((f) => ({
-                      ...f,
-                      sellerId: sId || null,
-                      supplierName: sObj?.entityName || sObj?.name || "",
-                    }));
-                  }}
-                  disabled={isView}
-                  className={`${inp} appearance-none pr-8 font-semibold text-gray-900`}
-                >
-                  <option value="">Select Supplier Entity</option>
-                  {sellersOptions.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.entityName || s.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-              </div>
-            ) : (
-              <input
-                type="text"
-                value={form.supplierName || defaultSeller}
-                onChange={(e) => setForm((f) => ({ ...f, supplierName: e.target.value }))}
+            <div className="relative">
+              <select
+                value={form.sellerId || ""}
+                onChange={(e) => {
+                  const sId = Number(e.target.value);
+                  const sObj = sellersOptions.find((s) => s.id === sId);
+                  setForm((f) => ({
+                    ...f,
+                    sellerId: sId || null,
+                    supplierName: sObj?.entityName || sObj?.name || "",
+                  }));
+                }}
                 disabled={isView}
-                className={`${inp} font-semibold text-gray-900`}
-                placeholder="Enter Supplier Name"
-              />
-            )}
+                className={`${inp} appearance-none pr-8 font-semibold text-gray-900`}
+              >
+                <option value="">Select Supplier Entity</option>
+                {sellersOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.entityName || s.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+            </div>
           </div>
 
           <div>

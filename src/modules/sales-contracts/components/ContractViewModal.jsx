@@ -628,7 +628,33 @@ export default function ContractViewModal({ contractId, onClose }) {
                         </Row>
 
                         <Row label="Quantity">
-                          {renderValue(`quantity_${idx}`, `${Number(item.quantity).toLocaleString("en-IN")} MT +/- 5%`)}
+                          {isCustomizing ? (
+                            <div className="flex items-center gap-2 w-full">
+                              <textarea
+                                value={printOverrides[`quantityPrefix_${idx}`] || ""}
+                                onChange={(e) => setPrintOverrides(prev => ({ ...prev, [`quantityPrefix_${idx}`]: e.target.value }))}
+                                className="w-full text-xs font-sans p-1.5 border border-blue-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-blue-50/20 resize-y uppercase font-medium"
+                                rows={1}
+                                placeholder="Prefix text (e.g. 1 TRUCKS OF...)"
+                              />
+                              <span className="whitespace-nowrap font-bold bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-slate-700 select-none">
+                                {Number(item.quantity).toLocaleString("en-IN")} MT
+                              </span>
+                              <textarea
+                                value={printOverrides[`quantitySuffix_${idx}`] !== undefined ? printOverrides[`quantitySuffix_${idx}`] : "+/- 5%"}
+                                onChange={(e) => setPrintOverrides(prev => ({ ...prev, [`quantitySuffix_${idx}`]: e.target.value }))}
+                                className="w-full text-xs font-sans p-1.5 border border-blue-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-blue-50/20 resize-y uppercase font-medium"
+                                rows={1}
+                                placeholder="Suffix text (e.g. +/- 5%)"
+                              />
+                            </div>
+                          ) : (
+                            <span>
+                              {printOverrides[`quantityPrefix_${idx}`] ? `${printOverrides[`quantityPrefix_${idx}`]} ` : ""}
+                              {Number(item.quantity).toLocaleString("en-IN")} MT
+                              {printOverrides[`quantitySuffix_${idx}`] !== undefined ? ` ${printOverrides[`quantitySuffix_${idx}`]}` : " +/- 5%"}
+                            </span>
+                          )}
                         </Row>
 
                         <Row label="Packing">
@@ -644,7 +670,38 @@ export default function ContractViewModal({ contractId, onClose }) {
                         </Row>
 
                         <Row label="Price">
-                          {renderValue(`price_${idx}`, `${contract.currencyCode} ${Number(item.unitPrice).toLocaleString("en-IN", { minimumFractionDigits: 2 })} PER MT ${incotermLabel(contract)}`.toUpperCase())}
+                          {(() => {
+                            const baseIncoterm = contract.destinationTransportMode === "road" || contract.destinationTransportMode === "rail" ? "DAP" : "CIF";
+                            const loc = contract.destinationLocationName || contract.portOfDischarge || "";
+                            
+                            const defaultPart1 = `${contract.currencyCode} ${Number(item.unitPrice).toLocaleString("en-IN", { minimumFractionDigits: 2 })} PER MT ${baseIncoterm}`.toUpperCase();
+                            const defaultPart2 = loc.toUpperCase();
+
+                            const p1 = printOverrides[`pricePart1_${idx}`] !== undefined ? printOverrides[`pricePart1_${idx}`] : defaultPart1;
+                            const p2 = printOverrides[`pricePart2_${idx}`] !== undefined ? printOverrides[`pricePart2_${idx}`] : defaultPart2;
+
+                            if (isCustomizing) {
+                              return (
+                                <div className="flex items-center gap-2 w-full">
+                                  <textarea
+                                    value={p1}
+                                    onChange={(e) => setPrintOverrides(prev => ({ ...prev, [`pricePart1_${idx}`]: e.target.value }))}
+                                    className="w-1/2 text-xs font-sans p-1.5 border border-blue-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-blue-50/20 resize-y uppercase font-medium"
+                                    rows={1}
+                                    placeholder="Part 1 (e.g. USD 490.00 PER MT CIF)"
+                                  />
+                                  <textarea
+                                    value={p2}
+                                    onChange={(e) => setPrintOverrides(prev => ({ ...prev, [`pricePart2_${idx}`]: e.target.value }))}
+                                    className="w-1/2 text-xs font-sans p-1.5 border border-blue-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-blue-50/20 resize-y uppercase font-medium"
+                                    rows={1}
+                                    placeholder="Part 2 (e.g. PORT NAME)"
+                                  />
+                                </div>
+                              );
+                            }
+                            return <span>{p1} {p2}</span>;
+                          })()}
                         </Row>
                       </React.Fragment>
                     ))}

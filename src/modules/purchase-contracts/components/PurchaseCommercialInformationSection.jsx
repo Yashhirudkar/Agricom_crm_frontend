@@ -73,8 +73,8 @@ export default function PurchaseCommercialInformationSection({
       </div>
 
       <div className="p-5 space-y-5">
-        {/* Row 1: Product, Quantity, Quality, Packing */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        {/* Row 1: Product, Quantity, Price, Currency, Quality, Packing */}
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
           <div>
             <label className={lbl}>Product *</label>
             {isManual && productsMaster.length > 0 ? (
@@ -84,6 +84,12 @@ export default function PurchaseCommercialInformationSection({
                   onChange={(e) => {
                     const pId = Number(e.target.value);
                     const pObj = productsMaster.find((p) => p.id === pId);
+                    
+                    let newQuality = "";
+                    if (pObj) {
+                      newQuality = [pObj.qualitySubType, pObj.specification].filter(Boolean).join(" - ");
+                    }
+
                     setForm((f) => {
                       const updatedItems = [...(f.items || [])];
                       if (updatedItems.length === 0) {
@@ -91,7 +97,7 @@ export default function PurchaseCommercialInformationSection({
                           productId: pId,
                           productName: pObj?.name || "",
                           quantity: f.quantity || 0,
-                          productQuality: f.productQuality || "",
+                          productQuality: newQuality || f.productQuality || "",
                           packing: f.packing || "",
                         });
                       } else {
@@ -99,12 +105,14 @@ export default function PurchaseCommercialInformationSection({
                           ...updatedItems[0],
                           productId: pId,
                           productName: pObj?.name || "",
+                          productQuality: newQuality || updatedItems[0].productQuality || "",
                         };
                       }
                       return {
                         ...f,
                         productId: pId || null,
                         productName: pObj?.name || "",
+                        productQuality: newQuality || f.productQuality || "",
                         items: updatedItems,
                       };
                     });
@@ -153,6 +161,57 @@ export default function PurchaseCommercialInformationSection({
               placeholder="e.g. 200"
               className={`${inp} font-bold text-gray-900 tabular-nums`}
             />
+          </div>
+
+          <div>
+            <label className={lbl}>Price *</label>
+            <input
+              type="number"
+              step="0.01"
+              value={form.ratePerMt ?? ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setForm((f) => {
+                  const updatedItems = [...(f.items || [])];
+                  if (updatedItems.length > 0) {
+                    updatedItems[0] = { ...updatedItems[0], ratePerMt: parseFloat(val) || 0 };
+                  }
+                  return { ...f, ratePerMt: val, items: updatedItems };
+                });
+              }}
+              disabled={isView}
+              placeholder="e.g. 500"
+              className={`${inp} font-bold text-gray-900 tabular-nums`}
+            />
+          </div>
+
+          <div>
+            <label className={lbl}>Currency *</label>
+            <div className="relative">
+              <select
+                value={form.currencyCode || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setForm((f) => {
+                    const updatedItems = [...(f.items || [])];
+                    if (updatedItems.length > 0) {
+                      updatedItems[0] = { ...updatedItems[0], currencyCode: val };
+                    }
+                    return { ...f, currencyCode: val, items: updatedItems };
+                  });
+                }}
+                disabled={isView}
+                className={`${inp} appearance-none pr-8 font-bold text-gray-900`}
+              >
+                <option value="">Select</option>
+                {(masters?.currencies || [
+                  { code: 'USD' }, { code: 'EUR' }, { code: 'INR' }, { code: 'CNY' }, { code: 'GBP' }
+                ]).map(c => (
+                  <option key={c.code} value={c.code}>{c.code}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+            </div>
           </div>
 
           <div>
@@ -272,7 +331,7 @@ export default function PurchaseCommercialInformationSection({
         </div>
 
         {/* Row 3: Delivery Place & Date */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-gray-100">
           <div>
             <label className={lbl}>Delivery Place</label>
             <input
@@ -286,11 +345,22 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Delivery / Dispatch Date</label>
+            <label className={lbl}>Delivery / Dispatch Date (From)</label>
             <input
               type="date"
               value={form.deliveryDate || ""}
               onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))}
+              disabled={isView}
+              className={`${inp}`}
+            />
+          </div>
+
+          <div>
+            <label className={lbl}>Delivery / Dispatch Date (To)</label>
+            <input
+              type="date"
+              value={form.deliveryToDate || ""}
+              onChange={(e) => setForm((f) => ({ ...f, deliveryToDate: e.target.value }))}
               disabled={isView}
               className={`${inp}`}
             />
@@ -325,8 +395,8 @@ export default function PurchaseCommercialInformationSection({
               />
             </div>
 
-            {/* Row 2: Advance / Penalty (auto) / Due Date */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Row 2: Advance / Balance (auto) / Due Date / Unloading Date */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
 
               {/* Advance % */}
               <div>
@@ -341,8 +411,8 @@ export default function PurchaseCommercialInformationSection({
                   onChange={(e) => {
                     const raw = e.target.value;
                     const val = raw === "" ? "" : Math.min(100, Math.max(0, Number(raw)));
-                    const penalty = val === "" ? "" : Math.max(0, 100 - Number(val));
-                    setForm((f) => ({ ...f, advancePercent: val, penaltyPercent: penalty }));
+                    const balance = val === "" ? "" : Math.max(0, 100 - Number(val));
+                    setForm((f) => ({ ...f, advancePercent: val, balancePercent: balance }));
                   }}
                   disabled={isView}
                   placeholder="Enter Advance %"
@@ -350,18 +420,18 @@ export default function PurchaseCommercialInformationSection({
                 />
               </div>
 
-              {/* Penalty % — read-only, auto-calculated as 100 - Advance */}
+              {/* Balance % — read-only, auto-calculated as 100 - Advance */}
               <div>
-                <label className={lbl} htmlFor="pc-penaltyPercent">
-                  Penalty (%)
+                <label className={lbl} htmlFor="pc-balancePercent">
+                  Balance (%)
                   <span className="ml-1.5 text-[9px] font-normal text-gray-400 normal-case tracking-normal">auto</span>
                 </label>
                 <input
-                  id="pc-penaltyPercent"
+                  id="pc-balancePercent"
                   type="number"
                   readOnly
                   tabIndex={-1}
-                  value={form.penaltyPercent ?? ""}
+                  value={form.balancePercent ?? ""}
                   className={`${inp} !bg-gray-100 text-gray-500 cursor-not-allowed`}
                   style={{ WebkitUserSelect: "none" }}
                 />
@@ -369,7 +439,10 @@ export default function PurchaseCommercialInformationSection({
 
               {/* Payment Due Date */}
               <div>
-                <label className={lbl} htmlFor="pc-paymentDueDate">Payment Due Date</label>
+                <label className={lbl} htmlFor="pc-paymentDueDate">
+                  Payment Due Date
+                  <span className="ml-1 text-[10px] font-normal text-gray-500">(Tentative)</span>
+                </label>
                 <div className="relative">
                   <input
                     id="pc-paymentDueDate"
@@ -384,6 +457,22 @@ export default function PurchaseCommercialInformationSection({
                   <CalendarDays
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 cursor-pointer hover:text-blue-500 transition-colors"
                     onClick={() => !isView && paymentDueDateRef.current?.showPicker?.()}
+                  />
+                </div>
+              </div>
+
+              {/* Unloading Date */}
+              <div>
+                <label className={lbl} htmlFor="pc-unloadingDate">Unloading Date</label>
+                <div className="relative">
+                  <input
+                    id="pc-unloadingDate"
+                    ref={useRef()}
+                    type="date"
+                    value={form.unloadingDate || ""}
+                    onChange={(e) => setForm((f) => ({ ...f, unloadingDate: e.target.value }))}
+                    disabled={isView}
+                    className={`${inp}`}
                   />
                 </div>
               </div>

@@ -85,6 +85,10 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     marking: "",
     deliveryPlace: "",
     deliveryDate: "",
+    deliveryToDate: "",
+    unloadingDate: "",
+    currencyCode: "",
+    ratePerMt: "",
     paymentTermId: null,
     paymentTermName: "",
     paymentTermsText: "",
@@ -120,7 +124,21 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
       const firstItem = itemsList[0] || {};
       const totalQuantity = itemsList.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0) || "";
 
-      const quality = contract.productQuality || firstItem.remarks || firstItem.productQuality || "";
+      let pObj = firstItem.product;
+      if (!pObj && masters?.products?.length > 0) {
+        pObj = masters.products.find(p => p.id === firstItem.productId);
+      }
+
+      const scQuality = [
+        pObj?.qualitySubType,
+        pObj?.specification || firstItem.quality
+      ].filter(Boolean).join(" - ") || "";
+
+      const scFirstItem = salesContract.items?.[0] || {};
+      const printOverrides = salesContract.printOverrides || {};
+      const overridenQuality = printOverrides['quality_0'];
+      const quality = contract.productQuality || firstItem.productQuality || overridenQuality || scQuality || firstItem.remarks || scFirstItem.remarks || "";
+
       const packing = contract.packing || firstItem.packingType?.name || (typeof firstItem.packingType === "string" ? firstItem.packingType : "");
       const bagType = contract.bagType || firstItem.bagType?.name || (typeof firstItem.bagType === "string" ? firstItem.bagType : "");
 
@@ -140,10 +158,10 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         ...f,
         purchaseType: contract.purchaseType || "SC",
         contractNumber: contract.contractNumber || "",
-        buyerId: contract.buyerId || salesContract.buyerId || f.buyerId || null,
-        buyerName: contract.buyer?.entityName || salesContract.buyer?.entityName || f.buyerName || "",
-        sellerId: contract.sellerId || salesContract.sellerId || f.sellerId || null,
-        supplierName: contract.seller?.entityName || salesContract.seller?.entityName || f.supplierName || "",
+        buyerId: salesContract.sellerId || contract.buyerId || f.buyerId || null,
+        buyerName: salesContract.seller?.entityName || contract.buyer?.entityName || f.buyerName || "",
+        sellerId: contract.sellerId || f.sellerId || null,
+        supplierName: contract.seller?.entityName || f.supplierName || "",
         brokerId: contract.brokerId || salesContract.brokerId || f.brokerId || null,
         brokerName: contract.broker?.entityName || salesContract.broker?.entityName || f.brokerName || "",
         brokerCommission: contract.brokerCommission || f.brokerCommission || "",
@@ -158,7 +176,11 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         stitching: contract.stitching || f.stitching || "",
         marking: contract.marking || firstItem.marking || f.marking || "",
         notes: contract.notes || f.notes || "",
+        currencyCode: contract.currencyCode || salesContract.currencyCode || f.currencyCode || "",
+        ratePerMt: firstItem.ratePerMt || f.ratePerMt || "",
         deliveryPlace: contract.deliveryPlace || salesContract.portOfLoading || f.deliveryPlace || "",
+        deliveryDate: contract.dispatchDate || f.deliveryDate || "",
+        deliveryToDate: contract.dispatchToDate || f.deliveryToDate || "",
         paymentTermId: contract.paymentTermId || salesContract.paymentTermId || f.paymentTermId || null,
         paymentTermName: contract.paymentTerm?.name || salesContract.paymentTerm?.name || f.paymentTermName || "",
         paymentTermsText: contract.paymentTermsText || f.paymentTermsText || "",
@@ -166,6 +188,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         balancePercent: contract.advancePercent != null ? Math.max(0, 100 - Number(contract.advancePercent)) : (f.balancePercent ?? ""),
         penaltyPercent: contract.penaltyPercent ?? f.penaltyPercent ?? "",
         paymentDueDate: contract.paymentDueDate ? contract.paymentDueDate.split("T")[0] : (f.paymentDueDate || ""),
+        unloadingDate: contract.unloadingDate ? contract.unloadingDate.split("T")[0] : (f.unloadingDate || ""),
         terms: (contract.terms && contract.terms.length > 0) ? contract.terms : (salesContract.terms || []),
         items: itemsList.map((it) => ({
           id: it.id,
@@ -174,6 +197,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           quantity: Number(it.quantity) || 0,
           productQuality: it.productQuality || quality,
           packing: it.packing || packing,
+          ratePerMt: Number(it.ratePerMt) || 0,
         })),
       }));
 
@@ -249,17 +273,21 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     setSaving(true);
     try {
       const formattedItems = (form.items && form.items.length > 0)
-        ? form.items.map((it) => ({
-            productId: it.productId || form.productId || null,
-            productName: it.productName || form.productName || null,
-            quantity: Number(it.quantity) || Number(form.quantity) || 0,
-            productQuality: it.productQuality || form.productQuality || null,
-            packing: it.packing || form.packing || null,
-            bagType: it.bagType || form.bagType || null,
-            bagSpec: it.bagSpec || form.bagSpec || null,
-            stitching: it.stitching || form.stitching || null,
-            marking: it.marking || form.marking || null,
-          }))
+        ? form.items.map((it, idx) => {
+            const isFirst = idx === 0;
+            return {
+              productId: isFirst ? (form.productId || it.productId || null) : (it.productId || form.productId || null),
+              productName: isFirst ? (form.productName || it.productName || null) : (it.productName || form.productName || null),
+              quantity: isFirst ? (Number(form.quantity) || Number(it.quantity) || 0) : (Number(it.quantity) || Number(form.quantity) || 0),
+              productQuality: isFirst ? (form.productQuality || null) : (it.productQuality || form.productQuality || null),
+              packing: isFirst ? (form.packing || null) : (it.packing || form.packing || null),
+              bagType: isFirst ? (form.bagType || null) : (it.bagType || form.bagType || null),
+              bagSpec: isFirst ? (form.bagSpec || null) : (it.bagSpec || form.bagSpec || null),
+              stitching: isFirst ? (form.stitching || null) : (it.stitching || form.stitching || null),
+              marking: isFirst ? (form.marking || null) : (it.marking || form.marking || null),
+              ratePerMt: isFirst ? (form.ratePerMt || null) : (it.ratePerMt || form.ratePerMt || null),
+            };
+          })
         : (form.productId || form.quantity ? [{
             productId: form.productId || null,
             productName: form.productName || null,
@@ -270,6 +298,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
             bagSpec: form.bagSpec || null,
             stitching: form.stitching || null,
             marking: form.marking || null,
+            ratePerMt: form.ratePerMt || null,
           }] : []);
 
       const formattedAllocations = shipmentAllocations.length > 0
@@ -295,10 +324,12 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         balancePercent: form.balancePercent !== "" && form.balancePercent != null ? parseFloat(form.balancePercent) : null,
         penaltyPercent: form.penaltyPercent !== "" && form.penaltyPercent != null ? parseFloat(form.penaltyPercent) : null,
         paymentDueDate: form.paymentDueDate || null,
+        unloadingDate: form.unloadingDate || null,
         brokerId: form.brokerId || null,
         brokerCommission: form.brokerCommission || null,
         deliveryPlace: form.deliveryPlace || null,
         dispatchDate: form.deliveryDate || null,
+        dispatchToDate: form.deliveryToDate || null,
         notes: form.notes || null,
         terms: Array.isArray(form.terms) ? form.terms : [],
         quantity: form.quantity ? String(form.quantity) : null,
@@ -308,6 +339,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         bagSpec: form.bagSpec || null,
         stitching: form.stitching || null,
         marking: form.marking || null,
+        currencyCode: form.currencyCode || null,
         items: formattedItems,
         shipmentAllocations: formattedAllocations,
         shipmentIds: (selectedShipmentIds || []).map(Number).filter((n) => !isNaN(n)),
@@ -511,6 +543,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
             <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
               <Field label="Product" value={form.productName} />
               <Field label="Quantity" value={form.quantity ? `${form.quantity} MT` : "—"} />
+              <Field label="Price" value={form.ratePerMt ? `${form.ratePerMt}` : "—"} />
+              <Field label="Currency" value={form.currencyCode} />
               <Field label="Product Quality" value={form.productQuality} />
               <Field label="Packing" value={form.packing} />
               <Field label="Bag Type" value={form.bagType} />
@@ -518,7 +552,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
               <Field label="Stitching" value={form.stitching} />
               <Field label="Marking" value={form.marking} />
               <Field label="Delivery Place" value={form.deliveryPlace} />
-              <Field label="Dispatch Date" value={form.deliveryDate} />
+              <Field label="Dispatch Date (From)" value={form.deliveryDate} />
+              <Field label="Dispatch Date (To)" value={form.deliveryToDate} />
             </div>
           </div>
 
@@ -532,11 +567,11 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
               <Field label="Payment Term" value={form.paymentTermName} />
               <Field label="Advance (%)" value={form.advancePercent ? `${form.advancePercent}%` : "—"} />
               <Field label="Balance (%)" value={form.balancePercent ? `${form.balancePercent}%` : "—"} />
-              <Field label="Penalty (%)" value={form.penaltyPercent ? `${form.penaltyPercent}%` : "—"} />
               <div className="col-span-2 md:col-span-4">
                 <Field label="Payment Terms Text" value={form.paymentTermsText} />
               </div>
-              <Field label="Payment Due Date" value={form.paymentDueDate} />
+              <Field label="Payment Due Date (Tentative)" value={form.paymentDueDate} />
+              <Field label="Unloading Date" value={form.unloadingDate} />
             </div>
           </div>
 

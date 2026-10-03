@@ -44,14 +44,22 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
   };
 
   const getDestinationText = (e) => {
-    if (e.shipmentMode === "SHIP") {
-      return e.destinationPort || e.podName ? `🚢 ${e.destinationPort || e.podName}` : "—";
+    let icon = "";
+    if (e.shipmentMode === "SHIP" || e.shipmentType === "VESSEL" || e.shipmentType === "FCL") icon = "🚢 ";
+    else if (e.shipmentMode === "ROAD" || e.shipmentType === "TRUCK" || e.shipmentType === "TRUCK_WAGON") icon = "🚛 ";
+    else if (e.shipmentMode === "RAIL" || e.shipmentType === "WAGON") icon = "🚆 ";
+
+    if (e.shipmentMode === "SHIP" || e.shipmentType === "VESSEL" || e.shipmentType === "FCL") {
+      const port = e.destinationPort || e.podName;
+      if (port) return `${icon}${port}`;
+      if (e.destinationCountry) return `${icon}${e.destinationCountry}`;
+      return "—";
     }
-    if (e.shipmentMode === "ROAD" || e.shipmentMode === "RAIL") {
-      const icon = e.shipmentMode === "ROAD" ? "🚛 " : "🚆 ";
-      const parts = [e.destinationCity, e.destinationState, e.destinationCountry].filter(Boolean);
-      return parts.length > 0 ? `${icon}${parts.join(", ")}` : "—";
+
+    if (e.destinationCountry) {
+      return icon ? `${icon}${e.destinationCountry}` : e.destinationCountry;
     }
+
     return e.podName || "—";
   };
 
@@ -83,7 +91,7 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Enquiry No.", "Date", "Partner", "Product", "Origin", "Qty (MT)", "Shipment Date", isOrderMode ? "Price" : "Bid", "Created By", "Potential", "Actions"].map((h, index) => {
+            {["Enquiry No.", "Date", "Partner", "Product", "Destination", "Qty (MT)", "Shipment Date", isOrderMode ? "Price" : "Bid", "Created By", "Potential", "Actions"].map((h, index) => {
               let stickyClass = "";
               if (index === 0) {
                 stickyClass = "sticky left-0 z-30 bg-[#f9fafb] w-[120px] min-w-[120px] max-w-[120px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none";
@@ -122,8 +130,8 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                 <td className="px-3 py-3 text-gray-600 whitespace-nowrap max-w-[150px] truncate" title={e.productName || ""}>
                   {e.productName || "—"}
                 </td>
-                <td className="px-3 py-3 text-gray-600 whitespace-nowrap max-w-[200px] truncate" title={getOriginText(e)}>
-                  {getOriginText(e)}
+                <td className="px-3 py-3 text-gray-600 whitespace-nowrap max-w-[200px] truncate" title={getDestinationText(e)}>
+                  {getDestinationText(e)}
                 </td>
                 <td className="px-3 py-3 text-gray-800 font-semibold tabular-nums">
                   {Number(e.quantity || 0).toLocaleString("en-IN")}

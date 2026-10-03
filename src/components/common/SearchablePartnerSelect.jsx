@@ -25,6 +25,8 @@ function SearchablePartnerSelect({
   searchPlaceholder = "Search by name, phone...",
   optionalText,
   requireRoleId = true,
+  filterFn,
+  allowedPrefixes,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -68,7 +70,15 @@ function SearchablePartnerSelect({
     async (searchQuery = "") => {
       const activeRoleParam = getRoleParam();
       if (requireRoleId && !partnerRoleId && !activeRoleParam) {
-        setOptions((initialPartnersRef.current || []).slice(0, 50));
+        let list = initialPartnersRef.current || [];
+        if (searchQuery.trim()) {
+          const q = searchQuery.trim().toLowerCase();
+          list = list.filter((p) => (p.name || p.entityName || "").toLowerCase().includes(q));
+        }
+        if (filterFn) {
+          list = list.filter(filterFn);
+        }
+        setOptions(list.slice(0, 50));
         return;
       }
 
@@ -86,10 +96,14 @@ function SearchablePartnerSelect({
           ...(activeRoleParam ? { roleName: activeRoleParam } : {}),
           ...(searchQuery.trim() ? { search: searchQuery.trim() } : {}),
           ...(mode === "contact" ? { includeContacts: "true" } : {}),
+          ...(allowedPrefixes && allowedPrefixes.length > 0 ? { allowedPrefixes: allowedPrefixes.join(',') } : {}),
         };
         const res = await axiosClient.get("/masters/partners/options", { params });
         const data = res.data?.data || res.data || [];
-        const partnerList = Array.isArray(data) ? data.slice(0, 50) : [];
+        let partnerList = Array.isArray(data) ? data.slice(0, 50) : [];
+        if (filterFn) {
+          partnerList = partnerList.filter(filterFn);
+        }
         setOptions(partnerList);
 
         // Populate contact details directly from batched response
@@ -105,7 +119,10 @@ function SearchablePartnerSelect({
         }
       } catch (e) {
         console.error("Failed to fetch partner options", e);
-        const initList = initialPartnersRef.current || [];
+        let initList = initialPartnersRef.current || [];
+        if (filterFn) {
+          initList = initList.filter(filterFn);
+        }
         setOptions(initList.length > 0 ? initList.slice(0, 50) : []);
       } finally {
         setLoading(false);
@@ -145,9 +162,13 @@ function SearchablePartnerSelect({
   // Initialize options with initialPartners if available
   useEffect(() => {
     if (initialPartners && initialPartners.length > 0) {
-      setOptions(initialPartners.slice(0, 50));
+      let initList = initialPartners;
+      if (filterFn) {
+        initList = initList.filter(filterFn);
+      }
+      setOptions(initList.slice(0, 50));
     }
-  }, [initialPartners]);
+  }, [initialPartners, filterFn]);
 
   // Sync selected partner name when `value` changes
   useEffect(() => {
