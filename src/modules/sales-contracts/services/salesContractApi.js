@@ -9,7 +9,16 @@ export const salesContractApi = {
     axiosClient.patch(`/sales-contracts/${id}/status`, { status }),
   remove: (id) => axiosClient.delete(`/sales-contracts/${id}`),
 
+  // Preview the next auto-generated contract number (Agricom sellers only).
+  // Prefix = <BuyerInitial><SellerCode>  — both buyer and seller are required.
+  // Returns { contractNo: string | null }
+  getNextContractNumber: (sellerId, buyerId, financialYear) =>
+    axiosClient.get("/sales-contracts/next-number", {
+      params: { sellerId, buyerId, financialYear },
+    }),
+
   // Document Endpoints
+
   getDocuments: (id) => axiosClient.get(`/sales-contracts/${id}/documents`),
   uploadDocument: (id, tradeDocumentId, data, onUploadProgress) =>
     axiosClient.post(`/sales-contracts/${id}/documents/${tradeDocumentId}/upload`, data, {

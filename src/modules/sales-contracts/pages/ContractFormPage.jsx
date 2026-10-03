@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Save, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -62,10 +62,11 @@ const defaultForm = () => ({
   printOverrides: {},
 });
 
-function validate(form) {
+function validate(form, isAutoNumber) {
   const e = {};
   if (!form.financialYear) e.financialYear = "Financial Year is required";
-  if (!form.contractNumber?.trim()) e.contractNumber = "Contract No. is required";
+  // For auto-generated sellers, contractNumber is not required from user
+  if (!isAutoNumber && !form.contractNumber?.trim()) e.contractNumber = "Contract No. is required";
   if (!form.contractDate) e.contractDate = "Contract Date is required";
   if (!form.buyerId) e.buyerId = "Buyer is required";
   // Commercial Details fields are optional (not required)
@@ -102,6 +103,12 @@ export default function ContractFormPage({ editId, viewId }) {
   const [loadingContract, setLoadingContract] = useState(false);
   const [pageError, setPageError] = useState(null);
   const [uploadedDocIds, setUploadedDocIds] = useState([]);
+
+  // Auto contract number state
+  const [contractNumberPreview, setContractNumberPreview] = useState(undefined);
+  const [isLoadingContractNumber, setIsLoadingContractNumber] = useState(false);
+  // Whether the currently selected seller uses auto-number generation
+  const [isAutoNumber, setIsAutoNumber] = useState(false);
 
   const isEdit = !!editId;
   const isView = !!viewId && !editId;
@@ -198,6 +205,54 @@ export default function ContractFormPage({ editId, viewId }) {
     load();
   }, [contractId]);
 
+  /**
+   * Fetch the next auto-generated contract number from the backend.
+   * Only triggered when: seller is selected, buyer is selected, FY is selected, and we are in CREATE mode.
+   * Prefix = <BuyerInitial><SellerCode> — so both buyer and seller are needed.
+   * On edit/view — the contract number is already known and must not change.
+   */
+  const fetchContractNumberPreview = useCallback(async (sellerId, buyerId, financialYear) => {
+    if (!sellerId || !buyerId || !financialYear || isEdit || isView) {
+      setContractNumberPreview(undefined);
+      setIsAutoNumber(false);
+      return;
+    }
+    setIsLoadingContractNumber(true);
+    try {
+      const res = await salesContractApi.getNextContractNumber(sellerId, buyerId, financialYear);
+      const contractNo = res.data?.contractNo;
+      if (contractNo) {
+        // Auto-number seller
+        setContractNumberPreview(contractNo);
+        setIsAutoNumber(true);
+        // Clear any manually typed contract number
+        setForm(f => ({ ...f, contractNumber: "" }));
+      } else {
+        // Regular seller — manual entry
+        setContractNumberPreview(undefined);
+        setIsAutoNumber(false);
+      }
+    } catch (err) {
+      // Silently fail — user can still type manually
+      setContractNumberPreview(undefined);
+      setIsAutoNumber(false);
+    } finally {
+      setIsLoadingContractNumber(false);
+    }
+  }, [isEdit, isView]);
+
+  // Trigger preview fetch whenever seller, buyer or financial year changes (create mode only)
+  useEffect(() => {
+    if (isEdit || isView) return;
+    if (form.sellerId && form.buyerId && form.financialYear) {
+      fetchContractNumberPreview(form.sellerId, form.buyerId, form.financialYear);
+    } else {
+      // Reset auto number state when seller, buyer, or FY is cleared
+      setContractNumberPreview(undefined);
+      setIsAutoNumber(false);
+    }
+  }, [form.sellerId, form.buyerId, form.financialYear, fetchContractNumberPreview, isEdit, isView]);
+
   // Pre-fill from enquiry
   useEffect(() => {
     if (!enquiryId || isEdit || isView || mastersLoading) return;
@@ -289,7 +344,7 @@ export default function ContractFormPage({ editId, viewId }) {
   }, [enquiryId, isEdit, isView, mastersLoading, masters]);
 
   const handleSave = async (asDraft = false) => {
-    const errs = validate(form);
+    const errs = validate(form, isAutoNumber);
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -308,7 +363,9 @@ export default function ContractFormPage({ editId, viewId }) {
     const payload = {
       enquiryId: form.enquiryId || null,
       financialYear: form.financialYear,
-      contractNumber: form.contractNumber.trim(),
+      // For auto-number sellers: omit contractNumber — backend will generate it atomically.
+      // For manual sellers: send the user-typed contractNumber.
+      ...(isAutoNumber ? {} : { contractNumber: form.contractNumber.trim() }),
       contractDate: form.contractDate,
       contractType: form.contractType || "Export",
       buyerId: Number(form.buyerId),
@@ -503,7 +560,15 @@ export default function ContractFormPage({ editId, viewId }) {
       )}
 
       {/* Form Sections */}
-      <HeaderSection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
+      <HeaderSection
+        form={form}
+        setForm={setForm}
+        errors={errors}
+        masters={masters}
+        isView={isView}
+        contractNumberPreview={isAutoNumber ? contractNumberPreview : undefined}
+        isLoadingContractNumber={isLoadingContractNumber}
+      />
       <PartySection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
       <CommercialSection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
       <ItemsTable form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />

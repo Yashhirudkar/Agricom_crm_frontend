@@ -1,17 +1,20 @@
 "use client";
 import React from "react";
-import { FileText, ChevronDown } from "lucide-react";
+import { FileText, ChevronDown, Loader2, Wand2, Lock } from "lucide-react";
 import { getDynamicFinancialYears } from "../utils/dateUtils";
 
 const CONTRACT_TYPES = ["Export", "Import", "MTT"];
 
-export default function HeaderSection({ form, setForm, errors, masters, isView }) {
+export default function HeaderSection({ form, setForm, errors, masters, isView, contractNumberPreview, isLoadingContractNumber }) {
   const inp = "w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white transition-all";
   const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
   const err = "text-[10px] text-red-500 mt-1";
 
   // Generate dynamic financial years (Prev, Current, Next) + existing historical value if present
   const fyOptions = getDynamicFinancialYears(form.financialYear || null);
+
+  // Determine if auto-number mode is active
+  const isAutoNumber = contractNumberPreview !== undefined;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
@@ -48,15 +51,42 @@ export default function HeaderSection({ form, setForm, errors, masters, isView }
 
         {/* Contract Number */}
         <div>
-          <label className={lbl}>Contract No. <span className="text-red-500">*</span></label>
-          <input
-            type="text"
-            value={form.contractNumber || ""}
-            onChange={e => setForm(f => ({ ...f, contractNumber: e.target.value }))}
-            disabled={isView}
-            placeholder="Enter Contract No."
-            className={`${inp} ${errors.contractNumber ? "border-red-300" : ""}`}
-          />
+          <label className={lbl}>
+            Contract No. <span className="text-red-500">*</span>
+            {isAutoNumber && !isView && (
+              <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-md px-1.5 py-0.5">
+                <Wand2 className="h-2.5 w-2.5" />
+                Auto
+              </span>
+            )}
+          </label>
+
+          {isAutoNumber && !isView ? (
+            /* Auto-generated mode */
+            <div className={`${inp} relative flex items-center gap-2 bg-gradient-to-r from-indigo-50/60 to-blue-50/40 border-indigo-200 cursor-not-allowed`}>
+              <Lock className="h-3 w-3 text-indigo-400 flex-shrink-0" />
+              {isLoadingContractNumber ? (
+                <span className="flex items-center gap-1.5 text-indigo-400 font-medium">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Generating...
+                </span>
+              ) : contractNumberPreview ? (
+                <span className="font-bold text-indigo-700 tracking-wide">{contractNumberPreview}</span>
+              ) : (
+                <span className="text-gray-400 italic">Select Seller &amp; Buyer above</span>
+              )}
+            </div>
+          ) : (
+            /* Manual mode */
+            <input
+              type="text"
+              value={form.contractNumber || ""}
+              onChange={e => setForm(f => ({ ...f, contractNumber: e.target.value }))}
+              disabled={isView}
+              placeholder="Enter Contract No."
+              className={`${inp} ${errors.contractNumber ? "border-red-300" : ""}`}
+            />
+          )}
           {errors.contractNumber && <p className={err}>{errors.contractNumber}</p>}
         </div>
 
