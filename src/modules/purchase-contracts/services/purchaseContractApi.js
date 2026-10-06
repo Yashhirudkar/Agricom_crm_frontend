@@ -11,6 +11,7 @@ export const purchaseContractApi = {
   updateStatus: (id, status) =>
     axiosClient.patch(`/purchase-contracts/${id}/status`, { status }),
   remove: (id) => axiosClient.delete(`/purchase-contracts/${id}`),
+  clearDrafts: () => axiosClient.delete(`/purchase-contracts/clear-drafts`),
 
   // Shipments
   getShipments: (id) => axiosClient.get(`/purchase-contracts/${id}/shipments`),

@@ -11,11 +11,13 @@ import {
   Plus,
   Truck,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   usePurchaseContractsList,
   usePurchaseContractDashboard,
+  useClearPurchaseContractDrafts,
 } from "../hooks/usePurchaseContracts";
 
 const STATUS_BADGE_CLASSES = {
@@ -43,6 +45,7 @@ export default function PurchaseContractListPage() {
 
   const { data: listData, isLoading: loadingList, refetch: refetchList } = usePurchaseContractsList(params);
   const { data: dashboard } = usePurchaseContractDashboard();
+  const { mutate: clearDrafts, isPending: clearingDrafts } = useClearPurchaseContractDrafts();
 
   const contracts = listData?.data || [];
   const total = listData?.total || 0;
@@ -71,6 +74,18 @@ export default function PurchaseContractListPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              if (window.confirm("Are you sure you want to clear all draft purchase contracts?")) {
+                clearDrafts();
+              }
+            }}
+            disabled={clearingDrafts}
+            className="px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>Clear Drafts</span>
+          </button>
           <button
             onClick={() => router.push("/sales/purchase-contracts/new")}
             className="px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"

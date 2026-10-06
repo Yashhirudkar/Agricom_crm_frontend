@@ -137,6 +137,21 @@ export function useUpdatePurchaseContractStatus(id) {
   });
 }
 
+export function useClearPurchaseContractDrafts() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => purchaseContractApi.clearDrafts(),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-contracts", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-contracts", "dashboard"] });
+      toast.success(`Cleared ${res.data?.count || 0} draft contracts`);
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || "Failed to clear drafts");
+    },
+  });
+}
+
 export function useAddPurchaseContractShipment(id) {
   const queryClient = useQueryClient();
   return useMutation({
