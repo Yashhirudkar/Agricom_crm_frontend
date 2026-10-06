@@ -11,6 +11,8 @@ import EnquiriesFilter from "@/modules/enquiries/components/EnquiriesFilter";
 import Pagination from "@/components/common/Pagination";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import EnquiryDrawer from "@/modules/enquiries/components/EnquiryDrawer";
+import LoadingPointsDrawer from "@/modules/enquiries/components/LoadingPointsDrawer";
+import TransportDrawer from "@/modules/logistics/components/TransportDrawer";
 
 export default function ConfirmedOrdersPage() {
   const router = useRouter();
@@ -25,6 +27,10 @@ export default function ConfirmedOrdersPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editEnquiry, setEditEnquiry] = useState(null);
   const [isViewMode, setIsViewMode] = useState(false);
+
+  // Transport & Loading Points Drawer states
+  const [transportEnquiry, setTransportEnquiry] = useState(null);
+  const [loadingPointsEnquiry, setLoadingPointsEnquiry] = useState(null);
 
   // We explicitly fetch only CONFIRMED enquiries that DO NOT have a Sales Contract mapped yet.
   const confirmedQuery = useEnquiries(activeCompanyId, "CONFIRMED", search, true);
@@ -95,8 +101,8 @@ export default function ConfirmedOrdersPage() {
           enquiries={confirmedQuery.enquiries}
           loading={confirmedQuery.loading}
           onFollowUp={(e) => {}}
-          onOpenTransport={(e) => {}}
-          onOpenLoadingPoints={(e) => {}}
+          onOpenTransport={(e) => setTransportEnquiry(e)}
+          onOpenLoadingPoints={(e) => setLoadingPointsEnquiry(e)}
           onDelete={(e) => setDeleteTarget(e)}
           onExecute={(e) => router.push(`/sales-contracts/new?enquiryId=${e.id}`)}
           onView={(e) => {
@@ -141,6 +147,21 @@ export default function ConfirmedOrdersPage() {
           confirmedQuery.fetchEnquiries();
           showToast("Order updated successfully");
         }}
+      />
+
+      {/* Transport Drawer (View Only Mode) */}
+      <TransportDrawer
+        isOpen={transportEnquiry !== null}
+        onClose={() => setTransportEnquiry(null)}
+        enquiry={transportEnquiry}
+        isReadOnly={true}
+      />
+
+      {/* Loading Points Drawer */}
+      <LoadingPointsDrawer
+        isOpen={loadingPointsEnquiry !== null}
+        onClose={() => setLoadingPointsEnquiry(null)}
+        enquiry={loadingPointsEnquiry}
       />
     </div>
   );

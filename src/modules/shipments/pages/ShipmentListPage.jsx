@@ -20,7 +20,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
   const [filters, setFilters] = useState({
     page: 1,
     limit: 10,
-    search: "",
+    search: contextContractNo || "",
     status: "",
     timeline: "",
     buyerId: "",

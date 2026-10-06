@@ -1,7 +1,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { currencies } from "@/constants/currenciesData";
-import { Eye, Pencil, Trash2, Rocket, FolderOpen } from "lucide-react";
+import { Eye, Pencil, Trash2, Rocket, FolderOpen, Ship } from "lucide-react";
 import ContractStatusBadge from "./ContractStatusBadge";
 import ScheduleBadge from "./ScheduleBadge";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
@@ -104,6 +104,17 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                   )}
                   <button
                     type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/sales/shipments?contractNo=${c.contractNumber}&search=${c.contractNumber}`);
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors cursor-pointer"
+                    title="View Shipments"
+                  >
+                    <Ship className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={async (e) => {
                       e.stopPropagation();
                       if (onExecutePurchase) {
@@ -123,7 +134,7 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                     className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
                     title="Execute + Workspace"
                   >
-                    <Rocket className="h-3.5 w-3.5 text-purple-600 animate-pulse" />
+                    <Rocket className="h-3.5 w-3.5 text-purple-600" />
                   </button>
                   {(c.status === "Draft" || c.status === "Cancelled") && (
                     <button
