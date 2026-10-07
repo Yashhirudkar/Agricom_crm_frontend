@@ -22,6 +22,7 @@ export default function ConfirmedOrdersPage() {
   const [toast, setToast] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [activeTab, setActiveTab] = useState("SALES"); // "SALES" | "PURCHASE"
 
   // Form Drawer states
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -32,8 +33,16 @@ export default function ConfirmedOrdersPage() {
   const [transportEnquiry, setTransportEnquiry] = useState(null);
   const [loadingPointsEnquiry, setLoadingPointsEnquiry] = useState(null);
 
-  // We explicitly fetch only CONFIRMED enquiries that DO NOT have a Sales Contract mapped yet.
-  const confirmedQuery = useEnquiries(activeCompanyId, "CONFIRMED", search, true);
+  // For SALES tab: show enquiries without a Sales Contract
+  // For PURCHASE tab: show enquiries without a Purchase Contract (but they can have a Sales Contract)
+  const isSalesTab = activeTab === "SALES";
+  const confirmedQuery = useEnquiries(
+    activeCompanyId,
+    "CONFIRMED",
+    search,
+    isSalesTab, // withoutSalesContract
+    !isSalesTab // withoutPurchaseContract
+  );
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -81,13 +90,43 @@ export default function ConfirmedOrdersPage() {
               Confirmed Orders
             </h1>
             <p className="text-xs text-gray-400 font-medium mt-1">
-              View confirmed orders that are waiting to be converted into Sales Contracts.
+              View confirmed orders that are waiting to be converted into contracts.
             </p>
           </div>
         </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+        {/* Tabs */}
+        <div className="border-b border-gray-100 flex gap-6 px-6 bg-gray-50/50">
+          <button
+            onClick={() => setActiveTab("SALES")}
+            className={`pb-4 pt-5 text-sm font-semibold transition-colors relative ${
+              activeTab === "SALES"
+                ? "text-[#007aff]"
+                : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            Sales Contract
+            {activeTab === "SALES" && (
+              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#007aff] rounded-t-full" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("PURCHASE")}
+            className={`pb-4 pt-5 text-sm font-semibold transition-colors relative ${
+              activeTab === "PURCHASE"
+                ? "text-[#007aff]"
+                : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            Purchase Contract
+            {activeTab === "PURCHASE" && (
+              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#007aff] rounded-t-full" />
+            )}
+          </button>
+        </div>
+
         {/* Filters */}
         <EnquiriesFilter
           search={search}

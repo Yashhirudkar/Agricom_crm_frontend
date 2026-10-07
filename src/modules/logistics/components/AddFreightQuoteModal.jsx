@@ -714,8 +714,7 @@ export default function AddFreightQuoteModal({
     const modeNorm = (transportMode || "").toLowerCase();
 
     if (!sellerId) { setError("Please select a transport partner."); return; }
-    if (!contactNumber) { setError("Contact phone number is required."); return; }
-    if (!validatePhone(contactNumber)) { setError("Please enter a valid phone number."); return; }
+    if (contactNumber && !validatePhone(contactNumber)) { setError("Please enter a valid phone number."); return; }
 
     if (modeNorm !== "sea") {
       if (!charges || charges.length === 0) { setError("Please add at least one freight charge line item."); return; }
@@ -968,7 +967,7 @@ export default function AddFreightQuoteModal({
 
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Phone Number <span className="text-red-500">*</span>
+                    Phone Number
                   </label>
                   <input
                     type="text"
