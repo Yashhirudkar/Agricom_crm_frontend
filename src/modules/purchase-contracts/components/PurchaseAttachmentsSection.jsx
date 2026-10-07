@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Paperclip, Upload, FileText, Download, Trash2, Eye } from "lucide-react";
+import CreatableSelect from "react-select/creatable";
 import axiosClient from "@/lib/axios";
 import { toast } from "sonner";
 
@@ -9,15 +10,42 @@ export default function PurchaseAttachmentsSection({
   onDeleteAttachment,
   isView = false,
 }) {
-  const [fileCategory, setFileCategory] = useState("Contract PDF");
+  const [fileCategory, setFileCategory] = useState("Attach Contract PDF");
   const [selectedFile, setSelectedFile] = useState(null);
 
-  const categories = [
+  const defaultCategories = [
     "Attach Contract PDF",
     "Attach Invoice",
     "Attach Supplier Quote",
     "Other Document",
   ];
+
+  const [customCategories, setCustomCategories] = useState([]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("customPurchaseAttachmentCategories");
+    if (saved) {
+      try {
+        setCustomCategories(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse custom categories");
+      }
+    }
+  }, []);
+
+  const categories = Array.from(new Set([...defaultCategories, ...customCategories]));
+
+  const handleCreateCategory = (inputValue) => {
+    const newCat = inputValue.trim();
+    if (!newCat) return;
+    
+    setCustomCategories((prev) => {
+      const updated = Array.from(new Set([...prev, newCat]));
+      localStorage.setItem("customPurchaseAttachmentCategories", JSON.stringify(updated));
+      return updated;
+    });
+    setFileCategory(newCat);
+  };
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -61,7 +89,7 @@ export default function PurchaseAttachmentsSection({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-visible">
       {/* Section Header */}
       <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -88,17 +116,60 @@ export default function PurchaseAttachmentsSection({
             onSubmit={handleUploadSubmit}
             className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col sm:flex-row items-center gap-3"
           >
-            <select
-              value={fileCategory}
-              onChange={(e) => setFileCategory(e.target.value)}
-              className="px-3 py-2 text-xs border border-gray-200 rounded-xl bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer"
-            >
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+            <div className="w-56 flex-shrink-0">
+              <CreatableSelect
+                value={{ label: fileCategory, value: fileCategory }}
+                onChange={(selected) => setFileCategory(selected ? selected.value : "")}
+                onCreateOption={handleCreateCategory}
+                options={categories.map(cat => ({ label: cat, value: cat }))}
+                isClearable={false}
+                placeholder="Select or type..."
+                maxMenuHeight={210}
+                createOptionPosition="first"
+                formatCreateLabel={(inputValue) => `+ Add "${inputValue}"`}
+                menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                menuPosition="fixed"
+                styles={{
+                  control: (base, state) => ({
+                    ...base,
+                    minHeight: '36px',
+                    borderRadius: '12px',
+                    borderColor: state.isFocused ? '#c084fc' : '#e5e7eb',
+                    boxShadow: state.isFocused ? '0 0 0 2px rgba(192, 132, 252, 0.4)' : 'none',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    color: '#1f2937',
+                    backgroundColor: 'white',
+                    cursor: 'text',
+                    '&:hover': {
+                      borderColor: state.isFocused ? '#c084fc' : '#d1d5db',
+                    }
+                  }),
+                  option: (base) => ({
+                    ...base,
+                    fontSize: '12px',
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    zIndex: 9999,
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                  }),
+                  menuPortal: (base) => ({
+                    ...base,
+                    zIndex: 9999,
+                  }),
+                  menuList: (base) => ({
+                    ...base,
+                    maxHeight: '210px', // Shows approximately 5 items
+                  }),
+                  valueContainer: (base) => ({
+                    ...base,
+                    padding: '0 12px',
+                  }),
+                }}
+              />
+            </div>
 
             <input
               type="file"

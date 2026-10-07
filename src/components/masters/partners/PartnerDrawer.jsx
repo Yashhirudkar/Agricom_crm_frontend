@@ -120,6 +120,7 @@ function PartnerDrawer({
       country: "",
       yearOfEstablishment: "",
       address: "",
+      loadingAddress: "",
       city: "",
       website: "",
       contactEmail: "",
@@ -136,6 +137,15 @@ function PartnerDrawer({
 
   // Watch country to drive city dropdown
   const watchedCountry = useWatch({ control, name: "country" });
+  const watchedRoleId = useWatch({ control, name: "partnerRoleId" });
+
+  // Determine if selected role is SELLER or SUPPLIER
+  const isSellerOrSupplier = useMemo(() => {
+    if (!watchedRoleId || !partnerRoles.length) return false;
+    const role = partnerRoles.find((r) => r.id === parseInt(watchedRoleId, 10));
+    return role && ["SELLER", "SUPPLIER"].includes(role.name?.toUpperCase());
+  }, [watchedRoleId, partnerRoles]);
+
   const watchedCountryIso2 = useMemo(() => {
     if (!watchedCountry) return "";
     return getAlpha2Code(watchedCountry) || "";
@@ -302,6 +312,7 @@ function PartnerDrawer({
           country: editData.country || "",
           yearOfEstablishment: editData.yearOfEstablishment || "",
           address: editData.address || "",
+          loadingAddress: editData.loadingAddress || "",
           city: editData.city || "",
           website: editData.website || "",
           contactEmail: editData.contactEmail || "",
@@ -331,6 +342,7 @@ function PartnerDrawer({
           country: "",
           yearOfEstablishment: "",
           address: "",
+          loadingAddress: "",
           city: "",
           website: "",
           contactEmail: "",
@@ -354,6 +366,7 @@ function PartnerDrawer({
     // Convert empty string fields to null so backend updates the DB column to NULL
     const optionalStringFields = [
       "address",
+      "loadingAddress",
       "city",
       "website",
       "contactEmail",
@@ -740,6 +753,17 @@ function PartnerDrawer({
                       </div>
                     </div>
 
+                    {editData.loadingAddress && (
+                      <div>
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          Loading Address
+                        </div>
+                        <div className="text-xs text-gray-700 mt-1 font-medium leading-relaxed">
+                          {editData.loadingAddress}
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                         Website
@@ -1112,6 +1136,21 @@ function PartnerDrawer({
                         placeholder="https://example.com"
                       />
                     </div>
+
+                    {isSellerOrSupplier && (
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-amber-500" />
+                          Loading Address
+                        </label>
+                        <input
+                          {...register("loadingAddress", { maxLength: 1000 })}
+                          className="w-full border border-amber-200 rounded-lg px-3 py-2.5 text-xs focus:outline-none focus:ring-0 focus:border-amber-400 text-gray-700 bg-amber-50/30"
+                          placeholder="e.g. Plot 45, APMC Yard, Unjha, Gujarat - 384170"
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">Where goods are loaded / dispatched from</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

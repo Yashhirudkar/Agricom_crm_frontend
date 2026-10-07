@@ -98,11 +98,11 @@ export function useSalesMasters() {
         const brokerRole = roles.find(r => r.name?.toLowerCase() === "broker" || r.name?.toLowerCase().includes("broker") || r.name?.toLowerCase() === "agent");
 
         const [buyersRes, sellersRes, suppliersRes, brokersRes, partnersRes] = await Promise.all([
-          buyerRole ? mastersApi.getPartnersOptions({ partnerRoleId: buyerRole.id, limit: 10, isActive: true }) : Promise.resolve({ data: [] }),
-          sellerRole ? mastersApi.getPartnersOptions({ partnerRoleId: sellerRole.id, limit: 10, isActive: true }) : Promise.resolve({ data: [] }),
-          supplierRole ? mastersApi.getPartnersOptions({ partnerRoleId: supplierRole.id, limit: 10, isActive: true }) : Promise.resolve({ data: [] }),
-          brokerRole ? mastersApi.getPartnersOptions({ partnerRoleId: brokerRole.id, limit: 10, isActive: true }) : Promise.resolve({ data: [] }),
-          mastersApi.getPartnersOptions({ limit: 100, isActive: true }),
+          buyerRole ? mastersApi.getPartnersOptions({ partnerRoleId: buyerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
+          sellerRole ? mastersApi.getPartnersOptions({ partnerRoleId: sellerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
+          supplierRole ? mastersApi.getPartnersOptions({ partnerRoleId: supplierRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
+          brokerRole ? mastersApi.getPartnersOptions({ partnerRoleId: brokerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
+          mastersApi.getPartnersOptions({ limit: 1000, isActive: true }),
         ]);
 
         const fetchedCountries = countries?.data?.data || [];

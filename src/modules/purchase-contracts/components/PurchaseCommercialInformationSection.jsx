@@ -18,7 +18,11 @@ export default function PurchaseCommercialInformationSection({
   const isManual = contract?.purchaseType === "MTT" || !contract?.salesContractId;
   const productsMaster = masters?.products || [];
   const paymentTermsMaster = masters?.paymentTerms || [];
-  const brokersMaster = masters?.brokers || masters?.partners || [];
+  const brokersMaster = masters?.brokers?.length 
+    ? masters.brokers 
+    : (masters?.partners || []).filter(
+        (p) => p.partnerRole?.name?.toUpperCase() === "BROKER" || p.partnerRole?.code?.toUpperCase() === "BROKER" || p.role === 'BROKER'
+      );
 
   const existingProducts = summary?.productSummary || contract?.items || contract?.salesContract?.items || [];
   const defaultProductName = existingProducts.map((p) => p.product?.name || p.productName || "Commodity").join(", ") || "";
@@ -270,7 +274,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Bag Spec</label>
+            <label className={lbl}>Bag Dimension</label>
             <div className="relative">
               <select
                 value={form.bagSpec || ""}
@@ -345,7 +349,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Delivery / Dispatch Date (From)</label>
+            <label className={lbl}>Shipment (From)</label>
             <input
               type="date"
               value={form.deliveryDate || ""}
@@ -356,7 +360,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Delivery / Dispatch Date (To)</label>
+            <label className={lbl}>To</label>
             <input
               type="date"
               value={form.deliveryToDate || ""}
@@ -519,41 +523,30 @@ export default function PurchaseCommercialInformationSection({
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-gray-100">
           <div>
             <label className={lbl}>Broker / Agent</label>
-            {isManual && brokersMaster.length > 0 ? (
-              <div className="relative">
-                <select
-                  value={form.brokerId || ""}
-                  onChange={(e) => {
-                    const brId = Number(e.target.value);
-                    const brObj = brokersMaster.find((b) => b.id === brId);
-                    setForm((f) => ({
-                      ...f,
-                      brokerId: brId || null,
-                      brokerName: brObj?.entityName || brObj?.name || "",
-                    }));
-                  }}
-                  disabled={isView}
-                  className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
-                >
-                  <option value="">Select Broker</option>
-                  {brokersMaster.map((br) => (
-                    <option key={br.id} value={br.id}>
-                      {br.entityName || br.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-              </div>
-            ) : (
-              <input
-                type="text"
-                value={form.brokerName || ""}
-                onChange={(e) => setForm((f) => ({ ...f, brokerName: e.target.value }))}
+            <div className="relative">
+              <select
+                value={form.brokerId || ""}
+                onChange={(e) => {
+                  const brId = Number(e.target.value);
+                  const brObj = brokersMaster.find((b) => b.id === brId);
+                  setForm((f) => ({
+                    ...f,
+                    brokerId: brId || null,
+                    brokerName: brObj?.entityName || brObj?.name || "",
+                  }));
+                }}
                 disabled={isView}
-                className={`${inp} font-medium text-gray-900`}
-                placeholder="Enter Broker Name"
-              />
-            )}
+                className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
+              >
+                <option value="">Select Broker</option>
+                {brokersMaster.map((br) => (
+                  <option key={br.id} value={br.id}>
+                    {br.entityName || br.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+            </div>
           </div>
 
           <div>

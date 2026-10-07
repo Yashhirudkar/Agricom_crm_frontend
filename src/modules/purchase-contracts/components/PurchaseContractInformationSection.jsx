@@ -1,6 +1,6 @@
 "use client";
-import React from "react";
-import { FileText, ChevronDown } from "lucide-react";
+import React, { useState } from "react";
+import { FileText, ChevronDown, Plus, Minus } from "lucide-react";
 
 export default function PurchaseContractInformationSection({
   contract,
@@ -10,6 +10,8 @@ export default function PurchaseContractInformationSection({
   masters = {},
   isView = false,
 }) {
+  const [showSpec, setShowSpec] = useState(!!(form?.specificationNo || form?.specificationDate));
+
   const inp = "w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white transition-all disabled:opacity-75 disabled:bg-gray-100";
   const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
 
@@ -37,9 +39,22 @@ export default function PurchaseContractInformationSection({
             <p className="text-[10px] text-gray-400">Basic purchase contract details and counterparty entities</p>
           </div>
         </div>
-        <span className="text-xs font-mono font-bold text-[#007aff] bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">
-          {contractNo}
-        </span>
+        <button
+          type="button"
+          onClick={() => {
+            if (showSpec) {
+              setShowSpec(false);
+              setForm((f) => ({ ...f, specificationNo: "", specificationDate: "" }));
+            } else {
+              setShowSpec(true);
+            }
+          }}
+          disabled={isView}
+          className="px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+        >
+          {showSpec ? <Minus className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+          <span>{showSpec ? "Remove Spec" : "Attach Spec"}</span>
+        </button>
       </div>
 
       <div className="p-5 space-y-4">
@@ -147,6 +162,33 @@ export default function PurchaseContractInformationSection({
               placeholder="e.g. SUP-88219"
             />
           </div>
+
+          {showSpec && (
+            <>
+              <div>
+                <label className={lbl}>Specification No</label>
+                <input
+                  type="text"
+                  value={form.specificationNo || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, specificationNo: e.target.value }))}
+                  disabled={isView}
+                  className={`${inp} font-mono`}
+                  placeholder="e.g. SPEC-2026"
+                />
+              </div>
+
+              <div>
+                <label className={lbl}>Specification Date</label>
+                <input
+                  type="date"
+                  value={form.specificationDate || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, specificationDate: e.target.value }))}
+                  disabled={isView}
+                  className={`${inp}`}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

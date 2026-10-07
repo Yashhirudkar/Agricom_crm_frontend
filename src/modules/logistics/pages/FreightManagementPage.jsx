@@ -30,10 +30,12 @@ import {
   DollarSign,
   Calendar,
   ExternalLink,
+  Plus
 } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { toast } from "sonner";
 import AddFreightQuoteModal from "../components/AddFreightQuoteModal";
+import DirectFreightQuoteDrawer from "../components/DirectFreightQuoteDrawer";
 import Pagination from "@/components/common/Pagination";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -48,33 +50,33 @@ const SORT_OPTIONS = [
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getOriginDisplay(enquiry) {
-  if (!enquiry) return "—";
+  if (!enquiry) return "N/A";
   const mode = (enquiry.logistics?.transportMode || "").toLowerCase();
-  if (mode === "sea") return enquiry.originPort || enquiry.originCity || enquiry.originCountryId || "—";
-  if (mode === "rail") return enquiry.originCity || enquiry.originState || "—";
-  return enquiry.originCity || enquiry.originPort || enquiry.originState || "—";
+  if (mode === "sea") return enquiry.originPort || enquiry.originCity || enquiry.originCountryId || "N/A";
+  if (mode === "rail") return enquiry.originCity || enquiry.originState || "N/A";
+  return enquiry.originCity || enquiry.originPort || enquiry.originState || "N/A";
 }
 
 function getDestinationDisplay(enquiry) {
-  if (!enquiry) return "—";
+  if (!enquiry) return "N/A";
   const mode = (enquiry.logistics?.transportMode || "").toLowerCase();
-  if (mode === "sea") return enquiry.destinationPort || enquiry.destinationCity || enquiry.destinationCountry || "—";
-  if (mode === "rail") return enquiry.destinationCity || enquiry.destinationState || "—";
-  return enquiry.destinationCity || enquiry.destinationPort || enquiry.destinationState || "—";
+  if (mode === "sea") return enquiry.destinationPort || enquiry.destinationCity || enquiry.destinationCountry || "N/A";
+  if (mode === "rail") return enquiry.destinationCity || enquiry.destinationState || "N/A";
+  return enquiry.destinationCity || enquiry.destinationPort || enquiry.destinationState || "N/A";
 }
 
 function getEquipmentDisplay(quote) {
   const mode = (quote?.logistics?.transportMode || "").toLowerCase();
   if (mode === "sea") {
     const parts = [quote.containerType, quote.containerSize].filter(Boolean);
-    return parts.join(" · ") || quote.vehicleType || "—";
+    return parts.join(" · ") || quote.vehicleType || "N/A";
   }
   if (mode === "rail") {
     const parts = [quote.wagonType, quote.wagonCapacity].filter(Boolean);
-    return parts.join(" · ") || "—";
+    return parts.join(" · ") || "N/A";
   }
   const parts = [quote.truckType, quote.truckCapacity].filter(Boolean);
-  return parts.join(" · ") || quote.vehicleType || "—";
+  return parts.join(" · ") || quote.vehicleType || "N/A";
 }
 
 function TransportModeIcon({ mode, className = "h-3.5 w-3.5" }) {
@@ -393,6 +395,17 @@ export default function FreightManagementPage() {
             </p>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setEditTarget({ isDirect: true });
+              setAddModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#007aff] to-indigo-600 text-white text-xs font-semibold rounded-xl hover:shadow-md transition-all cursor-pointer shadow-sm shadow-blue-500/20"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add Freight Quote
+          </button>
+        </div>
       </div>
 
 
@@ -611,23 +624,27 @@ export default function FreightManagementPage() {
                       {/* Product */}
                       <td className="px-5 py-3.5">
                         <span className="font-semibold text-gray-800">
-                          {enquiry?.product?.name || "—"}
+                          {quote.isDirect ? (quote.product?.name || "N/A") : (enquiry?.product?.name || "N/A")}
                         </span>
                       </td>
 
                       {/* Route: Origin → Destination */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1.5 text-gray-700 font-medium">
-                          <span className="truncate max-w-[120px]" title={origin}>{origin}</span>
+                          <span className="truncate max-w-[120px]" title={quote.isDirect ? quote.loadingPoint : origin}>
+                            {quote.isDirect ? quote.loadingPoint : origin}
+                          </span>
                           <ArrowRight className="h-3 w-3 text-gray-300 shrink-0" />
-                          <span className="truncate max-w-[120px]" title={destination}>{destination}</span>
+                          <span className="truncate max-w-[120px]" title={quote.isDirect ? quote.destination : destination}>
+                            {quote.isDirect ? quote.destination : destination}
+                          </span>
                         </div>
                       </td>
 
                       {/* Transport Partner */}
                       <td className="px-5 py-3.5">
                         <span className="font-semibold text-gray-800 block truncate max-w-[140px]">
-                          {quote.seller?.entityName || "—"}
+                          {quote.seller?.entityName || "N/A"}
                         </span>
                       </td>
 
@@ -642,7 +659,7 @@ export default function FreightManagementPage() {
                             ? "bg-blue-50 text-[#007aff]"
                             : "text-gray-400"
                           }`}>
-                          {quote.transitDays > 0 ? `${quote.transitDays}d` : "—"}
+                          {quote.transitDays > 0 ? `${quote.transitDays}d` : "N/A"}
                         </span>
                       </td>
 
@@ -683,13 +700,11 @@ export default function FreightManagementPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-          />
-        )}
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
         {!isLoading && data.length > 0 && (
           <div className="px-5 py-2.5 border-t border-gray-50 text-[10px] text-gray-400 font-medium">
             Showing {((page - 1) * 15) + 1}–{Math.min((page - 1) * 15 + data.length, total)} of {total} quotes
@@ -740,36 +755,63 @@ export default function FreightManagementPage() {
 
       {/* ── Add/Edit Freight Quote Modal ─────────────────────────────────────── */}
       {addModalOpen && (
-        <AddFreightQuoteModal
-          isOpen={addModalOpen}
-          onClose={() => {
-            setAddModalOpen(false);
-            setEditTarget(null);
-          }}
-          onSave={async (data) => {
-            try {
-              if (editTarget?.id && !editTarget?.isDuplicate) {
-                await logisticsApi.updateFreightQuote(editTarget.logisticsId, editTarget.id, data);
-                toast.success("Freight quote updated.");
-              } else if (editTarget?.logisticsId) {
-                await logisticsApi.addFreightQuote(editTarget.logisticsId, data);
-                toast.success("Freight quote duplicated.");
-              } else {
-                toast.error("Cannot add quote without a logistics context from this view. Please open Transport Management.");
-                return;
-              }
+        editTarget?.isDirect ? (
+          <DirectFreightQuoteDrawer
+            isOpen={addModalOpen}
+            onClose={() => {
               setAddModalOpen(false);
               setEditTarget(null);
-              setRefreshKey((k) => k + 1);
-            } catch (err) {
-              toast.error(err?.response?.data?.message || "Failed to save quote.");
-            }
-          }}
-          quote={editTarget}
-          transportMode={editTarget?.logistics?.transportMode || "Road"}
-          mode={editTarget?.logistics?.mode || "Domestic"}
-          isReadOnly={false}
-        />
+            }}
+            onSave={async (data) => {
+              try {
+                if (editTarget?.id && !editTarget?.isDuplicate) {
+                  await logisticsApi.updateFreightQuote(editTarget.logisticsId, editTarget.id, data);
+                  toast.success("Direct Freight quote updated.");
+                } else {
+                  await logisticsApi.addDirectFreightQuote(data);
+                  toast.success("Direct Freight quote added.");
+                }
+                setAddModalOpen(false);
+                setEditTarget(null);
+                setRefreshKey((k) => k + 1);
+              } catch (err) {
+                toast.error(err?.response?.data?.message || "Failed to save quote.");
+              }
+            }}
+            quote={editTarget}
+          />
+        ) : (
+          <AddFreightQuoteModal
+            isOpen={addModalOpen}
+            onClose={() => {
+              setAddModalOpen(false);
+              setEditTarget(null);
+            }}
+            onSave={async (data) => {
+              try {
+                if (editTarget?.id && !editTarget?.isDuplicate) {
+                  await logisticsApi.updateFreightQuote(editTarget.logisticsId, editTarget.id, data);
+                  toast.success("Freight quote updated.");
+                } else if (editTarget?.logisticsId) {
+                  await logisticsApi.addFreightQuote(editTarget.logisticsId, data);
+                  toast.success("Freight quote duplicated.");
+                } else {
+                  toast.error("Cannot add quote without a logistics context from this view. Please open Transport Management.");
+                  return;
+                }
+                setAddModalOpen(false);
+                setEditTarget(null);
+                setRefreshKey((k) => k + 1);
+              } catch (err) {
+                toast.error(err?.response?.data?.message || "Failed to save quote.");
+              }
+            }}
+            quote={editTarget}
+            transportMode={editTarget?.logistics?.transportMode || "Road"}
+            mode={editTarget?.logistics?.mode || "Domestic"}
+            isReadOnly={false}
+          />
+        )
       )}
     </div>
   );

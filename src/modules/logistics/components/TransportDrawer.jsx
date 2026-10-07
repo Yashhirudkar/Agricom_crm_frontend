@@ -928,6 +928,10 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                                         }
                                         if (modeNorm === "sea") {
                                           const line = q.shippingLine ? `${q.shippingLine} • ` : "";
+                                          if (q.containerRates && q.containerRates.length > 0) {
+                                            const sizes = q.containerRates.map(cr => cr.containerSize).filter(Boolean).join(", ");
+                                            return `${line}${sizes ? `Containers (${sizes})` : "Multiple Containers"}`;
+                                          }
                                           const type = q.containerType || "Container";
                                           const size = q.containerSize ? ` (${q.containerSize})` : "";
                                           return `${line}${type}${size}`;
@@ -965,18 +969,45 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                                     </td>
 
                                     <td className="px-3 py-2 text-right">
-                                      <div className="text-sm font-extrabold text-emerald-600 tabular-nums">
-                                        {q.currency} {totalCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                      </div>
+                                      {(!Array.isArray(q.containerRates) || q.containerRates.length === 0) && (
+                                        <div className="text-sm font-extrabold text-emerald-600 tabular-nums">
+                                          {q.currency} {totalCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </div>
+                                      )}
 
-                                      {Array.isArray(q.charges) && q.charges.length > 0 && (
-                                        <div className="text-[9px] text-slate-500 font-medium mt-1 space-y-0.5 text-right bg-slate-50/80 p-1.5 rounded-lg border border-slate-100">
-                                          {q.charges.map((c, idx) => (
-                                            <div key={c.id || idx} className="flex items-center justify-end gap-1.5">
-                                              <span className="text-slate-500 truncate max-w-[130px]">{c.chargeName}:</span>
-                                              <span className="font-mono font-bold text-slate-800">{q.currency} {Number(c.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                                            </div>
-                                          ))}
+                                      {Array.isArray(q.containerRates) && q.containerRates.length > 0 ? (
+                                        <div className="inline-block text-left bg-slate-50 border border-slate-200/60 rounded-md p-1.5 shadow-xs">
+                                          <table className="text-[10px] w-auto">
+                                            <tbody>
+                                              {q.containerRates.map((cr, idx) => (
+                                                <tr key={cr.id || idx}>
+                                                  <td className="text-slate-500 font-medium pr-3 whitespace-nowrap text-right">
+                                                    {cr.containerSize || cr.containerType ? `${cr.containerSize} ${cr.containerType}`.trim() : "Container"}:
+                                                  </td>
+                                                  <td className="font-mono font-bold text-emerald-600 text-[11px] text-right whitespace-nowrap">
+                                                    {q.currency} {Number(cr.freightAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                                  </td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      ) : Array.isArray(q.charges) && q.charges.length > 0 && (
+                                        <div className="mt-1.5 inline-block text-left bg-slate-50 border border-slate-200/60 rounded-md p-1.5 shadow-xs">
+                                          <table className="text-[10px] w-auto">
+                                            <tbody>
+                                              {q.charges.map((c, idx) => (
+                                                <tr key={c.id || idx}>
+                                                  <td className="text-slate-500 font-medium pr-3 whitespace-nowrap text-right max-w-[150px] truncate" title={c.chargeName}>
+                                                    {c.chargeName}:
+                                                  </td>
+                                                  <td className="font-mono font-bold text-slate-800 text-right whitespace-nowrap">
+                                                    {q.currency} {Number(c.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                                  </td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
                                         </div>
                                       )}
 

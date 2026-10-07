@@ -127,6 +127,11 @@ export default function AddFreightQuoteModal({
   const [contactNumber, setContactNumber] = useState("");
   const [isManualEditLocked, setIsManualEditLocked] = useState(false); // Contact state machine lock
 
+  const [productId, setProductId] = useState("");
+  const [loadingPoint, setLoadingPoint] = useState("");
+  const [destination, setDestination] = useState("");
+  const [productOptionsList, setProductOptionsList] = useState([]);
+
   const [carrierReferenceNo, setCarrierReferenceNo] = useState("");
   const [vehicleType, setVehicleType] = useState("");
   const [containerType, setContainerType] = useState("");
@@ -191,8 +196,14 @@ export default function AddFreightQuoteModal({
       setActiveInlineCategory(null);
       setInlineValue("");
       setInlineError("");
+      
+      if (quote?.isDirect) {
+        axiosClient.get("/masters/products/options", { params: { limit: 100, isActive: true } })
+          .then(res => setProductOptionsList(res.data?.data || []))
+          .catch(err => console.warn(err));
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, quote?.isDirect]);
 
   const handleSaveInline = async (category, setter) => {
     if (!inlineValue || !inlineValue.trim()) {
@@ -670,6 +681,9 @@ export default function AddFreightQuoteModal({
       setCutoffDate(quote.cutoffDate ? quote.cutoffDate.split("T")[0] : "");
       setVessel(quote.vessel || "");
       setVoyage(quote.voyage || "");
+      setProductId(quote.productId || "");
+      setLoadingPoint(quote.loadingPoint || "");
+      setDestination(quote.destination || "");
     } else {
       setSellerId("");
       setContactPerson("");
@@ -704,6 +718,9 @@ export default function AddFreightQuoteModal({
       setCutoffDate("");
       setVessel("");
       setVoyage("");
+      setProductId("");
+      setLoadingPoint("");
+      setDestination("");
     }
     setError("");
   }, [quote, lastQuote, mode, transportMode, isOpen]);
@@ -808,18 +825,37 @@ export default function AddFreightQuoteModal({
       setError("Please enter a valid phone number (digits, spaces, +, - allowed).");
       return;
     }
-    if (!charges || charges.length === 0) {
-      setError("Please add at least one freight charge line item.");
-      return;
-    }
-    for (let i = 0; i < charges.length; i++) {
-      const c = charges[i];
-      if (!c.chargeName || !c.chargeName.trim()) {
-        setError(`Please select Charge Type for row #${i + 1}.`);
+    if (!quote?.isDirect) {
+      if (!charges || charges.length === 0) {
+        setError("Please add at least one freight charge line item.");
         return;
       }
-      if (!c.amount || parseFloat(c.amount) <= 0) {
-        setError(`Please enter a valid amount (> 0) for "${c.chargeName}".`);
+      for (let i = 0; i < charges.length; i++) {
+        const c = charges[i];
+        if (!c.chargeName || !c.chargeName.trim()) {
+          setError(`Please select Charge Type for row #${i + 1}.`);
+          return;
+        }
+        if (!c.amount || parseFloat(c.amount) <= 0) {
+          setError(`Please enter a valid amount (> 0) for "${c.chargeName}".`);
+          return;
+        }
+      }
+    } else {
+      if (!productId) {
+        setError("Please select a product.");
+        return;
+      }
+      if (!loadingPoint.trim()) {
+        setError("Please enter a loading point.");
+        return;
+      }
+      if (!destination.trim()) {
+        setError("Please enter a destination.");
+        return;
+      }
+      if (!freightAmount || parseFloat(freightAmount) <= 0) {
+        setError("Please enter a valid freight amount.");
         return;
       }
     }
@@ -871,14 +907,20 @@ export default function AddFreightQuoteModal({
       const payload = {
         quoteDate,
         sellerId: Number(sellerId),
-        freightAmount: calculatedGrandTotal,
-        charges: charges.map((c, idx) => ({
-          ...(c.chargeMasterId && { chargeMasterId: c.chargeMasterId }),
-          chargeName: c.chargeName.trim(),
-          amount: parseFloat(c.amount),
-          ...(c.remarks && { remarks: c.remarks.trim() }),
-          displayOrder: idx + 1,
-        })),
+        freightAmount: quote?.isDirect ? parseFloat(freightAmount) : calculatedGrandTotal,
+        ...(!quote?.isDirect && {
+          charges: charges.map((c, idx) => ({
+            ...(c.chargeMasterId && { chargeMasterId: c.chargeMasterId }),
+            chargeName: c.chargeName.trim(),
+            amount: parseFloat(c.amount),
+            ...(c.remarks && { remarks: c.remarks.trim() }),
+            displayOrder: idx + 1,
+          }))
+        }),
+        ...(quote?.isDirect && { isDirect: true }),
+        ...(quote?.isDirect && productId && { productId: Number(productId) }),
+        ...(quote?.isDirect && loadingPoint && { loadingPoint: loadingPoint.trim() }),
+        ...(quote?.isDirect && destination && { destination: destination.trim() }),
         currency: currency || "INR",
         fuelCharges: 0,
         additionalCharges: 0,
@@ -970,12 +1012,12 @@ export default function AddFreightQuoteModal({
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-extrabold tracking-tight uppercase text-slate-900">
                   {isReadOnly
-                    ? quote
+                    ? (quote && quote.id)
                       ? `Freight Quotation (${quote.quoteNumber})`
                       : "Freight Quotation Details"
-                    : quote
+                    : (quote && quote.id)
                       ? `Revise Freight Quote (${quote.quoteNumber})`
-                      : "Add New Freight Quotation"}
+                      : quote?.isDirect ? "Add Direct Freight Quote" : "Add New Freight Quotation"}
                 </h3>
                 {isReadOnly && (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-100 text-blue-800 border border-blue-200">
@@ -1035,6 +1077,52 @@ export default function AddFreightQuoteModal({
                 </div>
                 <div className="px-3 py-1.5 bg-blue-100/50 border border-blue-200 rounded-lg text-[10px] font-extrabold text-blue-700">
                   Read-only
+                </div>
+              </div>
+            )}
+
+            {quote?.isDirect && (
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-4">
+                <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                  Cargo & Route Details (Direct Quote)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1.5">Product <span className="text-rose-500">*</span></label>
+                    <select
+                      value={productId}
+                      onChange={(e) => setProductId(e.target.value)}
+                      disabled={isReadOnly}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold focus:outline-none focus:border-blue-600 bg-white text-slate-900 text-xs disabled:opacity-75 cursor-pointer"
+                    >
+                      <option value="">Select Product...</option>
+                      {productOptionsList.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1.5">Loading Point <span className="text-rose-500">*</span></label>
+                    <input
+                      type="text"
+                      value={loadingPoint}
+                      onChange={(e) => setLoadingPoint(e.target.value)}
+                      disabled={isReadOnly}
+                      placeholder="Origin City/Port"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold focus:outline-none focus:border-blue-600 bg-white text-slate-900 text-xs disabled:opacity-75"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1.5">Destination <span className="text-rose-500">*</span></label>
+                    <input
+                      type="text"
+                      value={destination}
+                      onChange={(e) => setDestination(e.target.value)}
+                      disabled={isReadOnly}
+                      placeholder="Destination City/Port"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold focus:outline-none focus:border-blue-600 bg-white text-slate-900 text-xs disabled:opacity-75"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -1280,7 +1368,22 @@ export default function AddFreightQuoteModal({
               </div>
 
               {/* Dynamic Line Item Table or Empty State */}
-              {charges.length === 0 ? (
+              {quote?.isDirect ? (
+                <div className="mt-4 pt-4 border-t border-slate-200/80">
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
+                    Total Freight Amount <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={freightAmount}
+                    onChange={(e) => setFreightAmount(e.target.value)}
+                    disabled={isReadOnly}
+                    placeholder="e.g. 5000.00"
+                    className="w-full sm:w-1/2 px-3 py-2 border border-slate-200 rounded-xl font-mono text-sm font-extrabold text-slate-900 bg-white focus:outline-none focus:border-blue-600 disabled:opacity-75 tabular-nums"
+                  />
+                </div>
+              ) : charges.length === 0 ? (
                 <div className="text-center py-8 px-4 bg-white border border-dashed border-slate-200 rounded-2xl space-y-3">
                   <div className="h-10 w-10 mx-auto rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
                     <DollarSign className="h-5 w-5" />

@@ -74,6 +74,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     sellerId: null,
     supplierName: "",
     sellerContractNo: "",
+    specificationNo: "",
+    specificationDate: "",
     productId: null,
     productName: "",
     quantity: "",
@@ -166,6 +168,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         brokerName: contract.broker?.entityName || salesContract.broker?.entityName || f.brokerName || "",
         brokerCommission: contract.brokerCommission || f.brokerCommission || "",
         sellerContractNo: contract.sellerContractNo || f.sellerContractNo || "",
+        specificationNo: contract.specificationNo || f.specificationNo || "",
+        specificationDate: contract.specificationDate || f.specificationDate || "",
         productId: firstItem.productId || f.productId || null,
         productName: firstItem.product?.name || firstItem.productName || f.productName || "",
         quantity: contract.quantity || f.quantity || (totalQuantity ? String(totalQuantity) : ""),
@@ -318,6 +322,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         buyerId: form.buyerId || null,
         sellerId: form.sellerId || null,
         sellerContractNo: form.sellerContractNo || null,
+        specificationNo: form.specificationNo || null,
+        specificationDate: form.specificationDate || null,
         paymentTermId: form.paymentTermId || null,
         paymentTermsText: form.paymentTermsText || null,
         advancePercent: form.advancePercent !== "" && form.advancePercent != null ? parseFloat(form.advancePercent) : null,
@@ -495,6 +501,16 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
                   <span className="font-mono font-extrabold text-[#007aff] text-xs bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
                     {contractDisplayNo}
                   </span>
+                  {sc?.buyer?.entityName && (
+                    <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200">
+                      Buyer: {sc.buyer.entityName}
+                    </span>
+                  )}
+                  {contract?.quantity && (
+                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      Qty: {contract.quantity} MT
+                    </span>
+                  )}
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>
                     {contract.status}
                   </span>
@@ -527,6 +543,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
               <Field label="Status" value={contract.status} />
               <Field label="Purchase Type" value={contract.purchaseType} />
               <Field label="Seller Contract No." value={form.sellerContractNo} />
+              <Field label="Specification No." value={form.specificationNo} />
+              <Field label="Specification Date" value={form.specificationDate} />
               <Field label="Buyer" value={buyerName} />
               <Field label="Seller / Supplier" value={sellerName} />
               <Field label="Broker / Agent" value={brokerName} />
@@ -548,12 +566,12 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
               <Field label="Product Quality" value={form.productQuality} />
               <Field label="Packing" value={form.packing} />
               <Field label="Bag Type" value={form.bagType} />
-              <Field label="Bag Spec" value={form.bagSpec} />
+              <Field label="Bag Dimension" value={form.bagSpec} />
               <Field label="Stitching" value={form.stitching} />
               <Field label="Marking" value={form.marking} />
               <Field label="Delivery Place" value={form.deliveryPlace} />
-              <Field label="Dispatch Date (From)" value={form.deliveryDate} />
-              <Field label="Dispatch Date (To)" value={form.deliveryToDate} />
+              <Field label="Shipment (From)" value={form.deliveryDate} />
+              <Field label="To" value={form.deliveryToDate} />
             </div>
           </div>
 
@@ -689,6 +707,16 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
                 <span className="text-xs font-mono font-extrabold text-[#007aff] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
                   {contractDisplayNo}
                 </span>
+                {contract?.salesContract?.buyer?.entityName && (
+                  <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2.5 py-0.5 rounded-md border border-gray-200">
+                    Buyer: {contract.salesContract.buyer.entityName}
+                  </span>
+                )}
+                {contract?.quantity && (
+                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+                    Qty: {contract.quantity} MT
+                  </span>
+                )}
               </h1>
               <p className="text-xs text-gray-500">
                 {isManual ? (
