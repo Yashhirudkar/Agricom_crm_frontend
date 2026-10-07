@@ -78,12 +78,7 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
   const formatShortCreatorName = (fullName) => {
     if (!fullName) return "—";
     const parts = fullName.trim().split(/\s+/);
-    if (parts.length === 1) {
-      return parts[0].length > 10 ? parts[0].slice(0, 10) : parts[0];
-    }
-    const firstName = parts[0];
-    const secondPart = parts[1];
-    return `${firstName} ${secondPart.slice(0, 2).toUpperCase()}`;
+    return parts[0].length > 10 ? parts[0].slice(0, 10) : parts[0];
   };
 
   return (

@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { selectUserType } from "@/store/slices/authSlice";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import { Plus, MessageSquare, Check, AlertCircle } from "lucide-react";
-import { useEnquiries } from "../hooks/useEnquiries";
+import { useEnquiries, useEnquiriesMasters } from "../hooks/useEnquiries";
 import { enquiriesApi } from "../services/enquiriesApi";
 import EnquiriesTable from "../components/EnquiriesTable";
 import EnquiriesFilter from "../components/EnquiriesFilter";
@@ -27,6 +27,8 @@ export default function EnquiriesListPage() {
   const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
   const [search, setSearch] = useState("");
+  const [createdBy, setCreatedBy] = useState("");
+  const [productId, setProductId] = useState("");
   const [toast, setToast] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -43,7 +45,8 @@ export default function EnquiriesListPage() {
   // Loading Points Drawer state
   const [loadingPointsEnquiry, setLoadingPointsEnquiry] = useState(null);
 
-  const activeQuery = useEnquiries(activeCompanyId, "NEW,PENDING,WAITING_RESPONSE,IN_PROGRESS", search);
+  const activeQuery = useEnquiries(activeCompanyId, "NEW,PENDING,WAITING_RESPONSE,IN_PROGRESS", search, false, false, createdBy, productId);
+  const { masters } = useEnquiriesMasters();
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -159,6 +162,11 @@ export default function EnquiriesListPage() {
         <EnquiriesFilter
           search={search}
           setSearch={setSearch}
+          createdBy={createdBy}
+          setCreatedBy={setCreatedBy}
+          productId={productId}
+          setProductId={setProductId}
+          masters={masters}
           setPage={activeQuery.setPage}
           total={activeQuery.total}
         />

@@ -2,7 +2,7 @@
 import React from "react";
 import { Search, X } from "lucide-react";
 
-export default function EnquiriesFilter({ search, setSearch, setPage, total }) {
+export default function EnquiriesFilter({ search, setSearch, setPage, total, createdBy, setCreatedBy, productId, setProductId, masters }) {
   return (
     <div className="px-5 py-3.5 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-3">
       <div className="flex-1 relative min-w-0">
@@ -24,7 +24,29 @@ export default function EnquiriesFilter({ search, setSearch, setPage, total }) {
         )}
       </div>
 
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        <select
+          value={productId || ""}
+          onChange={(e) => { setProductId(e.target.value); setPage(1); }}
+          className="px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all max-w-[150px] truncate"
+        >
+          <option value="">All Products</option>
+          {masters?.products?.map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
 
+        <select
+          value={createdBy || ""}
+          onChange={(e) => { setCreatedBy(e.target.value); setPage(1); }}
+          className="px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all max-w-[150px] truncate"
+        >
+          <option value="">All Creators</option>
+          {masters?.users?.map(u => (
+            <option key={u.value} value={u.value}>{u.label}</option>
+          ))}
+        </select>
+      </div>
 
       <span className="text-[11px] font-semibold text-gray-400 whitespace-nowrap">
         {total} enquir{total !== 1 ? "ies" : "y"}

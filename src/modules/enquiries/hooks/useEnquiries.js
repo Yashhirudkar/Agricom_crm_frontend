@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { enquiriesApi, mastersApi } from "../services/enquiriesApi";
 
-export function useEnquiries(companyId, status = "", externalSearch = null, withoutSalesContract = false, withoutPurchaseContract = false) {
+export function useEnquiries(companyId, status = "", externalSearch = null, withoutSalesContract = false, withoutPurchaseContract = false, createdBy = "", productId = "") {
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -23,6 +23,8 @@ export function useEnquiries(companyId, status = "", externalSearch = null, with
         ...(status && { status }),
         ...(withoutSalesContract && { withoutSalesContract: true }),
         ...(withoutPurchaseContract && { withoutPurchaseContract: true }),
+        ...(createdBy && { createdBy }),
+        ...(productId && { productId }),
       };
       const res = await enquiriesApi.getAll(params);
       setEnquiries(res.data.data || []);
@@ -33,7 +35,7 @@ export function useEnquiries(companyId, status = "", externalSearch = null, with
     } finally {
       setLoading(false);
     }
-  }, [page, currentSearch, limit, companyId, status, withoutSalesContract, withoutPurchaseContract]);
+  }, [page, currentSearch, limit, companyId, status, withoutSalesContract, withoutPurchaseContract, createdBy, productId]);
 
   useEffect(() => {
     fetchEnquiries();
@@ -41,7 +43,7 @@ export function useEnquiries(companyId, status = "", externalSearch = null, with
 
   useEffect(() => {
     setPage(1);
-  }, [currentSearch, status]);
+  }, [currentSearch, status, createdBy, productId]);
 
   return {
     enquiries, loading, total, totalPages, page, setPage,
@@ -52,7 +54,7 @@ export function useEnquiries(companyId, status = "", externalSearch = null, with
 
 export function useEnquiriesMasters() {
   const [masters, setMasters] = useState({
-    partnerRoles: [], products: [], packingTypes: [], countries: [], shipmentTypes: []
+    partnerRoles: [], products: [], packingTypes: [], countries: [], shipmentTypes: [], users: []
   });
   const [loading, setLoading] = useState(true);
 
@@ -62,12 +64,13 @@ export function useEnquiriesMasters() {
       try {
         const pNew = { limit: 100, status: "Active" };
         const pOld = { limit: 100, isActive: true };
-        const [rolesRes, prod, countries, pkt, st] = await Promise.all([
+        const [rolesRes, prod, countries, pkt, st, usersRes] = await Promise.all([
           mastersApi.getPartnerRoles(pOld),
           mastersApi.getProducts(pOld),
           mastersApi.getCountries(pOld),
           mastersApi.getPackingTypes(),
           mastersApi.getShipmentTypes(pNew),
+          import("@/lib/axios").then(mod => mod.default.get("/options")),
         ]);
 
         setMasters({
@@ -76,6 +79,7 @@ export function useEnquiriesMasters() {
           countries: countries.data?.data || [],
           packingTypes: Array.isArray(pkt.data) ? pkt.data : (pkt.data?.data || []),
           shipmentTypes: st.data?.data || [],
+          users: usersRes.data?.data || usersRes.data || [],
         });
       } catch (e) {
         console.error("Failed to load masters", e);

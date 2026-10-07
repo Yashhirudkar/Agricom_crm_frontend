@@ -185,7 +185,6 @@ export default function PurchaseContractListPage() {
                   <th className="px-3.5 py-2.5">Product</th>
                   <th className="px-3.5 py-2.5">Packing</th>
                   <th className="px-3.5 py-2.5 text-right">Qty</th>
-                  <th className="px-3.5 py-2.5 text-right">Total Purchase Value</th>
                   <th className="px-3.5 py-2.5 text-right">Total Containers</th>
                   <th className="px-3.5 py-2.5 text-right">Actions</th>
                 </tr>
@@ -200,9 +199,7 @@ export default function PurchaseContractListPage() {
                   const packings = (pc.packings && pc.packings.length > 0)
                     ? pc.packings.join(", ")
                     : (pc.packing || "—");
-                  const totalValue = pc.totalPurchaseValue ?? 0;
                   const totalContainers = pc.totalContainers ?? 0;
-                  const currency = pc.salesContract?.currencyCode || "USD";
 
                   return (
                     <tr
@@ -238,12 +235,6 @@ export default function PurchaseContractListPage() {
 
                       <td className="px-3.5 py-2.5 text-right font-mono font-semibold text-gray-700 whitespace-nowrap">
                         {pc.quantity ? pc.quantity : <span className="text-gray-400 font-normal">—</span>}
-                      </td>
-
-                      <td className="px-3.5 py-2.5 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
-                        {totalValue > 0
-                          ? `${currency} ${Number(totalValue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          : <span className="text-gray-400 font-normal">—</span>}
                       </td>
 
                       <td className="px-3.5 py-2.5 text-right font-mono font-bold text-gray-800">
@@ -282,7 +273,7 @@ export default function PurchaseContractListPage() {
 
                 {contracts.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="text-center py-8 text-gray-400">
+                    <td colSpan={8} className="text-center py-8 text-gray-400">
                       <FileText className="h-6 w-6 mx-auto mb-1 text-gray-300 stroke-[1.2]" />
                       <p className="text-xs font-semibold text-gray-600">No purchase contracts found</p>
                     </td>
