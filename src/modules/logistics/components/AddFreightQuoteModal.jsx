@@ -118,12 +118,12 @@ export default function AddFreightQuoteModal({
           if (grouped[item.category]) grouped[item.category].push(item.value);
         });
         setEquipmentOptionsMap((prev) => ({
-          TRUCK_TYPE: grouped.TRUCK_TYPE.length ? grouped.TRUCK_TYPE : prev.TRUCK_TYPE,
-          TRUCK_CAPACITY: grouped.TRUCK_CAPACITY.length ? grouped.TRUCK_CAPACITY : prev.TRUCK_CAPACITY,
-          CONTAINER_TYPE: grouped.CONTAINER_TYPE.length ? grouped.CONTAINER_TYPE : prev.CONTAINER_TYPE,
-          CONTAINER_SIZE: grouped.CONTAINER_SIZE.length ? grouped.CONTAINER_SIZE : prev.CONTAINER_SIZE,
-          WAGON_TYPE: grouped.WAGON_TYPE.length ? grouped.WAGON_TYPE : prev.WAGON_TYPE,
-          WAGON_CAPACITY: grouped.WAGON_CAPACITY.length ? grouped.WAGON_CAPACITY : prev.WAGON_CAPACITY,
+          TRUCK_TYPE: [...new Set([...ROAD_TRUCK_TYPES, ...grouped.TRUCK_TYPE])],
+          TRUCK_CAPACITY: [...new Set([...ROAD_TRUCK_CAPACITIES, ...grouped.TRUCK_CAPACITY])],
+          CONTAINER_TYPE: [...new Set([...SEA_CONTAINER_TYPES, ...grouped.CONTAINER_TYPE])],
+          CONTAINER_SIZE: [...new Set([...SEA_CONTAINER_SIZES, ...grouped.CONTAINER_SIZE])],
+          WAGON_TYPE: [...new Set([...RAIL_WAGON_TYPES, ...grouped.WAGON_TYPE])],
+          WAGON_CAPACITY: [...new Set([...RAIL_WAGON_CAPACITIES, ...grouped.WAGON_CAPACITY])],
         }));
       }
     } catch (err) {
@@ -907,7 +907,7 @@ export default function AddFreightQuoteModal({
                   value={sellerId}
                   onChange={(id) => setSellerId(id)}
                   onSelect={handlePartnerSelect}
-                  roleNames={["Transport", "Freight Forwarder", "Shipping Line"]}
+                  roleNames={["Transport", "TRANSPORT-DOMESTIC", "TRANSPORT-INTERNATIONAL", "Freight Forwarder", "Shipping Line"]}
                   mode="entity"
                   allowCreate={!isReadOnly}
                   allowAddContact={!isReadOnly}

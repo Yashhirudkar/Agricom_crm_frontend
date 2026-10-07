@@ -222,7 +222,7 @@ export default function DirectFreightQuoteDrawer({
                 label="Transport Partner"
                 value={sellerId}
                 onChange={setSellerId}
-                roleNames={["Transport", "Freight Forwarder", "Shipping Line"]}
+                roleNames={["Transport", "TRANSPORT-DOMESTIC", "TRANSPORT-INTERNATIONAL", "Freight Forwarder", "Shipping Line"]}
                 mode="entity"
                 placeholder="Search Partner..."
               />
