@@ -205,6 +205,17 @@ export default function CreateCompanyModal({
                       placeholder="e.g. ACM001"
                     />
                   </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Display Order</label>
+                    <input
+                      type="number"
+                      name="displayOrder"
+                      value={form.displayOrder !== undefined ? form.displayOrder : 0}
+                      onChange={handleChange}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-[#007aff] outline-none text-gray-700 bg-gray-50/50 hover:bg-white transition-colors"
+                      placeholder="e.g. 1"
+                    />
+                  </div>
                   {userType === "super_admin" && !isEditMode && (
                     <div>
                       <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Assign to Tenant <span className="text-red-500">*</span></label>

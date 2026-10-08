@@ -9,6 +9,7 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   ArrowUpDown,
   Eye,
   Pencil,
@@ -30,7 +31,8 @@ import {
   DollarSign,
   Calendar,
   ExternalLink,
-  Plus
+  Plus,
+  ClipboardList
 } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { toast } from "sonner";
@@ -208,6 +210,109 @@ export default function FreightManagementPage() {
     setPage(1);
   }, [transportMode, statusFilter, productFilter, originFilter, destinationFilter, dateFrom, dateTo]);
 
+  const [expandedQuotes, setExpandedQuotes] = useState(new Set());
+
+  const toggleQuote = (quoteId) => {
+    setExpandedQuotes(prev => {
+      const next = new Set(prev);
+      if (next.has(quoteId)) next.delete(quoteId);
+      else next.add(quoteId);
+      return next;
+    });
+  };
+
+  const normalizedData = useMemo(() => {
+    return data.map(quote => {
+      const enquiry = quote.logistics?.enquiry;
+      const productName = quote.isDirect ? (quote.product?.name || "N/A") : (enquiry?.product?.name || "N/A");
+      
+      let routes = quote.freightRoutes || [];
+      
+      if (!routes || routes.length === 0) {
+        routes = [{
+          id: `legacy_route_${quote.id}`,
+          origin: quote.isDirect ? quote.loadingPoint : getOriginDisplay(enquiry),
+          destination: quote.isDirect ? quote.destination : getDestinationDisplay(enquiry),
+          rates: [{
+            id: `legacy_rate_${quote.id}`,
+            partner: quote.seller,
+            partnerId: quote.sellerId,
+            equipment: getEquipmentDisplay(quote),
+            transitDays: quote.transitDays,
+            currency: quote.currency,
+            amount: quote.freightAmount,
+            validTill: quote.validityDate,
+            status: quote.status || "Active",
+            _legacyQuote: quote
+          }]
+        }];
+      }
+
+      let totalQuotes = 0;
+      let minRate = Infinity;
+      let maxRate = -Infinity;
+      let currencyStr = "INR";
+
+      const normalizedRoutes = routes.map((route, routeIdx) => {
+        let rMin = Infinity;
+        let rMax = -Infinity;
+        let rActive = 0;
+        let rExpired = 0;
+        let rTotalTrans = 0;
+        let rTransCount = 0;
+
+        const rates = route.rates || [];
+        rates.forEach(rate => {
+          totalQuotes++;
+          const amt = Number(rate.amount);
+          if (!isNaN(amt) && amt > 0) {
+            if (amt < minRate) minRate = amt;
+            if (amt > maxRate) maxRate = amt;
+            if (amt < rMin) rMin = amt;
+            if (amt > rMax) rMax = amt;
+            if (rate.currency && rate.currency !== 'INR') currencyStr = rate.currency;
+          }
+          
+          const isExpired = rate.validTill && new Date(rate.validTill) < new Date();
+          if (isExpired) rExpired++;
+          else rActive++;
+
+          const tDays = Number(rate.transitDays);
+          if (tDays > 0) {
+            rTotalTrans += tDays;
+            rTransCount++;
+          }
+        });
+
+        return {
+          ...route,
+          routeKey: route.id || `route_${quote.id}_${routeIdx}`,
+          stats: {
+            quotesCount: rates.length,
+            minRate: rMin === Infinity ? null : rMin,
+            maxRate: rMax === -Infinity ? null : rMax,
+            avgTransit: rTransCount > 0 ? Math.round(rTotalTrans / rTransCount) : null,
+            activeQuotes: rActive,
+            expiredQuotes: rExpired
+          }
+        };
+      });
+
+      return {
+        ...quote,
+        productName,
+        normalizedRoutes,
+        stats: {
+          totalRoutes: normalizedRoutes.length,
+          totalQuotes,
+          minRate: minRate === Infinity ? null : minRate,
+          maxRate: maxRate === -Infinity ? null : maxRate,
+          currencyStr
+        }
+      };
+    });
+  }, [data]);
+
   // Dynamic dropdown options derived from current data
   const productOptions = useMemo(() => {
     const set = new Set();
@@ -363,9 +468,9 @@ export default function FreightManagementPage() {
     }
   };
 
-  // Duplicate handler (opens Add modal pre-filled)
-  const handleDuplicate = (quote) => {
-    setEditTarget({ ...quote, id: undefined, quoteNumber: undefined, isDuplicate: true });
+  // View handler (opens modal in read-only mode)
+  const handleView = (quote) => {
+    setEditTarget({ ...quote, isViewOnly: true });
     setAddModalOpen(true);
   };
 
@@ -565,39 +670,36 @@ export default function FreightManagementPage() {
           <table className="w-full text-left border-collapse min-w-[1300px]">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60 text-gray-400 uppercase tracking-widest text-[10px] font-bold">
+                <th className="px-5 py-3.5 w-10"></th>
                 <th className="px-5 py-3.5">Product</th>
-                <th className="px-5 py-3.5">Route</th>
-                <th className="px-5 py-3.5">Transport Partner</th>
-                <th className="px-5 py-3.5">Equipment</th>
-                <th className="px-5 py-3.5">
-                  <button onClick={() => handleSort("transitDays")} className="flex items-center gap-0.5 cursor-pointer hover:text-gray-600 transition-colors">
-                    Transit Days <SortIcon col="transitDays" />
-                  </button>
-                </th>
+                <th className="px-5 py-3.5 text-center">Total Routes</th>
+                <th className="px-5 py-3.5 text-center">Total Quotes</th>
                 <th className="px-5 py-3.5">
                   <button onClick={() => handleSort("freightAmount")} className="flex items-center gap-0.5 cursor-pointer hover:text-gray-600 transition-colors">
-                    Amount <SortIcon col="freightAmount" />
+                    Lowest Rate <SortIcon col="freightAmount" />
                   </button>
                 </th>
+                <th className="px-5 py-3.5">Highest Rate</th>
                 <th className="px-5 py-3.5">
-                  <button onClick={() => handleSort("validityDate")} className="flex items-center gap-0.5 cursor-pointer hover:text-gray-600 transition-colors">
-                    Valid Till <SortIcon col="validityDate" />
+                  <button onClick={() => handleSort("updatedAt")} className="flex items-center gap-0.5 cursor-pointer hover:text-gray-600 transition-colors">
+                    Last Updated <SortIcon col="updatedAt" />
                   </button>
                 </th>
                 <th className="px-5 py-3.5 text-center">Status</th>
+                <th className="px-5 py-3.5 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-xs">
               {isLoading ? (
                 <tr>
-                  <td colSpan="8" className="py-20 text-center">
+                  <td colSpan="9" className="py-20 text-center">
                     <Loader2 className="h-7 w-7 animate-spin text-[#007aff] mx-auto mb-2" />
                     <p className="text-xs font-semibold text-gray-400">Loading freight quotes...</p>
                   </td>
                 </tr>
-              ) : data.length === 0 ? (
+              ) : normalizedData.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-20 text-center">
+                  <td colSpan="9" className="py-20 text-center">
                     <Package className="h-10 w-10 text-gray-200 mx-auto mb-3" />
                     <p className="text-sm font-bold text-gray-600 mb-1">No Freight Quotes Found</p>
                     <p className="text-xs text-gray-400">
@@ -608,92 +710,233 @@ export default function FreightManagementPage() {
                   </td>
                 </tr>
               ) : (
-                data.map((quote) => {
-                  const enquiry = quote.logistics?.enquiry;
-                  const origin = getOriginDisplay(enquiry);
-                  const destination = getDestinationDisplay(enquiry);
-                  const equipment = getEquipmentDisplay(quote);
-                  const modeStr = quote.logistics?.transportMode || "Road";
-
-                  return (
-                    <tr
-                      key={quote.id}
-                      className={`group hover:bg-blue-50/30 transition-colors ${quote.isPreferred ? "bg-amber-50/20" : ""
-                        }`}
+                normalizedData.map((quote) => (
+                  <React.Fragment key={quote.id}>
+                    {/* Main Row */}
+                    <tr 
+                      className={`group hover:bg-slate-50 transition-colors cursor-pointer border-b border-gray-50 ${quote.isPreferred ? "bg-amber-50/20" : ""}`}
+                      onClick={() => toggleQuote(quote.id)}
                     >
-                      {/* Product */}
+                      <td className="px-5 py-3.5 text-slate-400">
+                        {expandedQuotes.has(quote.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </td>
                       <td className="px-5 py-3.5">
-                        <span className="font-semibold text-gray-800">
-                          {quote.isDirect ? (quote.product?.name || "N/A") : (enquiry?.product?.name || "N/A")}
+                        <span className="font-bold text-slate-800 text-[13px] block">
+                          {quote.productName}
                         </span>
-                      </td>
-
-                      {/* Route: Origin → Destination */}
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-1.5 text-gray-700 font-medium">
-                          <span className="truncate max-w-[120px]" title={quote.isDirect ? quote.loadingPoint : origin}>
-                            {quote.isDirect ? quote.loadingPoint : origin}
-                          </span>
-                          <ArrowRight className="h-3 w-3 text-gray-300 shrink-0" />
-                          <span className="truncate max-w-[120px]" title={quote.isDirect ? quote.destination : destination}>
-                            {quote.isDirect ? quote.destination : destination}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Transport Partner */}
-                      <td className="px-5 py-3.5">
-                        <span className="font-semibold text-gray-800 block truncate max-w-[140px]">
-                          {quote.seller?.entityName || "N/A"}
-                        </span>
-                      </td>
-
-                      {/* Equipment */}
-                      <td className="px-5 py-3.5">
-                        <span className="text-gray-600 truncate max-w-[140px] block">{equipment}</span>
-                      </td>
-
-                      {/* Transit Days */}
-                      <td className="px-5 py-3.5 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold ${quote.transitDays > 0
-                            ? "bg-blue-50 text-[#007aff]"
-                            : "text-gray-400"
-                          }`}>
-                          {quote.transitDays > 0 ? `${quote.transitDays}d` : "N/A"}
-                        </span>
-                      </td>
-
-                      {/* Freight Amount */}
-                      <td className="px-5 py-3.5">
-                        <span className="font-bold text-gray-900">
-                          {formatMoney(quote.freightAmount, quote.currency)}
-                        </span>
-                        {quote.currency && quote.currency !== "INR" && (
-                          <span className="text-[10px] text-gray-400 font-mono block">{quote.currency}</span>
+                        <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">{quote.quoteNumber}</span>
+                        {quote.isDirect ? (
+                          <div className="mt-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-50 text-green-700 border border-green-200">
+                            <Truck className="h-3 w-3" />
+                            DIRECT FREIGHT
+                          </div>
+                        ) : (
+                          <div className="mt-1.5 flex flex-col gap-1 items-start">
+                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                              <ClipboardList className="h-3 w-3" />
+                              ENQUIRY FREIGHT
+                            </div>
+                            {quote.logistics?.enquiry?.enquiryNumber && (
+                              <span className="text-[9px] text-slate-500 font-medium">Ref: {quote.logistics.enquiry.enquiryNumber}</span>
+                            )}
+                          </div>
                         )}
                       </td>
-
-                      {/* Valid Till */}
-                      <td className="px-5 py-3.5">
-                        {(() => {
-                          const dateStr = safeFormatDate(quote.validityDate);
-                          const isExpired = quote.validityDate && new Date(quote.validityDate) < new Date();
-                          return (
-                            <span className={`font-medium ${isExpired ? "text-red-500" : "text-gray-700"}`}>
-                              {dateStr}
-                              {isExpired && <span className="block text-[10px] font-bold text-red-400">Expired</span>}
-                            </span>
-                          );
-                        })()}
+                      <td className="px-5 py-3.5 text-center font-semibold text-slate-600">{quote.stats.totalRoutes}</td>
+                      <td className="px-5 py-3.5 text-center font-semibold text-slate-600">{quote.stats.totalQuotes}</td>
+                      <td className="px-5 py-3.5 font-bold text-emerald-600">
+                        {quote.stats.minRate !== null ? formatMoney(quote.stats.minRate, quote.stats.currencyStr) : "—"}
                       </td>
-
-                      {/* Status */}
+                      <td className="px-5 py-3.5 font-bold text-slate-600">
+                        {quote.stats.maxRate !== null ? formatMoney(quote.stats.maxRate, quote.stats.currencyStr) : "—"}
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-500 font-medium">
+                        {safeFormatDate(quote.updatedAt)}
+                      </td>
                       <td className="px-5 py-3.5 text-center">
                         <StatusBadge quote={quote} />
                       </td>
+                      <td className="px-5 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-2 transition-opacity">
+                          <button
+                            onClick={() => handleView(quote)}
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="View"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditTarget(quote);
+                              setAddModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteTarget(quote)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
-                  );
-                })
+
+                    {/* Expanded Routes */}
+                    {expandedQuotes.has(quote.id) && (
+                      <tr>
+                        <td colSpan="9" className="p-0 bg-slate-50/60 border-b border-slate-200">
+                          <div className="pl-[60px] pr-5 py-4 space-y-3">
+                            {/* Metadata Banner */}
+                            <div className="flex flex-wrap gap-x-6 gap-y-2 items-center bg-slate-100/50 p-3 rounded-lg border border-slate-200 mb-2">
+                              {quote.isDirect ? (
+                                <>
+                                  <div className="text-xs">
+                                    <span className="text-slate-400 font-medium mr-1.5">Source:</span>
+                                    <span className="font-bold text-slate-700">Created Directly</span>
+                                  </div>
+                                  <div className="text-xs">
+                                    <span className="text-slate-400 font-medium mr-1.5">Created By:</span>
+                                    <span className="font-bold text-slate-700">{quote.createdBy?.name || quote.createdById || "System"}</span>
+                                  </div>
+                                  <div className="text-xs">
+                                    <span className="text-slate-400 font-medium mr-1.5">Created Date:</span>
+                                    <span className="font-bold text-slate-700">{safeFormatDate(quote.createdAt)}</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="text-xs flex items-center">
+                                    <span className="text-slate-400 font-medium mr-1.5">Linked Enquiry:</span>
+                                    <span className="font-bold text-blue-600 hover:underline cursor-pointer">{quote.logistics?.enquiry?.enquiryNumber || "N/A"}</span>
+                                  </div>
+                                  <div className="text-xs">
+                                    <span className="text-slate-400 font-medium mr-1.5">Buyer:</span>
+                                    <span className="font-bold text-slate-700">{quote.logistics?.enquiry?.companyName || quote.logistics?.enquiry?.buyer?.name || quote.logistics?.enquiry?.company?.name || "N/A"}</span>
+                                  </div>
+                                  <div className="text-xs">
+                                    <span className="text-slate-400 font-medium mr-1.5">Enquiry Date:</span>
+                                    <span className="font-bold text-slate-700">{safeFormatDate(quote.logistics?.enquiry?.enquiryDate || quote.logistics?.enquiry?.createdAt || quote.createdAt)}</span>
+                                  </div>
+                                  {quote.logistics?.enquiry?.selectedQuoteId && (
+                                    <div className="text-xs">
+                                      <span className="text-slate-400 font-medium mr-1.5">Selected Quote:</span>
+                                      <span className="font-bold text-emerald-600">Yes</span>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                            {quote.normalizedRoutes.map((route) => {
+                              return (
+                                <div key={route.routeKey} className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+                                  {/* Route Header */}
+                                  <div className="flex flex-wrap items-center justify-between p-3 border-b border-slate-100 bg-slate-50/50">
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex items-center justify-center w-6 h-6 rounded-md bg-indigo-50 text-indigo-500">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                      </div>
+                                      <div className="flex items-center gap-2 text-[13px] font-bold text-slate-800">
+                                        <span className="truncate max-w-[150px]" title={route.origin}>{route.origin}</span>
+                                        <ArrowRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                        <span className="truncate max-w-[150px]" title={route.destination}>{route.destination}</span>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-5 text-[11px] font-semibold text-slate-500">
+                                      <div className="flex items-center gap-1.5"><span className="text-slate-400">Quotes:</span> <span className="text-slate-800">{route.stats.quotesCount}</span></div>
+                                      <div className="flex items-center gap-1.5"><span className="text-slate-400">Lowest:</span> <span className="text-emerald-600">{route.stats.minRate !== null ? formatMoney(route.stats.minRate, quote.stats.currencyStr) : "—"}</span></div>
+                                      <div className="flex items-center gap-1.5"><span className="text-slate-400">Highest:</span> <span className="text-slate-800">{route.stats.maxRate !== null ? formatMoney(route.stats.maxRate, quote.stats.currencyStr) : "—"}</span></div>
+                                      <div className="flex items-center gap-1.5"><span className="text-slate-400">Avg Transit:</span> <span className="text-slate-800">{route.stats.avgTransit ? `${route.stats.avgTransit}d` : "—"}</span></div>
+                                    </div>
+                                  </div>
+
+                                  {/* Expanded Quotes inside Route */}
+                                  <div className="bg-white">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                          <tr className="bg-slate-50/50 text-[10px] uppercase tracking-wider font-bold text-slate-500 border-b border-slate-100">
+                                            <th className="px-4 py-2.5">Partner</th>
+                                            <th className="px-4 py-2.5">Equipment</th>
+                                            <th className="px-4 py-2.5 text-center">Transit</th>
+                                            <th className="px-4 py-2.5">Amount</th>
+                                            <th className="px-4 py-2.5">Valid Till</th>
+                                            <th className="px-4 py-2.5 text-center">Status</th>
+                                            <th className="px-4 py-2.5 text-center">Actions</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50 text-xs">
+                                          {route.rates.map((rate, rIdx) => (
+                                            <tr key={rate.id || rIdx} className="hover:bg-slate-50/50 transition-colors group/rate">
+                                              <td className="px-4 py-2.5 font-bold text-slate-800 truncate max-w-[140px]" title={rate.partner?.entityName}>
+                                                {rate.partner?.entityName || "N/A"}
+                                              </td>
+                                              <td className="px-4 py-2.5 text-slate-600 font-medium truncate max-w-[120px]">{rate.equipment || "N/A"}</td>
+                                              <td className="px-4 py-2.5 text-center">
+                                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold ${rate.transitDays > 0 ? "bg-blue-50 text-[#007aff]" : "text-slate-400"}`}>
+                                                  {rate.transitDays > 0 ? `${rate.transitDays}d` : "N/A"}
+                                                </span>
+                                              </td>
+                                              <td className="px-4 py-2.5 font-bold text-slate-900">
+                                                {formatMoney(rate.amount, rate.currency)}
+                                                {rate.currency && rate.currency !== 'INR' && <span className="ml-1 text-[9px] text-slate-400 font-mono">{rate.currency}</span>}
+                                              </td>
+                                              <td className="px-4 py-2.5">
+                                                {(() => {
+                                                  const dateStr = safeFormatDate(rate.validTill);
+                                                  const isExpired = rate.validTill && new Date(rate.validTill) < new Date();
+                                                  return (
+                                                    <span className={`font-medium ${isExpired ? "text-red-500" : "text-slate-600"}`}>
+                                                      {dateStr}
+                                                      {isExpired && <span className="ml-1 text-[9px] font-bold text-red-400">Expired</span>}
+                                                    </span>
+                                                  );
+                                                })()}
+                                              </td>
+                                              <td className="px-4 py-2.5 text-center">
+                                                <StatusBadge quote={rate._legacyQuote || {...quote, status: rate.status}} />
+                                              </td>
+                                              <td className="px-4 py-2.5 text-center flex items-center justify-center gap-2">
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleView(rate._legacyQuote || quote);
+                                                  }}
+                                                  className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                                                  title="View"
+                                                >
+                                                  <Eye className="h-3 w-3" />
+                                                </button>
+                                                <button
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditTarget(rate._legacyQuote || quote);
+                                                    setAddModalOpen(true);
+                                                  }}
+                                                  className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                                                  title="Edit"
+                                                >
+                                                  <Pencil className="h-3 w-3" />
+                                                </button>
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))
               )}
             </tbody>
           </table>
@@ -765,8 +1008,13 @@ export default function FreightManagementPage() {
             onSave={async (data) => {
               try {
                 if (editTarget?.id && !editTarget?.isDuplicate) {
-                  await logisticsApi.updateFreightQuote(editTarget.logisticsId, editTarget.id, data);
-                  toast.success("Direct Freight quote updated.");
+                  if (data.isDirect) {
+                    await logisticsApi.updateDirectFreightQuote(editTarget.id, data);
+                    toast.success("Direct Freight quote updated.");
+                  } else {
+                    await logisticsApi.updateFreightQuote(editTarget.logisticsId, editTarget.id, data);
+                    toast.success("Freight quote updated.");
+                  }
                 } else {
                   await logisticsApi.addDirectFreightQuote(data);
                   toast.success("Direct Freight quote added.");
@@ -809,7 +1057,7 @@ export default function FreightManagementPage() {
             quote={editTarget}
             transportMode={editTarget?.logistics?.transportMode || "Road"}
             mode={editTarget?.logistics?.mode || "Domestic"}
-            isReadOnly={false}
+            isReadOnly={editTarget?.isViewOnly || false}
           />
         )
       )}

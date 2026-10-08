@@ -6,6 +6,7 @@ export const logisticsApi = {
   getDetails: (enquiryId) => axiosClient.get(`/logistics/enquiry/${enquiryId}`),
   addFreightQuote: (id, data) => axiosClient.post(`/logistics/${id}/quotes`, data),
   addDirectFreightQuote: (data) => axiosClient.post(`/logistics/direct-quotes`, data),
+  updateDirectFreightQuote: (quoteId, data) => axiosClient.patch(`/logistics/direct-quotes/${quoteId}`, data),
   updateFreightQuote: (id, quoteId, data) =>
     axiosClient.patch(`/logistics/${id}/quotes/${quoteId}`, data),
   deleteFreightQuote: (id, quoteId) =>

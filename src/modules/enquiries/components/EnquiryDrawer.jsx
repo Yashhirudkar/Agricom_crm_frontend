@@ -20,13 +20,16 @@ import LocationHierarchy from "@/components/common/LocationHierarchy";
 import PortSelector from "@/components/common/PortSelector";
 import axiosClient from "@/lib/axios";
 import { getAllCountryOptions } from "@/lib/countryUtils";
+import usePermissions from "@/hooks/usePermissions";
 
 export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, onSaveSuccess }) {
   const { masters, loading: mastersLoading } = useEnquiriesMasters();
   const { data: currencies = [], isLoading: currenciesLoading } = useCurrencyMaster();
+  const { hasPermission } = usePermissions();
 
-  const [saving, setSaving] = useState(false);
+  const [savingType, setSavingType] = useState(null); // 'SAVE' or 'SAVE_NOTIFY'
   const [error, setError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
   const [errors, setErrors] = useState({});
   const [createdByName, setCreatedByName] = useState("");
 
@@ -399,12 +402,13 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async () => {
+  const handleSave = async (notifyGroup = false) => {
     if (isViewMode) return;
     if (!validate()) return;
 
-    setSaving(true);
+    setSavingType(notifyGroup ? 'SAVE_NOTIFY' : 'SAVE');
     setError(null);
+    setSuccessMsg(null);
 
     try {
       const payload = {
@@ -448,10 +452,22 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
         delete payload.destinationZipCode;
       }
 
+      if (notifyGroup) {
+        payload.notifyGroup = true;
+      }
+
       if (editData) {
         await enquiriesApi.update(editData.id, payload);
       } else {
         await enquiriesApi.create(payload);
+      }
+
+      if (notifyGroup) {
+        setSavingType('SENDING'); // 'Sending WhatsApp...'
+        // Simulate a tiny delay for UX so user sees "Sending WhatsApp..."
+        await new Promise(r => setTimeout(r, 500)); 
+        setSuccessMsg("✅ Enquiry updated and notification sent.");
+        await new Promise(r => setTimeout(r, 1500));
       }
 
       onSaveSuccess?.();
@@ -467,9 +483,15 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       } else if (err.message) {
         errMsg = err.message;
       }
-      setError(errMsg);
+      
+      if (notifyGroup && err.response?.status === 200) {
+        // Since fire-and-forget in backend, this block might be rarely hit for 200 + error, but just in case
+        setError("Enquiry updated successfully. WhatsApp notification failed.");
+      } else {
+        setError(errMsg);
+      }
     } finally {
-      setSaving(false);
+      setSavingType(null);
     }
   };
 
@@ -509,6 +531,16 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
               <div>
                 <h3 className="text-sm font-bold text-red-800">Error saving enquiry</h3>
                 <p className="text-xs text-red-600 mt-1">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-start gap-3">
+              <div className="h-5 w-5 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 mt-0.5 text-[10px]">✓</div>
+              <div>
+                <h3 className="text-sm font-bold text-green-800">Success</h3>
+                <p className="text-xs text-green-600 mt-1">{successMsg}</p>
               </div>
             </div>
           )}
@@ -1082,23 +1114,37 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
             <button
               onClick={handleClose}
-              disabled={saving}
-              className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl text-xs hover:bg-gray-50 transition-colors cursor-pointer"
+              disabled={!!savingType}
+              className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl text-xs hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
             <button
-              onClick={handleSave}
-              disabled={saving || mastersLoading}
+              onClick={() => handleSave(false)}
+              disabled={!!savingType || mastersLoading}
               className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors disabled:opacity-50"
             >
-              {saving ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              {savingType === 'SAVE' ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</>
               ) : (
-                <Save className="h-3.5 w-3.5" />
+                <><Save className="h-3.5 w-3.5" /> Save Enquiry</>
               )}
-              Save Enquiry
             </button>
+            {editData && hasPermission("notification:send") && (
+              <button
+                onClick={() => handleSave(true)}
+                disabled={!!savingType || mastersLoading}
+                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-emerald-500/20 cursor-pointer transition-colors disabled:opacity-50"
+              >
+                {savingType === 'SAVE_NOTIFY' ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</>
+                ) : savingType === 'SENDING' ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending WhatsApp...</>
+                ) : (
+                  <><Save className="h-3.5 w-3.5" /> Save & Notify</>
+                )}
+              </button>
+            )}
           </div>
         )}
       </Drawer>

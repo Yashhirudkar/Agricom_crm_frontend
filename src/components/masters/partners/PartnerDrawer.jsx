@@ -143,7 +143,9 @@ function PartnerDrawer({
   const isSellerOrSupplier = useMemo(() => {
     if (!watchedRoleId || !partnerRoles.length) return false;
     const role = partnerRoles.find((r) => r.id === parseInt(watchedRoleId, 10));
-    return role && ["SELLER", "SUPPLIER"].includes(role.name?.toUpperCase());
+    if (!role || !role.name) return false;
+    const roleName = role.name.toUpperCase();
+    return roleName.includes("SELLER") || roleName.includes("SUPPLIER");
   }, [watchedRoleId, partnerRoles]);
 
   const watchedCountryIso2 = useMemo(() => {

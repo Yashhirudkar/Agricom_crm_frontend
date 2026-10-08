@@ -12,6 +12,7 @@ export default function AgainstShipmentSection({
   allAvailableShipments = [],
   selectedShipmentIds = [],
   onToggleShipment,
+  isView = false,
 }) {
   const [activeDrawerItem, setActiveDrawerItem] = useState(null);
 
@@ -64,11 +65,11 @@ export default function AgainstShipmentSection({
               return (
                 <div
                   key={s.id}
-                  onClick={() => onToggleShipment(s.id)}
-                  className={`px-3 py-2 rounded-xl border transition-all cursor-pointer flex items-center gap-2.5 ${
+                  onClick={() => !isView && onToggleShipment(s.id)}
+                  className={`px-3 py-2 rounded-xl border transition-all ${!isView ? 'cursor-pointer hover:border-gray-200 hover:bg-gray-50' : ''} flex items-center gap-2.5 ${
                     isChecked
                       ? "bg-blue-50/60 border-[#007aff]/40 shadow-2xs"
-                      : "bg-gray-50/40 border-gray-100 hover:border-gray-200 hover:bg-gray-50"
+                      : "bg-gray-50/40 border-gray-100"
                   }`}
                 >
                   <div className="text-[#007aff] flex-shrink-0">
@@ -201,13 +202,15 @@ export default function AgainstShipmentSection({
                     <span className="font-mono font-bold text-emerald-700">{remainingQty.toFixed(2)} MT</span>
                   </div>
 
-                  <button
-                    onClick={() => setActiveDrawerItem(item)}
-                    className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl transition-colors shadow-2xs inline-flex items-center gap-1.5 cursor-pointer ml-2"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Select Shipments</span>
-                  </button>
+                  {!isView && (
+                    <button
+                      onClick={() => setActiveDrawerItem(item)}
+                      className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl transition-colors shadow-2xs inline-flex items-center gap-1.5 cursor-pointer ml-2"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Select Shipments</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -238,13 +241,15 @@ export default function AgainstShipmentSection({
                             <span className="px-2 py-0.5 text-xs font-mono font-extrabold text-[#007aff] bg-blue-50 border border-blue-100 rounded-lg">
                               {Number(alloc.allocatedQuantity).toFixed(2)} MT
                             </span>
-                            <button
-                              onClick={() => handleRemoveAllocation(alloc.shipmentId)}
-                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                              title="Remove Shipment Allocation"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            {!isView && (
+                              <button
+                                onClick={() => handleRemoveAllocation(alloc.shipmentId)}
+                                className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                title="Remove Shipment Allocation"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );

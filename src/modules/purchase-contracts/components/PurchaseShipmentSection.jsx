@@ -10,6 +10,7 @@ export default function PurchaseShipmentSection({
   loading = false,
   currencyCode = "INR",
   allocationSummary = {},
+  isView = false,
 }) {
   const [selectedShipment, setSelectedShipment] = React.useState(null);
 
@@ -129,51 +130,67 @@ export default function PurchaseShipmentSection({
 
                   {/* Currency */}
                   <td className="px-3 py-2">
-                    <input
-                      type="text"
-                      value={rowData.currencyCode || s.currencyCode || currencyCode || "INR"}
-                      onChange={(e) => handleChange(s.id, "currencyCode", e.target.value)}
-                      className={`${inpCls} uppercase font-mono font-semibold text-gray-800`}
-                    />
+                    {isView ? (
+                      <span className="font-mono font-semibold text-gray-800">{rowData.currencyCode || s.currencyCode || currencyCode || "INR"}</span>
+                    ) : (
+                      <input
+                        type="text"
+                        value={rowData.currencyCode || s.currencyCode || currencyCode || "INR"}
+                        onChange={(e) => handleChange(s.id, "currencyCode", e.target.value)}
+                        className={`${inpCls} uppercase font-mono font-semibold text-gray-800`}
+                      />
+                    )}
                   </td>
 
                   {/* Purchase Rate */}
                   <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={rowData.purchaseRate ?? s.purchaseRate ?? ""}
-                      onChange={(e) => handleChange(s.id, "purchaseRate", e.target.value)}
-                      placeholder="0.00"
-                      className={`${inpCls} font-mono font-bold text-gray-900`}
-                    />
+                    {isView ? (
+                      <span className="font-mono font-bold text-gray-900">{rowData.purchaseRate ?? s.purchaseRate ?? "\u00A0"}</span>
+                    ) : (
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={rowData.purchaseRate ?? s.purchaseRate ?? ""}
+                        onChange={(e) => handleChange(s.id, "purchaseRate", e.target.value)}
+                        placeholder="0.00"
+                        className={`${inpCls} font-mono font-bold text-gray-900`}
+                      />
+                    )}
                   </td>
 
                   {/* Forex */}
                   <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={rowData.forex ?? s.forex ?? ""}
-                      onChange={(e) => handleChange(s.id, "forex", e.target.value)}
-                      placeholder="0.00"
-                      className={`${inpCls} font-mono text-gray-800`}
-                    />
+                    {isView ? (
+                      <span className="font-mono text-gray-800">{rowData.forex ?? s.forex ?? "\u00A0"}</span>
+                    ) : (
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={rowData.forex ?? s.forex ?? ""}
+                        onChange={(e) => handleChange(s.id, "forex", e.target.value)}
+                        placeholder="0.00"
+                        className={`${inpCls} font-mono text-gray-800`}
+                      />
+                    )}
                   </td>
 
                   {/* Freight */}
                   <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={rowData.freight ?? s.freight ?? ""}
-                      onChange={(e) => handleChange(s.id, "freight", e.target.value)}
-                      placeholder="0.00"
-                      className={`${inpCls} font-mono text-gray-800`}
-                    />
+                    {isView ? (
+                      <span className="font-mono text-gray-800">{rowData.freight ?? s.freight ?? "\u00A0"}</span>
+                    ) : (
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={rowData.freight ?? s.freight ?? ""}
+                        onChange={(e) => handleChange(s.id, "freight", e.target.value)}
+                        placeholder="0.00"
+                        className={`${inpCls} font-mono text-gray-800`}
+                      />
+                    )}
                   </td>
 
                   {/* Qty (MT) */}
@@ -202,13 +219,17 @@ export default function PurchaseShipmentSection({
 
                   {/* Remarks */}
                   <td className="px-3 py-2">
-                    <input
-                      type="text"
-                      value={rowData.remarks ?? s.remarks ?? ""}
-                      onChange={(e) => handleChange(s.id, "remarks", e.target.value)}
-                      placeholder="Remarks"
-                      className={inpCls}
-                    />
+                    {isView ? (
+                      <span className="text-gray-800">{rowData.remarks ?? s.remarks ?? "\u00A0"}</span>
+                    ) : (
+                      <input
+                        type="text"
+                        value={rowData.remarks ?? s.remarks ?? ""}
+                        onChange={(e) => handleChange(s.id, "remarks", e.target.value)}
+                        placeholder="Remarks"
+                        className={inpCls}
+                      />
+                    )}
                   </td>
 
                   {/* Actions */}

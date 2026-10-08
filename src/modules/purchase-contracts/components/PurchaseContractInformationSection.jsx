@@ -39,22 +39,23 @@ export default function PurchaseContractInformationSection({
             <p className="text-[10px] text-gray-400">Basic purchase contract details and counterparty entities</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            if (showSpec) {
-              setShowSpec(false);
-              setForm((f) => ({ ...f, specificationNo: "", specificationDate: "" }));
-            } else {
-              setShowSpec(true);
-            }
-          }}
-          disabled={isView}
-          className="px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-        >
-          {showSpec ? <Minus className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-          <span>{showSpec ? "Remove Spec" : "Attach Spec"}</span>
-        </button>
+        {!isView && (
+          <button
+            type="button"
+            onClick={() => {
+              if (showSpec) {
+                setShowSpec(false);
+                setForm((f) => ({ ...f, specificationNo: "", specificationDate: "" }));
+              } else {
+                setShowSpec(true);
+              }
+            }}
+            className="px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            {showSpec ? <Minus className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            <span>{showSpec ? "Remove Spec" : "Attach Spec"}</span>
+          </button>
+        )}
       </div>
 
       <div className="p-5 space-y-4">
@@ -62,29 +63,38 @@ export default function PurchaseContractInformationSection({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <label className={lbl}>Contract Date</label>
-            <input
-              type="date"
-              value={form.contractDate || new Date().toISOString().split("T")[0]}
-              onChange={(e) => setForm((f) => ({ ...f, contractDate: e.target.value }))}
-              disabled={isView}
-              className={`${inp} font-medium`}
-            />
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.contractDate || new Date().toISOString().split("T")[0] || "\u00A0"}</div>
+            ) : (
+              <input
+                type="date"
+                value={form.contractDate || new Date().toISOString().split("T")[0]}
+                onChange={(e) => setForm((f) => ({ ...f, contractDate: e.target.value }))}
+                className={`${inp} font-medium`}
+              />
+            )}
           </div>
 
           <div>
             <label className={lbl}>Contract Type</label>
-            <input
-              type="text"
-              value={contractTypeDisplay}
-              readOnly
-              className={`${inp} bg-purple-50/60 font-bold text-purple-700 border-purple-200`}
-            />
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{contractTypeDisplay || "\u00A0"}</div>
+            ) : (
+              <input
+                type="text"
+                value={contractTypeDisplay}
+                readOnly
+                className={`${inp} bg-purple-50/60 font-bold text-purple-700 border-purple-200`}
+              />
+            )}
           </div>
 
           {/* Buyer Entity */}
           <div>
-            <label className={lbl}>Buyer Entity {isManual ? "*" : "(Readonly)"}</label>
-            {isManual && buyersOptions.length > 0 ? (
+            <label className={lbl}>Buyer Entity {isManual && !isView ? "*" : ""}</label>
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.buyerName || defaultBuyer || "\u00A0"}</div>
+            ) : isManual && buyersOptions.length > 0 ? (
               <div className="relative">
                 <select
                   value={form.buyerId || ""}
@@ -97,7 +107,6 @@ export default function PurchaseContractInformationSection({
                       buyerName: bObj?.entityName || bObj?.name || "",
                     }));
                   }}
-                  disabled={isView}
                   className={`${inp} appearance-none pr-8 font-semibold text-gray-900`}
                 >
                   <option value="">Select Buyer Entity</option>
@@ -115,7 +124,6 @@ export default function PurchaseContractInformationSection({
                 value={form.buyerName || defaultBuyer}
                 onChange={(e) => setForm((f) => ({ ...f, buyerName: e.target.value }))}
                 readOnly={!isManual}
-                disabled={isView}
                 placeholder="Enter Buyer Entity"
                 className={`${inp} ${!isManual ? "bg-gray-50" : ""} font-semibold text-gray-800`}
               />
@@ -124,68 +132,80 @@ export default function PurchaseContractInformationSection({
 
           {/* Seller / Supplier Entity */}
           <div>
-            <label className={lbl}>Seller / Supplier *</label>
-            <div className="relative">
-              <select
-                value={form.sellerId || ""}
-                onChange={(e) => {
-                  const sId = Number(e.target.value);
-                  const sObj = sellersOptions.find((s) => s.id === sId);
-                  setForm((f) => ({
-                    ...f,
-                    sellerId: sId || null,
-                    supplierName: sObj?.entityName || sObj?.name || "",
-                  }));
-                }}
-                disabled={isView}
-                className={`${inp} appearance-none pr-8 font-semibold text-gray-900`}
-              >
-                <option value="">Select Supplier Entity</option>
-                {sellersOptions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.entityName || s.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-            </div>
+            <label className={lbl}>Seller / Supplier {!isView && "*"}</label>
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.supplierName || "\u00A0"}</div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={form.sellerId || ""}
+                  onChange={(e) => {
+                    const sId = Number(e.target.value);
+                    const sObj = sellersOptions.find((s) => s.id === sId);
+                    setForm((f) => ({
+                      ...f,
+                      sellerId: sId || null,
+                      supplierName: sObj?.entityName || sObj?.name || "",
+                    }));
+                  }}
+                  className={`${inp} appearance-none pr-8 font-semibold text-gray-900`}
+                >
+                  <option value="">Select Supplier Entity</option>
+                  {sellersOptions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.entityName || s.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              </div>
+            )}
           </div>
 
           <div>
-            <label className={lbl}>Seller Contract No (Optional)</label>
-            <input
-              type="text"
-              value={form.sellerContractNo || ""}
-              onChange={(e) => setForm((f) => ({ ...f, sellerContractNo: e.target.value }))}
-              disabled={isView}
-              className={`${inp} font-mono`}
-              placeholder="e.g. SUP-88219"
-            />
+            <label className={lbl}>Seller Contract No</label>
+            {isView ? (
+              <div className="text-sm font-mono text-gray-900 py-1.5">{form.sellerContractNo || "\u00A0"}</div>
+            ) : (
+              <input
+                type="text"
+                value={form.sellerContractNo || ""}
+                onChange={(e) => setForm((f) => ({ ...f, sellerContractNo: e.target.value }))}
+                className={`${inp} font-mono`}
+                placeholder="e.g. SUP-88219"
+              />
+            )}
           </div>
 
           {showSpec && (
             <>
               <div>
                 <label className={lbl}>Specification No</label>
-                <input
-                  type="text"
-                  value={form.specificationNo || ""}
-                  onChange={(e) => setForm((f) => ({ ...f, specificationNo: e.target.value }))}
-                  disabled={isView}
-                  className={`${inp} font-mono`}
-                  placeholder="e.g. SPEC-2026"
-                />
+                {isView ? (
+                  <div className="text-sm font-mono text-gray-900 py-1.5">{form.specificationNo || "\u00A0"}</div>
+                ) : (
+                  <input
+                    type="text"
+                    value={form.specificationNo || ""}
+                    onChange={(e) => setForm((f) => ({ ...f, specificationNo: e.target.value }))}
+                    className={`${inp} font-mono`}
+                    placeholder="e.g. SPEC-2026"
+                  />
+                )}
               </div>
 
               <div>
                 <label className={lbl}>Specification Date</label>
-                <input
-                  type="date"
-                  value={form.specificationDate || ""}
-                  onChange={(e) => setForm((f) => ({ ...f, specificationDate: e.target.value }))}
-                  disabled={isView}
-                  className={`${inp}`}
-                />
+                {isView ? (
+                  <div className="text-sm font-semibold text-gray-900 py-1.5">{form.specificationDate || "\u00A0"}</div>
+                ) : (
+                  <input
+                    type="date"
+                    value={form.specificationDate || ""}
+                    onChange={(e) => setForm((f) => ({ ...f, specificationDate: e.target.value }))}
+                    className={`${inp}`}
+                  />
+                )}
               </div>
             </>
           )}

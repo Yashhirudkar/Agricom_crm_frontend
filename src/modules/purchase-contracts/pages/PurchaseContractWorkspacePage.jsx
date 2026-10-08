@@ -85,6 +85,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     bagSpec: "",
     stitching: "",
     marking: "",
+    placeOfLoading: "",
     deliveryPlace: "",
     deliveryDate: "",
     deliveryToDate: "",
@@ -182,6 +183,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         notes: contract.notes || f.notes || "",
         currencyCode: contract.currencyCode || salesContract.currencyCode || f.currencyCode || "",
         ratePerMt: firstItem.ratePerMt || f.ratePerMt || "",
+        placeOfLoading: contract.placeOfLoading || f.placeOfLoading || "",
         deliveryPlace: contract.deliveryPlace || salesContract.portOfLoading || f.deliveryPlace || "",
         deliveryDate: contract.dispatchDate || f.deliveryDate || "",
         deliveryToDate: contract.dispatchToDate || f.deliveryToDate || "",
@@ -333,6 +335,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         unloadingDate: form.unloadingDate || null,
         brokerId: form.brokerId || null,
         brokerCommission: form.brokerCommission || null,
+        placeOfLoading: form.placeOfLoading || null,
         deliveryPlace: form.deliveryPlace || null,
         dispatchDate: form.deliveryDate || null,
         dispatchToDate: form.deliveryToDate || null,
@@ -461,232 +464,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     ? "New Manual MTT Contract"
     : (contract?.contractNumber || (contract?.salesContract?.contractNumber ? `PC-${contract.salesContract.contractNumber}` : `PC-${id}`));
 
-  /* ─────────────── VIEW MODE: Clean Read-Only Layout ─────────────── */
-  if (isViewMode && contract) {
-    const sc = contract.salesContract || {};
-    const buyerName = form.buyerName || sc.buyer?.entityName || "—";
-    const sellerName = form.supplierName || sc.seller?.entityName || "—";
-    const brokerName = form.brokerName || "—";
-    const STATUS_COLORS = {
-      Draft: "bg-gray-100 text-gray-700 border-gray-200",
-      "In Progress": "bg-blue-50 text-blue-700 border-blue-200",
-      Completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      Cancelled: "bg-red-50 text-red-700 border-red-200",
-    };
-    const statusClass = STATUS_COLORS[contract.status] || "bg-gray-100 text-gray-700 border-gray-200";
 
-    const Field = ({ label, value }) => (
-      <div className="flex flex-col gap-0.5">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</span>
-        <span className="text-sm font-semibold text-gray-800">{value || "—"}</span>
-      </div>
-    );
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 pb-16">
-
-        {/* Sticky Header */}
-        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-gray-100 shadow-xs">
-          <div className="w-full max-w-[1400px] mx-auto px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.push("/sales/purchase-contracts")}
-                className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-sm font-bold text-gray-900">Purchase Contract</h1>
-                  <span className="font-mono font-extrabold text-[#007aff] text-xs bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
-                    {contractDisplayNo}
-                  </span>
-                  {sc?.buyer?.entityName && (
-                    <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200">
-                      Buyer: {sc.buyer.entityName}
-                    </span>
-                  )}
-                  {contract?.quantity && (
-                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                      Qty: {contract.quantity} MT
-                    </span>
-                  )}
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusClass}`}>
-                    {contract.status}
-                  </span>
-                </div>
-                <p className="text-[10px] text-gray-400 mt-0.5">
-                  {isManual ? "Merchant Trading (MTT Manual)" : `Linked SC: SC-${sc.contractNumber}`}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => router.push(`/sales/purchase-contracts/${id}`)}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl transition-colors shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              <span>Edit Contract</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="w-full max-w-[1400px] mx-auto px-6 py-8 space-y-6">
-
-          {/* Section 1 — Contract Parties */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-purple-50/60 to-white flex items-center gap-2">
-              <div className="w-1.5 h-5 rounded-full bg-purple-400" />
-              <h2 className="text-sm font-bold text-gray-800">Contract Parties & Identification</h2>
-            </div>
-            <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
-              <Field label="Contract Number" value={contractDisplayNo} />
-              <Field label="Status" value={contract.status} />
-              <Field label="Purchase Type" value={contract.purchaseType} />
-              <Field label="Seller Contract No." value={form.sellerContractNo} />
-              <Field label="Specification No." value={form.specificationNo} />
-              <Field label="Specification Date" value={form.specificationDate} />
-              <Field label="Buyer" value={buyerName} />
-              <Field label="Seller / Supplier" value={sellerName} />
-              <Field label="Broker / Agent" value={brokerName} />
-              <Field label="Broker Commission" value={form.brokerCommission ? `${form.brokerCommission}%` : "—"} />
-            </div>
-          </div>
-
-          {/* Section 2 — Commercial Details */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-blue-50/60 to-white flex items-center gap-2">
-              <div className="w-1.5 h-5 rounded-full bg-blue-400" />
-              <h2 className="text-sm font-bold text-gray-800">Commercial & Product Details</h2>
-            </div>
-            <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
-              <Field label="Product" value={form.productName} />
-              <Field label="Quantity" value={form.quantity ? `${form.quantity} MT` : "—"} />
-              <Field label="Price" value={form.ratePerMt ? `${form.ratePerMt}` : "—"} />
-              <Field label="Currency" value={form.currencyCode} />
-              <Field label="Product Quality" value={form.productQuality} />
-              <Field label="Packing" value={form.packing} />
-              <Field label="Bag Type" value={form.bagType} />
-              <Field label="Bag Dimension" value={form.bagSpec} />
-              <Field label="Stitching" value={form.stitching} />
-              <Field label="Marking" value={form.marking} />
-              <Field label="Delivery Place" value={form.deliveryPlace} />
-              <Field label="Shipment (From)" value={form.deliveryDate} />
-              <Field label="To" value={form.deliveryToDate} />
-            </div>
-          </div>
-
-          {/* Section 3 — Payment Terms */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-emerald-50/60 to-white flex items-center gap-2">
-              <div className="w-1.5 h-5 rounded-full bg-emerald-400" />
-              <h2 className="text-sm font-bold text-gray-800">Payment Terms</h2>
-            </div>
-            <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
-              <Field label="Payment Term" value={form.paymentTermName} />
-              <Field label="Advance (%)" value={form.advancePercent ? `${form.advancePercent}%` : "—"} />
-              <Field label="Balance (%)" value={form.balancePercent ? `${form.balancePercent}%` : "—"} />
-              <div className="col-span-2 md:col-span-4">
-                <Field label="Payment Terms Text" value={form.paymentTermsText} />
-              </div>
-              <Field label="Payment Due Date (Tentative)" value={form.paymentDueDate} />
-              <Field label="Unloading Date" value={form.unloadingDate} />
-            </div>
-          </div>
-
-          {/* Section 4 — Shipment Schedule */}
-          {shipments && shipments.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-indigo-50/60 to-white flex items-center gap-2">
-                <div className="w-1.5 h-5 rounded-full bg-indigo-400" />
-                <h2 className="text-sm font-bold text-gray-800">Shipment Schedule</h2>
-                <span className="ml-auto text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
-                  {shipments.length} Shipment{shipments.length > 1 ? "s" : ""}
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-gray-50/80 text-gray-500 font-bold uppercase tracking-wider text-[9px]">
-                      <th className="px-4 py-3 text-left">#</th>
-                      <th className="px-4 py-3 text-left">Shipment Ref</th>
-                      <th className="px-4 py-3 text-left">Date</th>
-                      <th className="px-4 py-3 text-right">Containers</th>
-                      <th className="px-4 py-3 text-left">Currency</th>
-                      <th className="px-4 py-3 text-right">Purchase Rate</th>
-                      <th className="px-4 py-3 text-right">Forex</th>
-                      <th className="px-4 py-3 text-right">Freight</th>
-                      <th className="px-4 py-3 text-right">Qty (MT)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {shipments.map((s, idx) => (
-                      <tr key={s.id || idx} className="hover:bg-gray-50/50">
-                        <td className="px-4 py-3 text-gray-400 font-mono">{idx + 1}</td>
-                        <td className="px-4 py-3 font-mono font-bold text-indigo-700">{s.shipmentReference || s.shipment?.shipmentReference || "—"}</td>
-                        <td className="px-4 py-3 text-gray-600">{s.shipmentDate || s.shipment?.shipmentDate || "—"}</td>
-                        <td className="px-4 py-3 text-right font-bold text-gray-800">{s.containers ?? "—"}</td>
-                        <td className="px-4 py-3 text-gray-600">{s.currency || "INR"}</td>
-                        <td className="px-4 py-3 text-right font-bold text-gray-800">{s.purchaseRate ?? "—"}</td>
-                        <td className="px-4 py-3 text-right text-gray-600">{s.forexRate ?? "—"}</td>
-                        <td className="px-4 py-3 text-right text-gray-600">{s.freightCost ?? "—"}</td>
-                        <td className="px-4 py-3 text-right font-bold text-gray-800">{Number(s.allocatedQuantity || s.quantity || 0).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Section 5 — Terms & Conditions */}
-          {form.terms && form.terms.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-amber-50/60 to-white flex items-center gap-2">
-                <div className="w-1.5 h-5 rounded-full bg-amber-400" />
-                <h2 className="text-sm font-bold text-gray-800">Terms & Conditions</h2>
-                <span className="ml-auto text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
-                  {form.terms.length} Condition{form.terms.length > 1 ? "s" : ""}
-                </span>
-              </div>
-              <div className="p-6 space-y-2">
-                {form.terms.map((t, i) => (
-                  <div key={i} className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
-                    <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 border border-amber-100 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">{i + 1}</span>
-                    <span className="text-sm text-gray-700">{typeof t === "string" ? t : t.text || t.description || JSON.stringify(t)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Section 6 — Notes */}
-          {form.notes && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-50 flex items-center gap-2">
-                <div className="w-1.5 h-5 rounded-full bg-gray-300" />
-                <h2 className="text-sm font-bold text-gray-800">Notes & Additional Remarks</h2>
-              </div>
-              <div className="p-6">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{form.notes}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Section 7 — Financial Summary */}
-          {summary && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-50 bg-gradient-to-r from-green-50/60 to-white flex items-center gap-2">
-                <div className="w-1.5 h-5 rounded-full bg-green-400" />
-                <h2 className="text-sm font-bold text-gray-800">Financial Summary</h2>
-              </div>
-              <PurchaseFinancialSummary summary={summary} loading={loadingSummary} />
-            </div>
-          )}
-
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50/50 space-y-6 pb-28">
@@ -812,6 +590,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           allAvailableShipments={allAvailableShipments}
           selectedShipmentIds={selectedShipmentIds}
           onToggleShipment={handleToggleShipment}
+          isView={isViewMode}
         />
 
         {/* 4. Shipment Schedule Table */}
@@ -839,6 +618,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
             }));
           }}
           loading={loadingShipments}
+          isView={isViewMode}
         />
 
         {/* 5. Notes Section */}
@@ -848,14 +628,19 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
             <p className="text-[10px] text-gray-400">Enter additional contract conditions, special remarks, or instructions</p>
           </div>
           <div className="p-5">
-            <textarea
-              rows={3}
-              value={form.notes}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              placeholder="Enter any additional remarks, special terms, or conditions..."
-              disabled={isViewMode}
-              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white resize-none disabled:opacity-75 disabled:bg-gray-50"
-            />
+            {isViewMode ? (
+              <div className="text-sm font-medium text-gray-800 py-2 whitespace-pre-wrap">
+                {form.notes || "\u00A0"}
+              </div>
+            ) : (
+              <textarea
+                rows={3}
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="Enter any additional remarks, special terms, or conditions..."
+                className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white resize-none"
+              />
+            )}
           </div>
         </div>
 
@@ -876,6 +661,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
             onDeleteAttachment={(attId) => {
               deleteAttachment(attId);
             }}
+            isView={isViewMode}
           />
         )}
 

@@ -81,7 +81,9 @@ export default function PurchaseCommercialInformationSection({
         <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
           <div>
             <label className={lbl}>Product *</label>
-            {isManual && productsMaster.length > 0 ? (
+            {isView ? (
+              <div className="text-sm font-bold text-gray-900 py-1.5">{form.productName || defaultProductName || "\u00A0"}</div>
+            ) : isManual && productsMaster.length > 0 ? (
               <div className="relative">
                 <select
                   value={form.productId || ""}
@@ -121,7 +123,6 @@ export default function PurchaseCommercialInformationSection({
                       };
                     });
                   }}
-                  disabled={isView}
                   className={`${inp} appearance-none pr-8 font-bold text-gray-900`}
                 >
                   <option value="">Select Product Item</option>
@@ -139,7 +140,6 @@ export default function PurchaseCommercialInformationSection({
                 value={form.productName || defaultProductName}
                 onChange={(e) => setForm((f) => ({ ...f, productName: e.target.value }))}
                 readOnly={!isManual}
-                disabled={isView}
                 className={`${inp} ${!isManual ? "bg-gray-50" : ""} font-bold text-gray-900`}
               />
             )}
@@ -147,107 +147,122 @@ export default function PurchaseCommercialInformationSection({
 
           <div>
             <label className={lbl}>Qty (MT) *</label>
-            <input
-              type="number"
-              step="0.01"
-              value={form.quantity ?? ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                setForm((f) => {
-                  const updatedItems = [...(f.items || [])];
-                  if (updatedItems.length > 0) {
-                    updatedItems[0] = { ...updatedItems[0], quantity: parseFloat(val) || 0 };
-                  }
-                  return { ...f, quantity: val, items: updatedItems };
-                });
-              }}
-              disabled={isView}
-              placeholder="e.g. 200"
-              className={`${inp} font-bold text-gray-900 tabular-nums`}
-            />
-          </div>
-
-          <div>
-            <label className={lbl}>Price *</label>
-            <input
-              type="number"
-              step="0.01"
-              value={form.ratePerMt ?? ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                setForm((f) => {
-                  const updatedItems = [...(f.items || [])];
-                  if (updatedItems.length > 0) {
-                    updatedItems[0] = { ...updatedItems[0], ratePerMt: parseFloat(val) || 0 };
-                  }
-                  return { ...f, ratePerMt: val, items: updatedItems };
-                });
-              }}
-              disabled={isView}
-              placeholder="e.g. 500"
-              className={`${inp} font-bold text-gray-900 tabular-nums`}
-            />
-          </div>
-
-          <div>
-            <label className={lbl}>Currency *</label>
-            <div className="relative">
-              <select
-                value={form.currencyCode || ""}
+            {isView ? (
+              <div className="text-sm font-bold text-gray-900 py-1.5">{form.quantity || "\u00A0"}</div>
+            ) : (
+              <input
+                type="number"
+                step="0.01"
+                value={form.quantity ?? ""}
                 onChange={(e) => {
                   const val = e.target.value;
                   setForm((f) => {
                     const updatedItems = [...(f.items || [])];
                     if (updatedItems.length > 0) {
-                      updatedItems[0] = { ...updatedItems[0], currencyCode: val };
+                      updatedItems[0] = { ...updatedItems[0], quantity: parseFloat(val) || 0 };
                     }
-                    return { ...f, currencyCode: val, items: updatedItems };
+                    return { ...f, quantity: val, items: updatedItems };
                   });
                 }}
-                disabled={isView}
-                className={`${inp} appearance-none pr-8 font-bold text-gray-900`}
-              >
-                <option value="">Select</option>
-                {(masters?.currencies || [
-                  { code: 'USD' }, { code: 'EUR' }, { code: 'INR' }, { code: 'CNY' }, { code: 'GBP' }
-                ]).map(c => (
-                  <option key={c.code} value={c.code}>{c.code}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-            </div>
+                placeholder="e.g. 200"
+                className={`${inp} font-bold text-gray-900 tabular-nums`}
+              />
+            )}
+          </div>
+
+          <div>
+            <label className={lbl}>Price *</label>
+            {isView ? (
+              <div className="text-sm font-bold text-gray-900 py-1.5">{form.ratePerMt || "\u00A0"}</div>
+            ) : (
+              <input
+                type="number"
+                step="0.01"
+                value={form.ratePerMt ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setForm((f) => {
+                    const updatedItems = [...(f.items || [])];
+                    if (updatedItems.length > 0) {
+                      updatedItems[0] = { ...updatedItems[0], ratePerMt: parseFloat(val) || 0 };
+                    }
+                    return { ...f, ratePerMt: val, items: updatedItems };
+                  });
+                }}
+                placeholder="e.g. 500"
+                className={`${inp} font-bold text-gray-900 tabular-nums`}
+              />
+            )}
+          </div>
+
+          <div>
+            <label className={lbl}>Currency *</label>
+            {isView ? (
+              <div className="text-sm font-bold text-gray-900 py-1.5">{form.currencyCode || "\u00A0"}</div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={form.currencyCode || ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setForm((f) => {
+                      const updatedItems = [...(f.items || [])];
+                      if (updatedItems.length > 0) {
+                        updatedItems[0] = { ...updatedItems[0], currencyCode: val };
+                      }
+                      return { ...f, currencyCode: val, items: updatedItems };
+                    });
+                  }}
+                  className={`${inp} appearance-none pr-8 font-bold text-gray-900`}
+                >
+                  <option value="">Select</option>
+                  {(masters?.currencies || [
+                    { code: 'USD' }, { code: 'EUR' }, { code: 'INR' }, { code: 'CNY' }, { code: 'GBP' }
+                  ]).map(c => (
+                    <option key={c.code} value={c.code}>{c.code}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              </div>
+            )}
           </div>
 
           <div>
             <label className={lbl}>Product Quality</label>
-            <input
-              type="text"
-              value={form.productQuality || ""}
-              onChange={(e) => setForm((f) => ({ ...f, productQuality: e.target.value }))}
-              disabled={isView}
-              placeholder="e.g. Export Grade A Specification"
-              className={`${inp} font-medium text-gray-900`}
-            />
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.productQuality || "\u00A0"}</div>
+            ) : (
+              <input
+                type="text"
+                value={form.productQuality || ""}
+                onChange={(e) => setForm((f) => ({ ...f, productQuality: e.target.value }))}
+                placeholder="e.g. Export Grade A Specification"
+                className={`${inp} font-medium text-gray-900`}
+              />
+            )}
           </div>
 
           <div>
             <label className={lbl}>Packing</label>
-            <div className="relative">
-              <select
-                value={form.packing || ""}
-                onChange={(e) => setForm((f) => ({ ...f, packing: e.target.value }))}
-                disabled={isView}
-                className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
-              >
-                <option value="">Select Packing</option>
-                {packingOptions.map((opt) => (
-                  <option key={opt.id} value={opt.name}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-            </div>
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.packing || "\u00A0"}</div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={form.packing || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, packing: e.target.value }))}
+                  className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
+                >
+                  <option value="">Select Packing</option>
+                  {packingOptions.map((opt) => (
+                    <option key={opt.id} value={opt.name}>
+                      {opt.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              </div>
+            )}
           </div>
         </div>
 
@@ -255,119 +270,155 @@ export default function PurchaseCommercialInformationSection({
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div>
             <label className={lbl}>Bag Type</label>
-            <div className="relative">
-              <select
-                value={form.bagType || ""}
-                onChange={(e) => setForm((f) => ({ ...f, bagType: e.target.value }))}
-                disabled={isView}
-                className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
-              >
-                <option value="">Select Bag Type</option>
-                {bagTypeOptions.map((opt) => (
-                  <option key={opt.id} value={opt.name}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-            </div>
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.bagType || "—"}</div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={form.bagType || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, bagType: e.target.value }))}
+                  className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
+                >
+                  <option value="">Select Bag Type</option>
+                  {bagTypeOptions.map((opt) => (
+                    <option key={opt.id} value={opt.name}>
+                      {opt.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              </div>
+            )}
           </div>
 
           <div>
             <label className={lbl}>Bag Dimension</label>
-            <div className="relative">
-              <select
-                value={form.bagSpec || ""}
-                onChange={(e) => setForm((f) => ({ ...f, bagSpec: e.target.value }))}
-                disabled={isView}
-                className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
-              >
-                <option value="">Select Bag Spec</option>
-                {bagSpecOptions.map((opt) => (
-                  <option key={opt.id} value={opt.name}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-            </div>
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.bagSpec || "—"}</div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={form.bagSpec || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, bagSpec: e.target.value }))}
+                  className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
+                >
+                  <option value="">Select Bag Spec</option>
+                  {bagSpecOptions.map((opt) => (
+                    <option key={opt.id} value={opt.name}>
+                      {opt.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              </div>
+            )}
           </div>
 
           <div>
             <label className={lbl}>Stitching</label>
-            <div className="relative">
-              <select
-                value={form.stitching || ""}
-                onChange={(e) => setForm((f) => ({ ...f, stitching: e.target.value }))}
-                disabled={isView}
-                className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
-              >
-                <option value="">Select Stitching</option>
-                {stitchingOptions.map((opt) => (
-                  <option key={opt.id} value={opt.name}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-            </div>
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.stitching || "—"}</div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={form.stitching || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, stitching: e.target.value }))}
+                  className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
+                >
+                  <option value="">Select Stitching</option>
+                  {stitchingOptions.map((opt) => (
+                    <option key={opt.id} value={opt.name}>
+                      {opt.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              </div>
+            )}
           </div>
 
           <div>
             <label className={lbl}>Marking</label>
-            <div className="relative">
-              <select
-                value={form.marking || ""}
-                onChange={(e) => setForm((f) => ({ ...f, marking: e.target.value }))}
-                disabled={isView}
-                className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
-              >
-                <option value="">Select Marking</option>
-                {markingOptions.map((opt) => (
-                  <option key={opt.id} value={opt.name}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-            </div>
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.marking || "—"}</div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={form.marking || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, marking: e.target.value }))}
+                  className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
+                >
+                  <option value="">Select Marking</option>
+                  {markingOptions.map((opt) => (
+                    <option key={opt.id} value={opt.name}>
+                      {opt.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Row 3: Delivery Place & Date */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-gray-100">
+        {/* Row 3: Place of Loading, Delivery Place & Date */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-gray-100">
+          <div>
+            <label className={lbl}>Place of Loading</label>
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.placeOfLoading || "—"}</div>
+            ) : (
+              <input
+                type="text"
+                value={form.placeOfLoading || ""}
+                onChange={(e) => setForm((f) => ({ ...f, placeOfLoading: e.target.value }))}
+                className={`${inp}`}
+                placeholder="e.g. Loading Port / Location"
+              />
+            )}
+          </div>
+
           <div>
             <label className={lbl}>Delivery Place</label>
-            <input
-              type="text"
-              value={form.deliveryPlace || ""}
-              onChange={(e) => setForm((f) => ({ ...f, deliveryPlace: e.target.value }))}
-              disabled={isView}
-              className={`${inp}`}
-              placeholder="e.g. Port of Loading / Location"
-            />
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.deliveryPlace || "—"}</div>
+            ) : (
+              <input
+                type="text"
+                value={form.deliveryPlace || ""}
+                onChange={(e) => setForm((f) => ({ ...f, deliveryPlace: e.target.value }))}
+                className={`${inp}`}
+                placeholder="e.g. Port of Discharge / Location"
+              />
+            )}
           </div>
 
           <div>
             <label className={lbl}>Shipment (From)</label>
-            <input
-              type="date"
-              value={form.deliveryDate || ""}
-              onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))}
-              disabled={isView}
-              className={`${inp}`}
-            />
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.deliveryDate || "—"}</div>
+            ) : (
+              <input
+                type="date"
+                value={form.deliveryDate || ""}
+                onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))}
+                className={`${inp}`}
+              />
+            )}
           </div>
 
           <div>
             <label className={lbl}>To</label>
-            <input
-              type="date"
-              value={form.deliveryToDate || ""}
-              onChange={(e) => setForm((f) => ({ ...f, deliveryToDate: e.target.value }))}
-              disabled={isView}
-              className={`${inp}`}
-            />
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.deliveryToDate || "—"}</div>
+            ) : (
+              <input
+                type="date"
+                value={form.deliveryToDate || ""}
+                onChange={(e) => setForm((f) => ({ ...f, deliveryToDate: e.target.value }))}
+                className={`${inp}`}
+              />
+            )}
           </div>
         </div>
 
@@ -388,15 +439,18 @@ export default function PurchaseCommercialInformationSection({
               <label className={lbl} htmlFor="pc-paymentTermsText">
                 Payment Terms Condition
               </label>
-              <input
-                id="pc-paymentTermsText"
-                type="text"
-                value={form.paymentTermsText || ""}
-                onChange={(e) => setForm((f) => ({ ...f, paymentTermsText: e.target.value }))}
-                disabled={isView}
-                placeholder="e.g. 100% Before Unloading, 100% CAD Against Documents, 20% Advance + 80% Before Dispatch"
-                className={inp}
-              />
+              {isView ? (
+                <div className="text-sm font-semibold text-gray-900 py-1.5">{form.paymentTermsText || "—"}</div>
+              ) : (
+                <input
+                  id="pc-paymentTermsText"
+                  type="text"
+                  value={form.paymentTermsText || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, paymentTermsText: e.target.value }))}
+                  placeholder="e.g. 100% Before Unloading, 100% CAD Against Documents, 20% Advance + 80% Before Dispatch"
+                  className={inp}
+                />
+              )}
             </div>
 
             {/* Row 2: Advance / Balance (auto) / Due Date / Unloading Date */}
@@ -405,23 +459,26 @@ export default function PurchaseCommercialInformationSection({
               {/* Advance % */}
               <div>
                 <label className={lbl} htmlFor="pc-advancePercent">Advance (%)</label>
-                <input
-                  id="pc-advancePercent"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  value={form.advancePercent ?? ""}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const val = raw === "" ? "" : Math.min(100, Math.max(0, Number(raw)));
-                    const balance = val === "" ? "" : Math.max(0, 100 - Number(val));
-                    setForm((f) => ({ ...f, advancePercent: val, balancePercent: balance }));
-                  }}
-                  disabled={isView}
-                  placeholder="Enter Advance %"
-                  className={inp}
-                />
+                {isView ? (
+                  <div className="text-sm font-semibold text-gray-900 py-1.5">{form.advancePercent ?? "\u00A0"}</div>
+                ) : (
+                  <input
+                    id="pc-advancePercent"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={form.advancePercent ?? ""}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const val = raw === "" ? "" : Math.min(100, Math.max(0, Number(raw)));
+                      const balance = val === "" ? "" : Math.max(0, 100 - Number(val));
+                      setForm((f) => ({ ...f, advancePercent: val, balancePercent: balance }));
+                    }}
+                    placeholder="Enter Advance %"
+                    className={inp}
+                  />
+                )}
               </div>
 
               {/* Balance % — read-only, auto-calculated as 100 - Advance */}
@@ -430,15 +487,19 @@ export default function PurchaseCommercialInformationSection({
                   Balance (%)
                   <span className="ml-1.5 text-[9px] font-normal text-gray-400 normal-case tracking-normal">auto</span>
                 </label>
-                <input
-                  id="pc-balancePercent"
-                  type="number"
-                  readOnly
-                  tabIndex={-1}
-                  value={form.balancePercent ?? ""}
-                  className={`${inp} !bg-gray-100 text-gray-500 cursor-not-allowed`}
-                  style={{ WebkitUserSelect: "none" }}
-                />
+                {isView ? (
+                  <div className="text-sm font-semibold text-gray-900 py-1.5">{form.balancePercent ?? "\u00A0"}</div>
+                ) : (
+                  <input
+                    id="pc-balancePercent"
+                    type="number"
+                    readOnly
+                    tabIndex={-1}
+                    value={form.balancePercent ?? ""}
+                    className={`${inp} !bg-gray-100 text-gray-500 cursor-not-allowed`}
+                    style={{ WebkitUserSelect: "none" }}
+                  />
+                )}
               </div>
 
               {/* Payment Due Date */}
@@ -447,44 +508,49 @@ export default function PurchaseCommercialInformationSection({
                   Payment Due Date
                   <span className="ml-1 text-[10px] font-normal text-gray-500">(Tentative)</span>
                 </label>
-                <div className="relative">
-                  <input
-                    id="pc-paymentDueDate"
-                    ref={paymentDueDateRef}
-                    type="date"
-                    value={form.paymentDueDate || ""}
-                    onChange={(e) => setForm((f) => ({ ...f, paymentDueDate: e.target.value }))}
-                    onClick={() => paymentDueDateRef.current?.showPicker?.()}
-                    disabled={isView}
-                    className={`${inp} pr-9 cursor-pointer`}
-                  />
-                  <CalendarDays
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 cursor-pointer hover:text-blue-500 transition-colors"
-                    onClick={() => !isView && paymentDueDateRef.current?.showPicker?.()}
-                  />
-                </div>
+                {isView ? (
+                  <div className="text-sm font-semibold text-gray-900 py-1.5">{form.paymentDueDate || "—"}</div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      id="pc-paymentDueDate"
+                      ref={paymentDueDateRef}
+                      type="date"
+                      value={form.paymentDueDate || ""}
+                      onChange={(e) => setForm((f) => ({ ...f, paymentDueDate: e.target.value }))}
+                      onClick={() => paymentDueDateRef.current?.showPicker?.()}
+                      className={`${inp} pr-9 cursor-pointer`}
+                    />
+                    <CalendarDays
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 cursor-pointer hover:text-blue-500 transition-colors"
+                      onClick={() => paymentDueDateRef.current?.showPicker?.()}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Unloading Date */}
               <div>
                 <label className={lbl} htmlFor="pc-unloadingDate">Unloading Date</label>
-                <div className="relative">
-                  <input
-                    id="pc-unloadingDate"
-                    ref={useRef()}
-                    type="date"
-                    value={form.unloadingDate || ""}
-                    onChange={(e) => setForm((f) => ({ ...f, unloadingDate: e.target.value }))}
-                    disabled={isView}
-                    className={`${inp}`}
-                  />
-                </div>
+                {isView ? (
+                  <div className="text-sm font-semibold text-gray-900 py-1.5">{form.unloadingDate || "—"}</div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      id="pc-unloadingDate"
+                      type="date"
+                      value={form.unloadingDate || ""}
+                      onChange={(e) => setForm((f) => ({ ...f, unloadingDate: e.target.value }))}
+                      className={`${inp}`}
+                    />
+                  </div>
+                )}
               </div>
 
             </div>
 
             {/* Payment Terms Master Dropdown (optional override for MTT) */}
-            {isManual && paymentTermsMaster.length > 0 && (
+            {isManual && paymentTermsMaster.length > 0 && !isView && (
               <div className="pt-3 border-t border-blue-100">
                 <label className={lbl}>Payment Term (Master)</label>
                 <div className="relative">
@@ -500,7 +566,6 @@ export default function PurchaseCommercialInformationSection({
                         paymentTermsText: f.paymentTermsText || ptObj?.name || "",
                       }));
                     }}
-                    disabled={isView}
                     className={`${inp} appearance-none pr-8 font-semibold text-gray-800`}
                   >
                     <option value="">Select from Master (optional)</option>
@@ -523,42 +588,48 @@ export default function PurchaseCommercialInformationSection({
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-gray-100">
           <div>
             <label className={lbl}>Broker / Agent</label>
-            <div className="relative">
-              <select
-                value={form.brokerId || ""}
-                onChange={(e) => {
-                  const brId = Number(e.target.value);
-                  const brObj = brokersMaster.find((b) => b.id === brId);
-                  setForm((f) => ({
-                    ...f,
-                    brokerId: brId || null,
-                    brokerName: brObj?.entityName || brObj?.name || "",
-                  }));
-                }}
-                disabled={isView}
-                className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
-              >
-                <option value="">Select Broker</option>
-                {brokersMaster.map((br) => (
-                  <option key={br.id} value={br.id}>
-                    {br.entityName || br.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-            </div>
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.brokerName || "—"}</div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={form.brokerId || ""}
+                  onChange={(e) => {
+                    const brId = Number(e.target.value);
+                    const brObj = brokersMaster.find((b) => b.id === brId);
+                    setForm((f) => ({
+                      ...f,
+                      brokerId: brId || null,
+                      brokerName: brObj?.entityName || brObj?.name || "",
+                    }));
+                  }}
+                  className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
+                >
+                  <option value="">Select Broker</option>
+                  {brokersMaster.map((br) => (
+                    <option key={br.id} value={br.id}>
+                      {br.entityName || br.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              </div>
+            )}
           </div>
 
           <div>
             <label className={lbl}>Broker Commission</label>
-            <input
-              type="text"
-              value={form.brokerCommission || ""}
-              onChange={(e) => setForm((f) => ({ ...f, brokerCommission: e.target.value }))}
-              disabled={isView}
-              className={`${inp} font-medium text-gray-900`}
-              placeholder="e.g. 1.00 %"
-            />
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.brokerCommission ? `${form.brokerCommission}%` : "—"}</div>
+            ) : (
+              <input
+                type="text"
+                value={form.brokerCommission || ""}
+                onChange={(e) => setForm((f) => ({ ...f, brokerCommission: e.target.value }))}
+                className={`${inp} font-medium text-gray-900`}
+                placeholder="e.g. 1.00 %"
+              />
+            )}
           </div>
         </div>
       </div>

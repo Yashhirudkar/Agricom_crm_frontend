@@ -52,6 +52,7 @@ const defaultFormState = {
   whatsappEnabled: false,
   whatsappGroupName: "",
   whatsappGroupId: "",
+  displayOrder: 0,
 };
 
 function CompaniesContent() {
@@ -208,6 +209,7 @@ function CompaniesContent() {
       whatsappGroupName: company.whatsappGroupName || "",
       whatsappGroupId: company.whatsappGroupId || "",
       whatsappConnectedAt: company.whatsappConnectedAt || null,
+      displayOrder: company.displayOrder || 0,
       id: company.id,
     });
     setIsEditMode(true);
@@ -239,6 +241,8 @@ function CompaniesContent() {
 
       if (payload.establishedYear) payload.establishedYear = Number(payload.establishedYear);
       else delete payload.establishedYear;
+
+      if (payload.displayOrder !== undefined) payload.displayOrder = Number(payload.displayOrder);
 
       // Clean empty string fields
       Object.keys(payload).forEach(key => {
