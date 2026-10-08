@@ -22,9 +22,7 @@ export default function PurchaseContractInformationSection({
   const contractTypeDisplay = isManual ? "MTT (Manual Trade)" : (contract?.salesContract?.contractType || "SC (Sales Contract)");
 
   const buyersOptions = masters?.buyers || masters?.partners || [];
-  const sellersOptions = [
-    ...new Map([...(masters?.sellers || []), ...(masters?.suppliers || [])].map((item) => [item.id, item])).values()
-  ];
+  const sellersOptions = masters?.purchaseSuppliers || [];
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">

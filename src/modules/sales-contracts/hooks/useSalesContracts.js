@@ -97,12 +97,13 @@ export function useSalesMasters() {
         const supplierRole = roles.find(r => r.name?.toLowerCase() === "supplier");
         const brokerRole = roles.find(r => r.name?.toLowerCase() === "broker" || r.name?.toLowerCase().includes("broker") || r.name?.toLowerCase() === "agent");
 
-        const [buyersRes, sellersRes, suppliersRes, brokersRes, partnersRes] = await Promise.all([
+        const [buyersRes, sellersRes, suppliersRes, brokersRes, partnersRes, purchaseSuppliersRes] = await Promise.all([
           buyerRole ? mastersApi.getPartnersOptions({ partnerRoleId: buyerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
           sellerRole ? mastersApi.getPartnersOptions({ partnerRoleId: sellerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
           supplierRole ? mastersApi.getPartnersOptions({ partnerRoleId: supplierRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
           brokerRole ? mastersApi.getPartnersOptions({ partnerRoleId: brokerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
           mastersApi.getPartnersOptions({ limit: 1000, isActive: true }),
+          mastersApi.getPartnersOptions({ roleName: "domestic supplier/seller,international supplier/seller", limit: 1000, isActive: true }),
         ]);
 
         const fetchedCountries = countries?.data?.data || [];
@@ -123,6 +124,7 @@ export function useSalesMasters() {
           suppliers: extractData(suppliersRes),
           brokers: extractData(brokersRes),
           partners: extractData(partnersRes),
+          purchaseSuppliers: extractData(purchaseSuppliersRes),
           products: prod.data.data || [],
           countries: finalCountries,
           bagTypes: Array.isArray(bt.data) ? bt.data : (bt.data.data || []),
