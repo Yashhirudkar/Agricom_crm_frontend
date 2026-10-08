@@ -36,7 +36,7 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Contract No.", "Date", "Schedule", "Buyer", "Product", "Total Qty (MT)", "Documents", "Status", "Actions"].map(h => (
+            {["Contract No.", "Date", "Schedule", "Buyer", "Product", "Total Qty (MT)", "Documents", "Purchase Contract", "Status", "Actions"].map(h => (
               <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">{h}</th>
             ))}
           </tr>
@@ -72,6 +72,19 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                   </span>
                 ) : (
                   <span className="text-[10px] text-gray-400 font-normal italic">None</span>
+                )}
+              </td>
+              <td className="px-4 py-3">
+                {c.hasPurchaseContract ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <svg className="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z" clipRule="evenodd" /></svg>
+                    Yes
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200">
+                    <svg className="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                    No
+                  </span>
                 )}
               </td>
               <td className="px-4 py-3">
