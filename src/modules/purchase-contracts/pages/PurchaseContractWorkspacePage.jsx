@@ -379,9 +379,13 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
             : "Purchase Contract draft saved successfully!"
         );
 
-        refetchDetail();
-        refetchSummary();
-        refetchShipments();
+        if (targetStatus === "In Progress") {
+          router.push("/sales/purchase-contracts");
+        } else {
+          refetchDetail();
+          refetchSummary();
+          refetchShipments();
+        }
       }
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to save contract");
