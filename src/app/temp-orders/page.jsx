@@ -14,7 +14,7 @@ import EnquiryDrawer from "@/modules/enquiries/components/EnquiryDrawer";
 import LoadingPointsDrawer from "@/modules/enquiries/components/LoadingPointsDrawer";
 import TransportDrawer from "@/modules/logistics/components/TransportDrawer";
 
-export default function ConfirmedOrdersPage() {
+export default function TempOrdersPage() {
   const router = useRouter();
   const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
@@ -22,7 +22,7 @@ export default function ConfirmedOrdersPage() {
   const [toast, setToast] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [activeTab, setActiveTab] = useState("SALES"); // "SALES" | "PURCHASE"
+  const [activeTab, setActiveTab] = useState("CONFIRMED"); // "CONFIRMED" | "CLOSED"
 
   // Form Drawer states
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -33,15 +33,15 @@ export default function ConfirmedOrdersPage() {
   const [transportEnquiry, setTransportEnquiry] = useState(null);
   const [loadingPointsEnquiry, setLoadingPointsEnquiry] = useState(null);
 
-  // For SALES tab: show enquiries without a Sales Contract
-  // For PURCHASE tab: show enquiries without a Purchase Contract (but they can have a Sales Contract)
-  const isSalesTab = activeTab === "SALES";
-  const confirmedQuery = useEnquiries(
+  // Fetch enquiries based on the active tab status. 
+  // We pass false for both withoutSalesContract and withoutPurchaseContract
+  // so that it shows ALL enquiries for that status, regardless of contract creation.
+  const enquiriesQuery = useEnquiries(
     activeCompanyId,
-    "CONFIRMED",
+    activeTab === "ALL" ? "" : activeTab, // Empty string fetches all
     search,
-    isSalesTab, // withoutSalesContract
-    !isSalesTab // withoutPurchaseContract
+    false, // withoutSalesContract
+    false  // withoutPurchaseContract
   );
 
   const showToast = (msg, type = "success") => {
@@ -55,13 +55,21 @@ export default function ConfirmedOrdersPage() {
       await enquiriesApi.remove(deleteTarget.id);
       showToast("Order deleted successfully");
       setDeleteTarget(null);
-      confirmedQuery.fetchEnquiries();
+      enquiriesQuery.fetchEnquiries();
     } catch (e) {
       showToast("Failed to delete order", "error");
     } finally {
       setIsDeleting(false);
     }
   };
+
+  const tabs = [
+    { id: "ALL", label: "All Enquiries" },
+    { id: "CONFIRMED", label: "Confirmed" },
+    { id: "CANCELLED", label: "Cancelled" },
+    { id: "CLOSED", label: "Closed" },
+    { id: "COMPLETED", label: "Completed" },
+  ];
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6">
@@ -78,7 +86,7 @@ export default function ConfirmedOrdersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.push("/sales-contracts")}
+            onClick={() => router.push("/")}
             className="h-8 w-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-colors shadow-sm"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -86,10 +94,10 @@ export default function ConfirmedOrdersPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
               <FileCheck className="h-6 w-6 text-[#007aff]" />
-              Confirmed Orders
+              Temp Orders View
             </h1>
             <p className="text-xs text-gray-400 font-medium mt-1">
-              View confirmed orders that are waiting to be converted into contracts.
+              Temporary view showing Enquiries across different statuses (including converted ones).
             </p>
           </div>
         </div>
@@ -97,45 +105,36 @@ export default function ConfirmedOrdersPage() {
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
         {/* Tabs */}
-        <div className="border-b border-gray-100 flex gap-6 px-6 bg-gray-50/50">
-          <button
-            onClick={() => setActiveTab("SALES")}
-            className={`pb-4 pt-5 text-sm font-semibold transition-colors relative ${activeTab === "SALES"
-                ? "text-[#007aff]"
-                : "text-gray-500 hover:text-gray-900"
-              }`}
-          >
-            Sales Contract
-            {activeTab === "SALES" && (
-              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#007aff] rounded-t-full" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("PURCHASE")}
-            className={`pb-4 pt-5 text-sm font-semibold transition-colors relative ${activeTab === "PURCHASE"
-                ? "text-[#007aff]"
-                : "text-gray-500 hover:text-gray-900"
-              }`}
-          >
-            Purchase Contract
-            {activeTab === "PURCHASE" && (
-              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#007aff] rounded-t-full" />
-            )}
-          </button>
+        <div className="border-b border-gray-100 flex flex-wrap gap-6 px-6 bg-gray-50/50">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`pb-4 pt-5 text-sm font-semibold transition-colors relative ${activeTab === tab.id
+                  ? "text-[#007aff]"
+                  : "text-gray-500 hover:text-gray-900"
+                }`}
+            >
+              {tab.label}
+              {activeTab === tab.id && (
+                <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#007aff] rounded-t-full" />
+              )}
+            </button>
+          ))}
         </div>
 
         {/* Filters */}
         <EnquiriesFilter
           search={search}
           setSearch={setSearch}
-          setPage={confirmedQuery.setPage}
-          total={confirmedQuery.total}
+          setPage={enquiriesQuery.setPage}
+          total={enquiriesQuery.total}
         />
 
         <EnquiriesTable
           isOrderMode={true}
-          enquiries={confirmedQuery.enquiries}
-          loading={confirmedQuery.loading}
+          enquiries={enquiriesQuery.enquiries}
+          loading={enquiriesQuery.loading}
           onFollowUp={(e) => { }}
           onOpenTransport={(e) => setTransportEnquiry(e)}
           onOpenLoadingPoints={(e) => setLoadingPointsEnquiry(e)}
@@ -154,9 +153,9 @@ export default function ConfirmedOrdersPage() {
         />
 
         <Pagination
-          currentPage={confirmedQuery.page}
-          totalPages={confirmedQuery.totalPages}
-          onPageChange={confirmedQuery.setPage}
+          currentPage={enquiriesQuery.page}
+          totalPages={enquiriesQuery.totalPages}
+          onPageChange={enquiriesQuery.setPage}
         />
       </div>
 
@@ -180,7 +179,7 @@ export default function ConfirmedOrdersPage() {
         editData={editEnquiry}
         isViewMode={isViewMode}
         onSaveSuccess={() => {
-          confirmedQuery.fetchEnquiries();
+          enquiriesQuery.fetchEnquiries();
           showToast("Order updated successfully");
         }}
       />
