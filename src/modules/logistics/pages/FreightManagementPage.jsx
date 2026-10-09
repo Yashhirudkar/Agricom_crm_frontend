@@ -457,7 +457,11 @@ export default function FreightManagementPage() {
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      await logisticsApi.deleteFreightQuote(deleteTarget.logisticsId, deleteTarget.id);
+      if (deleteTarget.isDirect || !deleteTarget.logisticsId) {
+        await logisticsApi.deleteDirectFreightQuote(deleteTarget.id);
+      } else {
+        await logisticsApi.deleteFreightQuote(deleteTarget.logisticsId, deleteTarget.id);
+      }
       toast.success(`Quote ${deleteTarget.quoteNumber} deleted.`);
       setDeleteTarget(null);
       setRefreshKey((k) => k + 1);
