@@ -1,5 +1,5 @@
 import React from "react";
-import { Truck, Ship, Train, ArrowRight } from "lucide-react";
+import { Truck, Ship, Train, ArrowRight, Trash2 } from "lucide-react";
 
 const LOGISTICS_STATUS_CLASSES = {
   "Pending": "bg-gray-50 text-gray-600 border-gray-100",
@@ -13,7 +13,7 @@ const LOGISTICS_STATUS_CLASSES = {
   "Closed": "bg-gray-100 text-gray-700 border-gray-300",
 };
 
-export default function LogisticsQueueTable({ data, loading, onManage, mode = "All", highlightedRowId }) {
+export default function LogisticsQueueTable({ data, loading, onManage, onDelete, mode = "All", highlightedRowId }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -64,30 +64,18 @@ export default function LogisticsQueueTable({ data, loading, onManage, mode = "A
     return e.destinationPort || e.podPort || e.destinationCity || e.destinationState || e.destinationCountry || "—";
   };
 
-  const getRoutes = (e) => {
+  const getOrigins = (e) => {
     const origins = e.loadingPoints?.length 
       ? e.loadingPoints.map(p => p.loadingPoint)
       : [getOriginText(e)].filter(x => x && x !== "—");
-      
+    return origins.length ? origins : ["—"];
+  };
+
+  const getDestinations = (e) => {
     const destinations = e.destinations?.length
       ? e.destinations.map(d => d.destination)
       : [getDestinationText(e)].filter(x => x && x !== "—");
-
-    const routes = [];
-    if (origins.length && destinations.length) {
-      origins.forEach(orig => {
-        destinations.forEach(dest => {
-          routes.push(`${orig} → ${dest}`);
-        });
-      });
-    } else if (origins.length) {
-      origins.forEach(orig => routes.push(`${orig} → —`));
-    } else if (destinations.length) {
-      destinations.forEach(dest => routes.push(`— → ${dest}`));
-    }
-    
-    if (routes.length === 0) return ["— → —"];
-    return routes;
+    return destinations.length ? destinations : ["—"];
   };
 
   const getModeIcon = (mode) => {
@@ -103,7 +91,7 @@ export default function LogisticsQueueTable({ data, loading, onManage, mode = "A
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Enquiry No.", "Date", "Product", "Qty (MT)", "Route", "Mode", "Logistics Status", "Action"].map((h) => (
+            {["Enquiry No.", "Date", "Product", "Qty (MT)", "From", "To", "Mode", "Logistics Status", "Action"].map((h) => (
               <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">
                 {h}
               </th>
@@ -141,16 +129,34 @@ export default function LogisticsQueueTable({ data, loading, onManage, mode = "A
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
                   {(() => {
-                    const routes = getRoutes(e);
-                    const firstRoute = routes[0];
+                    const origins = getOrigins(e);
+                    const firstOrigin = origins[0];
                     return (
                       <div className="flex flex-col">
-                        <span className="max-w-[200px] truncate" title={firstRoute}>
-                          {firstRoute}
+                        <span className="max-w-[150px] truncate" title={firstOrigin}>
+                          {firstOrigin}
                         </span>
-                        {routes.length > 1 && (
+                        {origins.length > 1 && (
                           <span className="text-[10px] text-blue-600 font-semibold mt-0.5">
-                            +{routes.length - 1} More
+                            +{origins.length - 1} More
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </td>
+                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
+                  {(() => {
+                    const dests = getDestinations(e);
+                    const firstDest = dests[0];
+                    return (
+                      <div className="flex flex-col">
+                        <span className="max-w-[150px] truncate" title={firstDest}>
+                          {firstDest}
+                        </span>
+                        {dests.length > 1 && (
+                          <span className="text-[10px] text-blue-600 font-semibold mt-0.5">
+                            +{dests.length - 1} More
                           </span>
                         )}
                       </div>
@@ -169,12 +175,23 @@ export default function LogisticsQueueTable({ data, loading, onManage, mode = "A
                   </span>
                 </td>
                 <td className="px-4 py-4.5 whitespace-nowrap">
-                  <button
-                    onClick={() => onManage(e)}
-                    className="px-3 py-1 bg-white hover:bg-slate-50 border border-gray-200 text-gray-700 rounded-lg flex items-center gap-1 text-[11px] font-bold shadow-2xs hover:border-gray-300 transition-colors cursor-pointer"
-                  >
-                    Transport <ArrowRight className="h-3 w-3 text-gray-400" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onManage(e)}
+                      className="px-3 py-1 bg-white hover:bg-slate-50 border border-gray-200 text-gray-700 rounded-lg flex items-center gap-1 text-[11px] font-bold shadow-2xs hover:border-gray-300 transition-colors cursor-pointer"
+                    >
+                      Transport <ArrowRight className="h-3 w-3 text-gray-400" />
+                    </button>
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(e)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-red-100"
+                        title="Delete Enquiry"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             );

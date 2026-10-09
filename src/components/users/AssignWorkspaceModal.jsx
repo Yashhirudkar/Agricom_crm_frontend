@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import Modal from "@/components/modals/Modal";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 import axiosClient from "@/lib/axios";
 import { selectUser } from "@/store/slices/authSlice";
 
@@ -15,6 +16,10 @@ export default function AssignWorkspaceModal({
 }) {
   const [roles, setRoles] = useState([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferMsg, setTransferMsg] = useState("");
+  const [pendingEvent, setPendingEvent] = useState(null);
+  
   const currentUser = useSelector(selectUser);
 
   // Determine target client ID based on selectedUser, falling back to currentUser
@@ -64,13 +69,23 @@ export default function AssignWorkspaceModal({
       const oldClientName = selectedUser?.client?.name || `Client #${selectedUser.clientId}`;
       const newClientName = selectedCompany?.client?.name || `Client #${selectedCompany.clientId}`;
       
-      const confirmTransfer = window.confirm(
+      setTransferMsg(
         `This workspace belongs to another Client.\n\nThe user will be transferred from\n\n${oldClientName}\n\nto\n\n${newClientName}.\n\nThis will remove previous workspace mappings.\n\nContinue?`
       );
-      if (!confirmTransfer) return;
+      setPendingEvent(e);
+      setShowTransferModal(true);
+      return;
     }
 
     onSubmit(e);
+  };
+
+  const confirmTransfer = () => {
+    setShowTransferModal(false);
+    if (pendingEvent) {
+      onSubmit(pendingEvent);
+      setPendingEvent(null);
+    }
   };
 
   useEffect(() => {
@@ -154,6 +169,21 @@ export default function AssignWorkspaceModal({
           </button>
         </div>
       </form>
+
+      <ConfirmModal
+        isOpen={showTransferModal}
+        onClose={() => {
+          setShowTransferModal(false);
+          setPendingEvent(null);
+        }}
+        onConfirm={confirmTransfer}
+        title="Confirm Client Transfer"
+        message={transferMsg}
+        confirmText="Transfer User"
+        confirmButtonClass="bg-amber-500 hover:bg-amber-600"
+        iconBgClass="bg-amber-50"
+        iconColorClass="text-amber-500"
+      />
     </Modal>
   );
 }

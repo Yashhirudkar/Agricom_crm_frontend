@@ -196,7 +196,6 @@ export default function DirectFreightQuoteDrawer({
     setLoading(true);
     setError("");
     try {
-      if (!productId) throw new Error("Product is required.");
       if (routes.length === 0) throw new Error("At least one route is required.");
       
       const payloadRoutes = routes.map(route => {
@@ -227,7 +226,7 @@ export default function DirectFreightQuoteDrawer({
 
       const payload = {
         isDirect: true,
-        productId: Number(productId),
+        ...(productId ? { productId: Number(productId) } : {}),
         quoteDate: new Date().toISOString().split("T")[0],
         freightRoutes: payloadRoutes,
       };
@@ -280,12 +279,11 @@ export default function DirectFreightQuoteDrawer({
             )}
 
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <label className="block text-[11px] font-bold text-slate-700 mb-1.5">Product *</label>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1.5">Product</label>
               <select
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 bg-slate-50 focus:outline-none focus:border-indigo-500 focus:bg-white cursor-pointer transition-colors"
-                required
               >
                 <option value="">Select Product...</option>
                 {productOptionsList.map(p => (

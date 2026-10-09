@@ -29,6 +29,7 @@ import {
   useBulkChangeTaskStatusMutation
 } from "../../mutations/tasks.mutation";
 import ViewsDropdown from "./ViewsDropdown";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 
 import { usePermissions } from "@/hooks/usePermissions";
 
@@ -56,6 +57,7 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [isSaveViewOpen, setIsSaveViewOpen] = useState(false);
   const [viewName, setViewName] = useState("");
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const bulkRef = useRef(null);
   const saveViewRef = useRef(null);
 
@@ -99,6 +101,19 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const confirmBulkDelete = () => {
+    setShowBulkDeleteConfirm(false);
+    bulkDelete.mutate(
+      {
+        selectAll: isSelectAllActive,
+        excludedIds: Array.from(selectedRowIds),
+        ids: Array.from(selectedRowIds),
+        filters: { ...filters, preset }
+      },
+      { onSuccess: () => { setSelectedRowIds(new Set()); setIsSelectAllActive(false); } }
+    );
+  };
 
   return (
     <div className="flex flex-col border-b border-gray-200 bg-white shrink-0">
@@ -156,17 +171,7 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
                     toast.error("Only the owner can delete the task(s).");
                     return;
                   }
-                  if (window.confirm(`Are you sure you want to delete the selected task(s)?`)) {
-                    bulkDelete.mutate(
-                      {
-                        selectAll: isSelectAllActive,
-                        excludedIds: Array.from(selectedRowIds),
-                        ids: Array.from(selectedRowIds),
-                        filters: { ...filters, preset }
-                      },
-                      { onSuccess: () => { setSelectedRowIds(new Set()); setIsSelectAllActive(false); } }
-                    );
-                  }
+                  setShowBulkDeleteConfirm(true);
                 }}
                 disabled={!isOwnerOfAllSelected}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg shadow-sm transition-colors ${
@@ -346,6 +351,18 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
 
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showBulkDeleteConfirm}
+        onClose={() => setShowBulkDeleteConfirm(false)}
+        onConfirm={confirmBulkDelete}
+        title="Delete Tasks"
+        message="Are you sure you want to delete the selected task(s)?"
+        confirmText="Delete"
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+        iconBgClass="bg-red-50"
+        iconColorClass="text-red-500"
+      />
     </div>
   );
 }

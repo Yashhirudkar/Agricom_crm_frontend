@@ -19,6 +19,7 @@ import {
   usePurchaseContractDashboard,
   useClearPurchaseContractDrafts,
 } from "../hooks/usePurchaseContracts";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 
 const STATUS_BADGE_CLASSES = {
   Draft: "bg-slate-100 text-slate-700 border-slate-300",
@@ -42,6 +43,8 @@ export default function PurchaseContractListPage() {
     ...(search && { search }),
     ...(statusFilter && { status: statusFilter }),
   };
+
+  const [showClearDraftsModal, setShowClearDraftsModal] = useState(false);
 
   const { data: listData, isLoading: loadingList, refetch: refetchList } = usePurchaseContractsList(params);
   const { data: dashboard } = usePurchaseContractDashboard();
@@ -75,11 +78,7 @@ export default function PurchaseContractListPage() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              if (window.confirm("Are you sure you want to clear all draft purchase contracts?")) {
-                clearDrafts();
-              }
-            }}
+            onClick={() => setShowClearDraftsModal(true)}
             disabled={clearingDrafts}
             className="px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
@@ -310,6 +309,21 @@ export default function PurchaseContractListPage() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={showClearDraftsModal}
+        onClose={() => setShowClearDraftsModal(false)}
+        onConfirm={() => {
+          setShowClearDraftsModal(false);
+          clearDrafts();
+        }}
+        title="Clear Drafts"
+        message="Are you sure you want to clear all draft purchase contracts?"
+        confirmText="Clear Drafts"
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+        iconBgClass="bg-red-50"
+        iconColorClass="text-red-500"
+      />
     </div>
   );
 }

@@ -2,10 +2,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import axiosInstance from '@/lib/axios';
+import Pagination from '@/components/common/Pagination';
 import {
   FileSpreadsheet, Filter, X, Printer,
   TrendingUp, Users, ShoppingCart, BarChart3
 } from 'lucide-react';
+
+const ITEMS_PER_PAGE = 15;
 
 export default function SalesReportPage() {
   const [filters, setFilters] = useState({
@@ -31,8 +34,12 @@ export default function SalesReportPage() {
     loading: true
   });
   const [availableExecutives, setAvailableExecutives] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const companyId = typeof window !== 'undefined' ? localStorage.getItem('activeCompanyId') : null;
+  const totalPages = Math.ceil(data.orders.length / ITEMS_PER_PAGE);
+  const firstOrderIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const pageOrders = data.orders.slice(firstOrderIndex, firstOrderIndex + ITEMS_PER_PAGE);
 
   // Load options for filters
   useEffect(() => {
@@ -102,10 +109,12 @@ export default function SalesReportPage() {
   }, [filters, companyId]);
 
   const handleFilterChange = (key, value) => {
+    setCurrentPage(1);
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const resetFilters = () => {
+    setCurrentPage(1);
     setFilters({
       year: new Date().getFullYear().toString(),
       month: String(new Date().getMonth() + 1).padStart(2, '0'),
@@ -166,6 +175,28 @@ export default function SalesReportPage() {
     link.click();
     document.body.removeChild(link);
   };
+
+  const renderOrderRow = (o, i) => (
+    <tr key={i} className="hover:bg-gray-50/80 transition-colors group">
+      <td className="py-3.5 px-5 font-medium text-gray-800">{o.product || 'N/A'}</td>
+      <td className="py-3.5 px-5 text-gray-600">{o.customer || 'N/A'}</td>
+      <td className="py-3.5 px-5">
+        <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50/50 text-blue-700 text-[11px] font-semibold border border-blue-100/50">
+          {o.salesExecutive || 'N/A'}
+        </span>
+      </td>
+      <td className="py-3.5 px-5 text-gray-500">{o.destination || 'N/A'}</td>
+      <td className="py-3.5 px-5 text-gray-500">
+        <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-gray-100 text-gray-600">{o.currency || 'N/A'}</span>
+      </td>
+      <td className="py-3.5 px-5 text-right font-medium text-gray-800">
+        {Number(o.quantity || 0).toLocaleString()}
+      </td>
+      <td className="py-3.5 px-5 text-right font-medium text-gray-800">
+        {Number(o.salesValue || 0).toLocaleString()}
+      </td>
+    </tr>
+  );
 
   return (
     <div className="bg-gray-50 min-h-screen text-gray-800 pb-20 print:bg-white print:p-0">
@@ -274,28 +305,11 @@ export default function SalesReportPage() {
                     <th className="py-4 px-5 font-semibold text-right">Bid / Price</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50/50 text-gray-600">
-                  {data.orders.map((o, i) => (
-                    <tr key={i} className="hover:bg-gray-50/80 transition-colors group">
-                      <td className="py-3.5 px-5 font-medium text-gray-800">{o.product || 'N/A'}</td>
-                      <td className="py-3.5 px-5 text-gray-600">{o.customer || 'N/A'}</td>
-                      <td className="py-3.5 px-5">
-                        <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50/50 text-blue-700 text-[11px] font-semibold border border-blue-100/50">
-                          {o.salesExecutive || 'N/A'}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-5 text-gray-500">{o.destination || 'N/A'}</td>
-                      <td className="py-3.5 px-5 text-gray-500">
-                        <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-gray-100 text-gray-600">{o.currency || 'N/A'}</span>
-                      </td>
-                      <td className="py-3.5 px-5 text-right font-medium text-gray-800">
-                        {Number(o.quantity || 0).toLocaleString()}
-                      </td>
-                      <td className="py-3.5 px-5 text-right font-medium text-gray-800">
-                        {Number(o.salesValue || 0).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-gray-50/50 text-gray-600 print:hidden">
+                  {pageOrders.map(renderOrderRow)}
+                </tbody>
+                <tbody className="hidden divide-y divide-gray-50/50 text-gray-600 print:table-row-group">
+                  {data.orders.map(renderOrderRow)}
                 </tbody>
                 {/* Standard Table Footer for Totals */}
                 <tfoot className="bg-gray-50/80 backdrop-blur-md border-t border-gray-100 font-bold text-gray-900 text-sm print:bg-transparent print:border-black print:border-t-4">
@@ -312,6 +326,18 @@ export default function SalesReportPage() {
                   </tr>
                 </tfoot>
               </table>
+            </div>
+          )}
+          {!data.loading && data.orders.length > 0 && (
+            <div className="print:hidden">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={data.orders.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                itemName="orders"
+              />
             </div>
           )}
         </div>

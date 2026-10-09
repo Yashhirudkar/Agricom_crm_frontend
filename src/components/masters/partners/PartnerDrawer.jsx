@@ -32,6 +32,7 @@ import { City } from "country-state-city";
 import CountrySelect from "@/components/common/CountrySelect";
 import PartnerDnbTab from "./PartnerDnbTab";
 import { getAlpha2Code } from "@/lib/countryUtils";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 
 // Custom virtualized MenuList for react-select to handle large options (e.g. cities) smoothly
 const VirtualMenuList = (props) => {
@@ -105,6 +106,9 @@ function PartnerDrawer({
   const [loadingDynamic, setLoadingDynamic] = useState(false);
   const [isSavingAdditional, setIsSavingAdditional] = useState(false);
   const [previousRoleId, setPreviousRoleId] = useState("");
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [showRoleChangeModal, setShowRoleChangeModal] = useState(false);
+  const [pendingRoleId, setPendingRoleId] = useState(null);
 
   const {
     register,
@@ -272,21 +276,21 @@ function PartnerDrawer({
     );
 
     if (dynamicSchema && hasValues) {
-      const confirmChange = window.confirm(
-        "Changing Partner Role will reset Additional Information fields. Continue?"
-      );
-      if (!confirmChange) {
-        // Revert form select input back to original value
-        setValue("partnerRoleId", previousRoleId);
-        return;
-      }
+      setPendingRoleId(newRoleId);
+      setShowRoleChangeModal(true);
+      return;
     }
 
+    await executeRoleChange(newRoleId);
+  };
+
+  const executeRoleChange = async (newRoleId) => {
     setPreviousRoleId(newRoleId);
     setDynamicSchema(null);
     setDynamicConfigId(null);
     setDynamicConfigName("");
     setDynamicValues({});
+    setValue("partnerRoleId", newRoleId);
 
     if (newRoleId) {
       setLoadingDynamic(true);
@@ -303,6 +307,20 @@ function PartnerDrawer({
         setLoadingDynamic(false);
       }
     }
+  };
+
+  const confirmRoleChange = async () => {
+    setShowRoleChangeModal(false);
+    if (pendingRoleId) {
+      await executeRoleChange(pendingRoleId);
+    }
+    setPendingRoleId(null);
+  };
+
+  const cancelRoleChange = () => {
+    setShowRoleChangeModal(false);
+    setValue("partnerRoleId", previousRoleId);
+    setPendingRoleId(null);
   };
 
   useEffect(() => {
@@ -438,13 +456,12 @@ function PartnerDrawer({
   };
 
   const handleCloseAttempt = () => {
-    if (isDirty) {
-      if (window.confirm("You have unsaved changes. Are you sure you want to discard them?")) {
-        onClose();
-      }
-    } else {
-      onClose();
-    }
+    onClose();
+  };
+
+  const handleDiscardConfirm = () => {
+    setShowDiscardModal(false);
+    onClose();
   };
 
   // Convert products array to react-select options format
@@ -1559,6 +1576,28 @@ function PartnerDrawer({
           )}
         </form>
       </div>
+      
+      <ConfirmModal
+        isOpen={showDiscardModal}
+        onClose={() => setShowDiscardModal(false)}
+        onConfirm={handleDiscardConfirm}
+        title="Discard Changes"
+        message="You have unsaved changes. Are you sure you want to discard them?"
+        confirmText="Discard"
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+      />
+
+      <ConfirmModal
+        isOpen={showRoleChangeModal}
+        onClose={cancelRoleChange}
+        onConfirm={confirmRoleChange}
+        title="Change Partner Role"
+        message="Changing Partner Role will reset Additional Information fields. Are you sure you want to continue?"
+        confirmText="Continue"
+        confirmButtonClass="bg-blue-500 hover:bg-blue-600"
+        iconBgClass="bg-blue-50"
+        iconColorClass="text-blue-500"
+      />
     </Drawer>
   );
 }

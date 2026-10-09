@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ArrowLeft, Save, CheckCircle, X, Pencil } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import {
 } from "../hooks/usePurchaseContracts";
 import { useSalesMasters } from "@/modules/sales-contracts/hooks/useSalesContracts";
 import { purchaseContractApi } from "../services/purchaseContractApi";
+import { formatPurchaseDate, parsePurchaseDate } from "../utils/purchaseDate";
 
 import PurchaseContractInformationSection from "../components/PurchaseContractInformationSection";
 import PurchaseCommercialInformationSection from "../components/PurchaseCommercialInformationSection";
@@ -25,6 +27,7 @@ import PurchaseFinancialSummary from "../components/PurchaseFinancialSummary";
 
 export default function PurchaseContractWorkspacePage({ contractId, isNew = false }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const targetShipmentIdParam = searchParams?.get("shipmentId");
   const isViewMode = searchParams?.get("mode") === "view";
@@ -35,26 +38,23 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     data: contract,
     isLoading: loadingDetail,
     isError: errorDetail,
-    refetch: refetchDetail,
   } = usePurchaseContractDetail(isNew ? null : id);
 
   const {
     data: summary,
     isLoading: loadingSummary,
-    refetch: refetchSummary,
   } = usePurchaseContractSummary(isNew ? null : id);
 
   const {
     data: shipments,
     isLoading: loadingShipments,
-    refetch: refetchShipments,
   } = usePurchaseContractShipments(isNew ? null : id);
 
   const {
     data: attachmentsData,
   } = usePurchaseContractAttachments(isNew ? null : id);
 
-  const { masters } = useSalesMasters();
+  const { masters } = useSalesMasters({ includeBrokers: false, includePartners: false });
 
   // Mutations
   const { mutate: updateStatus } = useUpdatePurchaseContractStatus(id);
@@ -68,6 +68,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
   const [form, setForm] = useState({
     purchaseType: isNew ? "MTT" : "SC",
     contractDate: new Date().toISOString().split("T")[0],
+    purchaseDate: "",
+    purchaseDateInput: "",
     contractNumber: "",
     buyerId: null,
     buyerName: "",
@@ -101,6 +103,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     paymentDueDate: "",
     brokerId: null,
     brokerName: "",
+    brokerPartnerRoleId: null,
     brokerCommission: "",
     notes: "",
     terms: [],
@@ -160,6 +163,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
       setForm((f) => ({
         ...f,
         purchaseType: contract.purchaseType || "SC",
+        purchaseDate: contract.purchaseDate ? contract.purchaseDate.split("T")[0] : "",
+        purchaseDateInput: formatPurchaseDate(contract.purchaseDate),
         contractNumber: contract.contractNumber || "",
         buyerId: salesContract.sellerId || contract.buyerId || f.buyerId || null,
         buyerName: salesContract.seller?.entityName || contract.buyer?.entityName || f.buyerName || "",
@@ -167,6 +172,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         supplierName: contract.seller?.entityName || f.supplierName || "",
         brokerId: contract.brokerId || salesContract.brokerId || f.brokerId || null,
         brokerName: contract.broker?.entityName || salesContract.broker?.entityName || f.brokerName || "",
+        brokerPartnerRoleId: contract.broker?.partnerRoleId || salesContract.broker?.partnerRoleId || f.brokerPartnerRoleId || null,
         brokerCommission: contract.brokerCommission || f.brokerCommission || "",
         sellerContractNo: contract.sellerContractNo || f.sellerContractNo || "",
         specificationNo: contract.specificationNo || f.specificationNo || "",
@@ -276,6 +282,14 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
 
   // Perform Save Draft or Save & Activate
   const handleSaveContract = async (targetStatus = null) => {
+    if (
+      form.purchaseDateInput
+      && parsePurchaseDate(form.purchaseDateInput) !== form.purchaseDate
+    ) {
+      toast.error("Enter Purchase Date as DD-MMM-YYYY (for example, 09-Oct-2026)");
+      return;
+    }
+
     setSaving(true);
     try {
       const formattedItems = (form.items && form.items.length > 0)
@@ -318,12 +332,26 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
             allocatedQuantity: 0,
           }));
 
+      const purchaseContractType = isManual
+        ? "MTT"
+        : (contract?.salesContract?.contractType || "Import");
+      const expectedBrokerRoleId = purchaseContractType.toLowerCase() === "export"
+        ? masters?.domesticBrokerRoleId
+        : masters?.internationalBrokerRoleId;
+      const selectedBrokerRoleId = form.brokerPartnerRoleId
+        || contract?.broker?.partnerRoleId
+        || contract?.salesContract?.broker?.partnerRoleId;
+      const brokerMatchesContractType = !form.brokerId
+        || !expectedBrokerRoleId
+        || String(selectedBrokerRoleId) === String(expectedBrokerRoleId);
+
       const payload = {
         purchaseType: form.purchaseType || (isManual ? "MTT" : "SC"),
         contractNumber: form.contractNumber || null,
         buyerId: form.buyerId || null,
         sellerId: form.sellerId || null,
         sellerContractNo: form.sellerContractNo || null,
+        purchaseDate: form.purchaseDate || null,
         specificationNo: form.specificationNo || null,
         specificationDate: form.specificationDate || null,
         paymentTermId: form.paymentTermId || null,
@@ -333,7 +361,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         penaltyPercent: form.penaltyPercent !== "" && form.penaltyPercent != null ? parseFloat(form.penaltyPercent) : null,
         paymentDueDate: form.paymentDueDate || null,
         unloadingDate: form.unloadingDate || null,
-        brokerId: form.brokerId || null,
+        brokerId: brokerMatchesContractType ? (form.brokerId || null) : null,
         brokerCommission: form.brokerCommission || null,
         placeOfLoading: form.placeOfLoading || null,
         deliveryPlace: form.deliveryPlace || null,
@@ -364,8 +392,13 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           await purchaseContractApi.updateStatus(newId, targetStatus);
         }
 
-        toast.success("Purchase Contract created successfully!");
-        router.push(`/sales/purchase-contracts/${newId}`);
+        await queryClient.invalidateQueries({ queryKey: ["purchase-contracts"] });
+        toast.success(
+          targetStatus === "In Progress"
+            ? "Purchase Contract saved & activated successfully!"
+            : "Purchase Contract draft saved successfully!"
+        );
+        router.push("/sales/purchase-contracts");
       } else {
         await purchaseContractApi.update(id, payload);
 
@@ -379,13 +412,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
             : "Purchase Contract draft saved successfully!"
         );
 
-        if (targetStatus === "In Progress") {
-          router.push("/sales/purchase-contracts");
-        } else {
-          refetchDetail();
-          refetchSummary();
-          refetchShipments();
-        }
+        await queryClient.invalidateQueries({ queryKey: ["purchase-contracts"] });
+        router.push("/sales/purchase-contracts");
       }
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to save contract");

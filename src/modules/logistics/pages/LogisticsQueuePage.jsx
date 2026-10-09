@@ -1,9 +1,10 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Truck, Search } from "lucide-react";
+import { Truck, Search, Trash2, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { logisticsApi } from "../services/logisticsApi";
+import { enquiriesApi } from "../../enquiries/services/enquiriesApi";
 import LogisticsQueueTable from "../components/LogisticsQueueTable";
 import TransportDrawer from "../components/TransportDrawer";
 import { useRouter } from "next/navigation";
@@ -38,6 +39,10 @@ export default function LogisticsQueuePage() {
   // Selected Enquiry for Transport Drawer
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Delete Confirm Modal State
+  const [deleteTargetEnquiry, setDeleteTargetEnquiry] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Debounce search — wait 400ms after user stops typing
   useEffect(() => {
@@ -134,6 +139,26 @@ export default function LogisticsQueuePage() {
     setRefreshKey((k) => k + 1); // Trigger refetch on current page
   };
 
+  const handleDeleteEnquiry = (enquiry) => {
+    setDeleteTargetEnquiry(enquiry);
+  };
+
+  const confirmDeleteEnquiry = async () => {
+    if (!deleteTargetEnquiry) return;
+    setDeleteLoading(true);
+    try {
+      await enquiriesApi.remove(deleteTargetEnquiry.id, 'Deleted from logistics queue');
+      toast.success(`Enquiry ${deleteTargetEnquiry.enquiryNo} deleted successfully.`);
+      setDeleteTargetEnquiry(null);
+      setRefreshKey(k => k + 1);
+    } catch (err) {
+      toast.error("Failed to delete enquiry.");
+      console.error(err);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6">
       {/* Page Header */}
@@ -210,6 +235,7 @@ export default function LogisticsQueuePage() {
           mode={mode}
           loading={loading}
           onManage={handleOpenDrawer}
+          onDelete={handleDeleteEnquiry}
           highlightedRowId={highlightedRowId}
         />
 
@@ -226,6 +252,46 @@ export default function LogisticsQueuePage() {
         onClose={handleCloseDrawer}
         enquiry={selectedEnquiry}
       />
+
+      {/* ── Delete Confirm Modal ─────────────────────────────────────────────── */}
+      {deleteTargetEnquiry && (
+        <div className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-2xl bg-red-50 text-red-600">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Delete Enquiry</h3>
+                <p className="text-xs text-gray-500 mt-0.5">This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="bg-red-50 border border-red-100 rounded-xl p-3 mb-5 flex gap-2">
+              <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-red-800">
+                You are about to permanently delete enquiry{" "}
+                <strong>{deleteTargetEnquiry.enquiryNo}</strong>.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteTargetEnquiry(null)}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteEnquiry}
+                disabled={deleteLoading}
+                className="px-4 py-2 text-xs font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2"
+              >
+                {deleteLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                {deleteLoading ? "Deleting..." : "Confirm Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

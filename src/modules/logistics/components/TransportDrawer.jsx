@@ -35,6 +35,8 @@ import {
   Filter,
   Tag,
   FolderPlus,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logisticsApi } from "../services/logisticsApi";
@@ -110,6 +112,16 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
 
   // Route Selection
   const [selectedRoute, setSelectedRoute] = useState(null);
+  const [collapsedRoutes, setCollapsedRoutes] = useState(new Set());
+  
+  const toggleRouteCollapse = (routeId) => {
+    setCollapsedRoutes(prev => {
+      const next = new Set(prev);
+      if (next.has(routeId)) next.delete(routeId);
+      else next.add(routeId);
+      return next;
+    });
+  };
 
   const availableRoutes = useMemo(() => {
     if (!details?.logistics?.routes || details.logistics.routes.length === 0) {
@@ -554,7 +566,7 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
         className="fixed inset-0 z-40 bg-slate-800/40 backdrop-blur-sm transition-opacity"
       />
 
-      <div className="fixed inset-y-0 right-0 z-50 w-full lg:w-[90vw] lg:max-w-[1800px] lg:min-w-[1400px] bg-slate-50 border-l border-slate-200 shadow-2xl flex flex-col transition-transform duration-300">
+      <div className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-slate-200 bg-slate-50 shadow-2xl transition-transform duration-300 lg:w-[96vw] lg:max-w-[1600px]">
         {/* ================================================================================= */}
         {/* 1. DRAWER HEADER */}
         {/* ================================================================================= */}
@@ -616,11 +628,11 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
             </span>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 flex flex-col min-h-0 p-3 sm:p-4 lg:p-5 gap-5">
             {/* ================================================================================= */}
             {/* 2. MINIMAL PROGRESS BAR & PREMIUM ROUTE BOARD */}
             {/* ================================================================================= */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <div className="shrink-0 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
               {STATUS_STEPS.map((step, idx) => {
                 const isActive = step === logisticsStatus;
                 const isCompleted = idx < currentStepIndex;
@@ -643,49 +655,43 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
               })}
             </div>
 
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 flex flex-col xl:flex-row gap-6">
+            <div className="shrink-0 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 flex flex-col xl:flex-row gap-6">
               {/* Left Side: Route Details */}
               <div className="flex-1 flex flex-col justify-center">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-                      <MapPin className="h-4 w-4 text-blue-600" />
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                        <MapPin className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest whitespace-nowrap">Active Route</span>
                     </div>
-                    <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest">Active Route</span>
-                  </div>
-                  <div className="flex-1 max-w-sm relative">
-                    <select
-                      value={selectedRoute?.id || ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "all") {
-                          setSelectedRoute(availableRoutes.find(r => r.id === "all"));
-                        } else {
-                          const r = availableRoutes.find(ar => ar.id === Number(val));
-                          if (r) setSelectedRoute(r);
-                        }
-                      }}
-                      className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 appearance-none cursor-pointer transition-all truncate"
-                    >
-                      {availableRoutes.map((r, i) => (
-                        <option key={r.id || i} value={r.id}>{r.label}</option>
-                      ))}
-                    </select>
-                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+
+                    <div className="flex items-center gap-2 flex-1 w-full max-w-xl">
+                      {/* From */}
+                      <div className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 truncate" title={Array.from(new Set(availableRoutes.filter(r => r.origin !== "—").map(r => r.origin))).join(", ") || "—"}>
+                        {Array.from(new Set(availableRoutes.filter(r => r.origin !== "—").map(r => r.origin))).join(", ") || "—"}
+                      </div>
+
+                      <ArrowRight className="h-4 w-4 text-slate-400 shrink-0" />
+
+                      {/* To */}
+                      <div className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 truncate" title={Array.from(new Set(availableRoutes.filter(r => r.destination !== "—").map(r => r.destination))).join(", ") || "—"}>
+                        {Array.from(new Set(availableRoutes.filter(r => r.destination !== "—").map(r => r.destination))).join(", ") || "—"}
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-center pl-2">
                   <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Loading Point</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">From</p>
                     <p className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 truncate">
                       <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" /> {selectedRoute ? selectedRoute.origin : "—"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Destination</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">To</p>
                     <p className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 truncate">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" /> {selectedRoute ? selectedRoute.destination : "—"}
                     </p>
@@ -763,610 +769,359 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
             </div>
 
             {/* ================================================================================= */}
-            {/* 4. TAB NAVIGATION & CONTENT PANELS */}
+            {/* 4. FREIGHT MATRIX CONTENT */}
             {/* ================================================================================= */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col h-full">
-              <div className="p-4 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/50">
-                <div className="flex items-center gap-2 bg-slate-200/60 p-1.5 rounded-xl border border-slate-300/30">
-                  {[
-                    { id: "quotes", label: "Freight Matrix", icon: <Package className="h-3.5 w-3.5" />, count: quotes.length },
-                    { id: "docs", label: "Documents", icon: <Paperclip className="h-3.5 w-3.5" />, count: attachments.length },
-                    ...(!isReadOnly ? [{ id: "timeline", label: "Audit Logs", icon: <Clock className="h-3.5 w-3.5" /> }] : []),
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`px-4 py-2 text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 rounded-lg ${activeTab === tab.id
-                        ? "bg-white text-blue-600 shadow-sm ring-1 ring-slate-900/5"
-                        : "text-slate-500 hover:text-slate-700 hover:bg-white/40"
-                        }`}
-                    >
-                      {tab.icon}
-                      {tab.label}
-                      {tab.count !== undefined && (
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${activeTab === tab.id ? 'bg-blue-100 text-blue-700' : 'bg-slate-300 text-slate-600'}`}>
-                          {tab.count}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div className="flex-1 min-h-0 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
+              <div className="p-4 flex-1 overflow-y-auto">
+                <div className="space-y-5">
+                    {(() => {
+                      const routesToRender = availableRoutes.filter(r => r.id !== 'all');
+                      const routesArray = routesToRender.length > 0 ? routesToRender : [{ id: 'all', origin: '—', destination: '—' }];
+                      
+                      return routesArray.map((route, rIdx) => {
+                        const routeQuotes = details?.logistics?.quotes?.filter(q => route.id === 'all' || q.routeId === route.id || (!q.routeId && routesArray.length === 1)) || [];
+                        const isExpiring = expiringSoonIds; // Required for table below
+                        const isCollapsed = collapsedRoutes.has(route.id);
+                        
+                        return (
+                          <div key={route.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                            <div className={`flex flex-col gap-4 p-4 transition-colors sm:flex-row sm:items-center sm:justify-between ${
+                              isCollapsed ? "hover:bg-slate-50" : "border-b border-slate-100 bg-slate-50/50"
+                            }`}>
+                              <button
+                                type="button"
+                                onClick={() => toggleRouteCollapse(route.id)}
+                                aria-expanded={!isCollapsed}
+                                className="flex min-w-0 flex-1 cursor-pointer select-none items-center gap-3 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              >
+                                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                                  isCollapsed ? "bg-blue-50 text-blue-600 hover:bg-blue-100" : "text-slate-500 hover:bg-slate-200"
+                                }`}>
+                                  {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                                </span>
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center">
+                                  <MapPin className="h-4 w-4 text-blue-600" />
+                                </span>
+                                <span className="flex min-w-0 flex-wrap items-center gap-2">
+                                  <span className="text-sm font-semibold text-slate-800">{route.origin}</span>
+                                  <ArrowRight className="h-4 w-4 shrink-0 text-slate-400" />
+                                  <span className="text-sm font-semibold text-slate-800">{route.destination}</span>
+                                </span>
+                                <span className="ml-2 w-fit shrink-0 rounded-full border border-blue-200 bg-white px-2.5 py-1 text-[10px] font-extrabold text-blue-700">
+                                  {routeQuotes.length} {routeQuotes.length === 1 ? "Quote" : "Quotes"}
+                                </span>
+                              </button>
 
-              {/* TAB PANELS */}
-              <div className="p-4">
-                {/* --------------------------------------------------------------------------------- */}
-                {/* TAB 1: FREIGHT MATRIX */}
-                {/* --------------------------------------------------------------------------------- */}
-                {activeTab === "quotes" && (
-                  <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-tight">
-                          Freight Quote Evaluation Matrix
-                        </h3>
-                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">
-                          Compare logistics partner quotations by price, transit days, and expiration validity.
-                        </p>
-                      </div>
-
-                      {!isReadOnly ? (
-                        <div className="flex items-center gap-3">
-                          {details?.shipmentId ? (
-                            <span className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl font-bold flex items-center gap-2 text-xs">
-                              <CheckCircle className="h-4 w-4 text-emerald-600" /> Shipment Generated
-                            </span>
-                          ) : !details?.salesContractId ? (
-                            <span
-                              className="px-4 py-2 bg-slate-100 text-slate-500 border border-slate-200 rounded-xl font-bold flex items-center gap-2 text-xs cursor-not-allowed select-none"
-                              title="Sales Contract must be executed first."
-                            >
-                              <AlertTriangle className="h-4 w-4 text-amber-500" /> Waiting for Sales Contract
-                            </span>
-                          ) : (
-                            <button
-                              onClick={handleGenerateShipment}
-                              disabled={!details?.logistics?.selectedFreightId}
-                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl flex items-center gap-2 text-xs shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95"
-                            >
-                              <FileCheck className="h-4 w-4" /> Generate Execution Shipment
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => {
-                              setSelectedQuote(null);
-                              setIsModalOpen(true);
-                            }}
-                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl flex items-center gap-2 text-xs shadow-sm shadow-blue-600/20 transition-all cursor-pointer active:scale-95"
-                          >
-                            <Plus className="h-4 w-4" /> Add Freight Quote
-                          </button>
-                        </div>
-                      ) : details?.shipmentId ? (
-                        <span className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl font-bold flex items-center gap-2 text-xs">
-                          <CheckCircle className="h-4 w-4 text-emerald-600" /> Shipment Generated
-                        </span>
-                      ) : null}
-                    </div>
-
-                    {quotes.length > 0 ? (
-                      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-left text-xs text-slate-700 border-collapse">
-                            <thead className="bg-slate-50/80 border-b border-slate-200 text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
-                              <tr>
-                                <th className="px-3 py-2.5">Transport Partner</th>
-                                <th className="px-3 py-2.5">Contact Person</th>
-                                <th className="px-3 py-2.5">Equipment / Mode</th>
-                                <th className="px-3 py-2.5 text-center">Transit</th>
-                                <th className="px-3 py-2.5">Validity</th>
-                                <th className="px-3 py-2.5 text-right">Freight Amount</th>
-                                <th className="px-3 py-2.5 text-center">Preferred</th>
-                                <th className="px-3 py-2.5 text-right">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 font-medium">
-                              {quotes.map((q) => {
-                                const totalCost =
-                                  Number(q.freightAmount) +
-                                  Number(q.fuelCharges || 0) +
-                                  Number(q.additionalCharges || 0);
-
-                                const isPreferred = q.isPreferred;
-                                const isExpiring = expiringSoonIds.includes(q.id);
-
-                                const initials = getPartnerInitials(q.seller?.entityName);
-
-                                return (
-                                  <tr
-                                    key={q.id}
-                                    className={`transition-colors hover:bg-slate-50/80 ${isPreferred ? "bg-purple-50/30 font-semibold" : ""
-                                      }`}
-                                  >
-                                    <td className="px-3 py-2">
-                                      <div className="flex items-center gap-3">
-                                        <div className="h-7 w-7 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 shadow-xs">
-                                          {initials}
-                                        </div>
-                                        <div>
-                                          <div className="font-extrabold text-slate-900 flex items-center gap-1.5 text-xs">
-                                            <span>{q.seller?.entityName || "Logistics Seller"}</span>
-                                            {isPreferred && (
-                                              <span className="px-1.5 py-0.2 rounded bg-purple-600 text-white text-[9px] font-extrabold flex items-center gap-0.5">
-                                                <Star className="h-2 w-2 fill-white" /> Preferred
-                                              </span>
-                                            )}
-                                          </div>
-                                          <div className="text-[9px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5">
-                                            <span className="font-mono text-slate-700">{q.quoteNumber}</span>
-                                            <span>•</span>
-                                            <span>v{q.version}</span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </td>
-
-                                    <td className="px-3 py-2">
-                                      <div>
-                                        <div className="font-bold text-slate-800 text-[11px]">
-                                          {q.contactPerson || "—"}
-                                        </div>
-                                        <div className="text-[10px] font-mono text-slate-500 mt-0.5">
-                                          {q.contactNumber ? `📞 ${q.contactNumber}` : "—"}
-                                        </div>
-                                      </div>
-                                    </td>
-
-                                    <td className="px-3 py-2 font-bold text-slate-800 text-[11px]">
-                                      {(() => {
-                                        const modeNorm = (transportMode || "").toLowerCase();
-                                        if (modeNorm === "road") {
-                                          const type = q.truckType || q.vehicleType || "Standard Truck";
-                                          const cap = q.truckCapacity;
-                                          return cap ? `${type} (${cap})` : type;
-                                        }
-                                        if (modeNorm === "sea") {
-                                          const line = q.shippingLine ? `${q.shippingLine} • ` : "";
-                                          if (q.containerRates && q.containerRates.length > 0) {
-                                            const sizes = q.containerRates.map(cr => cr.containerSize).filter(Boolean).join(", ");
-                                            return `${line}${sizes ? `Containers (${sizes})` : "Multiple Containers"}`;
-                                          }
-                                          const type = q.containerType || "Container";
-                                          const size = q.containerSize ? ` (${q.containerSize})` : "";
-                                          return `${line}${type}${size}`;
-                                        }
-                                        if (modeNorm === "rail") {
-                                          const type = q.wagonType || q.vehicleType || "Wagon";
-                                          const cap = q.wagonCapacity;
-                                          return cap ? `${type} (${cap})` : type;
-                                        }
-                                        return q.vehicleType || "—";
-                                      })()}
-                                    </td>
-
-                                    <td className="px-3 py-2 text-center">
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 font-extrabold text-[10px]">
-                                        <Clock className="h-3 w-3 text-blue-600" /> {q.transitDays} Days
-                                      </span>
-                                    </td>
-
-                                    <td className="px-3 py-2">
-                                      <div className="font-bold text-slate-800 text-[11px]">
-                                        {q.validityDate
-                                          ? new Date(q.validityDate).toLocaleDateString("en-IN", {
-                                            day: "2-digit",
-                                            month: "short",
-                                            year: "numeric",
-                                          })
-                                          : "—"}
-                                      </div>
-                                      {isExpiring && (
-                                        <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded mt-0.5">
-                                          <AlertTriangle className="h-2.5 w-2.5 text-amber-600" /> Expiring Soon
+                              {!isReadOnly && (
+                                <div className="flex flex-wrap items-center gap-3">
+                                  {rIdx === 0 && (
+                                    <>
+                                      {details?.shipmentId ? (
+                                        <span className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl font-bold flex items-center gap-2 text-xs">
+                                          <CheckCircle className="h-4 w-4 text-emerald-600" /> Shipment Generated
                                         </span>
+                                      ) : !details?.salesContractId ? (
+                                        <span
+                                          className="px-4 py-2 bg-slate-100 text-slate-500 border border-slate-200 rounded-xl font-bold flex items-center gap-2 text-xs cursor-not-allowed select-none"
+                                          title="Sales Contract must be executed first."
+                                        >
+                                          <AlertTriangle className="h-4 w-4 text-amber-500" /> Waiting for Sales Contract
+                                        </span>
+                                      ) : (
+                                        <button
+                                          onClick={handleGenerateShipment}
+                                          disabled={!details?.logistics?.selectedFreightId}
+                                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl flex items-center gap-2 text-xs shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95"
+                                        >
+                                          <FileCheck className="h-4 w-4" /> Generate Execution Shipment
+                                        </button>
                                       )}
-                                    </td>
+                                    </>
+                                  )}
 
-                                    <td className="px-3 py-2 text-right">
-                                      {(!Array.isArray(q.containerRates) || q.containerRates.length === 0) && (
-                                        <div className="text-sm font-extrabold text-emerald-600 tabular-nums">
-                                          {q.currency} {totalCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  <button
+                                    onClick={() => {
+                                      setSelectedQuote(null);
+                                      if (route.id !== 'all') {
+                                        setSelectedRoute(availableRoutes.find(r => r.id === route.id));
+                                      } else {
+                                        setSelectedRoute(availableRoutes[0]);
+                                      }
+                                      setIsModalOpen(true);
+                                    }}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl flex items-center gap-2 text-xs shadow-sm shadow-blue-600/20 transition-all cursor-pointer active:scale-95"
+                                  >
+                                    <Plus className="h-4 w-4" /> Add Freight Quote
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            {!isCollapsed && (
+                              <div className="bg-slate-50/30 p-4">
+                                {routeQuotes.length > 0 ? (
+                                <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white">
+                                  <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400">
+                                    <table className="w-full text-left text-xs text-slate-700 border-collapse">
+                                      <thead className="bg-slate-50/80 border-b border-slate-200 text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
+                                        <tr>
+                                          <th className="px-3 py-2.5">Transport Partner</th>
+                                          <th className="px-3 py-2.5">Contact Person</th>
+                                          <th className="px-3 py-2.5 text-center">Transit</th>
+                                          <th className="px-3 py-2.5">Validity</th>
+                                          {(() => {
+                                              const tMode = (transportMode || "").toLowerCase();
+                                              if (tMode === "sea") {
+                                                return (
+                                                  <>
+                                                    <th className="px-3 py-2.5 text-right min-w-[140px]">20 FT Freight Amount</th>
+                                                    <th className="px-3 py-2.5 text-right min-w-[140px]">40 FT Freight Amount</th>
+                                                  </>
+                                                );
+                                              }
+                                              let title = "Vehicle Rates";
+                                              if (tMode === "air") title = "Air Rates";
+                                              if (tMode === "rail") title = "Rail Rates";
+                                              return <th className="px-3 py-2.5 text-right">{title}</th>;
+                                            })()}
+                                          <th className="px-3 py-2.5 text-center">Preferred</th>
+                                          <th className="px-3 py-2.5 text-right">Actions</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-slate-100 font-medium">
+                                        {routeQuotes.map((q) => {
+                                  const totalCost =
+                                    Number(q.freightAmount) +
+                                    Number(q.fuelCharges || 0) +
+                                    Number(q.additionalCharges || 0);
+
+                                  const isPreferred = q.isPreferred;
+                                  const isExpiring = expiringSoonIds.includes(q.id);
+
+                                  const initials = getPartnerInitials(q.seller?.entityName);
+
+                                  return (
+                                    <tr
+                                      key={q.id}
+                                      className={`transition-colors hover:bg-slate-50/80 ${isPreferred ? "bg-purple-50/30 font-semibold" : ""
+                                        }`}
+                                    >
+                                      <td className="px-3 py-2">
+                                        <div className="flex items-center gap-3">
+                                          <div className="h-7 w-7 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 shadow-xs">
+                                            {initials}
+                                          </div>
+                                          <div>
+                                            <div className="font-extrabold text-slate-900 flex items-center gap-1.5 text-xs">
+                                              <span>{q.seller?.entityName || "Logistics Seller"}</span>
+                                              {isPreferred && (
+                                                <span className="px-1.5 py-0.2 rounded bg-purple-600 text-white text-[9px] font-extrabold flex items-center gap-0.5">
+                                                  <Star className="h-2 w-2 fill-white" /> Preferred
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="text-[9px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5">
+                                              <span className="font-mono text-slate-700">{q.quoteNumber}</span>
+                                              <span>•</span>
+                                              <span>v{q.version}</span>
+                                            </div>
+                                          </div>
                                         </div>
-                                      )}
+                                      </td>
 
-                                      {Array.isArray(q.containerRates) && q.containerRates.length > 0 ? (
-                                        <div className="inline-block text-left bg-slate-50 border border-slate-200/60 rounded-md p-1.5 shadow-xs">
-                                          <table className="text-[10px] w-auto">
-                                            <tbody>
-                                              {q.containerRates.map((cr, idx) => (
-                                                <tr key={cr.id || idx}>
-                                                  <td className="text-slate-500 font-medium pr-3 whitespace-nowrap text-right">
-                                                    {cr.containerSize || cr.containerType ? `${cr.containerSize} ${cr.containerType}`.trim() : "Container"}:
-                                                  </td>
-                                                  <td className="font-mono font-bold text-emerald-600 text-[11px] text-right whitespace-nowrap">
-                                                    {q.currency} {Number(cr.freightAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                                                  </td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
+                                      <td className="px-3 py-2">
+                                        <div>
+                                          <div className="font-bold text-slate-800 text-[11px]">
+                                            {q.contactPerson || "N/A"}
+                                          </div>
+                                          <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                                            {q.contactNumber ? `📞 ${q.contactNumber}` : "N/A"}
+                                          </div>
                                         </div>
-                                      ) : Array.isArray(q.charges) && q.charges.length > 0 && (
-                                        <div className="mt-1.5 inline-block text-left bg-slate-50 border border-slate-200/60 rounded-md p-1.5 shadow-xs">
-                                          <table className="text-[10px] w-auto">
-                                            <tbody>
-                                              {q.charges.map((c, idx) => (
-                                                <tr key={c.id || idx}>
-                                                  <td className="text-slate-500 font-medium pr-3 whitespace-nowrap text-right max-w-[150px] truncate" title={c.chargeName}>
-                                                    {c.chargeName}:
-                                                  </td>
-                                                  <td className="font-mono font-bold text-slate-800 text-right whitespace-nowrap">
-                                                    {q.currency} {Number(c.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                                                  </td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
+                                      </td>
+
+                                      <td className="px-3 py-2 text-center">
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 font-extrabold text-[10px]">
+                                          <Clock className="h-3 w-3 text-blue-600" /> {q.transitDays} Days
+                                        </span>
+                                      </td>
+
+                                      <td className="px-3 py-2">
+                                        <div className="font-bold text-slate-800 text-[11px]">
+                                          {q.validityDate
+                                            ? new Date(q.validityDate).toLocaleDateString("en-IN", {
+                                              day: "2-digit",
+                                              month: "short",
+                                              year: "numeric",
+                                            })
+                                            : "N/A"}
                                         </div>
-                                      )}
+                                        {isExpiring && (
+                                          <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded mt-0.5">
+                                            <AlertTriangle className="h-2.5 w-2.5 text-amber-600" /> Expiring Soon
+                                          </span>
+                                        )}
+                                      </td>
 
+                                      {(() => {
+                                        const tMode = (transportMode || "").toLowerCase();
 
-                                    </td>
+                                        if (tMode === "sea") {
+                                          const rates20 = Array.isArray(q.containerRates) ? q.containerRates.filter(cr => (cr.containerSize || "").includes("20")) : [];
+                                          const rates40 = Array.isArray(q.containerRates) ? q.containerRates.filter(cr => (cr.containerSize || "").includes("40")) : [];
+                                          
+                                          return (
+                                            <>
+                                              <td className="px-3 py-2 align-top text-right min-w-[140px]">
+                                                {rates20.length === 0 ? (
+                                                  <div className="text-slate-400 font-extrabold text-[10px] mt-2 mr-4">N/A</div>
+                                                ) : (
+                                                  <div className="flex flex-col gap-2 items-end">
+                                                    {rates20.map((cr, idx) => (
+                                                      <div key={cr.id || idx} className="flex flex-col items-start bg-white border border-slate-200/80 p-2 rounded-lg shadow-xs w-[130px]">
+                                                        <span className="text-slate-500 font-bold text-[9px] uppercase tracking-wider truncate w-full text-left">{cr.containerType || "Standard"}</span>
+                                                        <span className="font-mono font-extrabold text-emerald-600 text-[11px] mt-0.5">
+                                                          {q.currency} {Number(cr.freightAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                                        </span>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                              </td>
+                                              <td className="px-3 py-2 align-top text-right min-w-[140px]">
+                                                {rates40.length === 0 ? (
+                                                  <div className="text-slate-400 font-extrabold text-[10px] mt-2 mr-4">N/A</div>
+                                                ) : (
+                                                  <div className="flex flex-col gap-2 items-end">
+                                                    {rates40.map((cr, idx) => (
+                                                      <div key={cr.id || idx} className="flex flex-col items-start bg-white border border-slate-200/80 p-2 rounded-lg shadow-xs w-[130px]">
+                                                        <span className="text-slate-500 font-bold text-[9px] uppercase tracking-wider truncate w-full text-left">{cr.containerType || "Standard"}</span>
+                                                        <span className="font-mono font-extrabold text-emerald-600 text-[11px] mt-0.5">
+                                                          {q.currency} {Number(cr.freightAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                                        </span>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                              </td>
+                                            </>
+                                          );
+                                        }
 
-                                    <td className="px-3 py-2 text-center">
-                                      <button
-                                        onClick={() => !isReadOnly && handleSetPreferred(q.id)}
-                                        disabled={isReadOnly}
-                                        className={`px-2 py-1 rounded-lg font-extrabold text-[10px] transition-all inline-flex items-center gap-1.5 ${isPreferred
-                                          ? "bg-purple-600 text-white shadow-sm"
-                                          : isReadOnly
-                                            ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
-                                            : "bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 cursor-pointer"
-                                          }`}
-                                      >
-                                        <Star className={`h-2.5 w-2.5 ${isPreferred ? "fill-white" : ""}`} />
-                                        {isPreferred ? "Selected" : "Select"}
-                                      </button>
-                                    </td>
+                                        return (
+                                          <td className="px-3 py-2 text-right">
+                                            <div className="flex flex-wrap items-center justify-end gap-2">
+                                              {(!Array.isArray(q.containerRates) || q.containerRates.length === 0) &&
+                                                (!Array.isArray(q.charges) || q.charges.length === 0) && (
+                                                <div className="text-sm font-extrabold text-emerald-600 tabular-nums">
+                                                  {q.currency} {totalCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </div>
+                                              )}
 
-                                    <td className="px-3 py-2 text-right">
-                                      <div className="flex items-center justify-end gap-1">
-                                        {isReadOnly ? (
-                                          <button
-                                            onClick={() => {
-                                              setSelectedQuote(q);
-                                              setIsModalOpen(true);
-                                            }}
-                                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                                            title="View Quote Details"
-                                          >
-                                            <Eye className="h-3.5 w-3.5" />
-                                          </button>
-                                        ) : (
-                                          <>
+                                              {Array.isArray(q.containerRates) && q.containerRates.length > 0 &&
+                                                q.containerRates.map((cr, idx) => (
+                                                  <div key={cr.id || idx} className="flex min-w-[130px] flex-col items-start rounded-lg border border-slate-200/80 bg-white p-2">
+                                                    <span className="text-slate-500 font-bold text-[9px] uppercase tracking-wider">
+                                                      {cr.containerSize || "Container"} {cr.containerType || ""}
+                                                    </span>
+                                                    <span className="font-mono font-extrabold text-emerald-600 text-[11px] mt-0.5">
+                                                      {q.currency} {Number(cr.freightAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                                    </span>
+                                                  </div>
+                                                ))}
+
+                                              {Array.isArray(q.charges) && q.charges.length > 0 &&
+                                                  q.charges.map((c, idx) => (
+                                                    <div key={c.id || idx} className="flex flex-col items-start rounded-lg border border-slate-200/80 bg-slate-50 p-2 text-left">
+                                                      <span className="text-slate-500 font-bold text-[9px] uppercase tracking-wider whitespace-nowrap max-w-[120px] truncate" title={c.chargeName}>
+                                                        {c.chargeName}
+                                                      </span>
+                                                      <span className="font-mono font-extrabold text-slate-700 text-xs whitespace-nowrap mt-0.5">
+                                                        {q.currency} {Number(c.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                                      </span>
+                                                    </div>
+                                                  ))}
+                                            </div>
+                                          </td>
+                                        );
+                                      })()}
+
+                                      <td className="px-3 py-2 text-center">
+                                        <button
+                                          onClick={() => !isReadOnly && handleSetPreferred(q.id)}
+                                          disabled={isReadOnly}
+                                          className={`px-2 py-1 rounded-lg font-extrabold text-[10px] transition-all inline-flex items-center gap-1.5 ${isPreferred
+                                            ? "bg-purple-600 text-white shadow-sm"
+                                            : isReadOnly
+                                              ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+                                              : "bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 cursor-pointer"
+                                            }`}
+                                        >
+                                          <Star className={`h-2.5 w-2.5 ${isPreferred ? "fill-white" : ""}`} />
+                                          {isPreferred ? "Selected" : "Select"}
+                                        </button>
+                                      </td>
+
+                                      <td className="px-3 py-2 text-right">
+                                        <div className="flex items-center justify-end gap-1">
+                                          {isReadOnly ? (
                                             <button
                                               onClick={() => {
                                                 setSelectedQuote(q);
                                                 setIsModalOpen(true);
                                               }}
                                               className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                                              title="Revise Quote"
+                                              title="View Quote Details"
                                             >
-                                              <Edit2 className="h-3.5 w-3.5" />
+                                              <Eye className="h-3.5 w-3.5" />
                                             </button>
-                                            <button
-                                              disabled={isPreferred}
-                                              onClick={() => handleDeleteQuote(q.id)}
-                                              className={`p-1.5 rounded-lg transition-colors ${isPreferred
-                                                ? "text-slate-300 cursor-not-allowed"
-                                                : "text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                                                }`}
-                                              title={isPreferred ? "Cannot delete preferred quote" : "Delete"}
-                                            >
-                                              <Trash2 className="h-3.5 w-3.5" />
-                                            </button>
-                                          </>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-12 bg-white border border-slate-200/80 rounded-2xl p-6 text-slate-400 space-y-2">
-                        <p className="text-xs font-bold text-slate-500">No freight quotes added yet.</p>
-                        <p className="text-[11px] text-slate-400">Click "Add Freight Quote" above to enter quotations from transport partners.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* --------------------------------------------------------------------------------- */}
-                {/* TAB 2: DOCUMENTS */}
-                {/* --------------------------------------------------------------------------------- */}
-                {activeTab === "docs" && (
-                  <div className="space-y-6">
-                    {/* UPLOAD & CATEGORY SELECTION HEADER CARD */}
-                    {!isReadOnly && (
-                      <div
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                        className={`border rounded-2xl p-5 transition-all shadow-xs ${isDraggingOver
-                          ? "bg-blue-50/90 border-blue-500 border-dashed ring-4 ring-blue-100"
-                          : "bg-slate-50 border-slate-200"
-                          }`}
-                      >
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-600/20">
-                              <UploadCloud className="h-5 w-5" />
-                            </div>
-                            <div>
-                              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-tight">
-                                Upload Transportation Document
-                              </h4>
-                              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                                Attach rate quotes, PODs, LR copies, booking confirmations, or custom documents.
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* CATEGORY & UPLOAD CONTROLS */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <div className="flex items-center gap-1.5">
-                              <select
-                                value={uploadCategory}
-                                onChange={(e) => {
-                                  if (e.target.value === "__ADD_NEW_CAT__") {
-                                    setIsAddingDocCategory(true);
-                                  } else {
-                                    setUploadCategory(e.target.value);
-                                  }
-                                }}
-                                className="px-3.5 py-2 border border-slate-200 rounded-xl bg-white font-bold text-xs text-slate-800 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs"
-                              >
-                                {docCategories.map((cat) => (
-                                  <option key={cat} value={cat}>
-                                    {cat}
-                                  </option>
-                                ))}
-                                <option value="__ADD_NEW_CAT__" className="font-extrabold text-blue-600 bg-blue-50">
-                                  + Add Custom Category...
-                                </option>
-                              </select>
-
-                            </div>
-
-                            <label className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl flex items-center gap-2 cursor-pointer shadow-md shadow-blue-600/20 active:scale-95 transition-all">
-                              {uploading ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Paperclip className="h-4 w-4" />
-                              )}
-                              Choose Files & Upload
-                              <input
-                                type="file"
-                                multiple
-                                className="hidden"
-                                onChange={handleFileInputChange}
-                                disabled={uploading}
-                              />
-                            </label>
-                          </div>
-                        </div>
-
-                        {/* INLINE CUSTOM CATEGORY INPUT FORM */}
-                        {isAddingDocCategory && (
-                          <div className="mt-4 pt-3 border-t border-slate-200 flex items-center gap-2 animate-in fade-in duration-150 max-w-lg">
-                            <input
-                              type="text"
-                              value={newCategoryName}
-                              onChange={(e) => setNewCategoryName(e.target.value)}
-                              placeholder="Enter custom category name (e.g. Packing List, Duty Bill)..."
-                              className="flex-1 px-3 py-1.5 border border-blue-500 rounded-xl text-xs font-bold text-slate-900 bg-white focus:outline-none shadow-xs"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  handleAddCustomCategory();
-                                }
-                                if (e.key === "Escape") {
-                                  setIsAddingDocCategory(false);
-                                  setNewCategoryName("");
-                                }
-                              }}
-                            />
-                            <button
-                              type="button"
-                              onClick={handleAddCustomCategory}
-                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl flex items-center gap-1 shadow-xs cursor-pointer"
-                            >
-                              <Check className="h-3.5 w-3.5" /> Add
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsAddingDocCategory(false);
-                                setNewCategoryName("");
-                              }}
-                              className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs rounded-xl flex items-center gap-1 cursor-pointer"
-                            >
-                              <X className="h-3.5 w-3.5" /> Cancel
-                            </button>
-                          </div>
-                        )}
-
-                        {/* DRAG AND DROP HINT */}
-                        <div className="mt-3 text-center text-[10px] text-slate-400 font-semibold flex items-center justify-center gap-1.5">
-                          <UploadCloud className="h-3.5 w-3.5 text-blue-500" />
-                          <span>Tip: You can drag and drop multiple files directly into this area to upload.</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SEARCH & CATEGORY FILTER PILLS BAR */}
-                    {attachments.length > 0 && (
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-2xs">
-                        {/* Search Input */}
-                        <div className="relative flex-1 max-w-xs">
-                          <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="text"
-                            value={docSearchQuery}
-                            onChange={(e) => setDocSearchQuery(e.target.value)}
-                            placeholder="Search documents..."
-                            className="w-full pl-8 pr-3 py-1.5 text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-600 text-slate-800"
-                          />
-                          {docSearchQuery && (
-                            <button
-                              onClick={() => setDocSearchQuery("")}
-                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Category Filter Pills */}
-                        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 max-w-full scrollbar-none">
-                          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1">
-                            <Filter className="h-3 w-3" /> Filter:
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedCategoryFilter("All")}
-                            className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition-all cursor-pointer ${selectedCategoryFilter === "All"
-                              ? "bg-blue-600 text-white shadow-2xs"
-                              : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-                              }`}
-                          >
-                            All ({attachments.length})
-                          </button>
-
-                          {activeAttachmentCategories.map((cat) => {
-                            const count = attachments.filter((att) => {
-                              const { displayCat } = parseAttachmentMeta(att);
-                              return displayCat.toLowerCase() === cat.toLowerCase();
-                            }).length;
-                            const isSel = selectedCategoryFilter.toLowerCase() === cat.toLowerCase();
-
-                            return (
-                              <button
-                                key={cat}
-                                type="button"
-                                onClick={() => setSelectedCategoryFilter(cat)}
-                                className={`px-2.5 py-1 rounded-xl text-[10px] font-extrabold transition-all cursor-pointer whitespace-nowrap ${isSel
-                                  ? "bg-blue-600 text-white shadow-2xs"
-                                  : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-                                  }`}
-                              >
-                                {cat} ({count})
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* DOCUMENT CARDS GRID */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filteredAttachments.map((att) => {
-                        const { displayCat, displayName } = parseAttachmentMeta(att);
-
-                        return (
-                          <div
-                            key={att.id}
-                            className="border border-slate-200 hover:border-slate-300 bg-white rounded-2xl p-4 flex flex-col justify-between shadow-xs hover:shadow-md transition-all group"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-center gap-3 overflow-hidden">
-                                <div className="h-10 w-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center shrink-0 shadow-2xs">
-                                  <FileText className="h-5 w-5" />
-                                </div>
-                                <div className="overflow-hidden">
-                                  <h5 className="font-extrabold text-slate-900 text-xs truncate" title={displayName}>
-                                    {displayName}
-                                  </h5>
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-700 font-extrabold text-[9px] mt-1">
-                                    <Tag className="h-2.5 w-2.5 text-blue-600" />
-                                    {displayCat}
-                                  </span>
+                                          ) : (
+                                            <>
+                                              <button
+                                                onClick={() => {
+                                                  setSelectedQuote(q);
+                                                  setIsModalOpen(true);
+                                                }}
+                                                className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                                title="Revise Quote"
+                                              >
+                                                <Edit2 className="h-3.5 w-3.5" />
+                                              </button>
+                                              <button
+                                                disabled={isPreferred}
+                                                onClick={() => handleDeleteQuote(q.id)}
+                                                className={`p-1.5 rounded-lg transition-colors ${isPreferred
+                                                  ? "text-slate-300 cursor-not-allowed"
+                                                  : "text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                                  }`}
+                                                title={isPreferred ? "Cannot delete preferred quote" : "Delete"}
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                              </button>
+                                            </>
+                                          )}
+                                        </div>
+                                      </td>
+                                        </tr>
+                                      );
+                                      })}
+                                    </tbody>
+                                  </table>
                                 </div>
                               </div>
-
-                              {!isReadOnly && (
-                                <button
-                                  onClick={() => handleDeleteAttachment(att.id)}
-                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer opacity-80 group-hover:opacity-100"
-                                  title="Delete Document"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
+                            ) : (
+                            <div className="space-y-2 rounded-2xl border border-slate-200/80 bg-white p-6 py-12 text-center text-slate-400">
+                                <p className="text-xs font-bold text-slate-500">No freight quotes added yet for this route.</p>
+                                <p className="text-[11px] text-slate-400">Click &quot;Add Freight Quote&quot; above to enter quotations from transport partners.</p>
+                              </div>
+                            )}
                             </div>
-
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
-                              <span>{(att.fileSize / 1024).toFixed(1)} KB</span>
-                              <span>{new Date(att.createdAt).toLocaleDateString()}</span>
-                              <a
-                                href={`${axiosClient.defaults.baseURL}${att.downloadUrl}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-3 py-1 font-extrabold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100 rounded-xl flex items-center gap-1 transition-colors"
-                              >
-                                <Download className="h-3 w-3" /> Download
-                              </a>
-                            </div>
+                            )}
                           </div>
-                        );
-                      })}
-
-                      {attachments.length > 0 && filteredAttachments.length === 0 && (
-                        <div className="col-span-full py-12 border border-dashed border-slate-200 rounded-2xl text-center bg-slate-50 space-y-2">
-                          <Search className="h-7 w-7 text-slate-400 mx-auto" />
-                          <h4 className="text-xs font-extrabold text-slate-700">No matching documents found</h4>
-                          <p className="text-[11px] text-slate-500 font-medium">
-                            Try adjusting your search query or category filter.
-                          </p>
-                        </div>
-                      )}
-
-                      {attachments.length === 0 && (
-                        <div
-                          onDragOver={handleDragOver}
-                          onDragLeave={handleDragLeave}
-                          onDrop={handleDrop}
-                          className={`col-span-full py-16 border-2 border-dashed rounded-2xl text-center transition-all ${isDraggingOver
-                            ? "bg-blue-50 border-blue-500 ring-4 ring-blue-100"
-                            : "bg-slate-50 border-slate-200"
-                            } space-y-2`}
-                        >
-                          <FileText className="h-8 w-8 text-slate-400 mx-auto" />
-                          <h4 className="text-xs font-extrabold text-slate-700">No Documents Uploaded</h4>
-                          <p className="text-[11px] text-slate-500 font-medium max-w-sm mx-auto">
-                            Select or create a document category above and upload quotation PDFs, LR copies, or rate sheets.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* --------------------------------------------------------------------------------- */}
-                {/* TAB 3: TIMELINE */}
-                {/* --------------------------------------------------------------------------------- */}
-                {activeTab === "timeline" && (
-                  <VirtualizedAuditLogTimeline
-                    activities={activities}
-                    isLoading={loadingActivities}
-                  />
-                )}
+                      );
+                      });
+                    })()}
+                </div>
               </div>
             </div>
           </div>

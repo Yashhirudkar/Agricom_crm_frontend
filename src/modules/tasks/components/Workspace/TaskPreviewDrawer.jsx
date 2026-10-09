@@ -17,6 +17,7 @@ import {
   GitBranch, Loader2, X,
 } from "lucide-react";
 import { toast } from "sonner";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 
 // Health status badge color mapping
 const HEALTH_COLORS = {
@@ -167,10 +168,16 @@ function SubtaskQuickAddForm({ parentTaskId, statuses, onCancel }) {
 
 // ─── Single Subtask Row ───────────────────────────────────────────────────────
 function SubtaskRow({ subtask, parentTaskId, index }) {
+  const [showConfirm, setShowConfirm] = useState(false);
   const deleteMutation = useDeleteSubtaskMutation(parentTaskId);
   const statusName = subtask.status?.name || '';
   const priorityName = subtask.priority?.name || '';
   const isCompleted = subtask.status?.isCompleted;
+
+  const confirmDelete = () => {
+    setShowConfirm(false);
+    deleteMutation.mutate(subtask.id);
+  };
 
   return (
     <div className={`flex items-center gap-3 py-2.5 px-3 rounded-lg border transition-all group ${
@@ -226,17 +233,25 @@ function SubtaskRow({ subtask, parentTaskId, index }) {
       {/* Delete */}
       <button
         type="button"
-        onClick={() => {
-          if (window.confirm(`Delete subtask "${subtask.title}"?`)) {
-            deleteMutation.mutate(subtask.id);
-          }
-        }}
+        onClick={() => setShowConfirm(true)}
         disabled={deleteMutation.isPending}
         className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all p-1 rounded cursor-pointer shrink-0 disabled:opacity-30"
         title="Delete subtask"
       >
         <Trash2 className="w-3.5 h-3.5" />
       </button>
+
+      <ConfirmModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete Subtask"
+        message={`Are you sure you want to delete subtask "${subtask.title}"?`}
+        confirmText="Delete"
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+        iconBgClass="bg-red-50"
+        iconColorClass="text-red-500"
+      />
     </div>
   );
 }
@@ -363,6 +378,7 @@ function SubtasksPanel({ taskId, statuses }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function TaskPreviewDrawer() {
   const { closeTaskDrawer, isTaskDrawerOpen, selectedTaskId, openCreateTaskDrawer } = useTaskStore();
+  const [commentInput, setCommentInput] = useState("");
   
   const { data: task, isLoading, isError } = useTaskDetailQuery(selectedTaskId);
   const { data: statuses = [] } = useTaskStatusesQuery();

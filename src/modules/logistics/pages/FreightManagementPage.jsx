@@ -316,43 +316,38 @@ export default function FreightManagementPage() {
   // Dynamic dropdown options derived from current data
   const productOptions = useMemo(() => {
     const set = new Set();
-    data.forEach((q) => {
-      const name = q.logistics?.enquiry?.product?.name;
-      if (name) set.add(name);
+    normalizedData.forEach((q) => {
+      if (q.productName && q.productName !== "N/A" && q.productName !== "—") set.add(q.productName);
     });
     return Array.from(set).sort();
-  }, [data]);
+  }, [normalizedData]);
 
   // Cascading dropdown options for Origin & Destination
   const originOptions = useMemo(() => {
     const set = new Set();
-    data.forEach((q) => {
-      const enquiry = q.logistics?.enquiry;
-      const orig = getOriginDisplay(enquiry);
-      const dest = getDestinationDisplay(enquiry);
+    normalizedData.forEach((q) => {
+      const matchesDest = destinationFilter === "all" || q.normalizedRoutes?.some(r => r.destination === destinationFilter);
+      if (!matchesDest) return;
 
-      if (destinationFilter !== "all" && dest !== destinationFilter) {
-        return;
-      }
-      if (orig && orig !== "—") set.add(orig);
+      q.normalizedRoutes?.forEach(r => {
+        if (r.origin && r.origin !== "N/A" && r.origin !== "—") set.add(r.origin);
+      });
     });
     return Array.from(set).sort();
-  }, [data, destinationFilter]);
+  }, [normalizedData, destinationFilter]);
 
   const destinationOptions = useMemo(() => {
     const set = new Set();
-    data.forEach((q) => {
-      const enquiry = q.logistics?.enquiry;
-      const orig = getOriginDisplay(enquiry);
-      const dest = getDestinationDisplay(enquiry);
+    normalizedData.forEach((q) => {
+      const matchesOrig = originFilter === "all" || q.normalizedRoutes?.some(r => r.origin === originFilter);
+      if (!matchesOrig) return;
 
-      if (originFilter !== "all" && orig !== originFilter) {
-        return;
-      }
-      if (dest && dest !== "—") set.add(dest);
+      q.normalizedRoutes?.forEach(r => {
+        if (r.destination && r.destination !== "N/A" && r.destination !== "—") set.add(r.destination);
+      });
     });
     return Array.from(set).sort();
-  }, [data, originFilter]);
+  }, [normalizedData, originFilter]);
 
   // Auto-reset invalid dependent selections
   useEffect(() => {
@@ -547,20 +542,7 @@ export default function FreightManagementPage() {
           {/* Dropdown Filters Group */}
           <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
 
-            {/* Product Dropdown */}
-            <div className="relative min-w-[130px] flex-1 sm:flex-none">
-              <select
-                value={productFilter}
-                onChange={(e) => setProductFilter(e.target.value)}
-                className="w-full appearance-none pl-3 pr-8 py-2 bg-gray-50/80 border border-gray-200/80 rounded-xl text-xs font-semibold text-gray-700 focus:outline-none focus:border-[#007aff] focus:bg-white focus:ring-2 focus:ring-[#007aff]/10 cursor-pointer"
-              >
-                <option value="all">All Products</option>
-                {productOptions.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-            </div>
+
 
             {/* Origin Dropdown */}
             <div className="relative min-w-[130px] flex-1 sm:flex-none">
@@ -569,7 +551,7 @@ export default function FreightManagementPage() {
                 onChange={(e) => setOriginFilter(e.target.value)}
                 className="w-full appearance-none pl-3 pr-8 py-2 bg-gray-50/80 border border-gray-200/80 rounded-xl text-xs font-semibold text-gray-700 focus:outline-none focus:border-[#007aff] focus:bg-white focus:ring-2 focus:ring-[#007aff]/10 cursor-pointer"
               >
-                <option value="all">All Origins</option>
+                <option value="all">From</option>
                 {originOptions.map((o) => (
                   <option key={o} value={o}>{o}</option>
                 ))}
@@ -584,7 +566,7 @@ export default function FreightManagementPage() {
                 onChange={(e) => setDestinationFilter(e.target.value)}
                 className="w-full appearance-none pl-3 pr-8 py-2 bg-gray-50/80 border border-gray-200/80 rounded-xl text-xs font-semibold text-gray-700 focus:outline-none focus:border-[#007aff] focus:bg-white focus:ring-2 focus:ring-[#007aff]/10 cursor-pointer"
               >
-                <option value="all">All Destinations</option>
+                <option value="all">To</option>
                 {destinationOptions.map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}
@@ -592,38 +574,7 @@ export default function FreightManagementPage() {
               <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
             </div>
 
-            {/* Transport Mode Dropdown */}
-            <div className="relative min-w-[130px] flex-1 sm:flex-none">
-              <select
-                value={transportMode}
-                onChange={(e) => setTransportMode(e.target.value)}
-                className="w-full appearance-none pl-3 pr-8 py-2 bg-gray-50/80 border border-gray-200/80 rounded-xl text-xs font-semibold text-gray-700 focus:outline-none focus:border-[#007aff] focus:bg-white focus:ring-2 focus:ring-[#007aff]/10 cursor-pointer"
-              >
-                <option value="All">All Modes</option>
-                <option value="Road">Road</option>
-                <option value="Sea">Sea Freight</option>
-                <option value="Rail">Rail</option>
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-            </div>
 
-            {/* Quote Status Dropdown */}
-            <div className="relative min-w-[130px] flex-1 sm:flex-none">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full appearance-none pl-3 pr-8 py-2 bg-gray-50/80 border border-gray-200/80 rounded-xl text-xs font-semibold text-gray-700 focus:outline-none focus:border-[#007aff] focus:bg-white focus:ring-2 focus:ring-[#007aff]/10 cursor-pointer"
-              >
-                <option value="all">All Statuses</option>
-                <option value="draft">Draft</option>
-                <option value="submitted">Submitted</option>
-                <option value="preferred">Preferred</option>
-                <option value="active">Active</option>
-                <option value="rejected">Rejected</option>
-                <option value="expired">Expired</option>
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-            </div>
 
             {/* Date Range Picker */}
             <div className="flex items-center gap-1.5 bg-gray-50/80 border border-gray-200/80 rounded-xl px-2.5 py-1.5 shrink-0">
@@ -675,8 +626,7 @@ export default function FreightManagementPage() {
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60 text-gray-400 uppercase tracking-widest text-[10px] font-bold">
                 <th className="px-5 py-3.5 w-10"></th>
-                <th className="px-5 py-3.5">Product</th>
-                <th className="px-5 py-3.5 text-center">Total Routes</th>
+                <th className="px-5 py-3.5">Route</th>
                 <th className="px-5 py-3.5 text-center">Total Quotes</th>
                 <th className="px-5 py-3.5">
                   <button onClick={() => handleSort("freightAmount")} className="flex items-center gap-0.5 cursor-pointer hover:text-gray-600 transition-colors">
@@ -696,14 +646,14 @@ export default function FreightManagementPage() {
             <tbody className="divide-y divide-gray-50 text-xs">
               {isLoading ? (
                 <tr>
-                  <td colSpan="9" className="py-20 text-center">
+                  <td colSpan="8" className="py-20 text-center">
                     <Loader2 className="h-7 w-7 animate-spin text-[#007aff] mx-auto mb-2" />
                     <p className="text-xs font-semibold text-gray-400">Loading freight quotes...</p>
                   </td>
                 </tr>
               ) : normalizedData.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="py-20 text-center">
+                  <td colSpan="8" className="py-20 text-center">
                     <Package className="h-10 w-10 text-gray-200 mx-auto mb-3" />
                     <p className="text-sm font-bold text-gray-600 mb-1">No Freight Quotes Found</p>
                     <p className="text-xs text-gray-400">
@@ -724,10 +674,30 @@ export default function FreightManagementPage() {
                       <td className="px-5 py-3.5 text-slate-400">
                         {expandedQuotes.has(quote.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </td>
-                      <td className="px-5 py-3.5">
-                        <span className="font-bold text-slate-800 text-[13px] block">
-                          {quote.productName}
-                        </span>
+                      <td className="px-5 py-3.5 align-top">
+                        <div className="flex items-center gap-6 mb-2">
+                          <div>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 ml-[22px]">From</p>
+                            <div className="flex items-center gap-1.5 text-[13px] font-bold text-slate-800">
+                              <div className="flex items-center justify-center w-4 h-4 rounded bg-blue-50 text-blue-500 shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                              </div>
+                              <span className="truncate max-w-[150px]" title={quote.normalizedRoutes?.[0]?.origin}>{quote.normalizedRoutes?.[0]?.origin || "N/A"}</span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 ml-[22px]">To</p>
+                            <div className="flex items-center gap-1.5 text-[13px] font-bold text-slate-800">
+                              <div className="flex items-center justify-center w-4 h-4 rounded bg-emerald-50 text-emerald-500 shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                              </div>
+                              <span className="truncate max-w-[150px]" title={quote.normalizedRoutes?.[0]?.destination}>{quote.normalizedRoutes?.[0]?.destination || "N/A"}</span>
+                            </div>
+                          </div>
+                          {quote.normalizedRoutes?.length > 1 && (
+                            <span className="text-[10px] text-slate-500 font-medium bg-slate-100 px-1.5 py-0.5 rounded-md mt-4">+{quote.normalizedRoutes.length - 1} more</span>
+                          )}
+                        </div>
                         <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">{quote.quoteNumber}</span>
                         {quote.isDirect ? (
                           <div className="mt-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-50 text-green-700 border border-green-200">
@@ -746,7 +716,6 @@ export default function FreightManagementPage() {
                           </div>
                         )}
                       </td>
-                      <td className="px-5 py-3.5 text-center font-semibold text-slate-600">{quote.stats.totalRoutes}</td>
                       <td className="px-5 py-3.5 text-center font-semibold text-slate-600">{quote.stats.totalQuotes}</td>
                       <td className="px-5 py-3.5 font-bold text-emerald-600">
                         {quote.stats.minRate !== null ? formatMoney(quote.stats.minRate, quote.stats.currencyStr) : "—"}
@@ -793,7 +762,7 @@ export default function FreightManagementPage() {
                     {/* Expanded Routes */}
                     {expandedQuotes.has(quote.id) && (
                       <tr>
-                        <td colSpan="9" className="p-0 bg-slate-50/60 border-b border-slate-200">
+                        <td colSpan="8" className="p-0 bg-slate-50/60 border-b border-slate-200">
                           <div className="pl-[60px] pr-5 py-4 space-y-3">
                             {/* Metadata Banner */}
                             <div className="flex flex-wrap gap-x-6 gap-y-2 items-center bg-slate-100/50 p-3 rounded-lg border border-slate-200 mb-2">
@@ -840,14 +809,24 @@ export default function FreightManagementPage() {
                                 <div key={route.routeKey} className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
                                   {/* Route Header */}
                                   <div className="flex flex-wrap items-center justify-between p-3 border-b border-slate-100 bg-slate-50/50">
-                                    <div className="flex items-center gap-3">
-                                      <div className="flex items-center justify-center w-6 h-6 rounded-md bg-indigo-50 text-indigo-500">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    <div className="flex items-center gap-6">
+                                      <div>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 ml-[22px]">From</p>
+                                        <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-800">
+                                          <div className="flex items-center justify-center w-4 h-4 rounded bg-blue-50 text-blue-500 shrink-0">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                          </div>
+                                          <span className="truncate max-w-[150px]" title={route.origin}>{route.origin}</span>
+                                        </div>
                                       </div>
-                                      <div className="flex items-center gap-2 text-[13px] font-bold text-slate-800">
-                                        <span className="truncate max-w-[150px]" title={route.origin}>{route.origin}</span>
-                                        <ArrowRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                                        <span className="truncate max-w-[150px]" title={route.destination}>{route.destination}</span>
+                                      <div>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 ml-[22px]">To</p>
+                                        <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-800">
+                                          <div className="flex items-center justify-center w-4 h-4 rounded bg-emerald-50 text-emerald-500 shrink-0">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                          </div>
+                                          <span className="truncate max-w-[150px]" title={route.destination}>{route.destination}</span>
+                                        </div>
                                       </div>
                                     </div>
                                     

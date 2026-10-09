@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { monthlyStockSummaryApi } from "../services/monthlyStockSummaryApi";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 
 export default function MonthlyStockSectionEditor({
   summaryId,
@@ -41,6 +42,10 @@ export default function MonthlyStockSectionEditor({
 
   // Loading state per section
   const [savingSectionId, setSavingSectionId] = useState(null);
+
+  // Confirm Delete Modals
+  const [deleteSectionTarget, setDeleteSectionTarget] = useState(null);
+  const [deleteColumnTarget, setDeleteColumnTarget] = useState(null); // { secId, col }
 
   useEffect(() => {
     // Map initial sections to local state with rows & cells structure
@@ -106,8 +111,14 @@ export default function MonthlyStockSectionEditor({
     }
   };
 
-  const handleDeleteSection = async (sec) => {
-    if (!window.confirm(`Are you sure you want to delete section "${sec.sectionName}"?`)) return;
+  const handleDeleteSection = (sec) => {
+    setDeleteSectionTarget(sec);
+  };
+
+  const confirmDeleteSection = async () => {
+    if (!deleteSectionTarget) return;
+    const sec = deleteSectionTarget;
+    setDeleteSectionTarget(null);
 
     try {
       await monthlyStockSummaryApi.deleteSection(summaryId, sec.id);
@@ -190,8 +201,14 @@ export default function MonthlyStockSectionEditor({
     }
   };
 
-  const handleDeleteColumn = async (secId, col) => {
-    if (!window.confirm(`Are you sure you want to delete column "${col.columnName}"? All cell values under this column will be removed.`)) return;
+  const handleDeleteColumn = (secId, col) => {
+    setDeleteColumnTarget({ secId, col });
+  };
+
+  const confirmDeleteColumn = async () => {
+    if (!deleteColumnTarget) return;
+    const { secId, col } = deleteColumnTarget;
+    setDeleteColumnTarget(null);
 
     try {
       await monthlyStockSummaryApi.deleteColumn(summaryId, secId, col.id);
@@ -750,6 +767,32 @@ export default function MonthlyStockSectionEditor({
           </div>
         </div>
       )}
+
+      {/* Delete Section Confirm Modal */}
+      <ConfirmModal
+        isOpen={!!deleteSectionTarget}
+        onClose={() => setDeleteSectionTarget(null)}
+        onConfirm={confirmDeleteSection}
+        title="Delete Section"
+        message={deleteSectionTarget ? `Are you sure you want to delete section "${deleteSectionTarget.sectionName}"?` : ""}
+        confirmText="Delete Section"
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+        iconBgClass="bg-red-50"
+        iconColorClass="text-red-500"
+      />
+
+      {/* Delete Column Confirm Modal */}
+      <ConfirmModal
+        isOpen={!!deleteColumnTarget}
+        onClose={() => setDeleteColumnTarget(null)}
+        onConfirm={confirmDeleteColumn}
+        title="Delete Column"
+        message={deleteColumnTarget ? `Are you sure you want to delete column "${deleteColumnTarget.col.columnName}"? All cell values under this column will be removed.` : ""}
+        confirmText="Delete Column"
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+        iconBgClass="bg-red-50"
+        iconColorClass="text-red-500"
+      />
     </div>
   );
 }

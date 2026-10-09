@@ -9,6 +9,7 @@ import axiosClient from "../../../lib/axios";
 import HolidayBasicDetails from "./HolidayBasicDetails";
 import HolidayRecurrenceForm from "./HolidayRecurrenceForm";
 import HolidayScopeForm from "./HolidayScopeForm";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 
 export default function HolidayForm({ holiday, onSave, onCancel }) {
   const currentYear = new Date().getFullYear();
@@ -39,6 +40,8 @@ export default function HolidayForm({ holiday, onSave, onCancel }) {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false);
 
   useEffect(() => {
     // Fetch available companies for the select
@@ -179,10 +182,12 @@ export default function HolidayForm({ holiday, onSave, onCancel }) {
     }
 
     const confirmMsg = `This will generate recurring holidays in the calendar based on your selection. Do you want to proceed?`;
-    if (!window.confirm(confirmMsg)) {
-      setLoading(false);
-      return;
-    }
+    setShowBulkConfirmModal(true);
+  };
+
+  const executeBulkSubmit = async () => {
+    setShowBulkConfirmModal(false);
+    setLoading(true);
 
     try {
       const payload = {
@@ -298,6 +303,21 @@ export default function HolidayForm({ holiday, onSave, onCancel }) {
           {loading ? (mode === "bulk" ? "Generating..." : "Saving...") : "Save Holiday"}
         </button>
       </div>
+
+      <ConfirmModal
+        isOpen={showBulkConfirmModal}
+        onClose={() => {
+          setShowBulkConfirmModal(false);
+          setLoading(false);
+        }}
+        onConfirm={executeBulkSubmit}
+        title="Confirm Bulk Creation"
+        message="This will generate recurring holidays in the calendar based on your selection. Do you want to proceed?"
+        confirmText="Proceed"
+        confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+        iconBgClass="bg-blue-50"
+        iconColorClass="text-blue-600"
+      />
     </form>
   );
 }

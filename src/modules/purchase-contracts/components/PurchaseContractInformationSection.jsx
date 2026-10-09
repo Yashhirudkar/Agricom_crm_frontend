@@ -1,6 +1,7 @@
 "use client";
-import React, { useState } from "react";
-import { FileText, ChevronDown, Plus, Minus } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { FileText, ChevronDown, Plus, Minus, CalendarDays } from "lucide-react";
+import { formatPurchaseDate, parsePurchaseDate } from "../utils/purchaseDate";
 
 export default function PurchaseContractInformationSection({
   contract,
@@ -11,6 +12,7 @@ export default function PurchaseContractInformationSection({
   isView = false,
 }) {
   const [showSpec, setShowSpec] = useState(!!(form?.specificationNo || form?.specificationDate));
+  const purchaseDatePickerRef = useRef(null);
 
   const inp = "w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white transition-all disabled:opacity-75 disabled:bg-gray-100";
   const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
@@ -23,6 +25,7 @@ export default function PurchaseContractInformationSection({
 
   const buyersOptions = masters?.buyers || masters?.partners || [];
   const sellersOptions = masters?.purchaseSuppliers || [];
+  const purchaseDateDisplay = formatPurchaseDate(form.purchaseDate);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
@@ -172,6 +175,68 @@ export default function PurchaseContractInformationSection({
                 className={`${inp} font-mono`}
                 placeholder="e.g. SUP-88219"
               />
+            )}
+          </div>
+
+          <div>
+            <label className={lbl}>Purchase Date</label>
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{purchaseDateDisplay || "\u00A0"}</div>
+            ) : (
+              <div className="relative">
+                <input
+                  type="text"
+                  value={form.purchaseDateInput ?? purchaseDateDisplay}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const parsedDate = parsePurchaseDate(value);
+                    setForm((f) => ({
+                      ...f,
+                      purchaseDateInput: value,
+                      purchaseDate: value === "" ? "" : (parsedDate || f.purchaseDate),
+                    }));
+                  }}
+                  onBlur={() => {
+                    if (form.purchaseDate && parsePurchaseDate(form.purchaseDateInput) === form.purchaseDate) {
+                      setForm((f) => ({
+                        ...f,
+                        purchaseDateInput: formatPurchaseDate(f.purchaseDate),
+                      }));
+                    }
+                  }}
+                  maxLength={11}
+                  placeholder="DD-MMM-YYYY"
+                  className={`${inp} font-medium pr-9`}
+                  aria-label="Purchase Date (DD-MMM-YYYY)"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (purchaseDatePickerRef.current?.showPicker) {
+                      purchaseDatePickerRef.current.showPicker();
+                    } else {
+                      purchaseDatePickerRef.current?.click();
+                    }
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#007aff]"
+                  aria-label="Choose Purchase Date"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                </button>
+                <input
+                  ref={purchaseDatePickerRef}
+                  type="date"
+                  value={form.purchaseDate || ""}
+                  onChange={(e) => setForm((f) => ({
+                    ...f,
+                    purchaseDate: e.target.value,
+                    purchaseDateInput: formatPurchaseDate(e.target.value),
+                  }))}
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                />
+              </div>
             )}
           </div>
 

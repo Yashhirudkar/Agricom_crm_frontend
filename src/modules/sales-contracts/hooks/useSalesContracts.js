@@ -55,7 +55,7 @@ export function useSalesContracts() {
   };
 }
 
-export function useSalesMasters() {
+export function useSalesMasters({ includeBrokers = true, includePartners = true } = {}) {
   const [masters, setMasters] = useState({
     currencies: [], shipmentTypes: [], paymentTerms: [],
     tradeDocuments: [], partners: [], products: [], countries: [],
@@ -97,12 +97,17 @@ export function useSalesMasters() {
         const supplierRole = roles.find(r => r.name?.toLowerCase() === "supplier");
         const brokerRole = roles.find(r => r.name?.toLowerCase() === "broker" || r.name?.toLowerCase().includes("broker") || r.name?.toLowerCase() === "agent");
 
+        const domesticBrokerRole = roles.find((r) => r.name?.toLowerCase() === "domestic broker");
+        const internationalBrokerRole = roles.find((r) => r.name?.toLowerCase() === "international broker");
+
         const [buyersRes, sellersRes, suppliersRes, brokersRes, partnersRes, purchaseSuppliersRes] = await Promise.all([
           buyerRole ? mastersApi.getPartnersOptions({ partnerRoleId: buyerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
           sellerRole ? mastersApi.getPartnersOptions({ partnerRoleId: sellerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
           supplierRole ? mastersApi.getPartnersOptions({ partnerRoleId: supplierRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
-          brokerRole ? mastersApi.getPartnersOptions({ partnerRoleId: brokerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
-          mastersApi.getPartnersOptions({ limit: 1000, isActive: true }),
+          includeBrokers && brokerRole ? mastersApi.getPartnersOptions({ partnerRoleId: brokerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
+          includePartners
+            ? mastersApi.getPartnersOptions({ limit: 1000, isActive: true })
+            : Promise.resolve({ data: [] }),
           mastersApi.getPartnersOptions({ roleName: "domestic supplier/seller,international supplier/seller", limit: 1000, isActive: true }),
         ]);
 
@@ -119,6 +124,8 @@ export function useSalesMasters() {
           buyerRoleId: buyerRole?.id,
           sellerRoleId: sellerRole?.id,
           brokerRoleId: brokerRole?.id,
+          domesticBrokerRoleId: domesticBrokerRole?.id,
+          internationalBrokerRoleId: internationalBrokerRole?.id,
           buyers: extractData(buyersRes),
           sellers: extractData(sellersRes),
           suppliers: extractData(suppliersRes),
@@ -140,7 +147,7 @@ export function useSalesMasters() {
       }
     };
     fetchAll();
-  }, []);
+  }, [includeBrokers, includePartners]);
 
   return { masters, loading };
 }

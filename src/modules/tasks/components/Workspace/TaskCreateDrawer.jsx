@@ -14,6 +14,7 @@ import { useTaskStore } from '../../store/taskStore';
 import { useTaskDetailQuery, useSubtasksQuery } from '../../queries/tasks.query';
 import { useUpdateTaskMutation } from '../../mutations/tasks.mutation';
 import axiosClient from "../../../../lib/axios";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 
 const generateUUID = () => {
   if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
@@ -365,6 +366,7 @@ export default function TaskCreateDrawer() {
   const queryClient = useQueryClient();
   const { isCreateTaskDrawerOpen, closeCreateTaskDrawer, createDrawerMode, createDrawerTaskId } = useTaskStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [subtaskToDelete, setSubtaskToDelete] = useState(null);
 
   const isEditMode = createDrawerMode === 'edit' && !!createDrawerTaskId;
 
@@ -733,6 +735,23 @@ export default function TaskCreateDrawer() {
     }
   };
 
+  const confirmDeleteSubtask = async () => {
+    if (!subtaskToDelete) return;
+    const { idx, subtask } = subtaskToDelete;
+    setSubtaskToDelete(null);
+
+    if (subtask?.id && isEditMode && createDrawerTaskId) {
+      try {
+        await axiosClient.delete(`/v1/tasks/${createDrawerTaskId}/subtasks/${subtask.id}`);
+        toast.success('Subtask deleted');
+      } catch (e) {
+        toast.error(e?.response?.data?.message || 'Failed to delete subtask');
+        return; 
+      }
+    }
+    removeSubtask(idx);
+  };
+
   const footer = (
     <div className="flex justify-end space-x-3 w-full">
       <button
@@ -1037,20 +1056,13 @@ export default function TaskCreateDrawer() {
                   control={control}
                   register={register}
                   remove={removeSubtask}
-                  onDelete={async (idx) => {
+                  onDelete={(idx) => {
                     const subtask = getValues('subtasks')[idx];
-                    // If it's an existing saved subtask (has a real backend id)
                     if (subtask?.id && isEditMode && createDrawerTaskId) {
-                      if (!window.confirm(`Delete subtask "${subtask.title || `Subtask ${idx + 1}`}"? This cannot be undone.`)) return;
-                      try {
-                        await axiosClient.delete(`/v1/tasks/${createDrawerTaskId}/subtasks/${subtask.id}`);
-                        toast.success('Subtask deleted');
-                      } catch (e) {
-                        toast.error(e?.response?.data?.message || 'Failed to delete subtask');
-                        return; // Don't remove from form if API failed
-                      }
+                      setSubtaskToDelete({ idx, subtask });
+                    } else {
+                      removeSubtask(idx);
                     }
-                    removeSubtask(idx);
                   }}
                   employeeOptions={employeeOptions}
                   statusOptions={statusOptions}
@@ -1084,6 +1096,18 @@ export default function TaskCreateDrawer() {
 
         </form>
       )}
+
+      <ConfirmModal
+        isOpen={!!subtaskToDelete}
+        onClose={() => setSubtaskToDelete(null)}
+        onConfirm={confirmDeleteSubtask}
+        title="Delete Subtask"
+        message={subtaskToDelete ? `Are you sure you want to delete subtask "${subtaskToDelete.subtask?.title || `Subtask ${subtaskToDelete.idx + 1}`}"? This cannot be undone.` : ""}
+        confirmText="Delete"
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+        iconBgClass="bg-red-50"
+        iconColorClass="text-red-500"
+      />
     </Drawer>
   );
 }

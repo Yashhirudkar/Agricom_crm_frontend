@@ -4,12 +4,14 @@ import { UploadCloud, FileText, CheckCircle2, Trash2, RefreshCw, Download, Eye, 
 import { salesContractApi } from "../services/salesContractApi";
 import axiosClient from "@/lib/axios";
 import { toast } from "sonner";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 
 export default function DocumentUploadSection({ contractId, isView, selectedDocuments = [], tradeDocumentsMaster = [], onUploadedChange }) {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState({});
   const [error, setError] = useState(null);
+  const [documentToDelete, setDocumentToDelete] = useState(null);
 
   // Create hidden file inputs for each document dynamically using refs
   const fileInputRefs = useRef({});
@@ -92,8 +94,14 @@ export default function DocumentUploadSection({ contractId, isView, selectedDocu
     }
   };
 
-  const handleDelete = async (tradeDocumentId) => {
-    if (!window.confirm("Are you sure you want to delete this file?")) return;
+  const handleDelete = (tradeDocumentId) => {
+    setDocumentToDelete(tradeDocumentId);
+  };
+
+  const confirmDelete = async () => {
+    if (!documentToDelete) return;
+    const tradeDocumentId = documentToDelete;
+    setDocumentToDelete(null);
     try {
       await salesContractApi.deleteDocument(contractId, tradeDocumentId);
       toast.success("Document deleted successfully");
@@ -308,6 +316,18 @@ export default function DocumentUploadSection({ contractId, isView, selectedDocu
           </table>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={!!documentToDelete}
+        onClose={() => setDocumentToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Document"
+        message="Are you sure you want to delete this file?"
+        confirmText="Delete"
+        confirmButtonClass="bg-red-500 hover:bg-red-600"
+        iconBgClass="bg-red-50"
+        iconColorClass="text-red-500"
+      />
     </div>
   );
 }

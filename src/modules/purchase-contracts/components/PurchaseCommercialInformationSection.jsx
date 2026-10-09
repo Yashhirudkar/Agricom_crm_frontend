@@ -1,6 +1,7 @@
 "use client";
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { DollarSign, ChevronDown, CreditCard, CalendarDays } from "lucide-react";
+import { mastersApi } from "@/modules/sales-contracts/services/salesContractApi";
 
 export default function PurchaseCommercialInformationSection({
   contract,
@@ -16,13 +17,48 @@ export default function PurchaseCommercialInformationSection({
 
   const paymentDueDateRef = useRef(null);
   const isManual = contract?.purchaseType === "MTT" || !contract?.salesContractId;
+  const contractType = isManual ? "MTT" : (contract?.salesContract?.contractType || "Import");
+  const brokerRoleId = contractType.toLowerCase() === "export"
+    ? masters?.domesticBrokerRoleId
+    : masters?.internationalBrokerRoleId;
+  const [brokerOptionsState, setBrokerOptionsState] = useState({
+    roleId: null,
+    options: [],
+  });
+  const brokersMaster = String(brokerOptionsState.roleId) === String(brokerRoleId)
+    ? brokerOptionsState.options
+    : [];
   const productsMaster = masters?.products || [];
   const paymentTermsMaster = masters?.paymentTerms || [];
-  const brokersMaster = masters?.brokers?.length 
-    ? masters.brokers 
-    : (masters?.partners || []).filter(
-        (p) => p.partnerRole?.name?.toUpperCase() === "BROKER" || p.partnerRole?.code?.toUpperCase() === "BROKER" || p.role === 'BROKER'
-      );
+  useEffect(() => {
+    if (!brokerRoleId) return undefined;
+
+    let active = true;
+    mastersApi.getPartnersOptions({ partnerRoleId: brokerRoleId, limit: 50, isActive: true })
+      .then((response) => {
+        const options = Array.isArray(response.data)
+          ? response.data
+          : (response.data?.data || []);
+        if (active) setBrokerOptionsState({ roleId: brokerRoleId, options });
+      })
+      .catch((error) => {
+        console.error("Failed to load brokers for purchase contract", error);
+        if (active) setBrokerOptionsState({ roleId: brokerRoleId, options: [] });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [brokerRoleId]);
+
+  const selectedBrokerRoleId = form.brokerPartnerRoleId
+    || contract?.broker?.partnerRoleId
+    || contract?.salesContract?.broker?.partnerRoleId;
+  const selectedBrokerId = form.brokerId
+    && selectedBrokerRoleId
+    && String(selectedBrokerRoleId) !== String(brokerRoleId)
+    ? ""
+    : (form.brokerId || "");
 
   const existingProducts = summary?.productSummary || contract?.items || contract?.salesContract?.items || [];
   const defaultProductName = existingProducts.map((p) => p.product?.name || p.productName || "Commodity").join(", ") || "";
@@ -593,7 +629,7 @@ export default function PurchaseCommercialInformationSection({
             ) : (
               <div className="relative">
                 <select
-                  value={form.brokerId || ""}
+                  value={selectedBrokerId}
                   onChange={(e) => {
                     const brId = Number(e.target.value);
                     const brObj = brokersMaster.find((b) => b.id === brId);
@@ -601,6 +637,7 @@ export default function PurchaseCommercialInformationSection({
                       ...f,
                       brokerId: brId || null,
                       brokerName: brObj?.entityName || brObj?.name || "",
+                      brokerPartnerRoleId: brId ? (brObj?.partnerRoleId || brokerRoleId) : null,
                     }));
                   }}
                   className={`${inp} appearance-none pr-8 font-medium text-gray-900`}
