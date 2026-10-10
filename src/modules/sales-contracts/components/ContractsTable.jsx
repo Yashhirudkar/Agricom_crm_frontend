@@ -35,7 +35,7 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Contract No.", "Date", "Buyer", "Product", "Total Qty (MT)", "Documents", "Purchase Contract", "Status", "Actions"].map(h => (
+            {["Contract No.", "Date", "Buyer", "Product", "Total Qty (MT)", "Documents", "Purchase Contract", "Contract Type", "Status", "Actions"].map(h => (
               <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">{h}</th>
             ))}
           </tr>
@@ -82,6 +82,9 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                     No
                   </span>
                 )}
+              </td>
+              <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                {c.contractType || "—"}
               </td>
               <td className="px-4 py-3">
                 <ContractStatusBadge status={c.status} />

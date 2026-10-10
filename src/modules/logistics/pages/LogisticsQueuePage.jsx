@@ -1,12 +1,12 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Truck, Search, Trash2, AlertCircle, Loader2 } from "lucide-react";
+import { Truck, Search } from "lucide-react";
 import { toast } from "sonner";
 import { logisticsApi } from "../services/logisticsApi";
-import { enquiriesApi } from "../../enquiries/services/enquiriesApi";
 import LogisticsQueueTable from "../components/LogisticsQueueTable";
 import TransportDrawer from "../components/TransportDrawer";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 import { useRouter } from "next/navigation";
 import Pagination from "@/components/common/Pagination";
 import { selectActiveCompany } from "@/store/slices/companyContextSlice";
@@ -19,7 +19,7 @@ export default function LogisticsQueuePage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [mode, setMode] = useState("All"); // All, Domestic, Export, Merchant Export
-  const [statusFilter, setStatusFilter] = useState("Active"); // Active, Closed
+  const [statusFilter, setStatusFilter] = useState("Active"); // Active, Closed, Hidden
   const [page, setPage] = useState(1);
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
@@ -39,10 +39,8 @@ export default function LogisticsQueuePage() {
   // Selected Enquiry for Transport Drawer
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  // Delete Confirm Modal State
-  const [deleteTargetEnquiry, setDeleteTargetEnquiry] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [hideTargetEnquiry, setHideTargetEnquiry] = useState(null);
+  const [hideLoading, setHideLoading] = useState(false);
 
   // Debounce search — wait 400ms after user stops typing
   useEffect(() => {
@@ -70,7 +68,8 @@ export default function LogisticsQueuePage() {
           limit: 10,
           ...(debouncedSearch && { search: debouncedSearch }),
           ...(mode !== "All" && { mode }),
-          ...(statusFilter && { status: statusFilter }),
+          ...(statusFilter !== "Hidden" && { status: statusFilter }),
+          ...(statusFilter === "Hidden" && { hiddenOnly: true }),
         };
         const res = await logisticsApi.getAll(params);
         if (!cancelled) {
@@ -139,23 +138,40 @@ export default function LogisticsQueuePage() {
     setRefreshKey((k) => k + 1); // Trigger refetch on current page
   };
 
-  const handleDeleteEnquiry = (enquiry) => {
-    setDeleteTargetEnquiry(enquiry);
+  const handleToggleHidden = async (enquiry) => {
+    if (statusFilter !== "Hidden") {
+      setHideTargetEnquiry(enquiry);
+      return;
+    }
+
+    try {
+      await logisticsApi.unhideEnquiry(enquiry.id);
+      toast.success(`Enquiry ${enquiry.enquiryNo} restored to your Transport queue.`);
+      setRefreshKey((key) => key + 1);
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to restore enquiry.",
+      );
+      console.error("Failed to update personal Transport visibility", error);
+    }
   };
 
-  const confirmDeleteEnquiry = async () => {
-    if (!deleteTargetEnquiry) return;
-    setDeleteLoading(true);
+  const confirmHideEnquiry = async () => {
+    if (!hideTargetEnquiry) return;
+    setHideLoading(true);
     try {
-      await enquiriesApi.remove(deleteTargetEnquiry.id, 'Deleted from logistics queue');
-      toast.success(`Enquiry ${deleteTargetEnquiry.enquiryNo} deleted successfully.`);
-      setDeleteTargetEnquiry(null);
-      setRefreshKey(k => k + 1);
-    } catch (err) {
-      toast.error("Failed to delete enquiry.");
-      console.error(err);
+      await logisticsApi.hideEnquiry(hideTargetEnquiry.id);
+      toast.success(
+        `Enquiry ${hideTargetEnquiry.enquiryNo} hidden from your Transport queue.`,
+      );
+      setHideTargetEnquiry(null);
+      setRefreshKey((key) => key + 1);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to hide enquiry.");
+      console.error("Failed to hide enquiry from personal Transport queue", error);
     } finally {
-      setDeleteLoading(false);
+      setHideLoading(false);
     }
   };
 
@@ -198,6 +214,7 @@ export default function LogisticsQueuePage() {
             {[
               { id: "Active", label: "Active Queue" },
               { id: "Closed", label: "Closed" },
+              { id: "Hidden", label: "Hidden" },
             ].map((st) => (
               <button
                 key={st.id}
@@ -205,7 +222,9 @@ export default function LogisticsQueuePage() {
                 className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${statusFilter === st.id
                     ? st.id === "Closed"
                       ? "bg-slate-800 text-white shadow-xs"
-                      : "bg-white text-gray-900 shadow-xs border border-gray-200/50"
+                      : st.id === "Hidden"
+                        ? "bg-amber-600 text-white shadow-xs"
+                        : "bg-white text-gray-900 shadow-xs border border-gray-200/50"
                     : "text-gray-400 hover:text-gray-600"
                   }`}
               >
@@ -235,7 +254,8 @@ export default function LogisticsQueuePage() {
           mode={mode}
           loading={loading}
           onManage={handleOpenDrawer}
-          onDelete={handleDeleteEnquiry}
+          onToggleHidden={handleToggleHidden}
+          hiddenOnly={statusFilter === "Hidden"}
           highlightedRowId={highlightedRowId}
         />
 
@@ -253,45 +273,17 @@ export default function LogisticsQueuePage() {
         enquiry={selectedEnquiry}
       />
 
-      {/* ── Delete Confirm Modal ─────────────────────────────────────────────── */}
-      {deleteTargetEnquiry && (
-        <div className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-2xl bg-red-50 text-red-600">
-                <Trash2 className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-900">Delete Enquiry</h3>
-                <p className="text-xs text-gray-500 mt-0.5">This action cannot be undone.</p>
-              </div>
-            </div>
-            <div className="bg-red-50 border border-red-100 rounded-xl p-3 mb-5 flex gap-2">
-              <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-red-800">
-                You are about to permanently delete enquiry{" "}
-                <strong>{deleteTargetEnquiry.enquiryNo}</strong>.
-              </p>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteTargetEnquiry(null)}
-                className="px-4 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteEnquiry}
-                disabled={deleteLoading}
-                className="px-4 py-2 text-xs font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2"
-              >
-                {deleteLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                {deleteLoading ? "Deleting..." : "Confirm Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={hideTargetEnquiry !== null}
+        onClose={() => setHideTargetEnquiry(null)}
+        onConfirm={confirmHideEnquiry}
+        isLoading={hideLoading}
+        title="Hide from Transport?"
+        message={`Hide enquiry "${hideTargetEnquiry?.enquiryNo}" from your Transport queue? It will remain available in Enquiries and can be restored from the Hidden tab.`}
+        confirmLabel="Hide from Transport"
+        confirmVariant="primary"
+      />
+
     </div>
   );
 }

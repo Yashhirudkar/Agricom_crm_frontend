@@ -3,7 +3,20 @@
 import { AlertTriangle } from "lucide-react";
 import Modal from "./Modal";
 
-export default function ConfirmModal({ isOpen, onClose, onConfirm, title, message, isLoading }) {
+export default function ConfirmModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  isLoading,
+  confirmLabel = "Delete",
+  confirmVariant = "danger",
+}) {
+  const confirmButtonClass = confirmVariant === "primary"
+    ? "bg-[#007aff] hover:bg-blue-600"
+    : "bg-red-500 hover:bg-red-600";
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title || "Confirm Action"}>
       <div className="flex gap-4">
@@ -27,10 +40,10 @@ export default function ConfirmModal({ isOpen, onClose, onConfirm, title, messag
         <button
           onClick={onConfirm}
           disabled={isLoading}
-          className="px-4 py-2 text-sm font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors disabled:opacity-60 flex items-center gap-2 cursor-pointer"
+          className={`px-4 py-2 text-sm font-semibold text-white ${confirmButtonClass} rounded-xl transition-colors disabled:opacity-60 flex items-center gap-2 cursor-pointer`}
         >
           {isLoading && <span className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-          Delete
+          {confirmLabel}
         </button>
       </div>
     </Modal>

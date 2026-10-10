@@ -1,16 +1,13 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useDispatch, useSelector } from "react-redux";
-import { selectUserType } from "@/store/slices/authSlice";
+import { useSelector } from "react-redux";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import { ChevronLeft, MessageSquare, Check, AlertCircle } from "lucide-react";
-import { useEnquiries } from "@/modules/enquiries/hooks/useEnquiries";
-import { enquiriesApi } from "@/modules/enquiries/services/enquiriesApi";
+import { useEnquiries, useEnquiriesMasters } from "@/modules/enquiries/hooks/useEnquiries";
 import EnquiriesTable from "@/modules/enquiries/components/EnquiriesTable";
 import EnquiriesFilter from "@/modules/enquiries/components/EnquiriesFilter";
 import Pagination from "@/components/common/Pagination";
-import ConfirmModal from "@/components/modals/ConfirmModal";
 import PartnerFollowUpDrawer from "@/components/masters/partners/PartnerFollowUpDrawer";
 import EnquiryDrawer from "@/modules/enquiries/components/EnquiryDrawer";
 import TransportDrawer from "@/modules/logistics/components/TransportDrawer";
@@ -18,16 +15,13 @@ import LoadingPointsDrawer from "@/modules/enquiries/components/LoadingPointsDra
 
 export default function CompletedEnquiriesListPage() {
   const router = useRouter();
-  const dispatch = useDispatch();
-
-  const userType = useSelector(selectUserType);
   const activeCompanyId = useSelector(selectActiveCompanyId) || "";
 
   const [search, setSearch] = useState("");
-  const [completedTab, setCompletedTab] = useState("CONFIRMED,COMPLETED");
+  const [completedTab, setCompletedTab] = useState("CONFIRMED");
+  const [createdBy, setCreatedBy] = useState("");
+  const [productId, setProductId] = useState("");
   const [toast, setToast] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null);
   const [followUpPartner, setFollowUpPartner] = useState(null);
 
   // Form Drawer states
@@ -41,25 +35,20 @@ export default function CompletedEnquiriesListPage() {
   // Loading Points Drawer state
   const [loadingPointsEnquiry, setLoadingPointsEnquiry] = useState(null);
 
-  const completedQuery = useEnquiries(activeCompanyId, completedTab, search);
+  const completedQuery = useEnquiries(
+    activeCompanyId,
+    completedTab,
+    search,
+    false,
+    false,
+    createdBy,
+    productId,
+  );
+  const { masters } = useEnquiriesMasters();
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await enquiriesApi.remove(deleteTarget.id);
-      showToast("Enquiry deleted successfully");
-      setDeleteTarget(null);
-      completedQuery.fetchEnquiries();
-    } catch (e) {
-      showToast("Failed to delete enquiry", "error");
-    } finally {
-      setIsDeleting(false);
-    }
   };
 
   const handleFollowUp = (e) => {
@@ -113,6 +102,11 @@ export default function CompletedEnquiriesListPage() {
         <EnquiriesFilter
           search={search}
           setSearch={setSearch}
+          createdBy={createdBy}
+          setCreatedBy={setCreatedBy}
+          productId={productId}
+          setProductId={setProductId}
+          masters={masters}
           setPage={completedQuery.setPage}
           total={completedQuery.total}
         />
@@ -120,9 +114,9 @@ export default function CompletedEnquiriesListPage() {
         {/* Tabs header */}
         <div className="border-b border-gray-100 px-5 flex items-center gap-6">
           <button
-            onClick={() => setCompletedTab("CONFIRMED,COMPLETED")}
+            onClick={() => setCompletedTab("CONFIRMED")}
             className={`py-3.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors border-b-2 -mb-[1px] cursor-pointer ${
-              completedTab === "CONFIRMED,COMPLETED"
+              completedTab === "CONFIRMED"
                 ? "border-[#007aff] text-[#007aff]"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
@@ -130,9 +124,9 @@ export default function CompletedEnquiriesListPage() {
             Confirmed
           </button>
           <button
-            onClick={() => setCompletedTab("CLOSED,CANCELLED")}
+            onClick={() => setCompletedTab("CLOSED")}
             className={`py-3.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors border-b-2 -mb-[1px] cursor-pointer ${
-              completedTab === "CLOSED,CANCELLED"
+              completedTab === "CLOSED"
                 ? "border-[#007aff] text-[#007aff]"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
@@ -146,7 +140,6 @@ export default function CompletedEnquiriesListPage() {
           enquiries={completedQuery.enquiries}
           loading={completedQuery.loading}
           onFollowUp={handleFollowUp}
-          onDelete={(e) => setDeleteTarget(e)}
           onExecute={(e) => router.push(`/sales-contracts/new?enquiryId=${e.id}`)}
           onView={(e) => {
             setEditEnquiry(e);
@@ -168,16 +161,6 @@ export default function CompletedEnquiriesListPage() {
           onPageChange={completedQuery.setPage}
         />
       </div>
-
-      {/* Confirm Delete Modal */}
-      <ConfirmModal
-        isOpen={deleteTarget !== null}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        isLoading={isDeleting}
-        title="Delete Enquiry"
-        message={`Are you sure you want to delete enquiry "${deleteTarget?.enquiryNo}"?`}
-      />
 
       {/* Follow Up Drawer */}
       <PartnerFollowUpDrawer

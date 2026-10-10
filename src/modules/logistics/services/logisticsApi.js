@@ -2,6 +2,8 @@ import axiosClient from "@/lib/axios";
 
 export const logisticsApi = {
   getAll: (params) => axiosClient.get("/logistics", { params }),
+  hideEnquiry: (enquiryId) => axiosClient.post(`/logistics/enquiry/${enquiryId}/hide`),
+  unhideEnquiry: (enquiryId) => axiosClient.delete(`/logistics/enquiry/${enquiryId}/hide`),
   getAllFreightQuotes: (params) => axiosClient.get("/logistics/quotes", { params }),
   getDetails: (enquiryId) => axiosClient.get(`/logistics/enquiry/${enquiryId}`),
   addFreightQuote: (id, data) => axiosClient.post(`/logistics/${id}/quotes`, data),

@@ -1,5 +1,5 @@
 import React from "react";
-import { Truck, Ship, Train, ArrowRight, Trash2 } from "lucide-react";
+import { Truck, Ship, Train, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 const LOGISTICS_STATUS_CLASSES = {
   "Pending": "bg-gray-50 text-gray-600 border-gray-100",
@@ -13,7 +13,15 @@ const LOGISTICS_STATUS_CLASSES = {
   "Closed": "bg-gray-100 text-gray-700 border-gray-300",
 };
 
-export default function LogisticsQueueTable({ data, loading, onManage, onDelete, mode = "All", highlightedRowId }) {
+export default function LogisticsQueueTable({
+  data,
+  loading,
+  onManage,
+  onToggleHidden,
+  hiddenOnly = false,
+  mode = "All",
+  highlightedRowId,
+}) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -182,15 +190,18 @@ export default function LogisticsQueueTable({ data, loading, onManage, onDelete,
                     >
                       Transport <ArrowRight className="h-3 w-3 text-gray-400" />
                     </button>
-                    {onDelete && (
-                      <button
-                        onClick={() => onDelete(e)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-red-100"
-                        title="Delete Enquiry"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => onToggleHidden?.(e)}
+                      className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                      title={hiddenOnly ? "Show in Transport" : "Hide from Transport"}
+                      aria-label={hiddenOnly ? "Show in Transport" : "Hide from Transport"}
+                    >
+                      {hiddenOnly ? (
+                        <Eye className="h-3.5 w-3.5" />
+                      ) : (
+                        <EyeOff className="h-3.5 w-3.5" />
+                      )}
+                    </button>
                   </div>
                 </td>
               </tr>

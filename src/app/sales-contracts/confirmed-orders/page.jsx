@@ -4,12 +4,11 @@ import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import { ChevronLeft, FileCheck, Check, AlertCircle } from "lucide-react";
-import { useEnquiries } from "@/modules/enquiries/hooks/useEnquiries";
-import { enquiriesApi } from "@/modules/enquiries/services/enquiriesApi";
+import { useEnquiries, useEnquiriesMasters } from "@/modules/enquiries/hooks/useEnquiries";
 import EnquiriesTable from "@/modules/enquiries/components/EnquiriesTable";
 import EnquiriesFilter from "@/modules/enquiries/components/EnquiriesFilter";
 import Pagination from "@/components/common/Pagination";
-import ConfirmModal from "@/components/modals/ConfirmModal";
+import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 import EnquiryDrawer from "@/modules/enquiries/components/EnquiryDrawer";
 import LoadingPointsDrawer from "@/modules/enquiries/components/LoadingPointsDrawer";
 import TransportDrawer from "@/modules/logistics/components/TransportDrawer";
@@ -20,9 +19,9 @@ export default function ConfirmedOrdersPage() {
 
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null);
   const [activeTab, setActiveTab] = useState("SALES"); // "SALES" | "PURCHASE"
+  const [createdBy, setCreatedBy] = useState("");
+  const [productId, setProductId] = useState("");
 
   // Form Drawer states
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -33,33 +32,52 @@ export default function ConfirmedOrdersPage() {
   const [transportEnquiry, setTransportEnquiry] = useState(null);
   const [loadingPointsEnquiry, setLoadingPointsEnquiry] = useState(null);
 
-  // For SALES tab: show enquiries without a Sales Contract
-  // For PURCHASE tab: show enquiries without a Purchase Contract (but they can have a Sales Contract)
+  // The Purchase Contract tab requires an existing Sales Contract and no linked Purchase Contract.
   const isSalesTab = activeTab === "SALES";
   const confirmedQuery = useEnquiries(
     activeCompanyId,
     "CONFIRMED",
     search,
     isSalesTab, // withoutSalesContract
-    !isSalesTab // withoutPurchaseContract
+    !isSalesTab, // withoutPurchaseContract
+    createdBy,
+    productId,
   );
+  const { masters } = useEnquiriesMasters();
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleDelete = async () => {
-    setIsDeleting(true);
+  const handleExecute = async (enquiry) => {
+    if (isSalesTab) {
+      router.push(`/sales-contracts/new?enquiryId=${enquiry.id}`);
+      return;
+    }
+
+    if (!enquiry.salesContractId) {
+      showToast("This enquiry has no linked Sales Contract for Purchase Contract creation.", "error");
+      return;
+    }
+
     try {
-      await enquiriesApi.remove(deleteTarget.id);
-      showToast("Order deleted successfully");
-      setDeleteTarget(null);
-      confirmedQuery.fetchEnquiries();
-    } catch (e) {
-      showToast("Failed to delete order", "error");
-    } finally {
-      setIsDeleting(false);
+      const response = await purchaseContractApi.create({
+        salesContractId: enquiry.salesContractId,
+      });
+      const purchaseContract = response.data?.data || response.data;
+      await confirmedQuery.fetchEnquiries();
+      if (!purchaseContract?.id) {
+        showToast("Purchase Contract was created but its workspace could not be opened.", "error");
+        return;
+      }
+      router.push(`/sales/purchase-contracts/${purchaseContract.id}`);
+    } catch (error) {
+      showToast(
+        error?.response?.data?.message || "Failed to create Purchase Contract",
+        "error",
+      );
+      await confirmedQuery.fetchEnquiries();
     }
   };
 
@@ -128,6 +146,11 @@ export default function ConfirmedOrdersPage() {
         <EnquiriesFilter
           search={search}
           setSearch={setSearch}
+          createdBy={createdBy}
+          setCreatedBy={setCreatedBy}
+          productId={productId}
+          setProductId={setProductId}
+          masters={masters}
           setPage={confirmedQuery.setPage}
           total={confirmedQuery.total}
         />
@@ -136,11 +159,10 @@ export default function ConfirmedOrdersPage() {
           isOrderMode={true}
           enquiries={confirmedQuery.enquiries}
           loading={confirmedQuery.loading}
-          onFollowUp={(e) => { }}
+          onFollowUp={() => { }}
           onOpenTransport={(e) => setTransportEnquiry(e)}
           onOpenLoadingPoints={(e) => setLoadingPointsEnquiry(e)}
-          onDelete={(e) => setDeleteTarget(e)}
-          onExecute={(e) => router.push(`/sales-contracts/new?enquiryId=${e.id}`)}
+          onExecute={handleExecute}
           onView={(e) => {
             setEditEnquiry(e);
             setIsViewMode(true);
@@ -159,16 +181,6 @@ export default function ConfirmedOrdersPage() {
           onPageChange={confirmedQuery.setPage}
         />
       </div>
-
-      {/* Confirm Delete Modal */}
-      <ConfirmModal
-        isOpen={deleteTarget !== null}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        isLoading={isDeleting}
-        title="Delete Order"
-        message={`Are you sure you want to delete order "${deleteTarget?.enquiryNo}"?`}
-      />
 
       {/* Enquiry View/Edit Drawer */}
       <EnquiryDrawer
