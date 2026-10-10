@@ -72,6 +72,7 @@ function getEnquiryDestination(e) {
 export default function LoadingPointsDrawer({ isOpen, onClose, enquiry, onSaveSuccess }) {
   const [destinations, setDestinations] = useState([""]);
   const [points, setPoints] = useState([""]);
+  const [freightRequired, setFreightRequired] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
@@ -84,6 +85,7 @@ export default function LoadingPointsDrawer({ isOpen, onClose, enquiry, onSaveSu
   const fetchAll = useCallback(async () => {
     if (!enquiry?.id) return;
     setLoading(true);
+    setFreightRequired(enquiry.freightRequired || false);
     try {
       const [dests, pts] = await Promise.all([
         enquiriesApi.getDestinations(enquiry.id),
@@ -113,6 +115,7 @@ export default function LoadingPointsDrawer({ isOpen, onClose, enquiry, onSaveSu
     } else {
       setDestinations([""]);
       setPoints([""]);
+      setFreightRequired(false);
       setToast(null);
     }
   }, [isOpen, fetchAll]);
@@ -141,7 +144,7 @@ export default function LoadingPointsDrawer({ isOpen, onClose, enquiry, onSaveSu
     try {
       await Promise.all([
         enquiriesApi.updateDestinations(enquiry.id, destinations),
-        enquiriesApi.updateLoadingPoints(enquiry.id, points),
+        enquiriesApi.updateLoadingPoints(enquiry.id, { loadingPoints: points, freightRequired }),
       ]);
       showToast("Saved successfully");
       await fetchAll();
@@ -207,6 +210,25 @@ export default function LoadingPointsDrawer({ isOpen, onClose, enquiry, onSaveSu
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {/* Freight Required Checkbox */}
+          <div className="flex items-center gap-3 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
+            <div className="flex items-center h-5">
+              <input
+                id="freightRequired"
+                type="checkbox"
+                checked={freightRequired}
+                onChange={(e) => setFreightRequired(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+              />
+            </div>
+            <label htmlFor="freightRequired" className="flex flex-col cursor-pointer">
+              <span className="text-sm font-bold text-gray-900">Freight Required</span>
+              <span className="text-xs text-gray-500 font-medium mt-0.5">Enable transport management for this enquiry</span>
+            </label>
+          </div>
+
+          <div className="border-t border-gray-100" />
+
           {/* Destinations */}
           <RepeatableList
             label="Destinations"
