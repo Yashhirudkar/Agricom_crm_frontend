@@ -3,7 +3,6 @@ import { useRouter } from "next/navigation";
 import { currencies } from "@/constants/currenciesData";
 import { Eye, Pencil, Trash2, Rocket, FolderOpen, Ship } from "lucide-react";
 import ContractStatusBadge from "./ContractStatusBadge";
-import ScheduleBadge from "./ScheduleBadge";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 
 export default function ContractsTable({ contracts, loading, onView, onEdit, onDelete, onDocuments, onExecutePurchase }) {
@@ -36,7 +35,7 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Contract No.", "Date", "Schedule", "Buyer", "Product", "Total Qty (MT)", "Documents", "Purchase Contract", "Status", "Actions"].map(h => (
+            {["Contract No.", "Date", "Buyer", "Product", "Total Qty (MT)", "Documents", "Purchase Contract", "Status", "Actions"].map(h => (
               <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">{h}</th>
             ))}
           </tr>
@@ -49,9 +48,6 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
               </td>
               <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                 {c.contractDate ? new Date(c.contractDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
-              </td>
-              <td className="px-4 py-3 whitespace-nowrap">
-                <ScheduleBadge date={c.contractDate} />
               </td>
               <td className="px-4 py-3 text-gray-800 font-medium whitespace-nowrap">
                 {c.buyer?.name || c.buyer?.entityName || "—"}
