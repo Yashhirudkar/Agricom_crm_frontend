@@ -17,6 +17,15 @@ export default function CargoAvailabilityFilter({ filters, onChange, onReset }) 
           />
         </div>
 
+        <input
+          type="text"
+          aria-label="Business Ref No."
+          placeholder="Business Ref No."
+          value={filters.businessReference || ""}
+          onChange={(e) => onChange("businessReference", e.target.value)}
+          className="w-full md:w-40 px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 font-mono"
+        />
+
         <select
           value={filters.status || ""}
           onChange={(e) => onChange("status", e.target.value)}

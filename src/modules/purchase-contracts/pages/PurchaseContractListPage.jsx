@@ -35,12 +35,19 @@ export default function PurchaseContractListPage() {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [businessReference, setBusinessReference] = useState("");
+  const [businessReferenceSortOrder, setBusinessReferenceSortOrder] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
   const params = {
     page,
     limit: 10,
     ...(search && { search }),
+    ...(businessReference && { businessReference }),
+    ...(businessReferenceSortOrder && {
+      sortBy: "businessReference",
+      sortOrder: businessReferenceSortOrder,
+    }),
     ...(statusFilter && { status: statusFilter }),
   };
 
@@ -146,6 +153,15 @@ export default function PurchaseContractListPage() {
           />
         </div>
 
+        <input
+          type="text"
+          aria-label="Business Ref No."
+          placeholder="Business Ref No."
+          value={businessReference}
+          onChange={(e) => { setBusinessReference(e.target.value); setPage(1); }}
+          className="w-full max-w-[11rem] text-xs px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg font-mono focus:ring-2 focus:ring-purple-400 focus:outline-hidden"
+        />
+
         {/* Status Filter */}
         <div className="flex items-center gap-2">
           <Filter className="h-3.5 w-3.5 text-gray-400" />
@@ -179,6 +195,14 @@ export default function PurchaseContractListPage() {
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-500 font-bold uppercase tracking-wider text-[9px]">
                   <th className="px-3.5 py-2.5">Contract Number</th>
+                  <th className="px-3.5 py-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setBusinessReferenceSortOrder((order) => order === "ASC" ? "DESC" : "ASC")}
+                    >
+                      Business Ref No.
+                    </button>
+                  </th>
                   <th className="px-3.5 py-2.5">Status</th>
                   <th className="px-3.5 py-2.5">Buyer</th>
                   <th className="px-3.5 py-2.5">Product</th>
@@ -209,6 +233,9 @@ export default function PurchaseContractListPage() {
                       <td className="px-3.5 py-2.5 font-mono font-bold text-purple-700 flex items-center gap-1.5">
                         <FileText className="h-3.5 w-3.5 text-purple-500" />
                         <span>{pcNo}</span>
+                      </td>
+                      <td className="px-3.5 py-2.5 font-mono font-semibold text-indigo-700 whitespace-nowrap">
+                        {pc.businessReference || pc.businessTransaction?.businessReference || "—"}
                       </td>
 
                       <td className="px-3.5 py-2.5 whitespace-nowrap">
@@ -272,7 +299,7 @@ export default function PurchaseContractListPage() {
 
                 {contracts.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-gray-400">
+                    <td colSpan={9} className="text-center py-8 text-gray-400">
                       <FileText className="h-6 w-6 mx-auto mb-1 text-gray-300 stroke-[1.2]" />
                       <p className="text-xs font-semibold text-gray-600">No purchase contracts found</p>
                     </td>

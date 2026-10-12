@@ -576,6 +576,18 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
 
                   {(editData || isViewMode) && (
                     <div>
+                      <label className={lbl}>Business Ref No.</label>
+                      <input
+                        type="text"
+                        value={editData?.businessReference || editData?.businessTransaction?.businessReference || "—"}
+                        readOnly
+                        className={`${inp} bg-gray-50 text-gray-500 font-mono font-semibold`}
+                      />
+                    </div>
+                  )}
+
+                  {(editData || isViewMode) && (
+                    <div>
                       <label className={lbl}>Created By</label>
                       <div className={`${inp} bg-gray-50 text-gray-700 font-semibold flex items-center gap-1.5`}>
                         <User className="h-3.5 w-3.5 text-gray-400" />

@@ -44,6 +44,7 @@ import Pagination from "@/components/common/Pagination";
 
 const SORT_OPTIONS = [
   { key: "createdAt", label: "Created Date" },
+  { key: "businessReference", label: "Business Ref No." },
   { key: "freightAmount", label: "Freight Amount" },
   { key: "transitDays", label: "Transit Days" },
   { key: "validityDate", label: "Valid Till" },
@@ -174,6 +175,7 @@ export default function FreightManagementPage() {
 
   // Filter & pagination state
   const [search, setSearch] = useState("");
+  const [businessReference, setBusinessReference] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [productFilter, setProductFilter] = useState("all");
   const [originFilter, setOriginFilter] = useState("all");
@@ -373,6 +375,7 @@ export default function FreightManagementPage() {
         sortBy,
         sortDir,
         ...(debouncedSearch && { search: debouncedSearch }),
+        ...(businessReference && { businessReference }),
         ...(productFilter !== "all" && { product: productFilter }),
         ...(originFilter !== "all" && { origin: originFilter }),
         ...(destinationFilter !== "all" && { destination: destinationFilter }),
@@ -395,6 +398,7 @@ export default function FreightManagementPage() {
     activeCompanyId,
     page,
     debouncedSearch,
+    businessReference,
     productFilter,
     originFilter,
     destinationFilter,
@@ -423,6 +427,7 @@ export default function FreightManagementPage() {
   // Reset all filters
   const resetFilters = () => {
     setSearch("");
+    setBusinessReference("");
     setDebouncedSearch("");
     setProductFilter("all");
     setOriginFilter("all");
@@ -439,6 +444,7 @@ export default function FreightManagementPage() {
 
   const hasActiveFilters =
     Boolean(debouncedSearch) ||
+    Boolean(businessReference) ||
     productFilter !== "all" ||
     originFilter !== "all" ||
     destinationFilter !== "all" ||
@@ -541,8 +547,14 @@ export default function FreightManagementPage() {
 
           {/* Dropdown Filters Group */}
           <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
-
-
+            <input
+              type="text"
+              aria-label="Business Ref No."
+              placeholder="Business Ref No."
+              value={businessReference}
+              onChange={(e) => { setBusinessReference(e.target.value); setPage(1); }}
+              className="w-full sm:w-40 px-3 py-2 bg-gray-50/80 border border-gray-200/80 rounded-xl text-xs font-mono placeholder-gray-400 focus:outline-none focus:border-[#007aff] focus:bg-white focus:ring-2 focus:ring-[#007aff]/10"
+            />
 
             {/* Origin Dropdown */}
             <div className="relative min-w-[130px] flex-1 sm:flex-none">
@@ -627,6 +639,11 @@ export default function FreightManagementPage() {
               <tr className="border-b border-gray-100 bg-gray-50/60 text-gray-400 uppercase tracking-widest text-[10px] font-bold">
                 <th className="px-5 py-3.5 w-10"></th>
                 <th className="px-5 py-3.5">Route</th>
+                <th className="px-5 py-3.5">
+                  <button onClick={() => handleSort("businessReference")} className="cursor-pointer hover:text-gray-600 transition-colors">
+                    Business Ref No. <SortIcon col="businessReference" />
+                  </button>
+                </th>
                 <th className="px-5 py-3.5 text-center">Total Quotes</th>
                 <th className="px-5 py-3.5">
                   <button onClick={() => handleSort("freightAmount")} className="flex items-center gap-0.5 cursor-pointer hover:text-gray-600 transition-colors">
@@ -646,14 +663,14 @@ export default function FreightManagementPage() {
             <tbody className="divide-y divide-gray-50 text-xs">
               {isLoading ? (
                 <tr>
-                  <td colSpan="8" className="py-20 text-center">
+                  <td colSpan="9" className="py-20 text-center">
                     <Loader2 className="h-7 w-7 animate-spin text-[#007aff] mx-auto mb-2" />
                     <p className="text-xs font-semibold text-gray-400">Loading freight quotes...</p>
                   </td>
                 </tr>
               ) : normalizedData.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-20 text-center">
+                  <td colSpan="9" className="py-20 text-center">
                     <Package className="h-10 w-10 text-gray-200 mx-auto mb-3" />
                     <p className="text-sm font-bold text-gray-600 mb-1">No Freight Quotes Found</p>
                     <p className="text-xs text-gray-400">
@@ -716,6 +733,9 @@ export default function FreightManagementPage() {
                           </div>
                         )}
                       </td>
+                      <td className="px-5 py-3.5 font-mono font-semibold text-indigo-700 whitespace-nowrap">
+                        {quote.businessReference || quote.businessTransaction?.businessReference || quote.logistics?.enquiry?.businessReference || "—"}
+                      </td>
                       <td className="px-5 py-3.5 text-center font-semibold text-slate-600">{quote.stats.totalQuotes}</td>
                       <td className="px-5 py-3.5 font-bold text-emerald-600">
                         {quote.stats.minRate !== null ? formatMoney(quote.stats.minRate, quote.stats.currencyStr) : "—"}
@@ -762,10 +782,14 @@ export default function FreightManagementPage() {
                     {/* Expanded Routes */}
                     {expandedQuotes.has(quote.id) && (
                       <tr>
-                        <td colSpan="8" className="p-0 bg-slate-50/60 border-b border-slate-200">
+                        <td colSpan="9" className="p-0 bg-slate-50/60 border-b border-slate-200">
                           <div className="pl-[60px] pr-5 py-4 space-y-3">
                             {/* Metadata Banner */}
                             <div className="flex flex-wrap gap-x-6 gap-y-2 items-center bg-slate-100/50 p-3 rounded-lg border border-slate-200 mb-2">
+                              <div className="text-xs">
+                                <span className="text-slate-400 font-medium mr-1.5">Business Ref No.:</span>
+                                <span className="font-mono font-bold text-indigo-700">{quote.businessReference || quote.businessTransaction?.businessReference || quote.logistics?.enquiry?.businessReference || "—"}</span>
+                              </div>
                               {quote.isDirect ? (
                                 <>
                                   <div className="text-xs">

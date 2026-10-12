@@ -9,8 +9,7 @@ export const cargoAvailabilityApi = {
   createReadiness: (data) => axiosClient.post("/cargo-availability/readiness", data),
   approveReadiness: (id, status) => axiosClient.patch(`/cargo-availability/readiness/${id}/approve`, { status }),
   createAllocation: (data) => axiosClient.post("/cargo-availability/allocations", data),
-  getAllLoadingEntries: () => axiosClient.get("/cargo-availability/loading"),
+  getAllLoadingEntries: (params) => axiosClient.get("/cargo-availability/loading", { params }),
   createLoading: (data) => axiosClient.post("/cargo-availability/loading", data),
   updateLoadingStatus: (id, data) => axiosClient.put(`/cargo-availability/loading/${id}`, data),
 };
-

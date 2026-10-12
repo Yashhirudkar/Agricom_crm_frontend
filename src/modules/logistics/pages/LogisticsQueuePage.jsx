@@ -17,6 +17,8 @@ export default function LogisticsQueuePage() {
   const companyCountry = company?.country;
 
   const [search, setSearch] = useState("");
+  const [businessReference, setBusinessReference] = useState("");
+  const [businessReferenceSortOrder, setBusinessReferenceSortOrder] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [mode, setMode] = useState("All"); // All, Domestic, Export, Merchant Export
   const [statusFilter, setStatusFilter] = useState("Active"); // Active, Closed, Hidden
@@ -67,6 +69,11 @@ export default function LogisticsQueuePage() {
           page,
           limit: 10,
           ...(debouncedSearch && { search: debouncedSearch }),
+          ...(businessReference && { businessReference }),
+          ...(businessReferenceSortOrder && {
+            sortBy: "businessReference",
+            sortOrder: businessReferenceSortOrder,
+          }),
           ...(mode !== "All" && { mode }),
           ...(statusFilter !== "Hidden" && { status: statusFilter }),
           ...(statusFilter === "Hidden" && { hiddenOnly: true }),
@@ -93,7 +100,7 @@ export default function LogisticsQueuePage() {
 
     // Cleanup: if filters change before fetch completes, ignore stale response
     return () => { cancelled = true; };
-  }, [page, debouncedSearch, mode, statusFilter, refreshKey]);
+  }, [page, debouncedSearch, businessReference, businessReferenceSortOrder, mode, statusFilter, refreshKey]);
 
   // Handle Redux pending navigation state
   useEffect(() => {
@@ -245,6 +252,14 @@ export default function LogisticsQueuePage() {
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs placeholder-gray-400 focus:outline-none focus:border-[#007aff] focus:ring-1 focus:ring-[#007aff]"
           />
         </div>
+        <input
+          type="text"
+          aria-label="Business Ref No."
+          placeholder="Business Ref No."
+          value={businessReference}
+          onChange={(e) => { setBusinessReference(e.target.value); setPage(1); }}
+          className="w-full md:max-w-[11rem] px-3 py-2 border border-gray-200 rounded-xl text-xs font-mono placeholder-gray-400 focus:outline-none focus:border-[#007aff] focus:ring-1 focus:ring-[#007aff]"
+        />
       </div>
 
       {/* Queue Table */}
@@ -257,6 +272,7 @@ export default function LogisticsQueuePage() {
           onToggleHidden={handleToggleHidden}
           hiddenOnly={statusFilter === "Hidden"}
           highlightedRowId={highlightedRowId}
+          onSortBusinessReference={() => setBusinessReferenceSortOrder((order) => order === "ASC" ? "DESC" : "ASC")}
         />
 
         <Pagination

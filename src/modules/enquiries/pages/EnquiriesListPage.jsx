@@ -29,6 +29,7 @@ export default function EnquiriesListPage() {
   const [search, setSearch] = useState("");
   const [createdBy, setCreatedBy] = useState("");
   const [productId, setProductId] = useState("");
+  const [businessReference, setBusinessReference] = useState("");
   const [toast, setToast] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -45,7 +46,7 @@ export default function EnquiriesListPage() {
   // Loading Points Drawer state
   const [loadingPointsEnquiry, setLoadingPointsEnquiry] = useState(null);
 
-  const activeQuery = useEnquiries(activeCompanyId, "NEW,PENDING,WAITING_RESPONSE,IN_PROGRESS", search, false, false, createdBy, productId);
+  const activeQuery = useEnquiries(activeCompanyId, "NEW,PENDING,WAITING_RESPONSE,IN_PROGRESS", search, false, false, createdBy, productId, businessReference);
   const { masters } = useEnquiriesMasters();
 
   const showToast = (msg, type = "success") => {
@@ -162,6 +163,8 @@ export default function EnquiriesListPage() {
         <EnquiriesFilter
           search={search}
           setSearch={setSearch}
+          businessReference={businessReference}
+          setBusinessReference={setBusinessReference}
           createdBy={createdBy}
           setCreatedBy={setCreatedBy}
           productId={productId}
@@ -174,6 +177,7 @@ export default function EnquiriesListPage() {
         <EnquiriesTable
           enquiries={activeQuery.enquiries}
           loading={activeQuery.loading}
+          onSortBusinessReference={activeQuery.toggleBusinessReferenceSort}
           onFollowUp={handleFollowUp}
           onDelete={(e) => setDeleteTarget(e)}
           onExecute={(e) => router.push(`/sales-contracts/new?enquiryId=${e.id}`)}

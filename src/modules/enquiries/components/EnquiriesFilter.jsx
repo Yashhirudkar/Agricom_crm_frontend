@@ -2,7 +2,7 @@
 import React from "react";
 import { Search, X } from "lucide-react";
 
-export default function EnquiriesFilter({ search, setSearch, setPage, total, createdBy, setCreatedBy, productId, setProductId, masters }) {
+export default function EnquiriesFilter({ search, setSearch, businessReference, setBusinessReference, setPage, total, createdBy, setCreatedBy, productId, setProductId, masters }) {
   return (
     <div className="px-5 py-3.5 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-3">
       <div className="flex-1 relative min-w-0">
@@ -23,6 +23,17 @@ export default function EnquiriesFilter({ search, setSearch, setPage, total, cre
           </button>
         )}
       </div>
+
+      {setBusinessReference && (
+        <input
+          type="text"
+          aria-label="Business Ref No."
+          placeholder="Business Ref No."
+          value={businessReference || ""}
+          onChange={(e) => { setBusinessReference(e.target.value); setPage(1); }}
+          className="w-full sm:w-40 px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all font-mono"
+        />
+      )}
 
       <div className="flex items-center gap-2 w-full sm:w-auto">
         <select

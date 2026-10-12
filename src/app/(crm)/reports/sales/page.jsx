@@ -19,7 +19,8 @@ export default function SalesReportPage() {
     productId: '',
     customerId: '',
     countryId: '',
-    companyId: ''
+    companyId: '',
+    businessReference: ''
   });
 
   const [options, setOptions] = useState({
@@ -123,7 +124,8 @@ export default function SalesReportPage() {
       productId: '',
       customerId: '',
       countryId: '',
-      companyId: ''
+      companyId: '',
+      businessReference: ''
     });
   };
 
@@ -161,10 +163,10 @@ export default function SalesReportPage() {
   }, [data.orders]);
 
   const exportCSV = () => {
-    let csvContent = "data:text/csv;charset=utf-8,Order Number,Date,Customer,Executive,Product,Destination,Quantity,Value,Created By\n";
+    let csvContent = "data:text/csv;charset=utf-8,Business Ref No.,Order Number,Date,Customer,Executive,Product,Destination,Quantity,Value,Created By\n";
     data.orders.forEach(row => {
       const date = row.date ? new Date(row.date).toLocaleDateString() : 'N/A';
-      csvContent += `${row.orderNumber || ''},${date},"${row.customer || ''}","${row.salesExecutive || ''}","${row.product || ''}","${row.destination || ''}",${row.quantity || 0},${row.salesValue || 0},"${row.salesExecutive || ''}"\n`;
+      csvContent += `"${row.businessReference || ''}",${row.orderNumber || ''},${date},"${row.customer || ''}","${row.salesExecutive || ''}","${row.product || ''}","${row.destination || ''}",${row.quantity || 0},${row.salesValue || 0},"${row.salesExecutive || ''}"\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
@@ -226,6 +228,15 @@ export default function SalesReportPage() {
             <div className="flex items-center text-gray-700 mr-2 text-sm font-semibold">
               <Filter className="w-4 h-4 mr-2 text-blue-600" /> Filters
             </div>
+
+            <input
+              type="text"
+              aria-label="Business Ref No."
+              placeholder="Business Ref No."
+              value={filters.businessReference}
+              onChange={e => handleFilterChange('businessReference', e.target.value)}
+              className="border border-gray-200 rounded-lg text-sm px-3 py-2 font-mono bg-gray-50 outline-none focus:ring-2 focus:ring-blue-100 w-40"
+            />
 
             <select
               value={filters.salesExecutiveId}

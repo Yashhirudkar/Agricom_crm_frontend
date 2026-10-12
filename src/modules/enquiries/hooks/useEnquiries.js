@@ -2,12 +2,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { enquiriesApi, mastersApi } from "../services/enquiriesApi";
 
-export function useEnquiries(companyId, status = "", externalSearch = null, withoutSalesContract = false, withoutPurchaseContract = false, createdBy = "", productId = "") {
+export function useEnquiries(companyId, status = "", externalSearch = null, withoutSalesContract = false, withoutPurchaseContract = false, createdBy = "", productId = "", businessReference = "") {
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
+  const [businessReferenceSortOrder, setBusinessReferenceSortOrder] = useState("");
   const [search, setSearchInternal] = useState("");
   const limit = 10;
 
@@ -25,6 +26,11 @@ export function useEnquiries(companyId, status = "", externalSearch = null, with
         ...(withoutPurchaseContract && { withoutPurchaseContract: true }),
         ...(createdBy && { createdBy }),
         ...(productId && { productId }),
+        ...(businessReference && { businessReference }),
+        ...(businessReferenceSortOrder && {
+          sortBy: "businessReference",
+          sortOrder: businessReferenceSortOrder,
+        }),
       };
       const res = await enquiriesApi.getAll(params);
       setEnquiries(res.data.data || []);
@@ -35,7 +41,7 @@ export function useEnquiries(companyId, status = "", externalSearch = null, with
     } finally {
       setLoading(false);
     }
-  }, [page, currentSearch, limit, companyId, status, withoutSalesContract, withoutPurchaseContract, createdBy, productId]);
+  }, [page, currentSearch, limit, companyId, status, withoutSalesContract, withoutPurchaseContract, createdBy, productId, businessReference, businessReferenceSortOrder]);
 
   useEffect(() => {
     fetchEnquiries();
@@ -43,12 +49,13 @@ export function useEnquiries(companyId, status = "", externalSearch = null, with
 
   useEffect(() => {
     setPage(1);
-  }, [currentSearch, status, createdBy, productId]);
+  }, [currentSearch, status, createdBy, productId, businessReference]);
 
   return {
     enquiries, loading, total, totalPages, page, setPage,
     search: currentSearch, setSearch: externalSearch !== null ? () => {} : setSearchInternal,
     status, fetchEnquiries,
+    toggleBusinessReferenceSort: () => setBusinessReferenceSortOrder((order) => order === "ASC" ? "DESC" : "ASC"),
   };
 }
 

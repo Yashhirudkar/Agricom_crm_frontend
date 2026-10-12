@@ -24,6 +24,7 @@ const defaultForm = () => ({
   enquiryId: null,
   financialYear: getCurrentFinancialYear(),
   contractNumber: "",
+  businessReference: "",
   contractDate: "",
   contractType: "Export",
   buyerId: "",
@@ -127,6 +128,7 @@ export default function ContractFormPage({ editId, viewId }) {
           // financialYear is now a plain string from the server
           financialYear: c.financialYear || getCurrentFinancialYear(),
           contractNumber: c.contractNumber || "",
+          businessReference: c.businessTransaction?.businessReference || c.businessReference || "",
           contractDate: c.contractDate ? c.contractDate.split("T")[0] : "",
           contractType: c.contractType || "Export",
           buyerId: c.buyerId || "",

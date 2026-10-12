@@ -90,6 +90,18 @@ export default function HeaderSection({ form, setForm, errors, masters, isView, 
           {errors.contractNumber && <p className={err}>{errors.contractNumber}</p>}
         </div>
 
+        {form.businessReference && (
+          <div>
+            <label className={lbl}>Business Ref No.</label>
+            <input
+              type="text"
+              value={form.businessReference}
+              readOnly
+              className={`${inp} bg-gray-50 font-semibold text-gray-700`}
+            />
+          </div>
+        )}
+
         {/* Contract Date */}
         <div>
           <label className={lbl}>Contract Date <span className="text-red-500">*</span></label>

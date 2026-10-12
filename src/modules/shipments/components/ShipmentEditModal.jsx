@@ -114,6 +114,9 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
           <div>
             <h3 className="text-sm font-bold text-gray-900">Edit Shipment Operational Details</h3>
             <p className="text-[10px] text-gray-400 font-mono mt-0.5">{shipment.shipmentReference}</p>
+            <p className="text-[10px] text-indigo-700 font-mono font-semibold mt-0.5">
+              Business Ref No.: {shipment.businessReference || shipment.businessTransaction?.businessReference || "—"}
+            </p>
           </div>
           <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
             <X className="h-4 w-4" />

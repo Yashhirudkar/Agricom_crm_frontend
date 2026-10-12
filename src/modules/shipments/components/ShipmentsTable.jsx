@@ -62,6 +62,7 @@ export default function ShipmentsTable({
   shipments,
   loading,
   onRowClick,
+  onSortBusinessReference,
   onViewContract,
   onEditShipment,
   onManageDocuments,
@@ -136,6 +137,11 @@ export default function ShipmentsTable({
               />
             </th>
             <th className="px-4 py-3.5 whitespace-nowrap">Shipment Ref</th>
+            <th className="px-4 py-3.5 whitespace-nowrap">
+              {onSortBusinessReference ? (
+                <button type="button" onClick={onSortBusinessReference}>Business Ref No.</button>
+              ) : "Business Ref No."}
+            </th>
             <th className="px-4 py-3.5 whitespace-nowrap">Timeline</th>
             <th className="px-4 py-3.5 whitespace-nowrap">Status</th>
             <th className="px-4 py-3.5 whitespace-nowrap">Shipment Date</th>
@@ -196,6 +202,9 @@ export default function ShipmentsTable({
                       )}
                     </button>
                   </div>
+                </td>
+                <td className="px-4 py-3 font-mono font-semibold text-indigo-700 whitespace-nowrap">
+                  {s.businessReference || s.businessTransaction?.businessReference || "—"}
                 </td>
 
                 {/* Timeline chip */}

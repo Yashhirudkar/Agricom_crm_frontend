@@ -18,6 +18,8 @@ export default function SalesContractListPage() {
     search, setSearch,
     statusFilter, setStatusFilter,
     financialYearFilter, setFinancialYearFilter,
+    businessReference, setBusinessReference,
+    toggleBusinessReferenceSort,
     fetchContracts,
   } = useSalesContracts();
 
@@ -82,6 +84,8 @@ export default function SalesContractListPage() {
         <ContractsFilter
           search={search}
           setSearch={setSearch}
+          businessReference={businessReference}
+          setBusinessReference={setBusinessReference}
           status={statusFilter}
           setStatus={setStatusFilter}
           financialYearFilter={financialYearFilter}
@@ -93,6 +97,7 @@ export default function SalesContractListPage() {
         <ContractsTable
           contracts={contracts}
           loading={loading}
+          onSortBusinessReference={toggleBusinessReferenceSort}
           onView={(c) => setViewContractId(c.id)}
           onEdit={(c) => router.push(`/sales-contracts/${c.id}/edit`)}
           onDelete={(c) => setDeleteTarget(c)}

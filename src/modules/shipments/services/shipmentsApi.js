@@ -9,4 +9,9 @@ export const shipmentsApi = {
     const baseURL = axiosClient.defaults.baseURL || "";
     return `${baseURL}/sales-contracts/shipments/export/excel?${query}`;
   },
+  exportExcel: (params) =>
+    axiosClient.get("/sales-contracts/shipments/export/excel", {
+      params,
+      responseType: "blob",
+    }),
 };

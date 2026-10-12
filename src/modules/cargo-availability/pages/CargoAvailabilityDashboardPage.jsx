@@ -31,6 +31,7 @@ function CargoAvailabilityContent() {
 
   const [filters, setFilters] = useState({
     search: queryShipmentNo || queryContractNo || "",
+    businessReference: "",
     status: "",
   });
 
@@ -47,7 +48,7 @@ function CargoAvailabilityContent() {
       setIsLoading(true);
       const [listRes, loadingRes] = await Promise.all([
         cargoAvailabilityApi.getCargoAvailabilityList(filters),
-        cargoAvailabilityApi.getAllLoadingEntries().catch(() => ({ data: [] })),
+        cargoAvailabilityApi.getAllLoadingEntries(filters).catch(() => ({ data: [] })),
       ]);
       setRecords(listRes.data?.data || listRes.data || []);
       setAllLoadingEntries(loadingRes.data || loadingRes || []);
@@ -90,7 +91,7 @@ function CargoAvailabilityContent() {
   };
 
   const handleResetFilters = () => {
-    setFilters({ search: "", status: "" });
+    setFilters({ search: "", businessReference: "", status: "" });
   };
 
   const handleSelectRecord = async (id) => {
@@ -224,6 +225,11 @@ function CargoAvailabilityContent() {
 
           <CargoMainGrid
             data={records}
+            onSortBusinessReference={() => setFilters((current) => ({
+              ...current,
+              sortBy: "businessReference",
+              sortOrder: current.sortOrder === "ASC" ? "DESC" : "ASC",
+            }))}
             isLoading={isLoading}
             onOpenReadinessModal={(rec) => {
               setSelectedRecord(rec);

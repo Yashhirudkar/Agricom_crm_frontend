@@ -541,6 +541,10 @@ export default function ContractViewModal({ contractId, onClose }) {
                           <td className="font-bold pb-2 text-slate-900 uppercase">{contract.contractNumber || "—"}</td>
                         </tr>
                         <tr>
+                          <td className="pr-8 pb-2 font-bold uppercase text-slate-900 whitespace-nowrap">Business Ref No. :</td>
+                          <td className="font-bold pb-2 text-slate-900 uppercase">{contract.businessReference || contract.businessTransaction?.businessReference || "—"}</td>
+                        </tr>
+                        <tr>
                           <td className="pr-8 font-bold uppercase text-slate-900 whitespace-nowrap">Contract Date :</td>
                           <td className="font-bold text-slate-900">{formatDate(contract.contractDate)}</td>
                         </tr>

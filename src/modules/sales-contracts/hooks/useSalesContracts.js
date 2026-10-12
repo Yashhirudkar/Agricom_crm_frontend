@@ -19,6 +19,8 @@ export function useSalesContracts() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [financialYearFilter, setFinancialYearFilter] = useState("");
+  const [businessReference, setBusinessReference] = useState("");
+  const [businessReferenceSortOrder, setBusinessReferenceSortOrder] = useState("");
   const limit = 10;
 
   const fetchContracts = useCallback(async () => {
@@ -30,6 +32,11 @@ export function useSalesContracts() {
         ...(search && { search }),
         ...(statusFilter && { status: statusFilter }),
         ...(financialYearFilter && { financialYear: financialYearFilter }),
+        ...(businessReference && { businessReference }),
+        ...(businessReferenceSortOrder && {
+          sortBy: "businessReference",
+          sortOrder: businessReferenceSortOrder,
+        }),
       };
       const res = await salesContractApi.getAll(params);
       setContracts(res.data.data || []);
@@ -40,7 +47,7 @@ export function useSalesContracts() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, financialYearFilter, limit]);
+  }, [page, search, statusFilter, financialYearFilter, businessReference, businessReferenceSortOrder, limit]);
 
   useEffect(() => {
     fetchContracts();
@@ -51,6 +58,8 @@ export function useSalesContracts() {
     search, setSearch,
     statusFilter, setStatusFilter,
     financialYearFilter, setFinancialYearFilter,
+    businessReference, setBusinessReference,
+    toggleBusinessReferenceSort: () => setBusinessReferenceSortOrder((order) => order === "ASC" ? "DESC" : "ASC"),
     fetchContracts,
   };
 }

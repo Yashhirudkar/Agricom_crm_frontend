@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Ship, AlertCircle, RefreshCw, Rocket, ChevronRight, Boxes } from "lucide-react";
+import { Ship, AlertCircle, RefreshCw, Rocket, ChevronRight, Boxes, FileSpreadsheet } from "lucide-react";
 import Link from "next/link";
 import { shipmentsApi } from "../services/shipmentsApi";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
@@ -21,6 +21,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
     page: 1,
     limit: 10,
     search: contextContractNo || "",
+    businessReference: "",
     status: "",
     timeline: "",
     buyerId: "",
@@ -51,6 +52,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   // Stats State
   const [stats, setStats] = useState({
@@ -90,6 +92,26 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
       setLoading(false);
     }
   }, [filters]);
+
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      const response = await shipmentsApi.exportExcel(filters);
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "shipments.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to export shipments", error);
+      showToast("Failed to export shipments", "error");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchStats = useCallback(async () => {
     try {
@@ -183,6 +205,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
         <body onload="window.print();window.close();">
           <h2>SHIPMENT DETAILED VOUCHER</h2>
           <div class="item"><span class="bold">Reference:</span> ${shipment.shipmentReference}</div>
+          <div class="item"><span class="bold">Business Ref No.:</span> ${shipment.businessReference || shipment.businessTransaction?.businessReference || "—"}</div>
           <div class="item"><span class="bold">Shipment Date:</span> ${new Date(shipment.shipmentDate).toLocaleDateString()}</div>
           <div class="item"><span class="bold">Workflow Status:</span> ${shipment.status}</div>
           
@@ -259,13 +282,23 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
             Track and monitor shipment timeline states, documentation completeness, and operational workflow statuses.
           </p>
         </div>
-        <button
-          onClick={fetchShipments}
-          className="px-3 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-colors"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          Refresh Registry
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportExcel}
+            disabled={exporting}
+            className="px-3 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-colors disabled:opacity-50"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            {exporting ? "Exporting..." : "Export Excel"}
+          </button>
+          <button
+            onClick={fetchShipments}
+            className="px-3 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-colors"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh Registry
+          </button>
+        </div>
       </div>
 
       {/* KPI Stats Cards */}
@@ -323,6 +356,12 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden print:border-none">
         <ShipmentsTable
           shipments={shipments}
+          onSortBusinessReference={() => setFilters((current) => ({
+            ...current,
+            sortBy: "businessReference",
+            sortOrder: current.sortOrder === "ASC" ? "DESC" : "ASC",
+            page: 1,
+          }))}
           loading={loading}
           selectedShipments={selectedShipments}
           setSelectedShipments={setSelectedShipments}
@@ -401,4 +440,3 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
     </div>
   );
 }
-

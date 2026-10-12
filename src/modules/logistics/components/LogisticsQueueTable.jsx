@@ -21,6 +21,7 @@ export default function LogisticsQueueTable({
   hiddenOnly = false,
   mode = "All",
   highlightedRowId,
+  onSortBusinessReference,
 }) {
   if (loading) {
     return (
@@ -99,9 +100,9 @@ export default function LogisticsQueueTable({
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Enquiry No.", "Date", "Product", "Qty (MT)", "From", "To", "Mode", "Logistics Status", "Action"].map((h) => (
+            {["Enquiry No.", "Business Ref No.", "Date", "Product", "Qty (MT)", "From", "To", "Mode", "Logistics Status", "Action"].map((h) => (
               <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">
-                {h}
+                {h === "Business Ref No." && onSortBusinessReference ? <button type="button" onClick={onSortBusinessReference}>{h}</button> : h}
               </th>
             ))}
           </tr>
@@ -123,6 +124,9 @@ export default function LogisticsQueueTable({
                       </span>
                     )}
                   </div>
+                </td>
+                <td className="px-4 py-4.5 font-mono font-semibold text-indigo-700 whitespace-nowrap">
+                  {e.businessReference || e.businessTransaction?.businessReference || "—"}
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
                   {e.enquiryDate

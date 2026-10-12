@@ -5,7 +5,7 @@ import { Eye, Pencil, Trash2, Rocket, FolderOpen, Ship } from "lucide-react";
 import ContractStatusBadge from "./ContractStatusBadge";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 
-export default function ContractsTable({ contracts, loading, onView, onEdit, onDelete, onDocuments, onExecutePurchase }) {
+export default function ContractsTable({ contracts, loading, onView, onEdit, onDelete, onDocuments, onExecutePurchase, onSortBusinessReference }) {
   const router = useRouter();
   if (loading) {
     return (
@@ -35,14 +35,19 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Contract No.", "Date", "Buyer", "Product", "Total Qty (MT)", "Documents", "Purchase Contract", "Contract Type", "Status", "Actions"].map(h => (
-              <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">{h}</th>
+            {["Business Ref No.", "Contract No.", "Date", "Buyer", "Product", "Total Qty (MT)", "Documents", "Purchase Contract", "Contract Type", "Status", "Actions"].map(h => (
+              <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">
+                {h === "Business Ref No." && onSortBusinessReference ? <button type="button" onClick={onSortBusinessReference}>{h}</button> : h}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">
           {contracts.map((c) => (
             <tr key={c.id} className="hover:bg-gray-50/70 transition-colors group">
+              <td className="px-4 py-3 font-mono font-semibold text-indigo-700 whitespace-nowrap">
+                {c.businessReference || "—"}
+              </td>
               <td className="px-4 py-3 font-mono font-bold text-[#007aff] whitespace-nowrap">
                 {c.contractNumber}
               </td>

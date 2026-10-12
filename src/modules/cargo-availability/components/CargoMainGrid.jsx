@@ -16,6 +16,7 @@ export default function CargoMainGrid({
   onOpenReadinessModal,
   onOpenAllocationModal,
   onSelectRecord,
+  onSortBusinessReference,
 }) {
   const getStatusBadge = (status) => {
     switch (status) {
@@ -61,6 +62,11 @@ export default function CargoMainGrid({
           <thead>
             <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-500 font-bold uppercase tracking-wider text-[10px]">
               <th className="py-3 px-4">Purchase Contract / Item</th>
+              <th className="py-3 px-4">
+                {onSortBusinessReference ? (
+                  <button type="button" onClick={onSortBusinessReference}>Business Ref No.</button>
+                ) : "Business Ref No."}
+              </th>
               <th className="py-3 px-4">Supplier & Buyer</th>
               <th className="py-3 px-4">Product</th>
               <th className="py-3 px-4 text-right">Purchase Qty</th>
@@ -95,6 +101,9 @@ export default function CargoMainGrid({
                         </div>
                       </div>
                     </div>
+                  </td>
+                  <td className="py-3 px-4 font-mono font-semibold text-indigo-700 whitespace-nowrap">
+                    {row.businessReference || row.businessTransaction?.businessReference || "—"}
                   </td>
 
                   <td className="py-3 px-4">

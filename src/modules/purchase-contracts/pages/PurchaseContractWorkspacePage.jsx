@@ -517,6 +517,9 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
                 <span className="text-xs font-mono font-extrabold text-[#007aff] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
                   {contractDisplayNo}
                 </span>
+                <span className="text-xs font-mono font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
+                  Business Ref No.: {contract?.businessReference || contract?.businessTransaction?.businessReference || "—"}
+                </span>
                 {contract?.salesContract?.buyer?.entityName && (
                   <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2.5 py-0.5 rounded-md border border-gray-200">
                     Buyer: {contract.salesContract.buyer.entityName}

@@ -66,6 +66,7 @@ export default function ExporterLoadingTab({
                 <th className="py-2.5 px-4">Loading Date</th>
                 <th className="py-2.5 px-4">Truck & Transporter</th>
                 <th className="py-2.5 px-4">Shipment Reference</th>
+                <th className="py-2.5 px-4">Business Ref No.</th>
                 <th className="py-2.5 px-4">Warehouse & Location</th>
                 <th className="py-2.5 px-4 text-right">Loaded Qty</th>
                 <th className="py-2.5 px-4 text-right">Unloaded Wt</th>
@@ -116,6 +117,10 @@ export default function ExporterLoadingTab({
                       </div>
                     </td>
 
+                    <td className="py-3 px-4 font-mono font-semibold text-indigo-700 whitespace-nowrap">
+                      {row.businessReference || row.businessTransaction?.businessReference || "—"}
+                    </td>
+
                     <td className="py-3 px-4">
                       <div className="text-gray-800 font-semibold">{row.warehouseName || "Warehouse"}</div>
                       <div className="text-[10px] text-gray-400">Seal: {row.sealNumber || "—"}</div>
@@ -156,4 +161,3 @@ export default function ExporterLoadingTab({
     </div>
   );
 }
-

@@ -85,6 +85,9 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
               <p className="text-[11px] text-slate-400 font-mono tracking-tight">
                 {shipment.shipmentReference || "DRAFT"}
               </p>
+              <p className="text-[11px] text-indigo-700 font-mono font-semibold">
+                Business Ref No.: {shipment.businessReference || shipment.businessTransaction?.businessReference || "—"}
+              </p>
             </div>
           </div>
 

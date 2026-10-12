@@ -125,6 +125,15 @@ export default function ShipmentsFilter({
           )}
         </div>
 
+        <input
+          type="text"
+          aria-label="Business Ref No."
+          placeholder="Business Ref No."
+          value={filters.businessReference || ""}
+          onChange={(e) => handleChange("businessReference", e.target.value)}
+          className="w-full md:w-40 px-3 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] font-mono"
+        />
+
         {/* Action Controls */}
         <div className="flex items-center gap-2 self-end md:self-auto flex-wrap">
           {/* Timeline filter shortcut */}
