@@ -10,6 +10,8 @@ import {
 
 const ITEMS_PER_PAGE = 15;
 
+const getExecutiveFirstName = name => name?.trim().split(/\s+/)[0] || '';
+
 export default function SalesReportPage() {
   const [filters, setFilters] = useState({
     year: new Date().getFullYear().toString(),
@@ -166,7 +168,8 @@ export default function SalesReportPage() {
     let csvContent = "data:text/csv;charset=utf-8,Business Ref No.,Order Number,Date,Customer,Executive,Product,Destination,Quantity,Value,Created By\n";
     data.orders.forEach(row => {
       const date = row.date ? new Date(row.date).toLocaleDateString() : 'N/A';
-      csvContent += `"${row.businessReference || ''}",${row.orderNumber || ''},${date},"${row.customer || ''}","${row.salesExecutive || ''}","${row.product || ''}","${row.destination || ''}",${row.quantity || 0},${row.salesValue || 0},"${row.salesExecutive || ''}"\n`;
+      const executive = getExecutiveFirstName(row.salesExecutive);
+      csvContent += `"${row.businessReference || ''}",${row.orderNumber || ''},${date},"${row.customer || ''}","${executive}","${row.product || ''}","${row.destination || ''}",${row.quantity || 0},${row.salesValue || 0},"${executive}"\n`;
     });
 
     const encodedUri = encodeURI(csvContent);
@@ -184,7 +187,7 @@ export default function SalesReportPage() {
       <td className="py-3.5 px-5 text-gray-600">{o.customer || 'N/A'}</td>
       <td className="py-3.5 px-5">
         <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50/50 text-blue-700 text-[11px] font-semibold border border-blue-100/50">
-          {o.salesExecutive || 'N/A'}
+          {getExecutiveFirstName(o.salesExecutive) || 'N/A'}
         </span>
       </td>
       <td className="py-3.5 px-5 text-gray-500">{o.destination || 'N/A'}</td>
@@ -245,7 +248,7 @@ export default function SalesReportPage() {
             >
               <option value="">All Executives</option>
               {availableExecutives.map(exec => (
-                <option key={exec.id} value={exec.id}>{exec.name}</option>
+                <option key={exec.id} value={exec.id}>{getExecutiveFirstName(exec.name)}</option>
               ))}
             </select>
 
