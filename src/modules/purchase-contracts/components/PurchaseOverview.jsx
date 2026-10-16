@@ -16,7 +16,8 @@ export default function PurchaseOverview({ contract, summary }) {
   const seller = summary?.commercialInfo?.seller || salesContract.seller || {};
   const broker = summary?.commercialInfo?.broker || salesContract.broker || {};
   const paymentTerm = summary?.commercialInfo?.paymentTerm?.name || salesContract.paymentTerm?.name || "—";
-  const shipmentType = salesContract.shipmentType?.name || "—";
+  const shipmentType =
+    contract?.shipmentType?.name || salesContract.shipmentType?.name || "—";
   const currencyCode = salesContract.currencyCode || "USD";
   const origin = salesContract.originCountry || "—";
   const destination = salesContract.destinationCountry || "—";
@@ -73,6 +74,12 @@ export default function PurchaseOverview({ contract, summary }) {
             <div className="flex items-start justify-between py-1.5 border-b border-dashed border-gray-100">
               <span className="font-semibold text-gray-500">Shipment Type</span>
               <span className="font-bold text-gray-800 text-right">{shipmentType}</span>
+            </div>
+            <div className="flex items-start justify-between py-1.5 border-b border-dashed border-gray-100">
+              <span className="font-semibold text-gray-500">Freight Required</span>
+              <span className={`font-bold text-right ${contract?.freightRequired ? 'text-blue-600' : 'text-gray-500'}`}>
+                {contract?.freightRequired ? 'Yes (☑)' : 'No (☐)'}
+              </span>
             </div>
             <div className="flex items-start justify-between py-1.5 border-b border-dashed border-gray-100">
               <span className="font-semibold text-gray-500">Origin → Destination</span>

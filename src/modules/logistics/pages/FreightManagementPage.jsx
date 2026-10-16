@@ -32,7 +32,8 @@ import {
   Calendar,
   ExternalLink,
   Plus,
-  ClipboardList
+  ClipboardList,
+  FileText
 } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { toast } from "sonner";
@@ -226,6 +227,11 @@ export default function FreightManagementPage() {
   const normalizedData = useMemo(() => {
     return data.map(quote => {
       const enquiry = quote.logistics?.enquiry;
+      const pc = quote.purchaseContract || enquiry?.purchaseContract;
+      const hasPurchaseContract = Boolean(pc);
+      const pcOrigin = pc?.placeOfLoading || null;
+      const pcDestination = pc?.deliveryPlace || null;
+
       const productName = quote.isDirect ? (quote.product?.name || "N/A") : (enquiry?.product?.name || "N/A");
       
       let routes = quote.freightRoutes || [];
@@ -233,8 +239,9 @@ export default function FreightManagementPage() {
       if (!routes || routes.length === 0) {
         routes = [{
           id: `legacy_route_${quote.id}`,
-          origin: quote.isDirect ? quote.loadingPoint : getOriginDisplay(enquiry),
-          destination: quote.isDirect ? quote.destination : getDestinationDisplay(enquiry),
+          origin: hasPurchaseContract && pcOrigin ? pcOrigin : (quote.isDirect ? quote.loadingPoint : getOriginDisplay(enquiry)),
+          destination: hasPurchaseContract && pcDestination ? pcDestination : (quote.isDirect ? quote.destination : getDestinationDisplay(enquiry)),
+          hasPurchaseContract,
           rates: [{
             id: `legacy_rate_${quote.id}`,
             partner: quote.seller,
@@ -248,6 +255,13 @@ export default function FreightManagementPage() {
             _legacyQuote: quote
           }]
         }];
+      } else {
+        routes = routes.map((r) => ({
+          ...r,
+          origin: hasPurchaseContract && pcOrigin ? pcOrigin : r.origin,
+          destination: hasPurchaseContract && pcDestination ? pcDestination : r.destination,
+          hasPurchaseContract,
+        }));
       }
 
       let totalQuotes = 0;
@@ -302,6 +316,8 @@ export default function FreightManagementPage() {
 
       return {
         ...quote,
+        hasPurchaseContract,
+        purchaseContract: pc,
         productName,
         normalizedRoutes,
         stats: {
@@ -701,6 +717,17 @@ export default function FreightManagementPage() {
                               </div>
                               <span className="truncate max-w-[150px]" title={quote.normalizedRoutes?.[0]?.origin}>{quote.normalizedRoutes?.[0]?.origin || "N/A"}</span>
                             </div>
+                            {quote.hasPurchaseContract && (
+                              <div className="mt-1 ml-[22px]">
+                                <span
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help max-w-fit"
+                                  title={"Source: Purchase Contract\n\nThis location is automatically synced from the Purchase Contract."}
+                                >
+                                  <FileText className="h-2.5 w-2.5 text-blue-600 shrink-0" />
+                                  <span>Purchase Contract</span>
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <div>
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 ml-[22px]">To</p>
@@ -710,6 +737,17 @@ export default function FreightManagementPage() {
                               </div>
                               <span className="truncate max-w-[150px]" title={quote.normalizedRoutes?.[0]?.destination}>{quote.normalizedRoutes?.[0]?.destination || "N/A"}</span>
                             </div>
+                            {quote.hasPurchaseContract && (
+                              <div className="mt-1 ml-[22px]">
+                                <span
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help max-w-fit"
+                                  title={"Source: Purchase Contract\n\nThis location is automatically synced from the Purchase Contract."}
+                                >
+                                  <FileText className="h-2.5 w-2.5 text-blue-600 shrink-0" />
+                                  <span>Purchase Contract</span>
+                                </span>
+                              </div>
+                            )}
                           </div>
                           {quote.normalizedRoutes?.length > 1 && (
                             <span className="text-[10px] text-slate-500 font-medium bg-slate-100 px-1.5 py-0.5 rounded-md mt-4">+{quote.normalizedRoutes.length - 1} more</span>
@@ -833,7 +871,7 @@ export default function FreightManagementPage() {
                                 <div key={route.routeKey} className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
                                   {/* Route Header */}
                                   <div className="flex flex-wrap items-center justify-between p-3 border-b border-slate-100 bg-slate-50/50">
-                                    <div className="flex items-center gap-6">
+                                    <div className="flex items-start gap-6">
                                       <div>
                                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 ml-[22px]">From</p>
                                         <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-800">
@@ -842,6 +880,17 @@ export default function FreightManagementPage() {
                                           </div>
                                           <span className="truncate max-w-[150px]" title={route.origin}>{route.origin}</span>
                                         </div>
+                                        {route.hasPurchaseContract && (
+                                          <div className="mt-1 ml-[22px]">
+                                            <span
+                                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help max-w-fit"
+                                              title={"Source: Purchase Contract\n\nThis location is automatically synced from the Purchase Contract."}
+                                            >
+                                              <FileText className="h-2.5 w-2.5 text-blue-600 shrink-0" />
+                                              <span>Purchase Contract</span>
+                                            </span>
+                                          </div>
+                                        )}
                                       </div>
                                       <div>
                                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 ml-[22px]">To</p>
@@ -851,6 +900,17 @@ export default function FreightManagementPage() {
                                           </div>
                                           <span className="truncate max-w-[150px]" title={route.destination}>{route.destination}</span>
                                         </div>
+                                        {route.hasPurchaseContract && (
+                                          <div className="mt-1 ml-[22px]">
+                                            <span
+                                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help max-w-fit"
+                                              title={"Source: Purchase Contract\n\nThis location is automatically synced from the Purchase Contract."}
+                                            >
+                                              <FileText className="h-2.5 w-2.5 text-blue-600 shrink-0" />
+                                              <span>Purchase Contract</span>
+                                            </span>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                     

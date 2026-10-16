@@ -677,7 +677,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                           {(() => {
                             const baseIncoterm = contract.destinationTransportMode === "road" || contract.destinationTransportMode === "rail" ? "DAP" : "CIF";
                             const loc = contract.destinationLocationName || contract.portOfDischarge || "";
-                            
+
                             const defaultPart1 = `${contract.currencyCode} ${Number(item.unitPrice).toLocaleString("en-IN", { minimumFractionDigits: 2 })} PER MT ${baseIncoterm}`.toUpperCase();
                             const defaultPart2 = loc.toUpperCase();
 

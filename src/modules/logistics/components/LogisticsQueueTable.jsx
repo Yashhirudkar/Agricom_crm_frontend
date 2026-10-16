@@ -1,5 +1,5 @@
 import React from "react";
-import { Truck, Ship, Train, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Truck, Ship, Train, ArrowRight, Eye, EyeOff, FileText } from "lucide-react";
 
 const LOGISTICS_STATUS_CLASSES = {
   "Pending": "bg-gray-50 text-gray-600 border-gray-100",
@@ -100,7 +100,7 @@ export default function LogisticsQueueTable({
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Enquiry No.", "Business Ref No.", "Date", "Product", "Qty (MT)", "From", "To", "Mode", "Logistics Status", "Action"].map((h) => (
+            {["Enquiry / PC No.", "Business Ref No.", "Date", "Product", "Qty (MT)", "From", "To", "Shipment Type", "Mode", "Logistics Status", "Action"].map((h) => (
               <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">
                 {h === "Business Ref No." && onSortBusinessReference ? <button type="button" onClick={onSortBusinessReference}>{h}</button> : h}
               </th>
@@ -117,7 +117,14 @@ export default function LogisticsQueueTable({
               <tr key={e.id} className={`transition-all duration-500 group hover:bg-gray-50/70 ${isHighlighted ? "bg-blue-50/50 shadow-inner" : ""}`}>
                 <td className="px-4 py-4.5 font-mono font-bold text-[#007aff] whitespace-nowrap">
                   <div className="flex items-center gap-1.5">
-                    <span>{e.enquiryNo}</span>
+                    {e.purchaseContract?.contractNumber ? (
+                      <div className="flex flex-col items-start">
+                        <span className="text-gray-900 font-bold">{e.purchaseContract.contractNumber}</span>
+                        <span className="text-[10px] text-gray-400 font-normal">Enq: {e.enquiryNo}</span>
+                      </div>
+                    ) : (
+                      <span>{e.enquiryNo}</span>
+                    )}
                     {(!e.logistics || e.logistics.isViewed === false) && (
                       <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-red-100 text-red-600 border border-red-200">
                         New
@@ -126,32 +133,47 @@ export default function LogisticsQueueTable({
                   </div>
                 </td>
                 <td className="px-4 py-4.5 font-mono font-semibold text-indigo-700 whitespace-nowrap">
-                  {e.businessReference || e.businessTransaction?.businessReference || "—"}
+                  {e.purchaseContract?.businessReference || e.businessReference || e.businessTransaction?.businessReference || "—"}
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
-                  {e.enquiryDate
-                    ? new Date(e.enquiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                  {(e.purchaseContract?.purchaseDate || e.enquiryDate)
+                    ? new Date(e.purchaseContract?.purchaseDate || e.enquiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                     : "—"}
                 </td>
-                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap max-w-[150px] truncate" title={e.product?.name || ""}>
-                  {e.product?.name || "—"}
+                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap max-w-[150px] truncate" title={e.purchaseContract?.productName || e.product?.name || ""}>
+                  {e.purchaseContract?.productName || e.product?.name || "—"}
                 </td>
                 <td className="px-4 py-4.5 text-gray-800 font-bold tabular-nums">
-                  {Number(e.quantity || 0).toLocaleString("en-IN")}
+                  {Number(e.purchaseContract?.quantity != null ? e.purchaseContract.quantity : (e.quantity || 0)).toLocaleString("en-IN")}
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
                   {(() => {
+                    const hasPurchaseContract = Boolean(e.purchaseContract);
                     const origins = getOrigins(e);
-                    const firstOrigin = origins[0];
+                    const defaultOrigin = origins[0] || "—";
+                    const originDisplay = hasPurchaseContract
+                      ? (e.purchaseContract.placeOfLoading || defaultOrigin)
+                      : defaultOrigin;
+
                     return (
-                      <div className="flex flex-col">
-                        <span className="max-w-[150px] truncate" title={firstOrigin}>
-                          {firstOrigin}
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="max-w-[170px] truncate font-medium text-gray-800" title={originDisplay}>
+                          {originDisplay}
                         </span>
-                        {origins.length > 1 && (
-                          <span className="text-[10px] text-blue-600 font-semibold mt-0.5">
-                            +{origins.length - 1} More
+                        {hasPurchaseContract ? (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help max-w-fit"
+                            title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
+                          >
+                            <FileText className="h-2.5 w-2.5 text-blue-600 shrink-0" />
+                            <span>Purchase Contract</span>
                           </span>
+                        ) : (
+                          origins.length > 1 && (
+                            <span className="text-[10px] text-blue-600 font-semibold mt-0.5">
+                              +{origins.length - 1} More
+                            </span>
+                          )
                         )}
                       </div>
                     );
@@ -159,21 +181,41 @@ export default function LogisticsQueueTable({
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
                   {(() => {
+                    const hasPurchaseContract = Boolean(e.purchaseContract);
                     const dests = getDestinations(e);
-                    const firstDest = dests[0];
+                    const defaultDest = dests[0] || "—";
+                    const destDisplay = hasPurchaseContract
+                      ? (e.purchaseContract.deliveryPlace || defaultDest)
+                      : defaultDest;
+
                     return (
-                      <div className="flex flex-col">
-                        <span className="max-w-[150px] truncate" title={firstDest}>
-                          {firstDest}
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="max-w-[170px] truncate font-medium text-gray-800" title={destDisplay}>
+                          {destDisplay}
                         </span>
-                        {dests.length > 1 && (
-                          <span className="text-[10px] text-blue-600 font-semibold mt-0.5">
-                            +{dests.length - 1} More
+                        {hasPurchaseContract ? (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help max-w-fit"
+                            title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
+                          >
+                            <FileText className="h-2.5 w-2.5 text-blue-600 shrink-0" />
+                            <span>Purchase Contract</span>
                           </span>
+                        ) : (
+                          dests.length > 1 && (
+                            <span className="text-[10px] text-blue-600 font-semibold mt-0.5">
+                              +{dests.length - 1} More
+                            </span>
+                          )
                         )}
                       </div>
                     );
                   })()}
+                </td>
+                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
+                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium text-[10px]">
+                    {e.purchaseContract?.shipmentTypeName || "—"}
+                  </span>
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
                   <div className="flex items-center gap-1.5 font-semibold text-gray-700 capitalize">

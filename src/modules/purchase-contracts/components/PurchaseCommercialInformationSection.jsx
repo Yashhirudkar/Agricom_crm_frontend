@@ -398,7 +398,65 @@ export default function PurchaseCommercialInformationSection({
         </div>
 
         {/* Row 3: Place of Loading, Delivery Place & Date */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2 border-t border-gray-100">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 pt-2 border-t border-gray-100">
+          <div>
+            <label className={lbl}>Shipment Type / Incoterms</label>
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">
+                {masters?.shipmentTypes?.find(
+                  (shipmentType) =>
+                    String(shipmentType.id) === String(form.shipmentTypeId),
+                )?.name ||
+                  contract?.shipmentType?.name ||
+                  contract?.salesContract?.shipmentType?.name ||
+                  "—"}
+              </div>
+            ) : (
+              <div className="relative">
+                <select
+                  value={form.shipmentTypeId || ""}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      shipmentTypeId: e.target.value
+                        ? Number(e.target.value)
+                        : "",
+                    }))
+                  }
+                  className={`${inp} appearance-none pr-8`}
+                >
+                  <option value="">Select Shipment Type</option>
+                  {(masters?.shipmentTypes || []).map((shipmentType) => (
+                    <option key={shipmentType.id} value={shipmentType.id}>
+                      {shipmentType.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+              </div>
+            )}
+            <div className="mt-2.5 flex items-center gap-2">
+              <input
+                id="pc-freight-required"
+                type="checkbox"
+                disabled={isView}
+                checked={Boolean(form.freightRequired)}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, freightRequired: e.target.checked }))
+                }
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed"
+              />
+              <label
+                htmlFor="pc-freight-required"
+                className={`text-xs font-semibold cursor-pointer select-none ${
+                  form.freightRequired ? "text-blue-700" : "text-gray-600"
+                }`}
+              >
+                Freight Required
+              </label>
+            </div>
+          </div>
+
           <div>
             <label className={lbl}>Place of Loading</label>
             {isView ? (

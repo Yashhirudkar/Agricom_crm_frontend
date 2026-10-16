@@ -87,6 +87,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     bagSpec: "",
     stitching: "",
     marking: "",
+    shipmentTypeId: "",
+    freightRequired: false,
     placeOfLoading: "",
     deliveryPlace: "",
     deliveryDate: "",
@@ -186,6 +188,14 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         bagSpec: bagSpec,
         stitching: contract.stitching || f.stitching || "",
         marking: contract.marking || firstItem.marking || f.marking || "",
+        shipmentTypeId:
+          contract.shipmentTypeId ||
+          contract.shipmentType?.id ||
+          salesContract.shipmentTypeId ||
+          salesContract.shipmentType?.id ||
+          f.shipmentTypeId ||
+          "",
+        freightRequired: contract.freightRequired ?? f.freightRequired ?? false,
         notes: contract.notes || f.notes || "",
         currencyCode: contract.currencyCode || salesContract.currencyCode || f.currencyCode || "",
         ratePerMt: firstItem.ratePerMt || f.ratePerMt || "",
@@ -355,6 +365,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         specificationNo: form.specificationNo || null,
         specificationDate: form.specificationDate || null,
         paymentTermId: form.paymentTermId || null,
+        shipmentTypeId: form.shipmentTypeId || null,
+        freightRequired: Boolean(form.freightRequired),
         paymentTermsText: form.paymentTermsText || null,
         advancePercent: form.advancePercent !== "" && form.advancePercent != null ? parseFloat(form.advancePercent) : null,
         balancePercent: form.balancePercent !== "" && form.balancePercent != null ? parseFloat(form.balancePercent) : null,

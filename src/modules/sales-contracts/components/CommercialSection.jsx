@@ -96,8 +96,8 @@ const selectStyles = {
     backgroundColor: state.isSelected
       ? "#007aff"
       : state.isFocused
-      ? "#eff6ff"
-      : "#fff",
+        ? "#eff6ff"
+        : "#fff",
     color: state.isSelected ? "#fff" : "#111827",
     cursor: "pointer",
     padding: "8px 12px",
@@ -152,8 +152,8 @@ function LocationSelect({ value, onChange, options, loadOptions, placeholder, is
         borderColor: hasError
           ? "#fca5a5"
           : state.isFocused
-          ? "#007aff"
-          : "#e5e7eb",
+            ? "#007aff"
+            : "#e5e7eb",
       }),
     },
     components: { MenuList: VirtualMenuList },
@@ -180,9 +180,9 @@ function LocationSelect({ value, onChange, options, loadOptions, placeholder, is
   }
 
   return (
-    <CreatableSelect 
-      {...selectProps} 
-      options={combinedOptions} 
+    <CreatableSelect
+      {...selectProps}
+      options={combinedOptions}
       formatCreateLabel={formatCreateLabel}
     />
   );
@@ -203,7 +203,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
   // Current transport modes
   const originTransportMode = form.originTransportMode || "sea";
   const destTransportMode = form.destinationTransportMode || "sea";
-  
+
   const originConfig = TRANSPORT_MODE_CONFIG[originTransportMode] || TRANSPORT_MODE_CONFIG.sea;
   const destConfig = TRANSPORT_MODE_CONFIG[destTransportMode] || TRANSPORT_MODE_CONFIG.sea;
 
@@ -315,14 +315,14 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
 
         {/* ── Split Section: Origin vs Destination ──────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
+
           {/* Origin Section */}
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
             <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
               <OriginTransportIcon className="h-3.5 w-3.5 text-blue-500" />
               Origin / Shipment
             </h3>
-            
+
             <div className="mb-4">
               <label className={lbl}>
                 Transport Mode
@@ -405,7 +405,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
               <MapPin className="h-3.5 w-3.5 text-emerald-500" />
               Destination
             </h3>
-            
+
             <div className="mb-4">
               <label className={lbl}>
                 Transport Mode
@@ -488,11 +488,11 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
 
         {/* ── Common Commercial Terms ────────────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-gray-100">
-          
+
           {/* Shipment Type */}
           <div>
             <label className={lbl}>
-              Shipment Type
+              Shipment Type / Incoterms
             </label>
             <div className="relative">
               <select

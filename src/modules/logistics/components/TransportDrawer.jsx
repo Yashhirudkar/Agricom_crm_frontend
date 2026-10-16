@@ -124,17 +124,29 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
   };
 
   const availableRoutes = useMemo(() => {
+    const pc = details?.purchaseContract || enquiry?.purchaseContract;
+    const hasPc = Boolean(pc);
+
     if (!details?.logistics?.routes || details.logistics.routes.length === 0) {
+      if (hasPc && (pc.placeOfLoading || pc.deliveryPlace)) {
+        const o = pc.placeOfLoading || "—";
+        const d = pc.deliveryPlace || "—";
+        return [{ id: "pc", origin: o, destination: d, label: `${o} → ${d}` }];
+      }
       return [{ id: "all", origin: "—", destination: "—", label: "— → —" }];
     }
     
-    return details.logistics.routes.map(r => ({
-      id: r.id,
-      origin: r.origin,
-      destination: r.destination,
-      label: `${r.origin} → ${r.destination}`
-    }));
-  }, [details]);
+    return details.logistics.routes.map(r => {
+      const origin = hasPc && pc.placeOfLoading ? pc.placeOfLoading : r.origin;
+      const destination = hasPc && pc.deliveryPlace ? pc.deliveryPlace : r.destination;
+      return {
+        id: r.id,
+        origin,
+        destination,
+        label: `${origin} → ${destination}`
+      };
+    });
+  }, [details, enquiry]);
 
   useEffect(() => {
     if (availableRoutes.length > 0 && (!selectedRoute || !availableRoutes.find(r => r.id === selectedRoute.id))) {
@@ -596,9 +608,25 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                 )}
               </div>
               <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-2">
-                <span>Enquiry: <strong className="text-slate-700">{enquiry?.enquiryNo}</strong></span>
+                {(details?.purchaseContract?.contractNumber || enquiry?.purchaseContract?.contractNumber) ? (
+                  <>
+                    <span>PC: <strong className="text-slate-700">{details?.purchaseContract?.contractNumber || enquiry?.purchaseContract?.contractNumber}</strong></span>
+                    <span>•</span>
+                    <span>Enquiry: <strong className="text-slate-500">{enquiry?.enquiryNo}</strong></span>
+                  </>
+                ) : (
+                  <span>Enquiry: <strong className="text-slate-700">{enquiry?.enquiryNo}</strong></span>
+                )}
                 <span>•</span>
                 <span>Buyer: <strong className="text-slate-700">{enquiry?.partner?.entityName || "Standard Buyer"}</strong></span>
+                {(details?.purchaseContract?.shipmentTypeName || enquiry?.purchaseContract?.shipmentTypeName) && (
+                  <>
+                    <span>•</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                      {details?.purchaseContract?.shipmentTypeName || enquiry?.purchaseContract?.shipmentTypeName}
+                    </span>
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -669,15 +697,37 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
 
                     <div className="flex items-center gap-2 flex-1 w-full max-w-xl">
                       {/* From */}
-                      <div className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 truncate" title={Array.from(new Set(availableRoutes.filter(r => r.origin !== "—").map(r => r.origin))).join(", ") || "—"}>
-                        {Array.from(new Set(availableRoutes.filter(r => r.origin !== "—").map(r => r.origin))).join(", ") || "—"}
+                      <div className="flex-1 flex flex-col gap-1 min-w-0">
+                        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 truncate" title={Array.from(new Set(availableRoutes.filter(r => r.origin !== "—").map(r => r.origin))).join(", ") || "—"}>
+                          {Array.from(new Set(availableRoutes.filter(r => r.origin !== "—").map(r => r.origin))).join(", ") || "—"}
+                        </div>
+                        {Boolean(details?.purchaseContract || enquiry?.purchaseContract) && (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help w-fit"
+                            title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
+                          >
+                            <FileText className="h-2.5 w-2.5 text-blue-600 shrink-0" />
+                            <span>Purchase Contract</span>
+                          </span>
+                        )}
                       </div>
 
-                      <ArrowRight className="h-4 w-4 text-slate-400 shrink-0" />
+                      <ArrowRight className="h-4 w-4 text-slate-400 shrink-0 self-center" />
 
                       {/* To */}
-                      <div className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 truncate" title={Array.from(new Set(availableRoutes.filter(r => r.destination !== "—").map(r => r.destination))).join(", ") || "—"}>
-                        {Array.from(new Set(availableRoutes.filter(r => r.destination !== "—").map(r => r.destination))).join(", ") || "—"}
+                      <div className="flex-1 flex flex-col gap-1 min-w-0">
+                        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 truncate" title={Array.from(new Set(availableRoutes.filter(r => r.destination !== "—").map(r => r.destination))).join(", ") || "—"}>
+                          {Array.from(new Set(availableRoutes.filter(r => r.destination !== "—").map(r => r.destination))).join(", ") || "—"}
+                        </div>
+                        {Boolean(details?.purchaseContract || enquiry?.purchaseContract) && (
+                          <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help w-fit"
+                            title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
+                          >
+                            <FileText className="h-2.5 w-2.5 text-blue-600 shrink-0" />
+                            <span>Purchase Contract</span>
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -685,13 +735,35 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-center pl-2">
                   <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">From</p>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">From</p>
+                      {Boolean(details?.purchaseContract || enquiry?.purchaseContract) && (
+                        <span
+                          className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-medium bg-blue-50 text-blue-700 border border-blue-200/60 select-none cursor-help"
+                          title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
+                        >
+                          <FileText className="h-2 w-2 text-blue-600 shrink-0" />
+                          <span>PC</span>
+                        </span>
+                      )}
+                    </div>
                     <p className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 truncate">
                       <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" /> {selectedRoute ? selectedRoute.origin : "—"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">To</p>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">To</p>
+                      {Boolean(details?.purchaseContract || enquiry?.purchaseContract) && (
+                        <span
+                          className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-medium bg-blue-50 text-blue-700 border border-blue-200/60 select-none cursor-help"
+                          title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
+                        >
+                          <FileText className="h-2 w-2 text-blue-600 shrink-0" />
+                          <span>PC</span>
+                        </span>
+                      )}
+                    </div>
                     <p className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 truncate">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" /> {selectedRoute ? selectedRoute.destination : "—"}
                     </p>
@@ -699,7 +771,7 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                   <div>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Commodity</p>
                     <p className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 truncate">
-                      <Package className="h-3.5 w-3.5 text-slate-400 shrink-0" /> {enquiry?.product?.name || "—"}
+                      <Package className="h-3.5 w-3.5 text-slate-400 shrink-0" /> {details?.purchaseContract?.productName || enquiry?.purchaseContract?.productName || enquiry?.product?.name || "—"}
                     </p>
                   </div>
                   <div>
