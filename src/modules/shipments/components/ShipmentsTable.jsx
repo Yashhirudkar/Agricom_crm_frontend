@@ -1,64 +1,60 @@
 import React, { useState } from "react";
-import { Ship, Clipboard, User, Eye, Loader2, Check, Rocket } from "lucide-react";
+import {
+  Ship,
+  Clipboard,
+  User,
+  Loader2,
+  Check,
+  Rocket,
+  CheckCircle2,
+  XCircle,
+  Package
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
+import { shipmentsApi } from "../services/shipmentsApi";
 
 import ShipmentAllocationSelectorModal from "@/modules/cargo-availability/components/ShipmentAllocationSelectorModal";
-import { Boxes, Truck } from "lucide-react";
+import ManualReadinessModal from "./ManualReadinessModal";
 
-// Category Emoji Mapper
-const getProductEmoji = (productName) => {
-  const name = productName?.toUpperCase() || "";
-  if (
-    name.includes("RICE") ||
-    name.includes("MILLET") ||
-    name.includes("WHEAT") ||
-    name.includes("MAIZE") ||
-    name.includes("CORN") ||
-    name.includes("GRAIN")
-  )
-    return "🌾";
-  if (name.includes("OIL")) return "🛢️";
-  if (name.includes("SUGAR")) return "🍬";
-  if (name.includes("SPICE") || name.includes("PEPPER") || name.includes("CHILI")) return "🌶️";
-  if (name.includes("BEAN") || name.includes("COFFEE") || name.includes("SOYA")) return "🫘";
-  return "📦";
+// Standardized Timeline Color Map
+const TIMELINE_STYLES = {
+  today: "bg-green-100 text-green-800 border-green-200",
+  tomorrow: "bg-blue-100 text-blue-800 border-blue-200",
+  upcoming: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  overdue: "bg-red-100 text-red-800 border-red-200",
+  completed: "bg-gray-100 text-gray-800 border-gray-200",
+  cancelled: "bg-gray-100 text-gray-500 border-gray-200",
 };
 
-// Workflow Status CSS Map
-const WORKFLOW_COLORS = {
-  Scheduled: "bg-slate-50 text-slate-700 border-slate-200",
-  Ready: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  Stuffing: "bg-cyan-50 text-cyan-700 border-cyan-200",
-  Dispatched: "bg-teal-50 text-teal-700 border-teal-200",
-  "In Transit": "bg-amber-50 text-amber-700 border-amber-200",
-  "At Port": "bg-pink-50 text-pink-700 border-pink-200",
-  Sailed: "bg-sky-50 text-sky-700 border-sky-200",
-  Arrived: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  Delivered: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  Cancelled: "bg-red-50 text-red-700 border-red-200",
-};
+// Dynamic Tooltip Reason Helper for Shipment Readiness
+const getExecuteDisabledTooltip = (shipment) => {
+  if (shipment?.readyForShipment) {
+    return "Execute Purchase Contract";
+  }
+  if (shipment?.isManualOverride && shipment?.manualReadyOverride === false) {
+    return shipment.manualReadyReason
+      ? `Blocked by manual override: ${shipment.manualReadyReason}`
+      : "Blocked by manual override.";
+  }
+  const cargoPending = !shipment?.cargoReady;
+  const freightPending = !shipment?.freightReady;
 
-// Timeline Color CSS Map
-const TIMELINE_COLORS = {
-  today: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  tomorrow: "bg-blue-50 text-blue-700 border-blue-200",
-  upcoming: "bg-blue-50 text-blue-700 border-blue-200",
-  overdue: "bg-red-50 text-red-700 border-red-200",
-  completed: "bg-gray-100 text-gray-700 border-gray-200",
-  cancelled: "bg-gray-50 text-gray-400 border-gray-200",
-};
-
-const TIMELINE_EMOJIS = {
-  today: "🟢",
-  tomorrow: "🔵",
-  upcoming: "🔵",
-  overdue: "🔴",
-  completed: "⚫",
-  cancelled: "⚪",
+  if (cargoPending && freightPending) {
+    return "Cargo and Freight allocations are pending.";
+  }
+  if (cargoPending) {
+    return "Cargo allocation is pending.";
+  }
+  if (freightPending) {
+    return "Freight allocation is pending.";
+  }
+  return "Shipment is not ready for execution.";
 };
 
 export default function ShipmentsTable({
+  onRefresh,
   shipments,
   loading,
   onRowClick,
@@ -76,7 +72,9 @@ export default function ShipmentsTable({
   const [copiedId, setCopiedId] = useState(null);
   const [selectorShipment, setSelectorShipment] = useState(null);
   const [selectorAllocations, setSelectorAllocations] = useState([]);
-
+  const [manualReadinessShipment, setManualReadinessShipment] = useState(null);
+  const [executingId, setExecutingId] = useState(null);
+  const [executedShipmentIds, setExecutedShipmentIds] = useState(new Set());
 
   const handleCopy = (e, text, id) => {
     e.stopPropagation();
@@ -104,19 +102,19 @@ export default function ShipmentsTable({
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-gray-400 gap-3 bg-white">
-        <Loader2 className="h-7 w-7 text-[#007aff] animate-spin" />
-        <span className="text-xs font-semibold">Loading shipments registry...</span>
+      <div className="flex flex-col items-center justify-center py-24 text-gray-500 gap-3 bg-white">
+        <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+        <span className="text-sm font-medium">Loading shipments registry...</span>
       </div>
     );
   }
 
   if (shipments.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-2.5 bg-white">
-        <Ship className="h-10 w-10 text-gray-300 stroke-[1.2]" />
-        <span className="text-xs font-semibold text-gray-600">No shipments found</span>
-        <span className="text-[10px] text-gray-400 max-w-[280px] text-center">
+      <div className="flex flex-col items-center justify-center py-20 text-gray-500 gap-3 bg-white">
+        <Ship className="h-12 w-12 text-gray-300 stroke-[1.5]" />
+        <span className="text-sm font-medium text-gray-700">No shipments found</span>
+        <span className="text-sm text-gray-500 max-w-sm text-center">
           No records match the current filters. Modify your search criteria or add shipments to Sales Contracts.
         </span>
       </div>
@@ -124,230 +122,298 @@ export default function ShipmentsTable({
   }
 
   return (
-    <div className="overflow-x-auto relative">
-      <table className="w-full text-xs text-left border-collapse">
-        <thead>
-          <tr className="bg-gray-50/70 border-b border-gray-100 text-gray-500 font-bold select-none uppercase tracking-wider text-[9px]">
-            <th className="px-4 py-3.5 w-8">
-              <input
-                type="checkbox"
-                onChange={handleSelectAll}
-                checked={shipments.length > 0 && selectedShipments.length === shipments.length}
-                className="h-3.5 w-3.5 rounded border-gray-300 text-[#007aff] focus:ring-[#007aff]"
-              />
-            </th>
-            <th className="px-4 py-3.5 whitespace-nowrap">Shipment Ref</th>
-            <th className="px-4 py-3.5 whitespace-nowrap">
-              {onSortBusinessReference ? (
-                <button type="button" onClick={onSortBusinessReference}>Business Ref No.</button>
-              ) : "Business Ref No."}
-            </th>
-            <th className="px-4 py-3.5 whitespace-nowrap">Timeline</th>
-            <th className="px-4 py-3.5 whitespace-nowrap">Status</th>
-            <th className="px-4 py-3.5 whitespace-nowrap">Shipment Date</th>
-            <th className="px-4 py-3.5 whitespace-nowrap">Buyer</th>
-            <th className="px-4 py-3.5 whitespace-nowrap">Seller</th>
-            <th className="px-4 py-3.5 whitespace-nowrap">Product</th>
-            <th className="px-4 py-3.5 text-right whitespace-nowrap">Qty (MT)</th>
-            <th className="px-4 py-3.5 text-right whitespace-nowrap">Purchase Rate</th>
-            <th className="px-4 py-3.5 text-right whitespace-nowrap">Action</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50">
-          {shipments.map((s) => {
-            const contract = s.salesContract || {};
-            const buyer = contract.buyer || {};
-            const seller = contract.seller || {};
-            const timelineObj = s.timeline || {};
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
+              <th className="px-4 py-3 w-12 text-center">
+                <input
+                  type="checkbox"
+                  onChange={handleSelectAll}
+                  checked={shipments.length > 0 && selectedShipments.length === shipments.length}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                />
+              </th>
+              <th className="px-4 py-3 whitespace-nowrap">Shipment Ref</th>
+              <th className="px-4 py-3 whitespace-nowrap">
+                {onSortBusinessReference ? (
+                  <button type="button" onClick={onSortBusinessReference} className="hover:text-blue-600 font-medium">
+                    Business Ref No.
+                  </button>
+                ) : (
+                  "Business Ref No."
+                )}
+              </th>
+              <th className="px-4 py-3 whitespace-nowrap">Timeline</th>
+              <th className="px-4 py-3 whitespace-nowrap">Shipment Date</th>
+              <th className="px-4 py-3 whitespace-nowrap">Buyer</th>
+              <th className="px-4 py-3 whitespace-nowrap">Seller</th>
+              <th className="px-4 py-3 whitespace-nowrap">Product</th>
+              <th className="px-4 py-3 text-right whitespace-nowrap">Qty (MT)</th>
+              <th className="px-4 py-3 text-center whitespace-nowrap">Ready</th>
+              <th className="px-4 py-3 text-right whitespace-nowrap">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {shipments.map((s) => {
+              const contract = s.salesContract || {};
+              const buyer = contract.buyer || {};
+              const seller = contract.seller || {};
+              const timelineObj = s.timeline || {};
 
-            const productsList = s.products || [];
-            const primaryProduct = productsList[0]?.name || "—";
-            const productDisplay =
-              productsList.length > 1
-                ? `${primaryProduct} + ${productsList.length - 1} more`
-                : primaryProduct;
+              const productsList = s.products || [];
+              const primaryProduct = productsList[0]?.name || "—";
+              const productDisplay =
+                productsList.length > 1
+                  ? `${primaryProduct} + ${productsList.length - 1} more`
+                  : primaryProduct;
 
-            const isSelected = selectedShipments.includes(s.id);
+              const isSelected = selectedShipments.includes(s.id);
+              const isExecuted = s.status === "Executed" || s.isExecuted || executedShipmentIds.has(s.id);
 
-            return (
-              <tr
-                key={s.id}
-                onClick={() => onRowClick(s)}
-                className={`hover:bg-[#007aff]/5 cursor-pointer transition-colors ${isSelected ? "bg-[#007aff]/3" : ""
-                  }`}
-              >
-                {/* Checkbox */}
-                <td className="px-4 py-3 w-8" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={(e) => handleSelectOne(e, s.id)}
-                    className="h-3.5 w-3.5 rounded border-gray-300 text-[#007aff] focus:ring-[#007aff]"
-                  />
-                </td>
-
-                {/* Shipment Ref */}
-                <td className="px-4 py-3 font-mono font-bold text-gray-700 whitespace-nowrap relative group/ref">
-                  <div className="flex items-center gap-1.5">
-                    <span>{s.shipmentReference || "—"}</span>
-                    <button
-                      onClick={(e) => handleCopy(e, s.shipmentReference, `ref-${s.id}`)}
-                      className="opacity-0 group-hover/ref:opacity-100 p-0.5 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-all"
-                      title="Copy Reference"
-                    >
-                      {copiedId === `ref-${s.id}` ? (
-                        <Check className="h-3 w-3 text-green-500" />
-                      ) : (
-                        <Clipboard className="h-3 w-3" />
-                      )}
-                    </button>
-                  </div>
-                </td>
-                <td className="px-4 py-3 font-mono font-semibold text-indigo-700 whitespace-nowrap">
-                  {s.businessReference || s.businessTransaction?.businessReference || "—"}
-                </td>
-
-                {/* Timeline chip */}
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-bold ${TIMELINE_COLORS[timelineObj.type] || "bg-gray-50 text-gray-500 border-gray-200"
-                      }`}
-                  >
-                    <span>{TIMELINE_EMOJIS[timelineObj.type] || "⚪"}</span>
-                    <span>{timelineObj.label}</span>
-                  </span>
-                </td>
-
-                {/* Workflow Status */}
-                <td className="px-4 py-3 whitespace-nowrap">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-lg border text-[10px] font-bold ${WORKFLOW_COLORS[s.status] || "bg-slate-50 text-slate-600 border-slate-200"
-                      }`}
-                  >
-                    {s.status}
-                  </span>
-                </td>
-
-
-                {/* Shipment Date */}
-                <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                  {s.shipmentDate
-                    ? new Date(s.shipmentDate).toLocaleDateString("en-GB", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })
-                    : "—"}
-                </td>
-
-                {/* Buyer */}
-                <td
-                  className="px-4 py-3 whitespace-nowrap font-medium text-gray-800"
-                  onClick={(e) => e.stopPropagation()}
+              return (
+                <tr
+                  key={s.id}
+                  onClick={() => onRowClick(s)}
+                  className={`hover:bg-gray-50 transition-colors cursor-pointer ${isSelected ? "bg-blue-50/50" : ""
+                    }`}
                 >
-                  {buyer.id ? (
-                    <button
-                      onClick={() => router.push(`/masters/partners?partnerId=${buyer.id}`)}
-                      className="text-gray-700 hover:text-[#007aff] hover:underline flex items-center gap-1.5 text-left"
-                    >
-                      <User className="h-3 w-3 text-gray-400" />
-                      <span>{buyer.entityName || "—"}</span>
-                    </button>
-                  ) : (
-                    "—"
-                  )}
-                </td>
+                  {/* Checkbox */}
+                  <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => handleSelectOne(e, s.id)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                    />
+                  </td>
 
-                {/* Seller */}
-                <td className="px-4 py-3 whitespace-nowrap text-gray-600">
-                  {seller.entityName || "—"}
-                </td>
-
-                {/* Product */}
-                <td className="px-4 py-3 whitespace-nowrap">
-                  {productsList.length > 0 ? (
-                    <span className="inline-flex items-center gap-1.5 bg-blue-50/50 border border-blue-100 px-2 py-0.5 rounded-lg text-gray-700 font-semibold">
-                      <span>{getProductEmoji(primaryProduct)}</span>
-                      <span className="truncate max-w-[120px]" title={primaryProduct}>
-                        {productDisplay}
+                  {/* Shipment Ref */}
+                  <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap group">
+                    <div className="flex items-center gap-2">
+                      <span title={s.shipmentReference || ""}>
+                        {s.shipmentReference
+                          ? s.shipmentReference.length > 8
+                            ? `${s.shipmentReference.slice(0, 8)}...`
+                            : s.shipmentReference
+                          : "—"}
                       </span>
-                    </span>
-                  ) : (
-                    "—"
-                  )}
-                </td>
+                      {s.shipmentReference && (
+                        <button
+                          onClick={(e) => handleCopy(e, s.shipmentReference, `ref-${s.id}`)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-gray-700 transition-opacity"
+                          title="Copy Reference"
+                        >
+                          {copiedId === `ref-${s.id}` ? (
+                            <Check className="h-3.5 w-3.5 text-green-600" />
+                          ) : (
+                            <Clipboard className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </td>
 
-                {/* Qty (MT) */}
-                <td className="px-4 py-3 text-right font-bold text-gray-800 whitespace-nowrap">
-                  {s.quantity
-                    ? Number(s.quantity).toLocaleString("en-US", { minimumFractionDigits: 2 })
-                    : "0.00"}
-                </td>
+                  {/* Business Ref */}
+                  <td className="px-4 py-3 font-medium text-blue-600 whitespace-nowrap">
+                    {s.businessReference || s.businessTransaction?.businessReference || "—"}
+                  </td>
 
-                {/* Purchase Rate */}
-                <td className="px-4 py-3 text-right font-medium text-gray-700 whitespace-nowrap">
-                  {s.purchaseRate
-                    ? Number(s.purchaseRate).toLocaleString("en-US", { minimumFractionDigits: 2 })
-                    : "—"}
-                </td>
-
-                {/* Actions */}
-                <td className="px-3 py-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      onClick={() => onRowClick(s)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-[#007aff] hover:bg-blue-50 transition-colors"
-                      title="View Details"
+                  {/* Timeline */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-xs font-medium capitalize ${TIMELINE_STYLES[timelineObj.type] || "bg-gray-100 text-gray-700 border-gray-200"
+                        }`}
                     >
-                      <Eye className="h-3.5 w-3.5 text-gray-700" />
-                    </button>
+                      {timelineObj.label || "Unknown"}
+                    </span>
+                  </td>
+
+                  {/* Shipment Date */}
+                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                    {s.shipmentDate
+                      ? new Date(s.shipmentDate).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })
+                      : "—"}
+                  </td>
+
+                  {/* Buyer */}
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-900 font-medium" onClick={(e) => e.stopPropagation()}>
+                    {buyer.entityName ? (
+                      buyer.id ? (
+                        <button
+                          onClick={() => router.push(`/masters/partners?partnerId=${buyer.id}`)}
+                          className="hover:text-blue-600 hover:underline flex items-center gap-1.5"
+                          title={buyer.entityName}
+                        >
+                          <User className="h-4 w-4 text-gray-400 shrink-0" />
+                          <span>
+                            {buyer.entityName.length > 10
+                              ? `${buyer.entityName.slice(0, 10)}...`
+                              : buyer.entityName}
+                          </span>
+                        </button>
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-gray-900" title={buyer.entityName}>
+                          <User className="h-4 w-4 text-gray-400 shrink-0" />
+                          <span>
+                            {buyer.entityName.length > 10
+                              ? `${buyer.entityName.slice(0, 10)}...`
+                              : buyer.entityName}
+                          </span>
+                        </span>
+                      )
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+
+                  {/* Seller */}
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-600" title={seller.entityName || ""}>
+                    {seller.entityName || "—"}
+                  </td>
+
+                  {/* Product */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {productsList.length > 0 ? (
+                      <div className="flex items-center gap-2 text-gray-700" title={primaryProduct}>
+                        <Package className="h-4 w-4 text-gray-400" />
+                        <span className="truncate max-w-[150px]">{productDisplay}</span>
+                      </div>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+
+                  {/* Qty (MT) */}
+                  <td className="px-4 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                    {s.quantity
+                      ? Number(s.quantity).toLocaleString("en-US", { minimumFractionDigits: 2 })
+                      : "0.00"}
+                  </td>
+
+                  {/* Ready Column */}
+                  <td className="px-4 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        if (onExecutePurchase) {
-                          onExecutePurchase(s);
-                        } else {
-                          try {
-                            const salesContractId = s.salesContractId || s.salesContract?.id;
-                            if (!salesContractId) {
-                              console.error("Sales Contract ID missing for shipment", s);
-                              return;
-                            }
-                            let targetShipmentIds = [Number(s.id)];
-                            if (selectedShipments.includes(s.id) && selectedShipments.length > 1) {
-                              targetShipmentIds = selectedShipments.map(Number);
-                            }
-
-                            const res = await purchaseContractApi.create({
-                              salesContractId: Number(salesContractId),
-                              shipmentIds: targetShipmentIds,
-                            });
-                            const pcId = res.data?.id;
-                            if (pcId) {
-                              if (targetShipmentIds.length > 1) {
-                                router.push(`/sales/purchase-contracts/${pcId}?shipmentIds=${targetShipmentIds.join(",")}`);
-                              } else {
-                                router.push(`/sales/purchase-contracts/${pcId}?shipmentId=${s.id}`);
-                              }
-                            }
-                          } catch (err) {
-                            console.error("Failed to open Purchase Contract workspace", err);
-                          }
-                        }
-                      }}
-                      className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
-                      title="Execute + Workspace"
+                      onClick={() => setManualReadinessShipment(s)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ${s.readyForShipment
+                        ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                        : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                        }`}
+                      title="Click to view or edit readiness"
                     >
-                      <Rocket className="h-3.5 w-3.5 text-purple-600 animate-pulse" />
+                      {s.readyForShipment ? (
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5" />
+                      )}
+                      <span>{s.readyForShipment ? "Yes" : "No"}</span>
                     </button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-4 py-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                    {isExecuted ? (
+                      <button
+                        type="button"
+                        disabled
+                        title="Shipment already executed"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-gray-100 text-gray-400 cursor-not-allowed"
+                      >
+                        <Check className="h-4 w-4" />
+                        <span>Executed</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={!s.readyForShipment || executingId === s.id}
+                        title={getExecuteDisabledTooltip(s)}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!s.readyForShipment || executingId === s.id) return;
+
+                          if (onExecutePurchase) {
+                            onExecutePurchase(s);
+                          } else {
+                            try {
+                              setExecutingId(s.id);
+                              const salesContractId = s.salesContractId || s.salesContract?.id;
+
+                              if (!salesContractId) {
+                                toast.error("Sales Contract ID missing for shipment");
+                                return;
+                              }
+
+                              let targetShipmentIds = [Number(s.id)];
+                              if (selectedShipments.includes(s.id) && selectedShipments.length > 1) {
+                                targetShipmentIds = selectedShipments.map(Number);
+                              }
+
+                              await purchaseContractApi.create({
+                                salesContractId: Number(salesContractId),
+                                shipmentIds: targetShipmentIds,
+                              });
+
+                              await Promise.all(
+                                targetShipmentIds.map((id) =>
+                                  shipmentsApi.updateShipment(id, { status: "Executed" })
+                                ).catch(() => { })
+                              );
+
+                              setExecutedShipmentIds((prev) => {
+                                const next = new Set(prev);
+                                targetShipmentIds.forEach((id) => next.add(id));
+                                return next;
+                              });
+
+                              toast.success("Shipment executed successfully");
+                              if (selectedShipments.includes(s.id)) {
+                                setSelectedShipments?.((prev) => prev.filter((id) => !targetShipmentIds.includes(id)));
+                              }
+                              if (onRefresh) onRefresh();
+                            } catch (err) {
+                              const msg = err.response?.data?.message || "Failed to execute shipment";
+                              toast.error(msg);
+                            } finally {
+                              setExecutingId(null);
+                            }
+                          }
+                        }}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${s.readyForShipment && executingId !== s.id
+                          ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          }`}
+                      >
+                        {executingId === s.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Rocket className="h-4 w-4" />
+                        )}
+                        <span>{executingId === s.id ? "Executing..." : "Execute"}</span>
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <ManualReadinessModal
+        isOpen={!!manualReadinessShipment}
+        shipment={manualReadinessShipment}
+        onClose={() => setManualReadinessShipment(null)}
+        onSaveSuccess={() => {
+          setManualReadinessShipment(null);
+          if (onRefresh) onRefresh();
+        }}
+      />
 
       {selectorShipment && (
         <ShipmentAllocationSelectorModal
@@ -356,6 +422,6 @@ export default function ShipmentsTable({
           onClose={() => setSelectorShipment(null)}
         />
       )}
-    </div>
+    </>
   );
 }

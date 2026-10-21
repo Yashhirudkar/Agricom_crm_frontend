@@ -101,7 +101,7 @@ export default function ShipmentsFilter({
   const lblCls = "block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1";
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl shadow-xs overflow-hidden">
+    <div>
       {/* Top Filter Bar */}
       <div className="px-5 py-3.5 border-b border-gray-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         
@@ -421,12 +421,6 @@ export default function ShipmentsFilter({
         </div>
       )}
 
-      {/* Row Counter (only shown if advanced is closed, as helper) */}
-      {!showAdvanced && (
-        <div className="px-5 py-2 bg-gray-50/50 border-t border-gray-50 flex items-center justify-between text-[11px] font-semibold text-gray-400">
-          <span>Filtered Results: {total} shipment{total !== 1 ? "s" : ""}</span>
-        </div>
-      )}
     </div>
   );
 }

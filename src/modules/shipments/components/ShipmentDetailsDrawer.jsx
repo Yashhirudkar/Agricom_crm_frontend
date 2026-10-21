@@ -19,6 +19,26 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+// Dynamic Tooltip Reason Helper for Shipment Readiness
+const getExecuteDisabledTooltip = (shipment) => {
+  if (shipment?.readyForShipment) {
+    return "Execute Purchase Contract Workspace";
+  }
+  const cargoPending = !shipment?.cargoReady;
+  const freightPending = !shipment?.freightReady;
+
+  if (cargoPending && freightPending) {
+    return "Cargo and Freight allocations are pending.";
+  }
+  if (cargoPending) {
+    return "Cargo allocation is pending.";
+  }
+  if (freightPending) {
+    return "Freight allocation is pending.";
+  }
+  return "Shipment is not ready for execution.";
+};
+
 export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContract, onOpenCargoDrawer }) {
   const router = useRouter();
   if (!shipment) return null;
@@ -92,14 +112,28 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
           </div>
 
           <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={handleExecuteWorkspace}
-              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-            >
-              <Rocket className="h-3.5 w-3.5" />
-              <span>Execute Workspace</span>
-            </button>
+            <div className="relative group/drawer-exec inline-flex">
+              <button
+                type="button"
+                disabled={!shipment.readyForShipment}
+                onClick={handleExecuteWorkspace}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${shipment.readyForShipment
+                    ? "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                    : "bg-gray-100 text-gray-400 border border-gray-200 opacity-50 cursor-not-allowed pointer-events-auto"
+                  }`}
+                title={getExecuteDisabledTooltip(shipment)}
+              >
+                <Rocket className="h-3.5 w-3.5" />
+                <span>Execute Workspace</span>
+              </button>
+              {!shipment.readyForShipment && (
+                <div className="pointer-events-none absolute top-full right-0 mt-1.5 hidden group-hover/drawer-exec:flex flex-col items-end z-50">
+                  <div className="bg-gray-900 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-gray-700">
+                    {getExecuteDisabledTooltip(shipment)}
+                  </div>
+                </div>
+              )}
+            </div>
             <button
               onClick={onClose}
               className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"

@@ -1,123 +1,191 @@
 "use client";
-import React from "react";
-import { CheckCircle2, Clock, XCircle, ShieldCheck } from "lucide-react";
-import { cargoAvailabilityApi } from "../services/cargoAvailabilityApi";
+import React, { useState } from "react";
+import { CheckCircle2, Clock, FileText, AlertCircle, Edit3 } from "lucide-react";
+import MttReadinessFormModal from "./MttReadinessFormModal";
 
 export default function MttReadinessTab({ cargoRecord, onRefresh }) {
-  const readinessEntries = cargoRecord?.readinessEntries || [];
+  const [openModal, setOpenModal] = useState(false);
 
-  const handleApprove = async (id, status) => {
-    try {
-      await cargoAvailabilityApi.approveReadiness(id, status);
-      onRefresh();
-    } catch (err) {
-      console.error("Failed to update readiness status", err);
-    }
-  };
+  const contract = cargoRecord?.purchaseContract || {};
+  const product = cargoRecord?.product || {};
+  const contractNo =
+    contract.contractNumber || `PC-${contract.id || cargoRecord?.purchaseContractId || ""}`;
+  const businessRef =
+    cargoRecord?.businessReference ||
+    cargoRecord?.businessTransaction?.businessReference ||
+    contract.businessReference ||
+    "—";
+  const productName = product.name || cargoRecord?.purchaseContractItem?.productName || "Product";
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "Approved":
-        return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Approved</span>;
-      case "Rejected":
-        return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">Rejected</span>;
-      default:
-        return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Pending Approval</span>;
-    }
-  };
+  const isReady =
+    cargoRecord?.isReady ||
+    cargoRecord?.status === "Ready" ||
+    cargoRecord?.status === "Partially Allocated" ||
+    cargoRecord?.status === "Fully Allocated" ||
+    cargoRecord?.status === "Loading" ||
+    cargoRecord?.status === "Dispatched" ||
+    cargoRecord?.status === "Completed";
 
-  if (!readinessEntries || readinessEntries.length === 0) {
-    return (
-      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-        <CheckCircle2 className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-        <h4 className="text-xs font-bold text-gray-700">No Readiness Entries Logged</h4>
-        <p className="text-[11px] text-gray-400 mt-0.5">Click "+ Readiness" in the grid to record physical stock readiness.</p>
-      </div>
-    );
-  }
+  const readyDate = cargoRecord?.readyDate || cargoRecord?.readinessEntries?.[0]?.readyDate;
+  const remarks = cargoRecord?.remarks || cargoRecord?.readinessEntries?.[0]?.remarks;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
-      <div className="px-4 py-3 bg-gray-50/60 border-b border-gray-200 flex items-center justify-between">
-        <h3 className="text-xs font-bold text-gray-800 flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          <span>MTT Physical Stock Readiness Entries</span>
-        </h3>
-        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-          Approved Total: {cargoRecord.readyQty} MT
-        </span>
+    <div className="space-y-4 font-sans">
+      {/* Main Readiness Status Card */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        {/* Header Banner */}
+        <div className="px-5 py-3.5 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                isReady
+                  ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                  : "bg-amber-100 text-amber-700 border border-amber-200"
+              }`}
+            >
+              {isReady ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <Clock className="h-4 w-4" />
+              )}
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                MTT Cargo Readiness Status
+              </h3>
+              <p className="text-[11px] text-slate-500 font-medium">
+                Procurement readiness confirmation for outbound allocation & loading
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setOpenModal(true)}
+            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <Edit3 className="h-3.5 w-3.5" />
+            <span>Update Readiness</span>
+          </button>
+        </div>
+
+        {/* Card Body */}
+        <div className="p-5 grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Status Display */}
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-col justify-between">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Current Readiness
+            </span>
+            <div className="mt-2">
+              {isReady ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  Ready
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                  <Clock className="h-3.5 w-3.5 text-amber-600" />
+                  Not Ready
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-2 font-medium">
+              {isReady
+                ? "Cargo is authorized for allocation & truck loading."
+                : "Cargo is not ready. Stock allocation is held."}
+            </p>
+          </div>
+
+          {/* Contract Details */}
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2 text-xs">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Purchase Contract
+              </span>
+              <span className="font-bold text-slate-900 mt-0.5 block">
+                {contractNo}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Business Ref
+              </span>
+              <span className="font-mono font-semibold text-indigo-700 mt-0.5 block">
+                {businessRef}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Product
+              </span>
+              <span className="font-medium text-slate-800 mt-0.5 block truncate">
+                {productName}
+              </span>
+            </div>
+          </div>
+
+          {/* Quantities */}
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2 text-xs">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Purchase Quantity
+              </span>
+              <span className="text-base font-extrabold text-slate-900 font-mono mt-0.5 block">
+                {Number(cargoRecord.purchaseQty || 0).toLocaleString()} MT
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Available Cargo
+              </span>
+              <span className="text-sm font-bold text-cyan-700 font-mono mt-0.5 block">
+                {Number(cargoRecord.availableQty || 0).toLocaleString()} MT
+              </span>
+            </div>
+          </div>
+
+          {/* Ready Date & Remarks */}
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2 text-xs">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Ready Date
+              </span>
+              <span className="font-bold text-slate-800 mt-0.5 block">
+                {readyDate ? new Date(readyDate).toLocaleDateString("en-GB") : "—"}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Remarks
+              </span>
+              <p className="text-[11px] text-slate-600 mt-0.5 italic line-clamp-3">
+                {remarks || "No operational remarks recorded."}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Operational Guidance Notice */}
+        <div className="px-5 py-3 bg-slate-100/60 border-t border-slate-200/80 flex items-center gap-2 text-xs text-slate-600">
+          <AlertCircle className="h-4 w-4 text-slate-400 flex-shrink-0" />
+          <span>
+            {isReady
+              ? "Cargo is marked Ready. You can proceed to the Allocation and Exporter Loading Execution workflows."
+              : "Cargo is marked Not Ready. Click 'Update Readiness' once cargo is confirmed ready."}
+          </span>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="bg-gray-50/50 border-b border-gray-200 text-gray-500 font-bold uppercase tracking-wider text-[10px]">
-              <th className="py-2.5 px-4">Ready Date</th>
-              <th className="py-2.5 px-4">Warehouse Location</th>
-              <th className="py-2.5 px-4 text-right">Ready Qty</th>
-              <th className="py-2.5 px-4">Packaging / Specs</th>
-              <th className="py-2.5 px-4">Quality & Moisture</th>
-              <th className="py-2.5 px-4">Status</th>
-              <th className="py-2.5 px-4 text-right">Approval Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 font-medium">
-            {readinessEntries.map((entry) => (
-              <tr key={entry.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="py-3 px-4 font-bold text-gray-900">
-                  {entry.readyDate ? new Date(entry.readyDate).toLocaleDateString("en-GB") : "—"}
-                </td>
-                <td className="py-3 px-4">
-                  <div className="font-bold text-gray-800">{entry.warehouseName || "Warehouse"}</div>
-                  <div className="text-[10px] text-gray-400 font-mono">
-                    Lot: {entry.lotNumber || "—"} | Batch: {entry.batchNumber || "—"} | Stack: {entry.stackNumber || "—"}
-                  </div>
-                </td>
-                <td className="py-3 px-4 text-right font-bold text-emerald-600 text-sm">
-                  {entry.readyQty} {entry.uom || "MT"}
-                </td>
-                <td className="py-3 px-4">
-                  <div className="text-gray-800 font-semibold">{entry.bagBulk}</div>
-                  <div className="text-[10px] text-gray-400">{entry.storageLocation || "Standard Storage"}</div>
-                </td>
-                <td className="py-3 px-4">
-                  <div className="text-gray-800 flex items-center gap-1">
-                    <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                    <span>Grade: {entry.qualityGrade || "Grade A"}</span>
-                  </div>
-                  <div className="text-[10px] text-gray-400">
-                    Moisture: {entry.moisture || "—"} | FM: {entry.foreignMatter || "—"}
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  {getStatusBadge(entry.status)}
-                </td>
-                <td className="py-3 px-4 text-right">
-                  {entry.status !== "Approved" && (
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => handleApprove(entry.id, "Approved")}
-                        className="px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-[10px] font-bold border border-emerald-200 transition-colors"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleApprove(entry.id, "Rejected")}
-                        className="px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-[10px] font-bold border border-red-200 transition-colors"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  )}
-                  {entry.status === "Approved" && (
-                    <span className="text-[10px] text-gray-400 italic">Approved & Added to Stock Pool</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Modal Dialog */}
+      {openModal && (
+        <MttReadinessFormModal
+          cargoRecord={cargoRecord}
+          onClose={() => setOpenModal(false)}
+          onSuccess={() => {
+            onRefresh?.();
+            setOpenModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

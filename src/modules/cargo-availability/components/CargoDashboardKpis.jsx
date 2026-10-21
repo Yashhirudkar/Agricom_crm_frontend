@@ -24,7 +24,7 @@ export default function CargoDashboardKpis({ stats = {}, isLoading = false }) {
       bg: "bg-blue-50 border-blue-100",
     },
     {
-      title: "Ready Qty Pool",
+      title: "Ready Cargo",
       value: `${(stats.totalReadyQty || 0).toLocaleString()} MT`,
       icon: CheckCircle2,
       color: "text-emerald-600",
@@ -38,7 +38,7 @@ export default function CargoDashboardKpis({ stats = {}, isLoading = false }) {
       bg: "bg-purple-50 border-purple-100",
     },
     {
-      title: "Available Ready Stock",
+      title: "Available Cargo",
       value: `${(stats.totalAvailableQty || 0).toLocaleString()} MT`,
       icon: Boxes,
       color: "text-cyan-600",
@@ -66,7 +66,7 @@ export default function CargoDashboardKpis({ stats = {}, isLoading = false }) {
       bg: "bg-teal-50 border-teal-100",
     },
     {
-      title: "Pending Readiness",
+      title: "Not Ready Cargo",
       value: stats.pendingReadinessCount || 0,
       icon: Clock,
       color: "text-amber-600",
@@ -98,29 +98,36 @@ export default function CargoDashboardKpis({ stats = {}, isLoading = false }) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
-        {Array.from({ length: 11 }).map((_, idx) => (
-          <div key={idx} className="h-20 bg-gray-100 rounded-xl animate-pulse" />
+        {[...Array(6)].map((_, i) => (
+          <div
+            key={i}
+            className="h-20 bg-slate-100 rounded-xl animate-pulse border border-slate-200"
+          />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 mb-6">
-      {cards.map((card, idx) => {
-        const Icon = card.icon;
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6 font-sans">
+      {cards.slice(0, 6).map((c, i) => {
+        const Icon = c.icon;
         return (
           <div
-            key={idx}
-            className="bg-white border border-gray-100 hover:border-gray-200 rounded-xl p-3.5 flex flex-col justify-between shadow-xs transition-all"
+            key={i}
+            className="p-3.5 rounded-xl border border-slate-200/80 bg-white shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors"
           >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-semibold text-gray-500 line-clamp-1">{card.title}</span>
-              <div className={`p-1.5 rounded-lg border ${card.bg}`}>
-                <Icon className={`h-3.5 w-3.5 ${card.color}`} />
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                {c.title}
+              </span>
+              <div className={`p-1 rounded-md ${c.bg}`}>
+                <Icon className={`h-3.5 w-3.5 ${c.color}`} />
               </div>
             </div>
-            <div className="text-base font-bold text-gray-900 tracking-tight">{card.value}</div>
+            <div className="text-base font-extrabold text-slate-900 font-mono">
+              {c.value}
+            </div>
           </div>
         );
       })}

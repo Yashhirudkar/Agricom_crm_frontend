@@ -318,43 +318,53 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
       </div>
 
 
-      {/* Filtering Panel */}
-      <div className="print:hidden">
-        <ShipmentsFilter
-          filters={filters}
-          setFilters={setFilters}
-          onReset={handleResetFilters}
-          total={total}
-          selectedShipments={selectedShipments}
-          onDeselect={() => setSelectedShipments([])}
-          onExecuteBulk={async () => {
-            try {
-              const selectedObjs = shipments.filter((s) => selectedShipments.includes(s.id));
-              const salesContractId = selectedObjs[0]?.salesContractId || selectedObjs[0]?.salesContract?.id;
-              if (!salesContractId) {
-                showToast("Could not determine Sales Contract for selected shipments", "error");
-                return;
-              }
-              const targetIds = selectedShipments.map(Number);
-              const res = await purchaseContractApi.create({
-                salesContractId: Number(salesContractId),
-                shipmentIds: targetIds,
-              });
-              const pcId = res.data?.id;
-              if (pcId) {
-                router.push(`/sales/purchase-contracts/${pcId}?shipmentIds=${targetIds.join(",")}`);
-              }
-            } catch (err) {
-              console.error("Failed bulk purchase contract execution", err);
-              showToast("Failed to execute purchase contract workspace", "error");
-            }
-          }}
-        />
-      </div>
-
-      {/* Data Grid table card */}
+      {/* Main Container Card: Unified Filter, Table and Pagination */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden print:border-none">
+        <div className="print:hidden">
+          <ShipmentsFilter
+            filters={filters}
+            setFilters={setFilters}
+            onReset={handleResetFilters}
+            total={total}
+            selectedShipments={selectedShipments}
+            onDeselect={() => setSelectedShipments([])}
+            onExecuteBulk={async () => {
+              try {
+                const selectedObjs = shipments.filter((s) => selectedShipments.includes(s.id));
+                const unreadyShipments = selectedObjs.filter((s) => !s.readyForShipment);
+                if (unreadyShipments.length > 0) {
+                  showToast("Cannot execute: Selected shipment(s) pending Cargo or Freight allocation.", "error");
+                  return;
+                }
+                const salesContractId = selectedObjs[0]?.salesContractId || selectedObjs[0]?.salesContract?.id;
+                if (!salesContractId) {
+                  showToast("Could not determine Sales Contract for selected shipments", "error");
+                  return;
+                }
+                const targetIds = selectedShipments.map(Number);
+                await purchaseContractApi.create({
+                  salesContractId: Number(salesContractId),
+                  shipmentIds: targetIds,
+                });
+                try {
+                  await Promise.all(
+                    targetIds.map((id) => shipmentsApi.updateShipment(id, { status: "Executed" }))
+                  );
+                } catch (statusErr) {
+                  console.warn("Could not update shipment status to Executed:", statusErr);
+                }
+                showToast("Shipments executed successfully", "success");
+                setSelectedShipments([]);
+                fetchShipments();
+              } catch (err) {
+                console.error("Failed bulk purchase contract execution", err);
+                showToast("Failed to execute shipments", "error");
+              }
+            }}
+          />
+        </div>
         <ShipmentsTable
+          onRefresh={fetchShipments}
           shipments={shipments}
           onSortBusinessReference={() => setFilters((current) => ({
             ...current,

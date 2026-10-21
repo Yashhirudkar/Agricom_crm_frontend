@@ -33,17 +33,19 @@ export default function ShipmentAllocationModal({ cargoRecord, onClose, onSucces
     setError("");
 
     if (!shipmentId) {
-      setError("Please select a target Shipment.");
+      setError("Please select a target Sales Shipment.");
       return;
     }
 
     if (!allocatedQty || Number(allocatedQty) <= 0) {
-      setError("Please enter a valid Allocated Quantity (> 0).");
+      setError("Please enter a valid Quantity to Allocate (> 0).");
       return;
     }
 
     if (Number(allocatedQty) > Number(cargoRecord.availableQty)) {
-      setError(`Cannot allocate ${allocatedQty} MT. Available Ready Stock is only ${cargoRecord.availableQty} MT.`);
+      setError(
+        `Cannot allocate ${allocatedQty} MT. Available Cargo is only ${cargoRecord.availableQty} MT.`
+      );
       return;
     }
 
@@ -57,7 +59,7 @@ export default function ShipmentAllocationModal({ cargoRecord, onClose, onSucces
       onSuccess();
       onClose();
     } catch (err) {
-      console.error("Failed to allocate stock to shipment", err);
+      console.error("Failed to allocate cargo to shipment", err);
       setError(err.response?.data?.message || "Failed to create shipment allocation.");
     } finally {
       setLoading(false);
@@ -68,24 +70,32 @@ export default function ShipmentAllocationModal({ cargoRecord, onClose, onSucces
 
   return (
     <>
-      <div className="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs animate-in fade-in duration-200" onClick={onClose} />
+      <div
+        className="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs animate-in fade-in duration-200"
+        onClick={onClose}
+      />
       <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-slate-100">
           
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 bg-purple-50/60 border-b border-purple-100 flex-shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 bg-purple-50/70 border-b border-purple-100 flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-purple-100 border border-purple-200 flex items-center justify-center">
                 <Layers className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-gray-900">Allocate Ready Stock to Shipment</h2>
-                <p className="text-xs text-purple-700 font-semibold mt-0.5">
-                  FIFO Reservation Strategy Enabled
+                <h2 className="text-base font-bold text-gray-900">
+                  Allocate Cargo to Sales Shipment
+                </h2>
+                <p className="text-xs text-gray-500 font-medium">
+                  Reserve cargo for customer export delivery
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <button
+              onClick={onClose}
+              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+            >
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -98,69 +108,84 @@ export default function ShipmentAllocationModal({ cargoRecord, onClose, onSucces
               </div>
             )}
 
-            {/* Ready Stock Pool Info */}
-            <div className="bg-purple-50/40 border border-purple-100 rounded-xl p-3.5 flex items-center justify-between text-xs">
+            {/* Available Cargo Info Card */}
+            <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-4 flex items-center justify-between text-xs">
               <div>
-                <span className="text-[10px] font-bold text-purple-600 uppercase">Available Ready Stock</span>
-                <div className="text-base font-extrabold text-purple-900 mt-0.5">{cargoRecord.availableQty} MT</div>
+                <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider block">
+                  Available Cargo
+                </span>
+                <div className="text-lg font-extrabold text-purple-900 font-mono mt-0.5">
+                  {Number(cargoRecord.availableQty || 0).toLocaleString()} MT
+                </div>
               </div>
               <div className="text-right">
-                <span className="text-[10px] font-bold text-gray-400 uppercase">Product</span>
-                <div className="font-bold text-gray-800 mt-0.5">{product.name || "Product"}</div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Product
+                </span>
+                <div className="font-bold text-slate-800 mt-0.5">
+                  {product.name || cargoRecord?.purchaseContractItem?.productName || "Product"}
+                </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Target Shipment *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Target Sales Shipment <span className="text-red-500">*</span>
+              </label>
               <select
                 required
                 value={shipmentId}
                 onChange={(e) => setShipmentId(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 font-medium"
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-medium text-slate-800"
               >
                 <option value="">Select a Sales Contract Shipment...</option>
                 {shipments.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.shipmentReference || `Shipment #${s.id}`} &bull; {s.salesContract?.contractNumber || "SC"} ({s.quantity} MT)
+                    {s.shipmentReference || `Shipment #${s.id}`} &bull;{" "}
+                    {s.salesContract?.contractNumber || "SC"} ({Number(s.quantity || 0).toLocaleString()} MT)
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Quantity to Allocate (MT) *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Quantity to Allocate (MT) <span className="text-red-500">*</span>
+              </label>
               <input
                 type="number"
                 step="0.01"
                 required
                 max={cargoRecord.availableQty}
-                placeholder={`Max available: ${cargoRecord.availableQty} MT`}
+                placeholder={`Max available: ${Number(cargoRecord.availableQty || 0).toLocaleString()} MT`}
                 value={allocatedQty}
                 onChange={(e) => setAllocatedQty(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 font-bold"
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-bold text-slate-900"
               />
             </div>
 
-            <div className="text-[11px] text-gray-500 bg-gray-50 p-3 rounded-xl border border-gray-100 flex items-center gap-2">
+            <div className="text-[11px] text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200/80 flex items-center gap-2">
               <ArrowRight className="h-4 w-4 text-purple-500 flex-shrink-0" />
-              <span>Allocated stock moves status to <strong>Reserved</strong> for truck loading execution.</span>
+              <span>
+                Allocating cargo assigns it to the sales shipment for truck loading.
+              </span>
             </div>
 
             {/* Buttons */}
-            <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-3">
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
               >
-                {loading ? "Allocating..." : "Confirm Stock Allocation"}
+                {loading ? "Allocating..." : "Allocate Cargo"}
               </button>
             </div>
           </form>
