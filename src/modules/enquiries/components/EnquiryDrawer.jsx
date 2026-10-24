@@ -24,6 +24,12 @@ import usePermissions from "@/hooks/usePermissions";
 
 export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, onSaveSuccess }) {
   const { masters, loading: mastersLoading } = useEnquiriesMasters();
+  const {
+    partnerRoles = [],
+    products = [],
+    packingTypes = [],
+    shipmentTypes = []
+  } = masters || {};
   const { data: currencies = [], isLoading: currenciesLoading } = useCurrencyMaster();
   const { hasPermission } = usePermissions();
 
@@ -38,6 +44,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     enquiryDate: new Date().toISOString().split("T")[0],
     partnerRoleId: "",
     partnerId: "",
+    brokerRoleId: "",
+    brokerId: "",
     productId: "",
     originCountryId: "",
     shipmentMode: "",
@@ -77,6 +85,14 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
   const [selectedPartnerName, setSelectedPartnerName] = useState("");
   const partnerDropdownRef = useRef(null);
 
+  // States for broker selection inside Drawer
+  const [brokerOptions, setBrokerOptions] = useState([]);
+  const [brokerLoading, setBrokerLoading] = useState(false);
+  const [brokerSearch, setBrokerSearch] = useState("");
+  const [isBrokerOpen, setIsBrokerOpen] = useState(false);
+  const [selectedBrokerName, setSelectedBrokerName] = useState("");
+  const brokerDropdownRef = useRef(null);
+
   // Reusable classes
   const inp = "w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white text-gray-800 transition-all";
   const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
@@ -99,6 +115,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           enquiryDate: editData.enquiryDate ? editData.enquiryDate.split("T")[0] : "",
           partnerRoleId: editData.partnerRoleId || "",
           partnerId: editData.partnerId || "",
+          brokerRoleId: editData.brokerRoleId || editData.brokerRole?.id || "",
+          brokerId: editData.brokerId || editData.broker?.id || "",
           productId: editData.productId || "",
           originCountryId: editData.originCountryId || "",
           shipmentMode: editData.shipmentMode || "",
@@ -127,6 +145,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
         };
         setForm(initialForm);
         setInitialFormState(initialForm);
+        setSelectedBrokerName(editData.brokerName || editData.broker?.entityName || "");
         setIsDirty(false);
 
         // Background query to refresh form data
@@ -139,6 +158,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                 enquiryDate: fresh.enquiryDate ? fresh.enquiryDate.split("T")[0] : "",
                 partnerRoleId: fresh.partnerRoleId || "",
                 partnerId: fresh.partnerId || "",
+                brokerRoleId: fresh.brokerRoleId || fresh.brokerRole?.id || "",
+                brokerId: fresh.brokerId || fresh.broker?.id || "",
                 productId: fresh.productId || "",
                 originCountryId: fresh.originCountryId || "",
                 shipmentMode: fresh.shipmentMode || "",
@@ -167,6 +188,9 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
               };
               setForm(freshForm);
               setInitialFormState(freshForm);
+              if (fresh.brokerName || fresh.broker?.entityName) {
+                setSelectedBrokerName(fresh.brokerName || fresh.broker?.entityName);
+              }
             }
           })
           .catch((e) => console.error("Error refreshing background enquiry", e));
@@ -177,6 +201,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           enquiryDate: new Date().toISOString().split("T")[0],
           partnerRoleId: "",
           partnerId: "",
+          brokerRoleId: "",
+          brokerId: "",
           productId: "",
           originCountryId: "",
           shipmentMode: "",
@@ -205,6 +231,9 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
         };
         setForm(emptyForm);
         setInitialFormState(emptyForm);
+        setSelectedBrokerName("");
+        setBrokerSearch("");
+        setBrokerOptions([]);
         setIsDirty(false);
       }
       setErrors({});
@@ -277,6 +306,86 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Fetch broker partners asynchronously based on role and search query
+  const fetchBrokerOptions = useCallback(async (roleId, search = "") => {
+    if (!roleId) {
+      setBrokerOptions([]);
+      return;
+    }
+    setBrokerLoading(true);
+    try {
+      const res = await axiosClient.get("/masters/partners/options", {
+        params: { partnerRoleId: roleId, search: search || undefined },
+      });
+      const data = res.data?.data || res.data || [];
+      setBrokerOptions(data);
+    } catch (e) {
+      console.error("Failed to fetch broker partner options", e);
+      setBrokerOptions([]);
+    } finally {
+      setBrokerLoading(false);
+    }
+  }, []);
+
+  // Sync broker selections
+  useEffect(() => {
+    if (form.brokerRoleId) {
+      fetchBrokerOptions(form.brokerRoleId, brokerSearch);
+    } else {
+      setBrokerOptions([]);
+      setSelectedBrokerName("");
+    }
+  }, [form.brokerRoleId, fetchBrokerOptions]);
+
+  useEffect(() => {
+    if (!form.brokerRoleId) return;
+    const timer = setTimeout(() => {
+      fetchBrokerOptions(form.brokerRoleId, brokerSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [brokerSearch, form.brokerRoleId, fetchBrokerOptions]);
+
+  useEffect(() => {
+    if (form.brokerId) {
+      const found = brokerOptions.find((p) => p.id === form.brokerId);
+      if (found) {
+        setSelectedBrokerName(found.entityName);
+      } else if (!selectedBrokerName) {
+        axiosClient.get(`/masters/partners/${form.brokerId}`).then((res) => {
+          if (res.data?.entityName) {
+            setSelectedBrokerName(res.data.entityName);
+          }
+        }).catch(() => { });
+      }
+    } else {
+      setSelectedBrokerName("");
+    }
+  }, [form.brokerId, brokerOptions]);
+
+  useEffect(() => {
+    function handleClickOutsideBroker(event) {
+      if (brokerDropdownRef.current && !brokerDropdownRef.current.contains(event.target)) {
+        setIsBrokerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutsideBroker);
+    return () => document.removeEventListener("mousedown", handleClickOutsideBroker);
+  }, []);
+
+  // Filter broker-related partner roles
+  const brokerPartnerRoles = useMemo(() => {
+    const filtered = partnerRoles.filter((r) =>
+      r.name?.toLowerCase().includes("broker")
+    );
+    if (filtered.length === 0) return partnerRoles;
+    if (form.brokerRoleId && !filtered.some((r) => r.id === Number(form.brokerRoleId))) {
+      const currentRole = partnerRoles.find((r) => r.id === Number(form.brokerRoleId));
+      if (currentRole) return [...filtered, currentRole];
+    }
+    return filtered;
+  }, [partnerRoles, form.brokerRoleId]);
+
 
   // Country options for SHIP mode
   const countryOptions = useMemo(() => {
@@ -388,6 +497,9 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     if (!form.partnerRoleId) newErrors.partnerRoleId = "Role is required";
     if (!form.partnerId) newErrors.partnerId = "Partner is required";
     if (!form.productId) newErrors.productId = "Product is required";
+    if (form.brokerRoleId && !form.brokerId) {
+      newErrors.brokerId = "Partner is required when Broker Role is selected";
+    }
 
     if (form.buyingInterest !== undefined && form.buyingInterest !== null && form.buyingInterest !== "") {
       if (Number(form.buyingInterest) < 0) {
@@ -417,6 +529,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
         shipmentDate: form.shipmentDate ? new Date(form.shipmentDate).toISOString() : undefined,
         partnerRoleId: Number(form.partnerRoleId),
         partnerId: Number(form.partnerId),
+        brokerRoleId: form.brokerRoleId ? Number(form.brokerRoleId) : null,
+        brokerId: form.brokerId ? Number(form.brokerId) : null,
         productId: Number(form.productId),
         packingTypeId: form.packingTypeId ? Number(form.packingTypeId) : undefined,
         quantity: form.quantity ? Number(form.quantity) : undefined,
@@ -465,7 +579,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       if (notifyGroup) {
         setSavingType('SENDING'); // 'Sending WhatsApp...'
         // Simulate a tiny delay for UX so user sees "Sending WhatsApp..."
-        await new Promise(r => setTimeout(r, 500)); 
+        await new Promise(r => setTimeout(r, 500));
         setSuccessMsg("✅ Enquiry updated and notification sent.");
         await new Promise(r => setTimeout(r, 1500));
       }
@@ -483,7 +597,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       } else if (err.message) {
         errMsg = err.message;
       }
-      
+
       if (notifyGroup && err.response?.status === 200) {
         // Since fire-and-forget in backend, this block might be rarely hit for 200 + error, but just in case
         setError("Enquiry updated successfully. WhatsApp notification failed.");
@@ -508,13 +622,6 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     : editData
       ? `Edit Enquiry: ${form.enquiryNo}`
       : "New Enquiry";
-
-  const {
-    partnerRoles = [],
-    products = [],
-    packingTypes = [],
-    shipmentTypes = []
-  } = masters || {};
 
   return (
     <>
@@ -631,131 +738,131 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
 
               {/* SECTION 2: Logistics & Locations — hidden temporarily */}
               {false && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-                <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2.5 bg-gray-50/50">
-                  <div className="h-6 w-6 rounded-lg bg-emerald-50 flex items-center justify-center">
-                    <MapPin className="h-3.5 w-3.5 text-emerald-600" />
-                  </div>
-                  <h3 className="text-xs font-bold text-gray-800">Logistics & Locations</h3>
-                </div>
-
-                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {form.shipmentMode === "SHIP" && (
-                    <>
-                      {/* Origin Country */}
-                      <div>
-                        <label className={lbl}>Origin Country</label>
-                        {isViewMode ? (
-                          <div className={inp}>{form.originCountryId || "—"}</div>
-                        ) : (
-                          <Select
-                            isClearable
-                            options={countryOptions}
-                            value={selectedOriginCountryOption}
-                            onChange={(opt) => {
-                              setForm((f) => ({
-                                ...f,
-                                originCountryId: opt ? opt.value : "",
-                                originPort: ""
-                              }));
-                            }}
-                            styles={selectStyles}
-                            placeholder="Search country..."
-                            menuPortalTarget={typeof document !== "undefined" ? document.body : null}
-                            menuPosition="fixed"
-                            className="text-xs"
-                          />
-                        )}
-                        {errors.originCountryId && <p className={err}>{errors.originCountryId}</p>}
-                      </div>
-
-                      {/* Origin Port */}
-                      <PortSelector
-                        value={form.originPort}
-                        onChange={(val) => setForm((f) => ({ ...f, originPort: val }))}
-                        label="Origin Port (POL)"
-                        placeholder="Search origin port..."
-                        isView={isViewMode}
-                        error={errors.originPort}
-                        countryName={form.originCountryId}
-                      />
-
-                      <div className="col-span-full border-t border-dashed border-gray-100 my-2" />
-
-                      {/* Destination Country */}
-                      <div>
-                        <label className={lbl}>Destination Country</label>
-                        {isViewMode ? (
-                          <div className={inp}>{form.destinationCountry || "—"}</div>
-                        ) : (
-                          <Select
-                            isClearable
-                            options={countryOptions}
-                            value={selectedDestinationCountryOption}
-                            onChange={(opt) => {
-                              setForm((f) => ({
-                                ...f,
-                                destinationCountry: opt ? opt.value : "",
-                                destinationPort: ""
-                              }));
-                            }}
-                            styles={selectStyles}
-                            placeholder="Search country..."
-                            menuPortalTarget={typeof document !== "undefined" ? document.body : null}
-                            menuPosition="fixed"
-                            className="text-xs"
-                          />
-                        )}
-                        {errors.destinationCountry && <p className={err}>{errors.destinationCountry}</p>}
-                      </div>
-
-                      {/* Destination Port */}
-                      <PortSelector
-                        value={form.destinationPort}
-                        onChange={(val) => setForm((f) => ({ ...f, destinationPort: val }))}
-                        label="Destination Port (POD)"
-                        placeholder="Search destination port..."
-                        isView={isViewMode}
-                        error={errors.destinationPort}
-                        countryName={form.destinationCountry}
-                      />
-                    </>
-                  )}
-
-                  {(form.shipmentMode === "ROAD" || form.shipmentMode === "RAIL") && (
-                    <>
-                      {/* Origin Land Selector */}
-                      <LocationHierarchy
-                        prefix="origin"
-                        form={form}
-                        setForm={setForm}
-                        errors={errors}
-                        isView={isViewMode}
-                        shipmentMode={form.shipmentMode}
-                      />
-
-                      {/* Spacer to separate origin and destination visually in 3-column grid */}
-                      <div className="col-span-full border-t border-dashed border-gray-100 my-2" />
-
-                      {/* Destination Land Selector */}
-                      <LocationHierarchy
-                        prefix="destination"
-                        form={form}
-                        setForm={setForm}
-                        errors={errors}
-                        isView={isViewMode}
-                        shipmentMode={form.shipmentMode}
-                      />
-                    </>
-                  )}
-
-                  {!form.shipmentMode && (
-                    <div className="col-span-full flex items-center justify-center py-6 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
-                      Select Shipment Mode above to configure origin and destination locations.
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+                  <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2.5 bg-gray-50/50">
+                    <div className="h-6 w-6 rounded-lg bg-emerald-50 flex items-center justify-center">
+                      <MapPin className="h-3.5 w-3.5 text-emerald-600" />
                     </div>
-                  )}
+                    <h3 className="text-xs font-bold text-gray-800">Logistics & Locations</h3>
+                  </div>
+
+                  <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {form.shipmentMode === "SHIP" && (
+                      <>
+                        {/* Origin Country */}
+                        <div>
+                          <label className={lbl}>Origin Country</label>
+                          {isViewMode ? (
+                            <div className={inp}>{form.originCountryId || "—"}</div>
+                          ) : (
+                            <Select
+                              isClearable
+                              options={countryOptions}
+                              value={selectedOriginCountryOption}
+                              onChange={(opt) => {
+                                setForm((f) => ({
+                                  ...f,
+                                  originCountryId: opt ? opt.value : "",
+                                  originPort: ""
+                                }));
+                              }}
+                              styles={selectStyles}
+                              placeholder="Search country..."
+                              menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                              menuPosition="fixed"
+                              className="text-xs"
+                            />
+                          )}
+                          {errors.originCountryId && <p className={err}>{errors.originCountryId}</p>}
+                        </div>
+
+                        {/* Origin Port */}
+                        <PortSelector
+                          value={form.originPort}
+                          onChange={(val) => setForm((f) => ({ ...f, originPort: val }))}
+                          label="Origin Port (POL)"
+                          placeholder="Search origin port..."
+                          isView={isViewMode}
+                          error={errors.originPort}
+                          countryName={form.originCountryId}
+                        />
+
+                        <div className="col-span-full border-t border-dashed border-gray-100 my-2" />
+
+                        {/* Destination Country */}
+                        <div>
+                          <label className={lbl}>Destination Country</label>
+                          {isViewMode ? (
+                            <div className={inp}>{form.destinationCountry || "—"}</div>
+                          ) : (
+                            <Select
+                              isClearable
+                              options={countryOptions}
+                              value={selectedDestinationCountryOption}
+                              onChange={(opt) => {
+                                setForm((f) => ({
+                                  ...f,
+                                  destinationCountry: opt ? opt.value : "",
+                                  destinationPort: ""
+                                }));
+                              }}
+                              styles={selectStyles}
+                              placeholder="Search country..."
+                              menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                              menuPosition="fixed"
+                              className="text-xs"
+                            />
+                          )}
+                          {errors.destinationCountry && <p className={err}>{errors.destinationCountry}</p>}
+                        </div>
+
+                        {/* Destination Port */}
+                        <PortSelector
+                          value={form.destinationPort}
+                          onChange={(val) => setForm((f) => ({ ...f, destinationPort: val }))}
+                          label="Destination Port (POD)"
+                          placeholder="Search destination port..."
+                          isView={isViewMode}
+                          error={errors.destinationPort}
+                          countryName={form.destinationCountry}
+                        />
+                      </>
+                    )}
+
+                    {(form.shipmentMode === "ROAD" || form.shipmentMode === "RAIL") && (
+                      <>
+                        {/* Origin Land Selector */}
+                        <LocationHierarchy
+                          prefix="origin"
+                          form={form}
+                          setForm={setForm}
+                          errors={errors}
+                          isView={isViewMode}
+                          shipmentMode={form.shipmentMode}
+                        />
+
+                        {/* Spacer to separate origin and destination visually in 3-column grid */}
+                        <div className="col-span-full border-t border-dashed border-gray-100 my-2" />
+
+                        {/* Destination Land Selector */}
+                        <LocationHierarchy
+                          prefix="destination"
+                          form={form}
+                          setForm={setForm}
+                          errors={errors}
+                          isView={isViewMode}
+                          shipmentMode={form.shipmentMode}
+                        />
+                      </>
+                    )}
+
+                    {!form.shipmentMode && (
+                      <div className="col-span-full flex items-center justify-center py-6 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
+                        Select Shipment Mode above to configure origin and destination locations.
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
               )}
 
               {/* SECTION 3: Product, Packaging & Commercials */}
@@ -863,8 +970,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                                       setIsPartnerOpen(false);
                                     }}
                                     className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${form.partnerId === p.id
-                                        ? "bg-blue-50 text-blue-600 font-semibold"
-                                        : "hover:bg-gray-50 text-gray-700"
+                                      ? "bg-blue-50 text-blue-600 font-semibold"
+                                      : "hover:bg-gray-50 text-gray-700"
                                       }`}
                                   >
                                     <span className="truncate">{p.entityName}</span>
@@ -898,7 +1005,6 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                     </div>
                     {errors.productId && <p className={err}>{errors.productId}</p>}
                   </div>
-
                   {/* Purity */}
                   <div>
                     <label className={lbl}>Purity</label>
@@ -996,11 +1102,10 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                           type="button"
                           disabled={isViewMode}
                           onClick={() => setForm((f) => ({ ...f, bidType: "TARGET" }))}
-                          className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${
-                            form.bidType === "TARGET" || !form.bidType
-                              ? "bg-[#007aff] text-white"
-                              : "bg-white text-gray-500 hover:bg-gray-50"
-                          }`}
+                          className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${form.bidType === "TARGET" || !form.bidType
+                            ? "bg-[#007aff] text-white"
+                            : "bg-white text-gray-500 hover:bg-gray-50"
+                            }`}
                         >
                           Target
                         </button>
@@ -1008,11 +1113,10 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                           type="button"
                           disabled={isViewMode}
                           onClick={() => setForm((f) => ({ ...f, bidType: "BID" }))}
-                          className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${
-                            form.bidType === "BID"
-                              ? "bg-[#007aff] text-white"
-                              : "bg-white text-gray-500 hover:bg-gray-50"
-                          }`}
+                          className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${form.bidType === "BID"
+                            ? "bg-[#007aff] text-white"
+                            : "bg-white text-gray-500 hover:bg-gray-50"
+                            }`}
                         >
                           Bid Amount
                         </button>
@@ -1023,8 +1127,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                       value={
                         form.buyingInterest !== "" && form.buyingInterest != null
                           ? (typeof form.buyingInterest === "number"
-                              ? String(parseFloat(form.buyingInterest.toString()))
-                              : form.buyingInterest)
+                            ? String(parseFloat(form.buyingInterest.toString()))
+                            : form.buyingInterest)
                           : ""
                       }
                       onChange={(e) => {
@@ -1076,6 +1180,129 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                       />
                     )}
                   </div>
+
+                  {/* Broker Details */}
+                  <div className="col-span-full pt-3 pb-0.5">
+                    <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                      <span>Broker Details</span>
+                      <div className="h-px bg-gray-100 flex-1" />
+                    </div>
+                  </div>
+
+                  {/* Broker Partner Role */}
+                  <div>
+                    <label className={lbl}>Partner Role</label>
+                    <div className="relative">
+                      <select
+                        value={form.brokerRoleId || ""}
+                        onChange={(e) => {
+                          const newRoleId = e.target.value ? Number(e.target.value) : "";
+                          setForm((f) => ({ ...f, brokerRoleId: newRoleId, brokerId: "" }));
+                          setSelectedBrokerName("");
+                          setBrokerSearch("");
+                        }}
+                        disabled={isViewMode}
+                        className={`${inp} appearance-none pr-8 ${errors.brokerRoleId ? "border-red-300" : ""}`}
+                      >
+                        <option value="">Select Role</option>
+                        {brokerPartnerRoles.map((r) => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                    </div>
+                    {errors.brokerRoleId && <p className={err}>{errors.brokerRoleId}</p>}
+                  </div>
+
+                  {/* Broker Partner Custom Searchable Select */}
+                  <div className="relative" ref={brokerDropdownRef}>
+                    <label className={lbl}>Partner</label>
+                    {isViewMode ? (
+                      <div className={`${inp} bg-gray-50 text-gray-700 font-medium`}>
+                        {selectedBrokerName || "—"}
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <button
+                          type="button"
+                          disabled={!form.brokerRoleId}
+                          onClick={() => setIsBrokerOpen((prev) => !prev)}
+                          className={`${inp} text-left flex items-center justify-between gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${errors.brokerId ? "border-red-300" : ""}`}
+                        >
+                          <span className={`truncate ${selectedBrokerName ? "text-gray-900 font-medium" : "text-gray-400"}`}>
+                            {!form.brokerRoleId
+                              ? "Select Role first"
+                              : selectedBrokerName || "Select Partner"}
+                          </span>
+                          <div className="flex items-center gap-1 shrink-0 text-gray-400">
+                            {brokerLoading && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
+                            <ChevronDown className="h-3 w-3" />
+                          </div>
+                        </button>
+
+                        {isBrokerOpen && form.brokerRoleId && (
+                          <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg p-2 space-y-2">
+                            <div className="relative flex items-center">
+                              <Search className="absolute left-2.5 h-3.5 w-3.5 text-gray-400" />
+                              <input
+                                type="text"
+                                placeholder="Search partner..."
+                                value={brokerSearch}
+                                onChange={(e) => setBrokerSearch(e.target.value)}
+                                className="w-full pl-8 pr-7 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#007aff]"
+                                autoFocus
+                              />
+                              {brokerSearch && (
+                                <button
+                                  type="button"
+                                  onClick={() => setBrokerSearch("")}
+                                  className="absolute right-2 text-gray-400 hover:text-gray-600"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="max-h-40 overflow-y-auto space-y-0.5">
+                              {brokerLoading && brokerOptions.length === 0 ? (
+                                <div className="p-3 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                                  Loading...
+                                </div>
+                              ) : brokerOptions.length === 0 ? (
+                                <div className="p-3 text-center text-xs text-gray-400 font-medium">
+                                  No partners found
+                                </div>
+                              ) : (
+                                brokerOptions.map((p) => (
+                                  <button
+                                    key={p.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setForm((f) => ({ ...f, brokerId: p.id }));
+                                      setSelectedBrokerName(p.entityName);
+                                      setIsBrokerOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${form.brokerId === p.id
+                                      ? "bg-blue-50 text-blue-600 font-semibold"
+                                      : "hover:bg-gray-50 text-gray-700"
+                                      }`}
+                                  >
+                                    <span className="truncate">{p.entityName}</span>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {errors.brokerId && <p className={err}>{errors.brokerId}</p>}
+                  </div>
+
+                  {/* Empty 3rd column placeholder to balance the 3-column grid cleanly */}
+                  <div className="hidden md:block" />
+
 
                   {/* Note */}
                   <div className="col-span-full">

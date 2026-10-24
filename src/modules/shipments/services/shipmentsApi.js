@@ -10,9 +10,15 @@ export const shipmentsApi = {
     const baseURL = axiosClient.defaults.baseURL || "";
     return `${baseURL}/sales-contracts/shipments/export/excel?${query}`;
   },
-  exportExcel: (params) =>
+  exportExcel: (params) => 
     axiosClient.get("/sales-contracts/shipments/export/excel", {
       params,
       responseType: "blob",
+    }),
+  getStuffingExecution: (id) => axiosClient.get(`/sales-contracts/shipments/${id}/stuffing-execution`),
+  saveStuffingExecution: (id, data) => axiosClient.post(`/sales-contracts/shipments/${id}/stuffing-execution`, data),
+  uploadStuffingAttachment: (id, formData) =>
+    axiosClient.post(`/sales-contracts/shipments/${id}/stuffing-execution/attachments`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     }),
 };

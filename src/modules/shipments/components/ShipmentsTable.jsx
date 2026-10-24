@@ -17,6 +17,7 @@ import { shipmentsApi } from "../services/shipmentsApi";
 
 import ShipmentAllocationSelectorModal from "@/modules/cargo-availability/components/ShipmentAllocationSelectorModal";
 import ManualReadinessModal from "./ManualReadinessModal";
+import ShipmentStuffingExecutionModal from "./ShipmentStuffingExecutionModal";
 
 // Standardized Timeline Color Map
 const TIMELINE_STYLES = {
@@ -31,7 +32,7 @@ const TIMELINE_STYLES = {
 // Dynamic Tooltip Reason Helper for Shipment Readiness
 const getExecuteDisabledTooltip = (shipment) => {
   if (shipment?.readyForShipment) {
-    return "Execute Purchase Contract";
+    return "Execute Shipment Stuffing";
   }
   if (shipment?.isManualOverride && shipment?.manualReadyOverride === false) {
     return shipment.manualReadyReason
@@ -73,6 +74,7 @@ export default function ShipmentsTable({
   const [selectorShipment, setSelectorShipment] = useState(null);
   const [selectorAllocations, setSelectorAllocations] = useState([]);
   const [manualReadinessShipment, setManualReadinessShipment] = useState(null);
+  const [stuffingShipment, setStuffingShipment] = useState(null);
   const [executingId, setExecutingId] = useState(null);
   const [executedShipmentIds, setExecutedShipmentIds] = useState(new Set());
 
@@ -170,7 +172,7 @@ export default function ShipmentsTable({
                   : primaryProduct;
 
               const isSelected = selectedShipments.includes(s.id);
-              const isExecuted = s.status === "Executed" || s.isExecuted || executedShipmentIds.has(s.id);
+              const isExecuted = s.status === "Executed" || s.status === "Stuffed" || s.isExecuted || executedShipmentIds.has(s.id);
 
               return (
                 <tr
@@ -316,85 +318,38 @@ export default function ShipmentsTable({
                     </button>
                   </td>
 
-                  {/* Actions */}
+                  {/* Actions - Execute Stuffing Form */}
                   <td className="px-4 py-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                     {isExecuted ? (
                       <button
                         type="button"
-                        disabled
-                        title="Shipment already executed"
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-gray-100 text-gray-400 cursor-not-allowed"
+                        title="Shipment executed. Click to view or edit Stuffing Execution."
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStuffingShipment(s);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-xs transition-colors cursor-pointer"
                       >
-                        <Check className="h-4 w-4" />
-                        <span>Executed</span>
+                        <Check className="h-3.5 w-3.5" />
+                        <span>Stuffed / Executed</span>
                       </button>
                     ) : (
                       <button
                         type="button"
                         disabled={!s.readyForShipment || executingId === s.id}
                         title={getExecuteDisabledTooltip(s)}
-                        onClick={async (e) => {
+                        onClick={(e) => {
                           e.stopPropagation();
                           if (!s.readyForShipment || executingId === s.id) return;
-
-                          if (onExecutePurchase) {
-                            onExecutePurchase(s);
-                          } else {
-                            try {
-                              setExecutingId(s.id);
-                              const salesContractId = s.salesContractId || s.salesContract?.id;
-
-                              if (!salesContractId) {
-                                toast.error("Sales Contract ID missing for shipment");
-                                return;
-                              }
-
-                              let targetShipmentIds = [Number(s.id)];
-                              if (selectedShipments.includes(s.id) && selectedShipments.length > 1) {
-                                targetShipmentIds = selectedShipments.map(Number);
-                              }
-
-                              await purchaseContractApi.create({
-                                salesContractId: Number(salesContractId),
-                                shipmentIds: targetShipmentIds,
-                              });
-
-                              await Promise.all(
-                                targetShipmentIds.map((id) =>
-                                  shipmentsApi.updateShipment(id, { status: "Executed" })
-                                ).catch(() => { })
-                              );
-
-                              setExecutedShipmentIds((prev) => {
-                                const next = new Set(prev);
-                                targetShipmentIds.forEach((id) => next.add(id));
-                                return next;
-                              });
-
-                              toast.success("Shipment executed successfully");
-                              if (selectedShipments.includes(s.id)) {
-                                setSelectedShipments?.((prev) => prev.filter((id) => !targetShipmentIds.includes(id)));
-                              }
-                              if (onRefresh) onRefresh();
-                            } catch (err) {
-                              const msg = err.response?.data?.message || "Failed to execute shipment";
-                              toast.error(msg);
-                            } finally {
-                              setExecutingId(null);
-                            }
-                          }
+                          setStuffingShipment(s);
                         }}
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${s.readyForShipment && executingId !== s.id
-                          ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-xs ${s.readyForShipment && executingId !== s.id
+                          ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer"
                           : "bg-gray-100 text-gray-400 cursor-not-allowed"
                           }`}
                       >
-                        {executingId === s.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Rocket className="h-4 w-4" />
-                        )}
-                        <span>{executingId === s.id ? "Executing..." : "Execute"}</span>
+                        <Rocket className="h-3.5 w-3.5" />
+                        <span>Execute</span>
                       </button>
                     )}
                   </td>
@@ -420,6 +375,19 @@ export default function ShipmentsTable({
           shipment={selectorShipment}
           allocations={selectorAllocations}
           onClose={() => setSelectorShipment(null)}
+        />
+      )}
+
+      {/* Shipment Stuffing Execution Modal */}
+      {stuffingShipment && (
+        <ShipmentStuffingExecutionModal
+          isOpen={!!stuffingShipment}
+          shipment={stuffingShipment}
+          onClose={() => setStuffingShipment(null)}
+          onSaveSuccess={() => {
+            setStuffingShipment(null);
+            if (onRefresh) onRefresh();
+          }}
         />
       )}
     </>

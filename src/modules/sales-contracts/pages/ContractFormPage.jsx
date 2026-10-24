@@ -283,7 +283,7 @@ export default function ContractFormPage({ editId, viewId }) {
           contractType: "Export",
           buyerId: eq.partnerId || "",
           sellerId: null,
-          brokerId: null,
+          brokerId: eq.brokerId || null,
           currencyCode: "USD",
           shipmentTypeId: shipmentTypeId,
           paymentTermId: "",

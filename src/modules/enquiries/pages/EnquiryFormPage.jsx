@@ -22,6 +22,8 @@ export default function EnquiryFormPage({ id }) {
     enquiryDate: new Date().toISOString().split("T")[0],
     partnerRoleId: "",
     partnerId: "",
+    brokerRoleId: "",
+    brokerId: "",
     productId: "",
     originCountryId: "",
     purity: "",
@@ -42,6 +44,9 @@ export default function EnquiryFormPage({ id }) {
     if (!form.partnerRoleId) newErrors.partnerRoleId = "Role is required";
     if (!form.partnerId) newErrors.partnerId = "Partner is required";
     if (!form.productId) newErrors.productId = "Product is required";
+    if (form.brokerRoleId && !form.brokerId) {
+      newErrors.brokerId = "Partner is required when Broker Role is selected";
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -59,6 +64,8 @@ export default function EnquiryFormPage({ id }) {
         shipmentDate: form.shipmentDate ? new Date(form.shipmentDate).toISOString() : undefined,
         partnerRoleId: Number(form.partnerRoleId),
         partnerId: Number(form.partnerId),
+        brokerRoleId: form.brokerRoleId ? Number(form.brokerRoleId) : undefined,
+        brokerId: form.brokerId ? Number(form.brokerId) : undefined,
         productId: Number(form.productId),
         originCountryId: form.originCountryId ? Number(form.originCountryId) : undefined,
         packingTypeId: form.packingTypeId ? Number(form.packingTypeId) : undefined,

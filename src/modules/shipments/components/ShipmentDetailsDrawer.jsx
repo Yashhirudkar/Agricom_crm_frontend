@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 import {
@@ -17,12 +17,14 @@ import {
   Boxes,
   ArrowUpRight,
   AlertCircle,
+  Check,
 } from "lucide-react";
+import ShipmentStuffingExecutionModal from "./ShipmentStuffingExecutionModal";
 
 // Dynamic Tooltip Reason Helper for Shipment Readiness
 const getExecuteDisabledTooltip = (shipment) => {
   if (shipment?.readyForShipment) {
-    return "Execute Purchase Contract Workspace";
+    return "Execute Shipment Stuffing";
   }
   const cargoPending = !shipment?.cargoReady;
   const freightPending = !shipment?.freightReady;
@@ -41,6 +43,8 @@ const getExecuteDisabledTooltip = (shipment) => {
 
 export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContract, onOpenCargoDrawer }) {
   const router = useRouter();
+  const [openStuffingModal, setOpenStuffingModal] = useState(false);
+
   if (!shipment) return null;
 
   const contract = shipment.salesContract || {};
@@ -49,6 +53,7 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
   const products = shipment.products || [];
   const timelineObj = shipment.timeline || {};
   const docProgress = shipment.documentProgress || { checklist: [] };
+  const isExecuted = shipment.status === "Executed" || shipment.status === "Stuffed";
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
@@ -59,21 +64,8 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
     });
   };
 
-  const handleExecuteWorkspace = async () => {
-    try {
-      const salesContractId = shipment.salesContractId || shipment.salesContract?.id;
-      if (!salesContractId) return;
-      const res = await purchaseContractApi.create({
-        salesContractId: Number(salesContractId),
-        shipmentIds: [Number(shipment.id)],
-      });
-      const pcId = res.data?.id;
-      if (pcId) {
-        router.push(`/sales/purchase-contracts/${pcId}?shipmentId=${shipment.id}`);
-      }
-    } catch (err) {
-      console.error("Failed to open Purchase Contract workspace", err);
-    }
+  const handleExecuteWorkspace = () => {
+    setOpenStuffingModal(true);
   };
 
   return (
@@ -101,6 +93,11 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                 <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono font-medium">
                   #{shipment.shipmentNo || "1"}
                 </span>
+                {isExecuted && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+                    Stuffed / Executed
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-slate-400 font-mono tracking-tight">
                 {shipment.shipmentReference || "DRAFT"}
@@ -115,18 +112,21 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
             <div className="relative group/drawer-exec inline-flex">
               <button
                 type="button"
-                disabled={!shipment.readyForShipment}
+                disabled={!shipment.readyForShipment && !isExecuted}
                 onClick={handleExecuteWorkspace}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${shipment.readyForShipment
-                    ? "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${
+                  isExecuted
+                    ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                    : shipment.readyForShipment
+                    ? "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
                     : "bg-gray-100 text-gray-400 border border-gray-200 opacity-50 cursor-not-allowed pointer-events-auto"
-                  }`}
+                }`}
                 title={getExecuteDisabledTooltip(shipment)}
               >
-                <Rocket className="h-3.5 w-3.5" />
-                <span>Execute Workspace</span>
+                {isExecuted ? <Check className="h-3.5 w-3.5" /> : <Rocket className="h-3.5 w-3.5" />}
+                <span>{isExecuted ? "View Stuffing" : "Execute Stuffing"}</span>
               </button>
-              {!shipment.readyForShipment && (
+              {!shipment.readyForShipment && !isExecuted && (
                 <div className="pointer-events-none absolute top-full right-0 mt-1.5 hidden group-hover/drawer-exec:flex flex-col items-end z-50">
                   <div className="bg-gray-900 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-gray-700">
                     {getExecuteDisabledTooltip(shipment)}
@@ -359,7 +359,7 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
         </div>
 
         {/* Sticky Footer */}
-        <div className="flex-shrink-0 px-6 py-3 border-t border-slate-200 bg-white flex items-center justify-end">
+        <div className="flex-shrink-0 px-6 py-3 border-t border-slate-200 bg-white flex items-center justify-end gap-3">
           <button
             onClick={onClose}
             className="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
@@ -368,6 +368,18 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
           </button>
         </div>
       </div>
+
+      {/* Shipment Stuffing Execution Modal */}
+      {openStuffingModal && (
+        <ShipmentStuffingExecutionModal
+          isOpen={openStuffingModal}
+          shipment={shipment}
+          onClose={() => setOpenStuffingModal(false)}
+          onSaveSuccess={() => {
+            setOpenStuffingModal(false);
+          }}
+        />
+      )}
     </>
   );
 }
