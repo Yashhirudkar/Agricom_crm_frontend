@@ -234,7 +234,12 @@ export default function ShipmentsTable({
                   : primaryProduct;
 
               const isSelected = selectedShipments.includes(s.id);
-              const isExecuted = s.status === "Executed" || s.status === "Stuffed" || s.isExecuted || executedShipmentIds.has(s.id);
+              // Show "Stuffed / Executed" button ONLY when stuffing is actually Completed
+              // stuffingCompleted = backend sets this true only when stuffingStatus === 'Completed'
+              // If shipment is Executed but stuffing is Pending/Draft → show "Execute" button instead
+              const isExecuted =
+                s.stuffingCompleted === true ||
+                executedShipmentIds.has(s.id);
 
               return (
                 <tr
@@ -425,13 +430,12 @@ export default function ShipmentsTable({
                           e.stopPropagation();
                           setManualReadinessShipment(s);
                         }}
-                        className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-md border text-xs font-medium transition-all cursor-pointer ${
-                          s.isManualOverride
+                        className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-md border text-xs font-medium transition-all cursor-pointer ${s.isManualOverride
                             ? s.manualReadyOverride
                               ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
                               : "bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100"
                             : "bg-white text-gray-500 hover:text-gray-800 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                        }`}
+                          }`}
                         title={
                           s.isManualOverride
                             ? `Manual Override active: ${s.manualReadyOverride ? "Force Ready" : "Block Execution"}. Click to change.`

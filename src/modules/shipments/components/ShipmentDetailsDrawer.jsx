@@ -58,7 +58,10 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
   const products = shipment.products || [];
   const timelineObj = shipment.timeline || {};
   const docProgress = shipment.documentProgress || { checklist: [] };
-  const isExecuted = shipment.status === "Executed" || shipment.status === "Stuffed";
+  // Show "Stuffed / Executed" ONLY when stuffing is actually completed (stuffingStatus === 'Completed')
+  const isExecuted =
+    shipment.stuffingCompleted === true ||
+    ['Dispatched', 'Completed'].includes(shipment.status);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
@@ -117,23 +120,21 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
             <button
               type="button"
               onClick={() => setOpenManualReadinessModal(true)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ${
-                shipment.isManualOverride
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ${shipment.isManualOverride
                   ? shipment.manualReadyOverride
                     ? "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100"
                     : "bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100"
                   : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-              }`}
+                }`}
               title="Shipment Readiness Control (Manual Override)"
             >
               <ShieldCheck
-                className={`h-3.5 w-3.5 ${
-                  shipment.isManualOverride
+                className={`h-3.5 w-3.5 ${shipment.isManualOverride
                     ? shipment.manualReadyOverride
                       ? "text-amber-600"
                       : "text-rose-600"
                     : "text-slate-500"
-                }`}
+                  }`}
               />
               <span>Readiness Control</span>
               {shipment.isManualOverride && (
@@ -148,13 +149,12 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                 type="button"
                 disabled={!shipment.readyForShipment && !isExecuted}
                 onClick={handleExecuteWorkspace}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${
-                  isExecuted
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${isExecuted
                     ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
                     : shipment.readyForShipment
-                    ? "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
-                    : "bg-gray-100 text-gray-400 border border-gray-200 opacity-50 cursor-not-allowed pointer-events-auto"
-                }`}
+                      ? "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
+                      : "bg-gray-100 text-gray-400 border border-gray-200 opacity-50 cursor-not-allowed pointer-events-auto"
+                  }`}
                 title={getExecuteDisabledTooltip(shipment)}
               >
                 {isExecuted ? <Check className="h-3.5 w-3.5" /> : <Rocket className="h-3.5 w-3.5" />}
@@ -228,11 +228,10 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                       router.push(`/sales/cargo-availability?shipmentId=${shipment.id}&shipmentNo=${encodeURIComponent(shipment.shipmentReference || "")}`);
                     }
                   }}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium transition-all cursor-pointer hover:scale-105 ${
-                    shipment.cargoReady
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium transition-all cursor-pointer hover:scale-105 ${shipment.cargoReady
                       ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                       : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                  }`}
+                    }`}
                   title={
                     shipment.cargoReady
                       ? "Cargo Allocated. Click to view Cargo details."
@@ -283,26 +282,25 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                         shipment.businessTransaction?.businessReference ||
                         shipment.shipmentReference ||
                         "";
-                        const params = new URLSearchParams();
-                        if (searchVal) {
-                          params.set("search", searchVal);
-                          params.set("businessRef", searchVal);
-                        }
-                        if (shipment.logisticsId) {
-                          params.set("logisticsId", String(shipment.logisticsId));
-                        }
-                        if (shipment.salesContract?.enquiryId) {
-                          params.set("enquiryId", String(shipment.salesContract.enquiryId));
-                        }
-                        params.set("openDrawer", "true");
-                        router.push(`/logistics/transport-management?${params.toString()}`);
+                      const params = new URLSearchParams();
+                      if (searchVal) {
+                        params.set("search", searchVal);
+                        params.set("businessRef", searchVal);
+                      }
+                      if (shipment.logisticsId) {
+                        params.set("logisticsId", String(shipment.logisticsId));
+                      }
+                      if (shipment.salesContract?.enquiryId) {
+                        params.set("enquiryId", String(shipment.salesContract.enquiryId));
+                      }
+                      params.set("openDrawer", "true");
+                      router.push(`/logistics/transport-management?${params.toString()}`);
                     }
                   }}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium transition-all cursor-pointer hover:scale-105 ${
-                    shipment.freightReady
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium transition-all cursor-pointer hover:scale-105 ${shipment.freightReady
                       ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                       : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                  }`}
+                    }`}
                   title={
                     shipment.freightReady
                       ? "Freight Allocated. Click to view Freight Allocation details."
