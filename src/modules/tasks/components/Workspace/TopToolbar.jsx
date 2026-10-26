@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import axiosClient from "@/lib/axios";
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
@@ -51,6 +53,21 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
 
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission("task:create");
+
+  const activeCompanyId = typeof window !== 'undefined' ? localStorage.getItem('activeCompanyId') : null;
+  const targetCompanyId = selectedCompanyId || activeCompanyId;
+
+  const { data: filterUsersData } = useQuery({
+    queryKey: ['tasks', 'filter-users', targetCompanyId || 'all'],
+    queryFn: async () => {
+      const headers = targetCompanyId ? { 'x-company-id': targetCompanyId } : {};
+      const { data } = await axiosClient.get("/v1/tasks/employees/filter-users", { headers });
+      return data.data || { owners: [], associates: [] };
+    },
+    staleTime: 60 * 1000,
+  });
+  const taskOwners = filterUsersData?.owners || [];
+  const taskAssociates = filterUsersData?.associates || [];
 
   const [searchInput, setSearchInput] = useState(filters.search || "");
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -148,6 +165,64 @@ export default function TopToolbar({ userType, allCompanies, selectedCompanyId, 
           </button>
 
           <ViewsDropdown />
+
+          {/* Owner Filter Dropdown */}
+          <div className="relative shrink-0">
+            <select
+              value={filters.ownerIds?.[0] || ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFilters({ ownerIds: val ? [parseInt(val, 10)] : [] });
+              }}
+              className={`h-[34px] pl-2.5 pr-7 py-1 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none truncate max-w-[140px] sm:max-w-[170px] ${
+                filters.ownerIds?.length > 0
+                  ? "bg-blue-50 border border-blue-300 text-blue-700 font-semibold"
+                  : "bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100"
+              }`}
+              title="Filter by Task Owner"
+            >
+              <option value="">Owner: All</option>
+              {taskOwners.map((emp) => {
+                const id = emp.userId || emp.id;
+                const name = `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || emp.name || emp.email;
+                return (
+                  <option key={`owner-${id}`} value={id}>
+                    {name}
+                  </option>
+                );
+              })}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          </div>
+
+          {/* Associates Filter Dropdown */}
+          <div className="relative shrink-0">
+            <select
+              value={filters.assigneeIds?.[0] || ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFilters({ assigneeIds: val ? [parseInt(val, 10)] : [] });
+              }}
+              className={`h-[34px] pl-2.5 pr-7 py-1 rounded-lg text-xs font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none truncate max-w-[140px] sm:max-w-[170px] ${
+                filters.assigneeIds?.length > 0
+                  ? "bg-blue-50 border border-blue-300 text-blue-700 font-semibold"
+                  : "bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100"
+              }`}
+              title="Filter by Associates"
+            >
+              <option value="">Associates: All</option>
+              {taskAssociates.map((emp) => {
+                const id = emp.userId || emp.id;
+                const name = `${emp.firstName || ""} ${emp.lastName || ""}`.trim() || emp.name || emp.email;
+                return (
+                  <option key={`assignee-${id}`} value={id}>
+                    {name}
+                  </option>
+                );
+              })}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          </div>
 
           {/* Bulk Actions Dropdown */}
           {(isSelectAllActive || selectedRowIds.size > 0) && (

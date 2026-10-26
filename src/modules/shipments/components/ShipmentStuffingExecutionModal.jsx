@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
+import { toast } from "sonner";
 import {
   X,
   Check,
@@ -73,53 +74,54 @@ export default function ShipmentStuffingExecutionModal({
     const contract = shipment.salesContract || {};
     const item = contract.items?.[0] || {};
     const product = shipment.products?.[0] || item.product || {};
-    const bagSizeKg = item.bagSpecification?.size ? Number(item.bagSpecification.size) : 50;
+    const bagSizeKg = item.bagSpecification?.size ? Number(item.bagSpecification.size) : 0;
     const qtyMt = Number(shipment.quantity || 0);
     return {
       shipmentRef: shipment.shipmentReference || `SHP-${shipment.id}`,
-      businessRefNo: shipment.businessReference || shipment.businessTransaction?.businessReference || `BTX-2026-${shipment.id}`,
-      salesContractNo: contract.contractNumber || (shipment.salesContractId ? `SC-${shipment.salesContractId}` : "N/A"),
-      purchaseContractNo: "N/A",
-      enquiryRef: contract.enquiry?.enquiryReference || "ENQ-DIRECT",
-      buyer: contract.buyer?.entityName || "Global Importers LLC",
-      seller: contract.seller?.entityName || "Agricom Global Private Limited",
-      product: product.name || "Soybean",
-      commodityGrade: product.grade || item.remarks || "Standard Export Quality (Grade A)",
+      businessRefNo: shipment.businessReference || shipment.businessTransaction?.businessReference || "—",
+      salesContractNo: contract.contractNumber || "—",
+      purchaseContractNo: "—",
+      enquiryRef: contract.enquiry?.enquiryReference || "—",
+      buyer: contract.buyer?.entityName || "—",
+      seller: contract.seller?.entityName || "—",
+      product: product.name || "—",
+      commodityGrade: product.grade || item.remarks || "—",
       quantityMt: qtyMt,
-      packingType: item.packingType?.name || "PP Woven Bags",
-      bagSize: `${bagSizeKg} Kg`,
-      totalBags: Math.round((qtyMt * 1000) / bagSizeKg) || 0,
-      incoterm: contract.paymentTerm?.name || contract.contractType || "FOB",
+      packingType: item.packingType?.name || "—",
+      bagSize: bagSizeKg ? `${bagSizeKg} Kg` : "—",
+      totalBags: bagSizeKg ? Math.round((qtyMt * 1000) / bagSizeKg) : 0,
+      incoterm: contract.paymentTerm?.name || contract.contractType || "—",
       shipmentDate: shipment.shipmentDate || "",
-      freightType: contract.shipmentType?.name || "Sea Freight (FCL)",
+      freightType: contract.shipmentType?.name || "—",
       shipmentType: contract.contractType || "Export",
-      route: `${contract.portOfLoading || "Nhava Sheva Port"} ➔ ${contract.portOfDischarge || "Jebel Ali Port"}`,
-      originPort: contract.portOfLoading || "Nhava Sheva Port",
-      destinationPort: contract.portOfDischarge || "Jebel Ali Port",
-      originCountry: contract.originCountry || "India",
-      destinationCountry: contract.destinationCountry || "UAE",
-      allocatedWeight: qtyMt,
-      availableWeight: qtyMt,
+      route: `${contract.portOfLoading || "—"} ➔ ${contract.portOfDischarge || "—"}`,
+      originPort: contract.portOfLoading || "—",
+      destinationPort: contract.portOfDischarge || "—",
+      originCountry: contract.originCountry || "—",
+      destinationCountry: contract.destinationCountry || "—",
+      allocatedWeight: 0,
+      availableWeight: 0,
       balanceWeight: 0,
-      warehouse: "Main Cargo Warehouse",
+      remainingQuantity: qtyMt,
+      warehouse: "—",
       shippingLine: "",
       vessel: "",
       voyage: "",
-      containerType: shipment.noOfContainers ? `${shipment.noOfContainers}x 20' Standard Container` : "20' Heavy Container",
+      containerType: shipment.noOfContainers ? `${shipment.noOfContainers} container(s)` : "—",
       freightForwarder: "",
       etd: shipment.shipmentDate || "",
       eta: "",
-      pol: contract.portOfLoading || "Nhava Sheva Port",
-      pod: contract.portOfDischarge || "Jebel Ali Port",
-      sellerCompany: "Agricom Global Private Limited",
-      sellerAddress: "Export Zone, Mumbai, Maharashtra, India",
-      gst: "27AAACG1234F1Z5",
-      iec: "0398012345",
-      contactDetails: "+91 22 2654 3210 | logistics@agricom.com",
-      buyerName: contract.buyer?.entityName || "Global Importers LLC",
-      buyerAddress: "Industrial Area 4, Sharjah, UAE",
-      buyerCountry: contract.destinationCountry || "UAE",
-      buyerContactPerson: "Ahmed Al Mansoori (+971 50 123 4567)",
+      pol: contract.portOfLoading || "—",
+      pod: contract.portOfDischarge || "—",
+      sellerCompany: contract.seller?.entityName || "—",
+      sellerAddress: contract.seller?.address || "—",
+      gst: contract.seller?.taxId || "—",
+      iec: contract.seller?.registrationNumber || "—",
+      contactDetails: contract.seller?.contactEmail || "—",
+      buyerName: contract.buyer?.entityName || "—",
+      buyerAddress: contract.buyer?.address || "—",
+      buyerCountry: contract.buyer?.country || "—",
+      buyerContactPerson: contract.buyer?.contactEmail || "—",
     };
   }, [shipment]);
 
@@ -134,11 +136,14 @@ export default function ShipmentStuffingExecutionModal({
     stuffingEndTime: "16:00",
     stuffingLocation: "",
     supervisor: "",
+    operator: "",
   });
 
   // Section 3: Loading & Weights
   const [loadingInfo, setLoadingInfo] = useState({
     loadingDate: new Date().toISOString().split("T")[0],
+    loadingStartTime: "",
+    loadingEndTime: "",
     actualLoadingWeight: "",
     grossWeight: "",
     netWeight: "",
@@ -161,7 +166,13 @@ export default function ShipmentStuffingExecutionModal({
   const [containers, setContainers] = useState([
     {
       containerNo: "",
+      containerSize: "",
+      vehicleNumber: "",
       sealNo: "",
+      stuffingDate: "",
+      warehouse: "",
+      status: "Pending",
+      remarks: "",
       tareWeight: "",
       grossWeight: "",
       netWeight: "",
@@ -199,16 +210,7 @@ export default function ShipmentStuffingExecutionModal({
 
     const fetchData = async () => {
       try {
-        // 1. Fetch Auto Populated Stuffing Data with 2.5s timeout safeguard
-        const fetchPromise = shipmentsApi.getStuffingExecution(shipment.id);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Timeout")), 2500)
-        );
-
-        const res = await Promise.race([fetchPromise, timeoutPromise]).catch((e) => {
-          console.warn("Stuffing execution fetch fallback to shipment data:", e);
-          return null;
-        });
+        const res = await shipmentsApi.getStuffingExecution(shipment.id);
 
         const data = res?.data || res || {};
         const auto = data.autoPopulated || {};
@@ -241,12 +243,15 @@ export default function ShipmentStuffingExecutionModal({
               stuffingEndTime: existing.stuffingEndTime || "16:00",
               stuffingLocation: existing.stuffingLocation || mergedAuto.warehouse || "",
               supervisor: existing.supervisor || "",
+              operator: existing.operator || "",
             });
             setLoadingInfo({
               loadingDate: existing.loadingDate || new Date().toISOString().split("T")[0],
-              actualLoadingWeight: existing.actualLoadingWeight || mergedAuto.quantityMt || "",
+              loadingStartTime: existing.loadingStartTime || "",
+              loadingEndTime: existing.loadingEndTime || "",
+              actualLoadingWeight: Number(existing.actualLoadingWeight) > 0 ? existing.actualLoadingWeight : "",
               grossWeight: existing.grossWeight || "",
-              netWeight: existing.netWeight || mergedAuto.quantityMt || "",
+              netWeight: Number(existing.netWeight) > 0 ? existing.netWeight : "",
             });
             if (existing.freightOverrides) {
               setFreightData((prev) => ({ ...prev, ...existing.freightOverrides }));
@@ -276,11 +281,6 @@ export default function ShipmentStuffingExecutionModal({
               ...prev,
               stuffingLocation: mergedAuto.warehouse || "",
             }));
-            setLoadingInfo((prev) => ({
-              ...prev,
-              actualLoadingWeight: mergedAuto.quantityMt || "",
-              netWeight: mergedAuto.quantityMt || "",
-            }));
           }
         }
 
@@ -296,6 +296,12 @@ export default function ShipmentStuffingExecutionModal({
         }
       } catch (err) {
         console.error("Failed to fetch stuffing execution data:", err);
+        if (isMounted) {
+          setErrorMsg(
+            err.response?.data?.message ||
+              "Could not start the stuffing workflow for this shipment.",
+          );
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -319,7 +325,7 @@ export default function ShipmentStuffingExecutionModal({
   const handleAddContainer = () => {
     setContainers((prev) => [
       ...prev,
-      { containerNo: "", sealNo: "", tareWeight: "", grossWeight: "", netWeight: "" },
+      { containerNo: "", containerSize: "", vehicleNumber: "", sealNo: "", stuffingDate: "", warehouse: "", status: "Pending", remarks: "", tareWeight: "", grossWeight: "", netWeight: "" },
     ]);
   };
 
@@ -437,27 +443,56 @@ export default function ShipmentStuffingExecutionModal({
 
   // Submit Handler
   const handleSave = async (action = "draft") => {
-    setSubmitting(true);
     setErrorMsg("");
     setSuccessToast("");
+
+    // Client-side validation when Completing Stuffing
+    if (action === "complete") {
+      const weight = parseFloat(loadingInfo.actualLoadingWeight) || 0;
+      if (weight <= 0) {
+        const msg = "Actual Loading Weight (MT) is required before completing stuffing. Please enter a valid weight in Section 2.";
+        setErrorMsg(msg);
+        toast.error(msg);
+        return;
+      }
+      const maxShipmentQty = Number(autoData.quantityMt || shipment?.quantity || 0);
+      if (maxShipmentQty > 0 && weight > maxShipmentQty) {
+        const msg = `Actual Loading Weight (${weight} MT) exceeds shipment quantity (${maxShipmentQty} MT).`;
+        setErrorMsg(msg);
+        toast.error(msg);
+        return;
+      }
+      const allocatedQty = Number(autoData.allocatedWeight || autoData.allocatedQuantity || 0);
+      if (allocatedQty > 0 && weight > allocatedQty) {
+        const msg = `Actual Loading Weight (${weight} MT) exceeds cargo allocated quantity (${allocatedQty} MT).`;
+        setErrorMsg(msg);
+        toast.error(msg);
+        return;
+      }
+    }
+
+    setSubmitting(true);
 
     try {
       const payload = {
         action: action, // "draft" | "complete"
         stuffingStatus: action === "complete" ? "Completed" : "Draft",
-        executionStatus: action === "complete" ? "Stuffed" : "Draft",
-        stuffingDate: loadingInfo.loadingDate,
-
-
-
-
+        executionStatus: action === "complete" ? "Loading Completed" : "Pending",
+        stuffingDate: stuffingInfo.stuffingDate,
+        stuffingStartTime: stuffingInfo.stuffingStartTime,
+        stuffingEndTime: stuffingInfo.stuffingEndTime,
+        stuffingLocation: stuffingInfo.stuffingLocation,
+        supervisor: stuffingInfo.supervisor,
         loadingDate: loadingInfo.loadingDate,
+        loadingStartTime: loadingInfo.loadingStartTime,
+        loadingEndTime: loadingInfo.loadingEndTime,
+        operator: stuffingInfo.operator,
         actualLoadingWeight: parseFloat(loadingInfo.actualLoadingWeight) || 0,
         grossWeight: parseFloat(loadingInfo.grossWeight) || 0,
         netWeight: parseFloat(loadingInfo.netWeight) || 0,
         freightOverrides: freightData,
-        containers: containers.filter((c) => c.containerNo.trim() !== "" || c.sealNo.trim() !== "" || c.tareWeight || c.grossWeight),
-        trucks: trucks.filter((t) => t.truckNo.trim() !== "" || t.driver.trim() !== "" || t.mobile.trim() !== "" || t.transporter.trim() !== ""),
+        containers: containers.filter((c) => c.containerNo?.trim()),
+        trucks: trucks.filter((t) => t.truckNo?.trim() !== "" || t.driver?.trim() !== "" || t.mobile?.trim() !== "" || t.transporter?.trim() !== ""),
         attachments: attachments.filter((a) => a.documentName || a.fileName),
         remarks: remarks,
         autoPopulated: autoData,
@@ -466,11 +501,11 @@ export default function ShipmentStuffingExecutionModal({
       const res = await shipmentsApi.saveStuffingExecution(shipment.id, payload);
       const data = res.data || res;
 
-      setSuccessToast(
-        action === "complete"
-          ? "Stuffing Completed! Shipment status set to Executed."
-          : "Stuffing Draft saved successfully."
-      );
+      const successMsg = action === "complete"
+        ? "Stuffing Completed! Shipment status set to Executed."
+        : "Stuffing Draft saved successfully.";
+      setSuccessToast(successMsg);
+      toast.success(successMsg);
 
       if (action === "complete") {
         setStuffingStatus("Completed");
@@ -482,7 +517,9 @@ export default function ShipmentStuffingExecutionModal({
       }, 700);
     } catch (err) {
       console.error("Failed to save stuffing execution:", err);
-      setErrorMsg(err.response?.data?.message || "Failed to save stuffing execution form.");
+      const msg = err.response?.data?.message || "Failed to save stuffing execution form.";
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -1029,6 +1066,30 @@ export default function ShipmentStuffingExecutionModal({
                     />
                   </div>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 text-xs mt-3">
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Loading Start</label>
+                    <input type="time" value={loadingInfo.loadingStartTime} onChange={(e) => setLoadingInfo((prev) => ({ ...prev, loadingStartTime: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Loading End</label>
+                    <input type="time" value={loadingInfo.loadingEndTime} onChange={(e) => setLoadingInfo((prev) => ({ ...prev, loadingEndTime: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Supervisor</label>
+                    <input value={stuffingInfo.supervisor} onChange={(e) => setStuffingInfo((prev) => ({ ...prev, supervisor: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-semibold mb-1">Operator</label>
+                    <input value={stuffingInfo.operator} onChange={(e) => setStuffingInfo((prev) => ({ ...prev, operator: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs">
+                  <span className="font-semibold text-indigo-900">Remaining after this loading</span>
+                  <span className="font-bold text-indigo-700">
+                    {Math.max(0, Number(autoData.remainingQuantity ?? autoData.quantityMt ?? 0) - Number(loadingInfo.actualLoadingWeight || 0)).toFixed(2)} MT
+                  </span>
+                </div>
               </div>
 
               {/* 3. CONTAINER DETAILS (DYNAMIC) */}
@@ -1057,7 +1118,13 @@ export default function ShipmentStuffingExecutionModal({
                       <tr className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                         <th className="py-2.5 px-3">#</th>
                         <th className="py-2.5 px-3">Container No.</th>
+                        <th className="py-2.5 px-3">Size</th>
+                        <th className="py-2.5 px-3">Vehicle No.</th>
                         <th className="py-2.5 px-3">Seal No.</th>
+                        <th className="py-2.5 px-3">Stuffing Date</th>
+                        <th className="py-2.5 px-3">Warehouse</th>
+                        <th className="py-2.5 px-3">Container Status</th>
+                        <th className="py-2.5 px-3">Remarks</th>
                         <th className="py-2.5 px-3">Tare Wt (MT)</th>
                         <th className="py-2.5 px-3">Gross Wt (MT)</th>
                         <th className="py-2.5 px-3">Net Wt (MT)</th>
@@ -1078,6 +1145,14 @@ export default function ShipmentStuffingExecutionModal({
                             />
                           </td>
                           <td className="py-2 px-3">
+                            <select value={c.containerSize || ""} onChange={(e) => handleContainerChange(idx, "containerSize", e.target.value)} className="min-w-20 rounded border border-slate-200 px-2 py-1.5">
+                              <option value="">Select</option><option value="20 FT">20 FT</option><option value="40 FT">40 FT</option><option value="40 HC">40 HC</option>
+                            </select>
+                          </td>
+                          <td className="py-2 px-3">
+                            <input type="text" value={c.vehicleNumber || ""} onChange={(e) => handleContainerChange(idx, "vehicleNumber", e.target.value.toUpperCase())} placeholder="Vehicle No." className="min-w-28 rounded border border-slate-200 px-2 py-1.5" />
+                          </td>
+                          <td className="py-2 px-3">
                             <input
                               type="text"
                               placeholder="e.g. SL987654"
@@ -1085,6 +1160,20 @@ export default function ShipmentStuffingExecutionModal({
                               onChange={(e) => handleContainerChange(idx, "sealNo", e.target.value.toUpperCase())}
                               className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium"
                             />
+                          </td>
+                          <td className="py-2 px-3">
+                            <input type="date" value={c.stuffingDate || ""} onChange={(e) => handleContainerChange(idx, "stuffingDate", e.target.value)} className="min-w-32 rounded border border-slate-200 px-2 py-1.5" />
+                          </td>
+                          <td className="py-2 px-3">
+                            <input type="text" value={c.warehouse || ""} onChange={(e) => handleContainerChange(idx, "warehouse", e.target.value)} placeholder="Warehouse" className="min-w-28 rounded border border-slate-200 px-2 py-1.5" />
+                          </td>
+                          <td className="py-2 px-3">
+                            <select value={c.status || "Pending"} onChange={(e) => handleContainerChange(idx, "status", e.target.value)} className="min-w-32 rounded border border-slate-200 px-2 py-1.5">
+                              {["Pending", "Stuffing Started", "Stuffing In Progress", "Stuffing Completed", "Loading Completed"].map((status) => <option key={status} value={status}>{status}</option>)}
+                            </select>
+                          </td>
+                          <td className="py-2 px-3">
+                            <input type="text" value={c.remarks || ""} onChange={(e) => handleContainerChange(idx, "remarks", e.target.value)} placeholder="Remarks" className="min-w-28 rounded border border-slate-200 px-2 py-1.5" />
                           </td>
                           <td className="py-2 px-3">
                             <input

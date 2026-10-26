@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import LogisticsQueuePage from "@/modules/logistics/pages/LogisticsQueuePage";
 
 export const metadata = {
@@ -7,5 +7,15 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <LogisticsQueuePage />;
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-xs font-semibold text-gray-400">Loading transport management...</div>
+        </div>
+      }
+    >
+      <LogisticsQueuePage />
+    </Suspense>
+  );
 }

@@ -7,7 +7,7 @@ import {
   COUNTRY_ALIASES,
 } from "@/lib/countryUtils";
 
-export default function CountrySelect({ value, onChange, error, className }) {
+export default function CountrySelect({ value, onChange, error, className, placeholder = "Search country..." }) {
   const [inputValue, setInputValue] = useState("");
   const [customCountries, setCustomCountries] = useState([]);
 
@@ -172,7 +172,7 @@ export default function CountrySelect({ value, onChange, error, className }) {
       menuPortalTarget={typeof document !== "undefined" ? document.body : null}
       menuPosition="fixed"
       styles={customStyles}
-      placeholder="Search country..."
+      placeholder={placeholder}
       formatCreateLabel={(val) => `+ Add "${val}"`}
       className={className}
     />

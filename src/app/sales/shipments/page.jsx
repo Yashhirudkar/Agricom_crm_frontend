@@ -8,12 +8,14 @@ function ShipmentsPageContent() {
 
   const shipmentId = searchParams.get("shipmentId") || null;
   const openCargo = searchParams.get("openCargo") === "true";
+  const openFreight = searchParams.get("openFreight") === "true";
   const contractNo = searchParams.get("contractNo") || null;
 
   return (
     <ShipmentListPage
       preSelectedShipmentId={shipmentId}
       preOpenCargo={openCargo}
+      preOpenFreight={openFreight}
       contextContractNo={contractNo}
     />
   );

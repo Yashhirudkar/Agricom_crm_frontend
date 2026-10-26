@@ -13,8 +13,12 @@ import ContractViewModal from "@/modules/sales-contracts/components/ContractView
 import DocumentUploadDrawer from "@/modules/sales-contracts/components/DocumentUploadDrawer";
 import Pagination from "@/components/common/Pagination";
 import CargoAvailabilityDrawer from "@/modules/cargo-availability/components/CargoAvailabilityDrawer";
+import ShipmentAllocationModal from "@/modules/cargo-availability/components/ShipmentAllocationModal";
+import MttReadinessFormModal from "@/modules/cargo-availability/components/MttReadinessFormModal";
+import { cargoAvailabilityApi } from "@/modules/cargo-availability/services/cargoAvailabilityApi";
+import FreightAllocationDrawer from "../components/FreightAllocationDrawer";
 
-export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, contextContractNo }) {
+export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, preOpenFreight, contextContractNo }) {
   const router = useRouter();
   // Filters State
   const [filters, setFilters] = useState({
@@ -47,6 +51,120 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
     setTimeout(() => setToastMsg(null), 3000);
   };
 
+    const isMttShipment = (s, targetCargo = null) => {
+    const contract = s?.salesContract || {};
+    const contractType = String(contract.contractType || s?.contractType || "").trim().toUpperCase();
+    const shipmentType = String(contract.shipmentType?.name || contract.shipmentType || s?.shipmentType || "").trim().toUpperCase();
+    const purchaseType = String(s?.purchaseContract?.purchaseType || s?.purchaseType || "").trim().toUpperCase();
+    
+    // Explicit MTT markings
+    if (contractType === "MTT" || shipmentType === "MTT" || purchaseType === "MTT") return true;
+    if (Array.isArray(s?.purchaseContracts) && s.purchaseContracts.some(pc => String(pc.purchaseType || "").toUpperCase() === "MTT")) return true;
+    if (targetCargo?.cargoType === "MTT" || String(targetCargo?.purchaseContract?.purchaseType || "").toUpperCase() === "MTT") return true;
+
+    // Non-export contract types are MTT domestic workflows
+    if (contractType && contractType !== "EXPORT" && contractType !== "IMPORT") return true;
+
+    // Even if contractType is "Export", if there are NO sea ports and NO containers, or transport is truck/road, it is MTT (Domestic Truck Loading)
+    const hasSeaPorts = Boolean(
+      contract.portOfLoading || contract.port_of_loading ||
+      contract.portOfDischarge || contract.port_of_discharge ||
+      s?.originPortId || s?.destinationPortId
+    );
+    const hasContainers = Boolean(Number(s?.noOfContainers || s?.no_of_containers || 0) > 0);
+    const isTruckTransport = String(contract.originTransportMode || contract.origin_transport_mode || "").toLowerCase() === "truck" ||
+      String(contract.originTransportMode || contract.origin_transport_mode || "").toLowerCase() === "road";
+
+    if (!hasSeaPorts && !hasContainers) return true;
+    if (isTruckTransport) return true;
+
+    return false;
+  };
+
+  const handleOpenCargoAllocation = async (s) => {
+    console.log("[ShipmentListPage] handleOpenCargoAllocation invoked for shipment:", {
+      id: s.id,
+      ref: s.shipmentReference,
+      cargoReady: s.cargoReady,
+      contractType: s.salesContract?.contractType,
+    });
+
+    try {
+      setLoadingAllocation(true);
+      const res = await cargoAvailabilityApi.getByShipmentId(s.id);
+      const data = res?.data || res || {};
+      const cargoRecords = data.cargoAvailabilityRecords || [];
+      const allocations = data.allocations || [];
+
+      const targetCargo = cargoRecords[0] || allocations[0]?.cargoAvailability || null;
+      const isMtt = isMttShipment(s, targetCargo);
+      console.log("[ShipmentListPage] isMtt evaluation:", isMtt, "for shipment:", s.id);
+
+      if (isMtt) {
+        // MTT WORKFLOW: Open MTT Cargo Readiness Modal directly on current page (/sales/shipments)
+        // DO NOT open Cargo Execution Workspace!
+        // DO NOT mount CargoAvailabilityDrawer!
+        // DO NOT navigate away or change URL!
+        let mttCargo = targetCargo;
+        if (!mttCargo) {
+          const listRes = await cargoAvailabilityApi.getCargoAvailabilityList({
+            limit: 20,
+            productId: s.products?.[0]?.id || s.salesContract?.items?.[0]?.productId,
+          });
+          const listData = listRes?.data?.data || listRes?.data || [];
+          mttCargo = listData.find(
+            (c) =>
+              c.purchaseContract?.purchaseType === "MTT" ||
+              c.purchaseContract?.salesContract?.contractType === "MTT" ||
+              c.cargoType === "MTT"
+          ) || listData[0];
+        }
+
+        if (!mttCargo) {
+          mttCargo = {
+            id: null,
+            purchaseContractId: s.purchaseContract?.id || null,
+            purchaseContract: s.purchaseContract || {
+              contractNumber: s.salesContract?.contractNumber || `SHIP-${s.id}`,
+              seller: s.salesContract?.seller || { entityName: "Vendor / Warehouse" },
+              businessReference: s.businessReference || s.businessTransaction?.businessReference,
+            },
+            product: s.products?.[0] || { name: "Product" },
+            purchaseQty: s.quantity || 0,
+            availableQty: s.quantity || 0,
+            allocatedQty: s.cargoReady ? (s.quantity || 0) : 0,
+            status: s.cargoReady ? "Ready" : "Not Ready",
+            isReady: s.cargoReady,
+          };
+        }
+
+        console.log("[ShipmentListPage] Opening MttReadinessFormModal with cargo:", mttCargo.id || "provisioned");
+        setMttReadinessCargoRecord({
+          ...mttCargo,
+          isReady: s.cargoReady,
+          status: s.cargoReady ? "Ready" : mttCargo.status || "Not Ready",
+          currentShipment: s,
+        });
+      } else {
+        // Export Cargo: Keep separate and independent. Open Cargo Availability Drawer on the current page
+        console.log("[ShipmentListPage] Opening Export Cargo Execution Workspace for shipment:", s.id);
+        setCargoShipment(s);
+      }
+    } catch (err) {
+      console.error("[ShipmentListPage] Error preparing cargo readiness:", err);
+      showToast("Failed to load cargo readiness details.", "error");
+    } finally {
+      setLoadingAllocation(false);
+    }
+  };
+
+  const handleReadinessSuccess = () => {
+    setMttReadinessCargoRecord(null);
+    fetchShipments();
+    fetchStats();
+    showToast("Cargo readiness updated successfully.", "success");
+  };
+
   // Data States
   const [shipments, setShipments] = useState([]);
   const [total, setTotal] = useState(0);
@@ -69,10 +187,17 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
   // Modal / Drawer Active States
   const [activeShipment, setActiveShipment] = useState(null); // Detail drawer target
   const [cargoShipment, setCargoShipment] = useState(null);   // Cargo availability drawer target
+  const [freightShipment, setFreightShipment] = useState(null); // Freight allocation drawer target
   const [editShipment, setEditShipment] = useState(null);     // Edit modal target
   const [viewContractId, setViewContractId] = useState(null); // Contract modal target
   const [docContract, setDocContract] = useState(null);       // Document drawer target
   const [selectedShipments, setSelectedShipments] = useState([]); // Bulk actions checkbox tracker
+
+  // MTT Cargo Allocation & Readiness Workflow State
+  const [allocationCargoRecord, setAllocationCargoRecord] = useState(null);
+  const [allocationTargetShipment, setAllocationTargetShipment] = useState(null);
+  const [mttReadinessCargoRecord, setMttReadinessCargoRecord] = useState(null);
+  const [loadingAllocation, setLoadingAllocation] = useState(false);
 
 
   // API Fetches
@@ -142,8 +267,11 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
               const timelineRes = await shipmentsApi.getShipments({ search: match.shipmentReference });
               const resolved = timelineRes?.data?.data?.[0] || match;
               if (preOpenCargo) {
-                // Auto-open CargoAvailabilityDrawer when ?openCargo=true
-                setCargoShipment(resolved);
+                // Delegate to handleOpenCargoAllocation to ensure MTT opens modal, not workspace
+                handleOpenCargoAllocation(resolved);
+              } else if (preOpenFreight) {
+                // Auto-open FreightAllocationDrawer when ?openFreight=true
+                setFreightShipment(resolved);
               } else {
                 // Default: open ShipmentDetailsDrawer
                 setActiveShipment(resolved);
@@ -156,7 +284,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
       };
       loadPreselected();
     }
-  }, [preSelectedShipmentId, preOpenCargo]);
+  }, [preSelectedShipmentId, preOpenCargo, preOpenFreight]);
 
   // Reset Filters Handler
   const handleResetFilters = () => {
@@ -341,18 +469,23 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
                   showToast("Could not determine Sales Contract for selected shipments", "error");
                   return;
                 }
+                const selectedContractIds = new Set(
+                  selectedObjs.map((shipment) =>
+                    Number(shipment.salesContractId || shipment.salesContract?.id),
+                  ),
+                );
+                if (selectedContractIds.size !== 1) {
+                  showToast("Execute Workspace can only include shipments from one Sales Contract.", "error");
+                  return;
+                }
                 const targetIds = selectedShipments.map(Number);
                 await purchaseContractApi.create({
                   salesContractId: Number(salesContractId),
                   shipmentIds: targetIds,
                 });
-                try {
-                  await Promise.all(
-                    targetIds.map((id) => shipmentsApi.updateShipment(id, { status: "Executed" }))
-                  );
-                } catch (statusErr) {
-                  console.warn("Could not update shipment status to Executed:", statusErr);
-                }
+                await Promise.all(
+                  targetIds.map((id) => shipmentsApi.updateShipment(id, { status: "Executed" }))
+                );
                 showToast("Shipments executed successfully", "success");
                 setSelectedShipments([]);
                 fetchShipments();
@@ -380,7 +513,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
           onEditShipment={(s) => setEditShipment(s)}
           onManageDocuments={(contractObj) => setDocContract(contractObj)}
           onPrintShipment={handlePrintSingleShipment}
-          onOpenCargoDrawer={(s) => setCargoShipment(s)}
+          onOpenCargoDrawer={handleOpenCargoAllocation}
         />
 
         <div className="print:hidden">
@@ -402,7 +535,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
           shipment={activeShipment}
           onClose={() => setActiveShipment(null)}
           onViewContract={(id) => setViewContractId(id)}
-          onOpenCargoDrawer={(s) => setCargoShipment(s)}
+          onOpenCargoDrawer={handleOpenCargoAllocation}
         />
       )}
 
@@ -411,6 +544,15 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
         <CargoAvailabilityDrawer
           shipment={cargoShipment}
           onClose={() => setCargoShipment(null)}
+        />
+      )}
+
+      {/* Freight Allocation Dedicated Drawer */}
+      {freightShipment && (
+        <FreightAllocationDrawer
+          shipment={freightShipment}
+          onClose={() => setFreightShipment(null)}
+          onEditShipment={(s) => setEditShipment(s)}
         />
       )}
 
@@ -447,6 +589,29 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
         />
       )}
 
+      {/* Allocate Cargo Modal (Direct MTT Workflow) */}
+      {allocationCargoRecord && (
+        <ShipmentAllocationModal
+          cargoRecord={allocationCargoRecord}
+          targetShipment={allocationTargetShipment}
+          defaultShipmentId={allocationTargetShipment?.id}
+          onClose={() => {
+            setAllocationCargoRecord(null);
+            setAllocationTargetShipment(null);
+          }}
+          onSuccess={handleAllocationSuccess}
+        />
+      )}
+
+      {/* MTT Cargo Readiness Modal (Triggered automatically if not already confirmed) */}
+      {mttReadinessCargoRecord && (
+        <MttReadinessFormModal
+          cargoRecord={mttReadinessCargoRecord}
+          shipment={mttReadinessCargoRecord.currentShipment}
+          onClose={() => setMttReadinessCargoRecord(null)}
+          onSuccess={handleReadinessSuccess}
+        />
+      )}
     </div>
   );
 }

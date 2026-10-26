@@ -20,11 +20,17 @@ import axiosClient from "@/lib/axios";
 
 const STAGES = [
   "Draft",
+  "Pending",
+  "Ready",
   "Truck Arrived",
   "Weighment In",
+  "Stuffing Started",
   "Loading Started",
+  "Stuffing In Progress",
+  "Stuffing Completed",
   "Loading Completed",
   "Weighment Out",
+  "Ready For Dispatch",
   "Dispatched",
   "Reached Destination",
   "Unloaded",
@@ -47,10 +53,13 @@ export default function ExporterLoadingDrawer({
   const isEdit = Boolean(loadingRecord?.id);
 
   const [formData, setFormData] = useState({
-    cargoAvailabilityId: cargoRecord?.id,
+    cargoAvailabilityId: loadingRecord?.cargoAvailabilityId || cargoRecord?.id,
     shipmentId: loadingRecord?.shipmentId || defaultShipmentId || "",
     warehouseName: loadingRecord?.warehouseName || "",
     loadingDate: loadingRecord?.loadingDate || new Date().toISOString().split("T")[0],
+    loadingStartTime: loadingRecord?.loadingStartTime || "",
+    loadingEndTime: loadingRecord?.loadingEndTime || "",
+    operator: loadingRecord?.operator || "",
     arrivalTime: loadingRecord?.arrivalTime || "09:00",
     truckNo: loadingRecord?.truckNo || "",
     trailerNo: loadingRecord?.trailerNo || "",
@@ -365,6 +374,25 @@ export default function ExporterLoadingDrawer({
                       className={inputCls}
                     />
                   </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className={labelCls}>Loading Start</label>
+                      <input type="time" value={formData.loadingStartTime} onChange={(e) => handleChange("loadingStartTime", e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Loading End</label>
+                      <input type="time" value={formData.loadingEndTime} onChange={(e) => handleChange("loadingEndTime", e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Operator</label>
+                      <input value={formData.operator} onChange={(e) => handleChange("operator", e.target.value)} className={inputCls} />
+                    </div>
+                  </div>
+                  {autoShipmentInfo && (
+                    <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs">
+                      Remaining shipment quantity: <strong>{Number(autoShipmentInfo.remainingShipmentQty || 0).toFixed(2)} MT</strong>
+                    </div>
+                  )}
                   <div>
                     <label className={labelCls}>Loading Location / Bay</label>
                     <input

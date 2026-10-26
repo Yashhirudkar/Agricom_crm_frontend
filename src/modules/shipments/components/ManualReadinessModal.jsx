@@ -49,6 +49,9 @@ export default function ManualReadinessModal({
 
   if (!isOpen || !shipment) return null;
 
+  // System Ready = YES strictly when Cargo Allocation = Allocated AND Freight Allocation = Allocated
+  const isSystemReady = Boolean(shipment.cargoReady && shipment.freightReady);
+
   const handleSave = async (e) => {
     e?.preventDefault();
     if (!canEdit) {
@@ -170,7 +173,7 @@ export default function ManualReadinessModal({
                 </span>
               </div>
               <div>
-                {shipment.systemReady ? (
+                {isSystemReady ? (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Yes
@@ -207,10 +210,14 @@ export default function ManualReadinessModal({
             </div>
 
             {/* Reasons if system not ready */}
-            {!shipment.systemReady && shipment.readinessReasons?.length > 0 && (
+            {!isSystemReady && (
               <div className="text-[11px] text-gray-500 bg-white/70 p-2 rounded-lg border border-gray-100">
-                <span className="font-semibold text-gray-700">Reason:</span>{" "}
-                {shipment.readinessReasons.join(", ")}
+                <span className="font-semibold text-gray-700">System Ready Logic:</span>{" "}
+                {!shipment.cargoReady && !shipment.freightReady
+                  ? "Both Cargo Allocation and Freight Allocation are pending."
+                  : !shipment.cargoReady
+                  ? "Cargo Allocation is pending."
+                  : "Freight Allocation is pending."}
               </div>
             )}
           </div>

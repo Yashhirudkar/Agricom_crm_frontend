@@ -18,8 +18,12 @@ import {
   ArrowUpRight,
   AlertCircle,
   Check,
+  ShieldCheck,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import ShipmentStuffingExecutionModal from "./ShipmentStuffingExecutionModal";
+import ManualReadinessModal from "./ManualReadinessModal";
 
 // Dynamic Tooltip Reason Helper for Shipment Readiness
 const getExecuteDisabledTooltip = (shipment) => {
@@ -41,9 +45,10 @@ const getExecuteDisabledTooltip = (shipment) => {
   return "Shipment is not ready for execution.";
 };
 
-export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContract, onOpenCargoDrawer }) {
+export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContract, onOpenCargoDrawer, onOpenFreightDrawer }) {
   const router = useRouter();
   const [openStuffingModal, setOpenStuffingModal] = useState(false);
+  const [openManualReadinessModal, setOpenManualReadinessModal] = useState(false);
 
   if (!shipment) return null;
 
@@ -109,6 +114,35 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
           </div>
 
           <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setOpenManualReadinessModal(true)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ${
+                shipment.isManualOverride
+                  ? shipment.manualReadyOverride
+                    ? "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100"
+                    : "bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100"
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+              }`}
+              title="Shipment Readiness Control (Manual Override)"
+            >
+              <ShieldCheck
+                className={`h-3.5 w-3.5 ${
+                  shipment.isManualOverride
+                    ? shipment.manualReadyOverride
+                      ? "text-amber-600"
+                      : "text-rose-600"
+                    : "text-slate-500"
+                }`}
+              />
+              <span>Readiness Control</span>
+              {shipment.isManualOverride && (
+                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-white/80 border border-current">
+                  {shipment.manualReadyOverride ? "Force Ready" : "Blocked"}
+                </span>
+              )}
+            </button>
+
             <div className="relative group/drawer-exec inline-flex">
               <button
                 type="button"
@@ -147,26 +181,26 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
           {/* Top Key Metrics Banner */}
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] grid grid-cols-2 md:grid-cols-3 gap-4 items-center">
-            <div className="border-r border-slate-100 last:border-r-0 pr-4">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Target Quantity</span>
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] grid grid-cols-2 md:grid-cols-5 gap-3 items-center">
+            <div className="border-r border-slate-100 last:border-r-0 pr-3">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Target Quantity</span>
               <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-xl font-extrabold text-slate-900">{shipment.quantity || 0}</span>
+                <span className="text-lg font-extrabold text-slate-900">{shipment.quantity || 0}</span>
                 <span className="text-xs font-bold text-slate-500">MT</span>
               </div>
             </div>
 
-            <div className="border-r border-slate-100 last:border-r-0 pr-4">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Containers</span>
+            <div className="border-r border-slate-100 last:border-r-0 pr-3">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Containers</span>
               <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-xl font-extrabold text-slate-900">{shipment.noOfContainers ?? "0"}</span>
+                <span className="text-lg font-extrabold text-slate-900">{shipment.noOfContainers ?? "0"}</span>
                 <span className="text-xs font-medium text-slate-500">Units</span>
               </div>
             </div>
 
-            <div className="border-r border-slate-100 last:border-r-0 pr-4">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Timeline & Status</span>
-              <div className="flex items-center gap-2 mt-1">
+            <div className="border-r border-slate-100 last:border-r-0 pr-3">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Timeline & Status</span>
+              <div className="flex items-center gap-1.5 mt-1">
                 <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                   {shipment.status || "Scheduled"}
                 </span>
@@ -178,6 +212,110 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                     {timelineObj.label}
                   </span>
                 )}
+              </div>
+            </div>
+
+            <div className="border-r border-slate-100 last:border-r-0 pr-3">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Cargo Allocation</span>
+              <div className="mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log("[ShipmentDetailsDrawer] Cargo Allocation clicked for shipment:", shipment.id);
+                    if (onOpenCargoDrawer) {
+                      onOpenCargoDrawer(shipment);
+                    } else {
+                      router.push(`/sales/cargo-availability?shipmentId=${shipment.id}&shipmentNo=${encodeURIComponent(shipment.shipmentReference || "")}`);
+                    }
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium transition-all cursor-pointer hover:scale-105 ${
+                    shipment.cargoReady
+                      ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                      : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                  }`}
+                  title={
+                    shipment.cargoReady
+                      ? "Cargo Allocated. Click to view Cargo details."
+                      : "Cargo Not Allocated. Click to allocate cargo."
+                  }
+                >
+                  {shipment.cargoReady ? (
+                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  ) : (
+                    <XCircle className="h-3 w-3 text-red-600" />
+                  )}
+                  <span>{shipment.cargoReady ? "Yes" : "No"}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="pr-2">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Freight Allocation</span>
+              <div className="mt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (shipment.freightReady) {
+                      if (onOpenFreightDrawer) onOpenFreightDrawer(shipment);
+                      else {
+                        const searchVal =
+                          shipment.businessReference ||
+                          shipment.businessTransaction?.businessReference ||
+                          shipment.shipmentReference ||
+                          "";
+                        const params = new URLSearchParams();
+                        if (searchVal) {
+                          params.set("search", searchVal);
+                          params.set("businessRef", searchVal);
+                        }
+                        if (shipment.logisticsId) {
+                          params.set("logisticsId", String(shipment.logisticsId));
+                        }
+                        if (shipment.salesContract?.enquiryId) {
+                          params.set("enquiryId", String(shipment.salesContract.enquiryId));
+                        }
+                        params.set("openDrawer", "true");
+                        router.push(`/logistics/transport-management?${params.toString()}`);
+                      }
+                    } else {
+                      const searchVal =
+                        shipment.businessReference ||
+                        shipment.businessTransaction?.businessReference ||
+                        shipment.shipmentReference ||
+                        "";
+                        const params = new URLSearchParams();
+                        if (searchVal) {
+                          params.set("search", searchVal);
+                          params.set("businessRef", searchVal);
+                        }
+                        if (shipment.logisticsId) {
+                          params.set("logisticsId", String(shipment.logisticsId));
+                        }
+                        if (shipment.salesContract?.enquiryId) {
+                          params.set("enquiryId", String(shipment.salesContract.enquiryId));
+                        }
+                        params.set("openDrawer", "true");
+                        router.push(`/logistics/transport-management?${params.toString()}`);
+                    }
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium transition-all cursor-pointer hover:scale-105 ${
+                    shipment.freightReady
+                      ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                      : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                  }`}
+                  title={
+                    shipment.freightReady
+                      ? "Freight Allocated. Click to view Freight Allocation details."
+                      : "Freight Not Allocated. Click to complete freight allocation."
+                  }
+                >
+                  {shipment.freightReady ? (
+                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  ) : (
+                    <XCircle className="h-3 w-3 text-red-600" />
+                  )}
+                  <span>{shipment.freightReady ? "Yes" : "No"}</span>
+                </button>
               </div>
             </div>
 
@@ -377,6 +515,21 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
           onClose={() => setOpenStuffingModal(false)}
           onSaveSuccess={() => {
             setOpenStuffingModal(false);
+          }}
+        />
+      )}
+
+      {/* Shipment Readiness Control Modal */}
+      {openManualReadinessModal && (
+        <ManualReadinessModal
+          isOpen={openManualReadinessModal}
+          shipment={shipment}
+          onClose={() => setOpenManualReadinessModal(false)}
+          onSaveSuccess={(updated) => {
+            if (updated) {
+              Object.assign(shipment, updated);
+            }
+            setOpenManualReadinessModal(false);
           }}
         />
       )}

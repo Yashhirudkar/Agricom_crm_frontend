@@ -414,6 +414,7 @@ export default function TaskTable() {
     if (filters.statusIds?.length > 0) params.set('status', filters.statusIds.join(','));
     if (filters.priorityIds?.length > 0) params.set('priority', filters.priorityIds.join(','));
     if (filters.assigneeIds?.length > 0) params.set('assignee', filters.assigneeIds.join(','));
+    if (filters.ownerIds?.length > 0) params.set('owner', filters.ownerIds.join(','));
     if (preset) params.set('preset', preset);
 
     const qs = params.toString();

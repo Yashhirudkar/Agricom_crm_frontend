@@ -2,6 +2,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { DollarSign, ChevronDown, CreditCard, CalendarDays } from "lucide-react";
 import { mastersApi } from "@/modules/sales-contracts/services/salesContractApi";
+import CountrySelect from "@/components/common/CountrySelect";
 
 export default function PurchaseCommercialInformationSection({
   contract,
@@ -398,7 +399,7 @@ export default function PurchaseCommercialInformationSection({
         </div>
 
         {/* Row 3: Place of Loading, Delivery Place & Date */}
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 pt-2 border-t border-gray-100">
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-4 pt-2 border-t border-gray-100">
           <div>
             <label className={lbl}>Shipment Type / Incoterms</label>
             {isView ? (
@@ -468,6 +469,18 @@ export default function PurchaseCommercialInformationSection({
                 onChange={(e) => setForm((f) => ({ ...f, placeOfLoading: e.target.value }))}
                 className={`${inp}`}
                 placeholder="e.g. Loading Port / Location"
+              />
+            )}
+          </div>
+
+          <div>
+            <label className={lbl}>Country</label>
+            {isView ? (
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.loadingCountry || "—"}</div>
+            ) : (
+              <CountrySelect
+                value={form.loadingCountry || ""}
+                onChange={(val) => setForm((f) => ({ ...f, loadingCountry: val?.name || "" }))}
               />
             )}
           </div>

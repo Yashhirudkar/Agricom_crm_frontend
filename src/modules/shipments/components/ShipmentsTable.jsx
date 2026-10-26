@@ -8,14 +8,14 @@ import {
   Rocket,
   CheckCircle2,
   XCircle,
-  Package
+  Package,
+  ShieldCheck,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 import { shipmentsApi } from "../services/shipmentsApi";
 
-import ShipmentAllocationSelectorModal from "@/modules/cargo-availability/components/ShipmentAllocationSelectorModal";
 import ManualReadinessModal from "./ManualReadinessModal";
 import ShipmentStuffingExecutionModal from "./ShipmentStuffingExecutionModal";
 
@@ -66,13 +66,12 @@ export default function ShipmentsTable({
   onPrintShipment,
   onExecutePurchase,
   onOpenCargoDrawer,
+  onOpenFreightDrawer,
   selectedShipments = [],
   setSelectedShipments,
 }) {
   const router = useRouter();
   const [copiedId, setCopiedId] = useState(null);
-  const [selectorShipment, setSelectorShipment] = useState(null);
-  const [selectorAllocations, setSelectorAllocations] = useState([]);
   const [manualReadinessShipment, setManualReadinessShipment] = useState(null);
   const [stuffingShipment, setStuffingShipment] = useState(null);
   const [executingId, setExecutingId] = useState(null);
@@ -99,6 +98,68 @@ export default function ShipmentsTable({
       setSelectedShipments((prev) => [...prev, id]);
     } else {
       setSelectedShipments((prev) => prev.filter((item) => item !== id));
+    }
+  };
+
+  const handleCargoClick = (e, s) => {
+    e.stopPropagation();
+    console.log("[ShipmentsTable] handleCargoClick triggered for shipment:", {
+      id: s.id,
+      shipmentReference: s.shipmentReference,
+      cargoReady: s.cargoReady,
+      contractType: s.salesContract?.contractType,
+    });
+    if (onOpenCargoDrawer) {
+      onOpenCargoDrawer(s);
+    }
+  };
+
+  const handleFreightClick = (e, s) => {
+    e.stopPropagation();
+    if (s.freightReady) {
+      // IF status == YES -> Open Freight Allocation details directly on the Shipment page
+      if (onOpenFreightDrawer) {
+        onOpenFreightDrawer(s);
+      } else {
+        const searchVal =
+          s.businessReference ||
+          s.businessTransaction?.businessReference ||
+          s.shipmentReference ||
+          "";
+        const params = new URLSearchParams();
+        if (searchVal) {
+          params.set("search", searchVal);
+          params.set("businessRef", searchVal);
+        }
+        if (s.logisticsId) {
+          params.set("logisticsId", String(s.logisticsId));
+        }
+        if (s.salesContract?.enquiryId) {
+          params.set("enquiryId", String(s.salesContract.enquiryId));
+        }
+        params.set("openDrawer", "true");
+        router.push(`/logistics/transport-management?${params.toString()}`);
+      }
+    } else {
+      // IF status == NO -> Redirect directly with openDrawer=true so TransportDrawer opens automatically
+      const searchVal =
+        s.businessReference ||
+        s.businessTransaction?.businessReference ||
+        s.shipmentReference ||
+        "";
+      const params = new URLSearchParams();
+      if (searchVal) {
+        params.set("search", searchVal);
+        params.set("businessRef", searchVal);
+      }
+      if (s.logisticsId) {
+        params.set("logisticsId", String(s.logisticsId));
+      }
+      if (s.salesContract?.enquiryId) {
+        params.set("enquiryId", String(s.salesContract.enquiryId));
+      }
+      params.set("openDrawer", "true");
+      router.push(`/logistics/transport-management?${params.toString()}`);
     }
   };
 
@@ -153,7 +214,8 @@ export default function ShipmentsTable({
               <th className="px-4 py-3 whitespace-nowrap">Seller</th>
               <th className="px-4 py-3 whitespace-nowrap">Product</th>
               <th className="px-4 py-3 text-right whitespace-nowrap">Qty (MT)</th>
-              <th className="px-4 py-3 text-center whitespace-nowrap">Ready</th>
+              <th className="px-4 py-3 text-center whitespace-nowrap">Cargo Allocation</th>
+              <th className="px-4 py-3 text-center whitespace-nowrap">Freight Allocation</th>
               <th className="px-4 py-3 text-right whitespace-nowrap">Action</th>
             </tr>
           </thead>
@@ -165,7 +227,7 @@ export default function ShipmentsTable({
               const timelineObj = s.timeline || {};
 
               const productsList = s.products || [];
-              const primaryProduct = productsList[0]?.name || "—";
+              const primaryProduct = productsList[0]?.name || "â€”";
               const productDisplay =
                 productsList.length > 1
                   ? `${primaryProduct} + ${productsList.length - 1} more`
@@ -199,7 +261,7 @@ export default function ShipmentsTable({
                           ? s.shipmentReference.length > 8
                             ? `${s.shipmentReference.slice(0, 8)}...`
                             : s.shipmentReference
-                          : "—"}
+                          : "â€”"}
                       </span>
                       {s.shipmentReference && (
                         <button
@@ -219,17 +281,24 @@ export default function ShipmentsTable({
 
                   {/* Business Ref */}
                   <td className="px-4 py-3 font-medium text-blue-600 whitespace-nowrap">
-                    {s.businessReference || s.businessTransaction?.businessReference || "—"}
+                    {s.businessReference || s.businessTransaction?.businessReference || "â€”"}
                   </td>
 
                   {/* Timeline */}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-xs font-medium capitalize ${TIMELINE_STYLES[timelineObj.type] || "bg-gray-100 text-gray-700 border-gray-200"
-                        }`}
-                    >
-                      {timelineObj.label || "Unknown"}
-                    </span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-xs font-medium capitalize ${TIMELINE_STYLES[timelineObj.type] || "bg-gray-100 text-gray-700 border-gray-200"
+                          }`}
+                      >
+                        {timelineObj.label || "Unknown"}
+                      </span>
+                      {s.executionStatus && (
+                        <span className="text-[10px] font-semibold text-indigo-700">
+                          {s.executionStatus}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* Shipment Date */}
@@ -240,7 +309,7 @@ export default function ShipmentsTable({
                         month: "short",
                         year: "numeric",
                       })
-                      : "—"}
+                      : "â€”"}
                   </td>
 
                   {/* Buyer */}
@@ -270,13 +339,13 @@ export default function ShipmentsTable({
                         </span>
                       )
                     ) : (
-                      "—"
+                      "â€”"
                     )}
                   </td>
 
                   {/* Seller */}
                   <td className="px-4 py-3 whitespace-nowrap text-gray-600" title={seller.entityName || ""}>
-                    {seller.entityName || "—"}
+                    {seller.entityName || "â€”"}
                   </td>
 
                   {/* Product */}
@@ -287,7 +356,7 @@ export default function ShipmentsTable({
                         <span className="truncate max-w-[150px]">{productDisplay}</span>
                       </div>
                     ) : (
-                      "—"
+                      "â€”"
                     )}
                   </td>
 
@@ -298,60 +367,119 @@ export default function ShipmentsTable({
                       : "0.00"}
                   </td>
 
-                  {/* Ready Column */}
+                  {/* Cargo Allocation Column */}
                   <td className="px-4 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
-                      onClick={() => setManualReadinessShipment(s)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ${s.readyForShipment
-                        ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                        : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                      onClick={(e) => handleCargoClick(e, s)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all cursor-pointer shadow-2xs hover:shadow-xs hover:scale-105 active:scale-95 ${s.cargoReady
+                        ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300"
+                        : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300"
                         }`}
-                      title="Click to view or edit readiness"
+                      title={
+                        s.cargoReady
+                          ? "Cargo Allocated. Click to view Cargo Allocation details."
+                          : "Cargo Not Allocated. Click to allocate cargo."
+                      }
                     >
-                      {s.readyForShipment ? (
-                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      {s.cargoReady ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                       ) : (
-                        <XCircle className="h-3.5 w-3.5" />
+                        <XCircle className="h-3.5 w-3.5 text-red-600" />
                       )}
-                      <span>{s.readyForShipment ? "Yes" : "No"}</span>
+                      <span>{s.cargoReady ? "Yes" : "No"}</span>
                     </button>
                   </td>
 
-                  {/* Actions - Execute Stuffing Form */}
+                  {/* Freight Allocation Column */}
+                  <td className="px-4 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={(e) => handleFreightClick(e, s)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all cursor-pointer shadow-2xs hover:shadow-xs hover:scale-105 active:scale-95 ${s.freightReady
+                        ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300"
+                        : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300"
+                        }`}
+                      title={
+                        s.freightReady
+                          ? "Freight Allocated. Click to view Freight Allocation details."
+                          : "Freight Not Allocated. Click to complete freight allocation."
+                      }
+                    >
+                      {s.freightReady ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5 text-red-600" />
+                      )}
+                      <span>{s.freightReady ? "Yes" : "No"}</span>
+                    </button>
+                  </td>
+
+                  {/* Actions - Execute Stuffing Form & Readiness Control */}
                   <td className="px-4 py-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
-                    {isExecuted ? (
+                    <div className="flex items-center justify-end gap-1.5">
+                      {/* Shipment Readiness Control (Manual Override) */}
                       <button
                         type="button"
-                        title="Shipment executed. Click to view or edit Stuffing Execution."
                         onClick={(e) => {
                           e.stopPropagation();
-                          setStuffingShipment(s);
+                          setManualReadinessShipment(s);
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-xs transition-colors cursor-pointer"
+                        className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-md border text-xs font-medium transition-all cursor-pointer ${
+                          s.isManualOverride
+                            ? s.manualReadyOverride
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                              : "bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100"
+                            : "bg-white text-gray-500 hover:text-gray-800 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                        }`}
+                        title={
+                          s.isManualOverride
+                            ? `Manual Override active: ${s.manualReadyOverride ? "Force Ready" : "Block Execution"}. Click to change.`
+                            : "Shipment Readiness Control (Manual Override)"
+                        }
                       >
-                        <Check className="h-3.5 w-3.5" />
-                        <span>Stuffed / Executed</span>
+                        <ShieldCheck className={`h-3.5 w-3.5 ${s.isManualOverride ? (s.manualReadyOverride ? "text-emerald-600" : "text-rose-600") : "text-gray-400"}`} />
+                        {s.isManualOverride && (
+                          <span className="text-[10px] font-bold">
+                            {s.manualReadyOverride ? "Override" : "Blocked"}
+                          </span>
+                        )}
                       </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={!s.readyForShipment || executingId === s.id}
-                        title={getExecuteDisabledTooltip(s)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!s.readyForShipment || executingId === s.id) return;
-                          setStuffingShipment(s);
-                        }}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-xs ${s.readyForShipment && executingId !== s.id
-                          ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          }`}
-                      >
-                        <Rocket className="h-3.5 w-3.5" />
-                        <span>Execute</span>
-                      </button>
-                    )}
+
+                      {/* Execute Button */}
+                      {isExecuted ? (
+                        <button
+                          type="button"
+                          title="Shipment executed. Click to view or edit Stuffing Execution."
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStuffingShipment(s);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-xs transition-colors cursor-pointer"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          <span>Stuffed / Executed</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={!s.readyForShipment}
+                          title={getExecuteDisabledTooltip(s)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!s.readyForShipment) return;
+                            setStuffingShipment(s);
+                          }}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-xs ${s.readyForShipment
+                            ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer"
+                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            }`}
+                        >
+                          <Rocket className="h-3.5 w-3.5" />
+                          <span>Execute</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -369,14 +497,6 @@ export default function ShipmentsTable({
           if (onRefresh) onRefresh();
         }}
       />
-
-      {selectorShipment && (
-        <ShipmentAllocationSelectorModal
-          shipment={selectorShipment}
-          allocations={selectorAllocations}
-          onClose={() => setSelectorShipment(null)}
-        />
-      )}
 
       {/* Shipment Stuffing Execution Modal */}
       {stuffingShipment && (

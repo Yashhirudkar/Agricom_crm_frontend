@@ -32,10 +32,11 @@ export default function CargoAvailabilityFilter({ filters, onChange, onReset }) 
           className="px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 font-medium"
         >
           <option value="">All Statuses</option>
-          <option value="Pending Readiness">Pending Readiness</option>
-          <option value="Partially Ready">Partially Ready</option>
-          <option value="Ready Pool">Ready Pool</option>
-          <option value="Allocated">Allocated</option>
+          <option value="Not Ready">Not Ready</option>
+          <option value="Ready">Ready</option>
+          <option value="Partially Allocated">Partially Allocated</option>
+          <option value="Fully Allocated">Fully Allocated</option>
+          <option value="Loading">Loading</option>
           <option value="Dispatched">Dispatched</option>
           <option value="Completed">Completed</option>
         </select>

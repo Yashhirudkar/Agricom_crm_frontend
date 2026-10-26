@@ -4,15 +4,38 @@ import { X, Layers, ArrowRight } from "lucide-react";
 import { cargoAvailabilityApi } from "../services/cargoAvailabilityApi";
 import axiosClient from "@/lib/axios";
 
-export default function ShipmentAllocationModal({ cargoRecord, onClose, onSuccess }) {
+export default function ShipmentAllocationModal({
+  cargoRecord,
+  targetShipment = null,
+  defaultShipmentId = null,
+  onClose,
+  onSuccess,
+}) {
   const [loading, setLoading] = useState(false);
   const [shipments, setShipments] = useState([]);
-  const [shipmentId, setShipmentId] = useState("");
-  const [allocatedQty, setAllocatedQty] = useState("");
+  const initialShipmentId = defaultShipmentId || targetShipment?.id ? String(defaultShipmentId || targetShipment.id) : "";
+  const [shipmentId, setShipmentId] = useState(initialShipmentId);
+  const initialQty = targetShipment?.quantity
+    ? Math.min(Number(targetShipment.quantity), Number(cargoRecord?.availableQty || targetShipment.quantity))
+    : "";
+  const [allocatedQty, setAllocatedQty] = useState(initialQty ? String(initialQty) : "");
   const [error, setError] = useState("");
 
   const contract = cargoRecord?.purchaseContract || {};
   const product = cargoRecord?.product || {};
+
+  useEffect(() => {
+    if (defaultShipmentId || targetShipment?.id) {
+      setShipmentId(String(defaultShipmentId || targetShipment.id));
+      if (!allocatedQty && (targetShipment?.quantity || cargoRecord?.availableQty)) {
+        const maxAlloc = Math.min(
+          Number(targetShipment?.quantity || cargoRecord?.availableQty || 0),
+          Number(cargoRecord?.availableQty || targetShipment?.quantity || 0)
+        );
+        if (maxAlloc > 0) setAllocatedQty(String(maxAlloc));
+      }
+    }
+  }, [defaultShipmentId, targetShipment, cargoRecord]);
 
   useEffect(() => {
     const fetchShipments = async () => {
@@ -51,12 +74,17 @@ export default function ShipmentAllocationModal({ cargoRecord, onClose, onSucces
 
     try {
       setLoading(true);
-      await cargoAvailabilityApi.createAllocation({
+      const res = await cargoAvailabilityApi.createAllocation({
         cargoAvailabilityId: cargoRecord.id,
         shipmentId: Number(shipmentId),
         allocatedQty: Number(allocatedQty),
       });
-      onSuccess();
+      if (onSuccess) {
+        onSuccess(
+          res?.data || res || { cargoRecord, shipmentId: Number(shipmentId), allocatedQty: Number(allocatedQty) },
+          cargoRecord
+        );
+      }
       onClose();
     } catch (err) {
       console.error("Failed to allocate cargo to shipment", err);
@@ -67,6 +95,11 @@ export default function ShipmentAllocationModal({ cargoRecord, onClose, onSucces
   };
 
   if (!cargoRecord) return null;
+
+  const displayShipments =
+    targetShipment && !shipments.some((s) => String(s.id) === String(targetShipment.id))
+      ? [targetShipment, ...shipments]
+      : shipments;
 
   return (
     <>
@@ -139,7 +172,7 @@ export default function ShipmentAllocationModal({ cargoRecord, onClose, onSucces
                 className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-medium text-slate-800"
               >
                 <option value="">Select a Sales Contract Shipment...</option>
-                {shipments.map((s) => (
+                {displayShipments.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.shipmentReference || `Shipment #${s.id}`} &bull;{" "}
                     {s.salesContract?.contractNumber || "SC"} ({Number(s.quantity || 0).toLocaleString()} MT)

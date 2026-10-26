@@ -2,7 +2,15 @@
 import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Boxes, CheckCircle2, Truck, RefreshCw, ChevronRight, ArrowLeft } from "lucide-react";
+import {
+  Boxes,
+  CheckCircle2,
+  Truck,
+  RefreshCw,
+  ChevronRight,
+  ChevronLeft,
+  ArrowLeft,
+} from "lucide-react";
 import { cargoAvailabilityApi } from "../services/cargoAvailabilityApi";
 import CargoAvailabilityFilter from "../components/CargoAvailabilityFilter";
 import CargoMainGrid from "../components/CargoMainGrid";
@@ -26,6 +34,8 @@ function CargoAvailabilityContent() {
   const [activeTab, setActiveTab] = useState(queryTab || "grid");
   const [isLoading, setIsLoading] = useState(true);
   const [records, setRecords] = useState([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [page, setPage] = useState(1);
   const [selectedRecordId, setSelectedRecordId] = useState(queryCargoId || null);
   const [selectedRecord, setSelectedRecord] = useState(null);
 
@@ -33,6 +43,17 @@ function CargoAvailabilityContent() {
     search: queryShipmentNo || queryContractNo || "",
     businessReference: "",
     status: "",
+  });
+  const [loadingFilters, setLoadingFilters] = useState({
+    search: "",
+    businessReference: "",
+    shipmentReference: "",
+    buyer: "",
+    seller: "",
+    product: "",
+    status: "",
+    dateFrom: "",
+    dateTo: "",
   });
 
   // Modal / Drawer states
@@ -42,17 +63,27 @@ function CargoAvailabilityContent() {
   const [activeLoadingRecord, setActiveLoadingRecord] = useState(null);
 
   const [allLoadingEntries, setAllLoadingEntries] = useState([]);
+  const [loadingMetrics, setLoadingMetrics] = useState({});
+  const [loadingError, setLoadingError] = useState("");
 
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [listRes, loadingRes] = await Promise.all([
-        cargoAvailabilityApi.getCargoAvailabilityList(filters),
-        cargoAvailabilityApi.getAllLoadingEntries(filters).catch(() => ({ data: [] })),
+      setLoadingError("");
+      const [listRes, loadingRes, metricsRes] = await Promise.all([
+        cargoAvailabilityApi.getCargoAvailabilityList({
+          ...filters,
+          page,
+          limit: 50,
+        }),
+        cargoAvailabilityApi.getAllLoadingEntries(loadingFilters),
+        cargoAvailabilityApi.getLoadingMetrics(),
       ]);
-      setRecords(listRes.data?.data || listRes.data || []);
-      setAllLoadingEntries(loadingRes.data || loadingRes || []);
       const dataList = listRes.data?.data || listRes.data || [];
+      setRecords(dataList);
+      setTotalRecords(listRes.data?.total ?? dataList.length);
+      setAllLoadingEntries(loadingRes.data || loadingRes || []);
+      setLoadingMetrics(metricsRes.data || metricsRes || {});
 
       let targetId = selectedRecordId;
       if (!targetId && queryCargoId) {
@@ -77,21 +108,45 @@ function CargoAvailabilityContent() {
       }
     } catch (err) {
       console.error("Failed to load Cargo Availability data", err);
+      setLoadingError(
+        err.response?.data?.message ||
+          "Unable to load exporter loading execution records.",
+      );
     } finally {
       setIsLoading(false);
     }
-  }, [filters, selectedRecordId, queryCargoId, queryPurchaseContractId]);
+  }, [filters, loadingFilters, page, selectedRecordId, queryCargoId, queryPurchaseContractId]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const handleFilterChange = (key, value) => {
+    setPage(1);
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleResetFilters = () => {
+    setPage(1);
     setFilters({ search: "", businessReference: "", status: "" });
+  };
+
+  const handleLoadingFilterChange = (key, value) => {
+    setLoadingFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleResetLoadingFilters = () => {
+    setLoadingFilters({
+      search: "",
+      businessReference: "",
+      shipmentReference: "",
+      buyer: "",
+      seller: "",
+      product: "",
+      status: "",
+      dateFrom: "",
+      dateTo: "",
+    });
   };
 
   const handleSelectRecord = async (id) => {
@@ -244,6 +299,43 @@ function CargoAvailabilityContent() {
               setActiveTab("readiness");
             }}
           />
+          <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs">
+            <span className="text-gray-500">
+              Showing{" "}
+              <span className="font-semibold text-gray-800">
+                {totalRecords === 0 ? 0 : (page - 1) * 50 + 1}-
+                {Math.min(page * 50, totalRecords)}
+              </span>{" "}
+              of <span className="font-semibold text-gray-800">{totalRecords}</span>{" "}
+              cargo records
+            </span>
+            {totalRecords > 50 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page === 1 || isLoading}
+                  className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((current) =>
+                      Math.min(Math.ceil(totalRecords / 50), current + 1),
+                    )
+                  }
+                  disabled={page >= Math.ceil(totalRecords / 50) || isLoading}
+                  className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -261,7 +353,12 @@ function CargoAvailabilityContent() {
       {activeTab === "loading" && (
         <div className="space-y-4">
           <ExporterLoadingTab
-            loadingEntries={allLoadingEntries.length > 0 ? allLoadingEntries : (selectedRecord?.loadingEntries || [])}
+            loadingEntries={allLoadingEntries}
+            metrics={loadingMetrics}
+            filters={loadingFilters}
+            error={loadingError}
+            onFilterChange={handleLoadingFilterChange}
+            onResetFilters={handleResetLoadingFilters}
             onOpenDrawer={(rec) => {
               setActiveLoadingRecord(rec);
               setOpenLoadingDrawer(true);

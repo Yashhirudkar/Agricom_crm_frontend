@@ -4,9 +4,17 @@ import { X, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { cargoAvailabilityApi } from "../services/cargoAvailabilityApi";
 import { toast } from "sonner";
 
-export default function MttReadinessFormModal({ cargoRecord, onClose, onSuccess }) {
+export default function MttReadinessFormModal({
+  cargoRecord,
+  shipment = null,
+  onClose,
+  onSuccess,
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const targetShipment = shipment || cargoRecord?.currentShipment || null;
+  const isLinkedToCurrentShipment = Boolean(targetShipment);
 
   const contract = cargoRecord?.purchaseContract || {};
   const product = cargoRecord?.product || {};
@@ -15,6 +23,7 @@ export default function MttReadinessFormModal({ cargoRecord, onClose, onSuccess 
     cargoRecord?.businessReference ||
     cargoRecord?.businessTransaction?.businessReference ||
     contract.businessReference ||
+    targetShipment?.businessReference ||
     "—";
   const contractNo =
     contract.contractNumber || `PC-${contract.id || cargoRecord?.purchaseContractId || ""}`;
@@ -22,9 +31,11 @@ export default function MttReadinessFormModal({ cargoRecord, onClose, onSuccess 
 
   const allocatedQty = Number(cargoRecord?.allocatedQty || 0);
   const hasAllocations = allocatedQty > 0;
+  const hasBlockingAllocations = hasAllocations && !isLinkedToCurrentShipment;
 
-  // Initial status correctly recognizing all active readiness and allocation stages
+  // Initial status correctly recognizing active readiness and shipment allocation state
   const isAlreadyReady =
+    (isLinkedToCurrentShipment && Boolean(targetShipment.cargoReady)) ||
     Boolean(cargoRecord?.isReady) ||
     cargoRecord?.status === "Ready" ||
     cargoRecord?.status === "Allocated" ||
@@ -46,8 +57,8 @@ export default function MttReadinessFormModal({ cargoRecord, onClose, onSuccess 
     e.preventDefault();
     setError("");
 
-    if (status === "Not Ready" && hasAllocations) {
-      const msg = `Cannot mark cargo as Not Ready because ${allocatedQty.toLocaleString()} MT is actively allocated to shipment(s). Please cancel active allocations first.`;
+    if (status === "Not Ready" && hasBlockingAllocations) {
+      const msg = `Cannot mark cargo as Not Ready because ${allocatedQty.toLocaleString()} MT is actively allocated to other shipment(s). Please cancel active allocations first.`;
       setError(msg);
       toast.error(msg);
       return;
@@ -62,16 +73,13 @@ export default function MttReadinessFormModal({ cargoRecord, onClose, onSuccess 
     try {
       setLoading(true);
       const res = await cargoAvailabilityApi.createReadiness({
-        cargoAvailabilityId: Number(cargoRecord.id),
+        cargoAvailabilityId: cargoRecord.id && !isNaN(Number(cargoRecord.id)) ? Number(cargoRecord.id) : null,
         status,
         readyDate: readyDate || new Date().toISOString().split("T")[0],
         remarks: remarks?.trim() || null,
+        shipmentId: targetShipment?.id || null,
       });
-      toast.success(
-        status === "Ready"
-          ? "Cargo confirmed Ready successfully."
-          : "Cargo marked as Not Ready."
-      );
+      toast.success("Cargo readiness updated successfully.");
       onSuccess?.(res?.data || res);
       onClose?.();
     } catch (err) {
@@ -213,29 +221,29 @@ export default function MttReadinessFormModal({ cargoRecord, onClose, onSuccess 
                 {/* Not Ready Option */}
                 <label
                   onClick={() => {
-                    if (hasAllocations) {
-                      toast.error(`Cannot mark as Not Ready: ${allocatedQty.toLocaleString()} MT is actively allocated to shipments.`);
+                    if (hasBlockingAllocations) {
+                      toast.error(`Cannot mark as Not Ready: ${allocatedQty.toLocaleString()} MT is actively allocated to other shipments.`);
                       return;
                     }
                     setStatus("Not Ready");
                   }}
                   className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 transition-all ${
-                    hasAllocations
+                    hasBlockingAllocations
                       ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
                       : status === "Not Ready"
                         ? "bg-amber-50 border-amber-500 text-amber-900 font-bold shadow-xs cursor-pointer"
                         : "bg-white border-slate-200 text-slate-600 font-medium hover:border-slate-300 cursor-pointer"
                   }`}
-                  title={hasAllocations ? `Cannot mark as Not Ready: ${allocatedQty.toLocaleString()} MT is actively allocated to shipments.` : ""}
+                  title={hasBlockingAllocations ? `Cannot mark as Not Ready: ${allocatedQty.toLocaleString()} MT is actively allocated to other shipments.` : ""}
                 >
                   <input
                     type="radio"
                     name="readyStatus"
                     value="Not Ready"
-                    disabled={hasAllocations}
+                    disabled={hasBlockingAllocations}
                     checked={status === "Not Ready"}
                     onChange={() => {
-                      if (!hasAllocations) setStatus("Not Ready");
+                      if (!hasBlockingAllocations) setStatus("Not Ready");
                     }}
                     className="text-amber-600 focus:ring-amber-500 cursor-pointer disabled:cursor-not-allowed"
                   />
@@ -246,20 +254,20 @@ export default function MttReadinessFormModal({ cargoRecord, onClose, onSuccess 
                 </label>
               </div>
 
-              {hasAllocations && (
+              {hasBlockingAllocations && (
                 <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800 flex items-start gap-2">
                   <AlertCircle className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
                   <span>
-                    This cargo currently has <strong>{allocatedQty.toLocaleString()} MT</strong> actively allocated to shipments. It cannot be marked as <strong>Not Ready</strong> until active shipment allocations are canceled.
+                    This cargo currently has <strong>${allocatedQty.toLocaleString()} MT</strong> actively allocated to other shipments.
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Ready Date (Conditional: Only visible if Ready) */}
+            {/* Date Input (Shown when Ready) */}
             {status === "Ready" && (
-              <div className="animate-in fade-in duration-150">
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Ready Date <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -267,38 +275,38 @@ export default function MttReadinessFormModal({ cargoRecord, onClose, onSuccess 
                   required
                   value={readyDate}
                   onChange={(e) => setReadyDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 font-medium text-slate-800"
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-medium text-slate-800"
                 />
               </div>
             )}
 
-            {/* Remarks (Optional) */}
+            {/* Remarks Input */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Remarks <span className="text-slate-400 font-normal lowercase">(optional)</span>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Remarks <span className="text-slate-400 font-normal">(Optional)</span>
               </label>
               <textarea
-                rows={2}
-                placeholder="e.g. Supplier delayed, Ready for dispatch, Waiting for truck..."
+                rows={3}
+                placeholder="Enter readiness notes, warehouse confirmation, inspection notes..."
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 text-slate-800 resize-none"
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-800 font-medium placeholder-slate-400"
               />
             </div>
 
-            {/* Footer Buttons */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            {/* Action Buttons */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
               >
                 {loading ? "Saving..." : "Save Readiness"}
               </button>

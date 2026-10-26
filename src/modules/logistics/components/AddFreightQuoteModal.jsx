@@ -652,6 +652,44 @@ export default function AddFreightQuoteModal({
     setError("");
   }, [quote, lastQuote, mode, transportMode, isOpen]);
 
+  // Automatically calculate Estimated ETA based on Estimated ETD + Transit Days
+  useEffect(() => {
+    if (!etd || transitDays === "" || transitDays === null || transitDays === undefined) {
+      setEta("");
+      return;
+    }
+
+    const days = parseInt(transitDays, 10);
+    if (isNaN(days) || days < 0) {
+      setEta("");
+      return;
+    }
+
+    const parts = etd.split("-");
+    if (parts.length !== 3) {
+      setEta("");
+      return;
+    }
+
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+
+    if (isNaN(year) || isNaN(month) || isNaN(day)) {
+      setEta("");
+      return;
+    }
+
+    const date = new Date(Date.UTC(year, month, day));
+    date.setUTCDate(date.getUTCDate() + days);
+
+    const yyyy = date.getUTCFullYear();
+    const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(date.getUTCDate()).padStart(2, "0");
+
+    setEta(`${yyyy}-${mm}-${dd}`);
+  }, [etd, transitDays]);
+
   const [partnerContactsList, setPartnerContactsList] = useState([]);
 
   useEffect(() => {
@@ -1354,7 +1392,14 @@ export default function AddFreightQuoteModal({
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Estimated ETA</label>
-                    <input type="date" value={eta} onChange={(e) => setEta(e.target.value)} disabled={isReadOnly} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white disabled:bg-slate-50 shadow-sm" />
+                    <input
+                      type="date"
+                      value={eta}
+                      readOnly
+                      disabled
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 text-slate-600 cursor-not-allowed shadow-sm select-none"
+                      title="Estimated ETA is automatically calculated (Estimated ETD + Transit Days)"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Cutoff Date (Port / CY)</label>

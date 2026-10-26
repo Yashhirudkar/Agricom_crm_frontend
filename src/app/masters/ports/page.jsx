@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { portsApi } from "@/api/ports.api";
+import CountrySelect from "@/components/common/CountrySelect";
 
 // ─── Port Type Helpers (Light Theme Badges) ──────────────────────────────────
 const PORT_TYPES = [
@@ -85,6 +86,7 @@ export default function PortMasterPage() {
 
   // Form State
   const [formCountryId, setFormCountryId] = useState("");
+  const [formCountryName, setFormCountryName] = useState("");
   const [formCustomCountryName, setFormCustomCountryName] = useState("");
   const [formPortName, setFormPortName] = useState("");
   const [formPortCode, setFormPortCode] = useState("");
@@ -166,7 +168,8 @@ export default function PortMasterPage() {
   // ─── Add / Edit Modal ────────────────────────────────────────────────────────
   const handleOpenAddModal = () => {
     setEditingPort(null);
-    setFormCountryId(allCountries[0]?.id ? String(allCountries[0].id) : "");
+    setFormCountryId("");
+    setFormCountryName("");
     setFormCustomCountryName("");
     setFormPortName("");
     setFormPortCode("");
@@ -180,7 +183,9 @@ export default function PortMasterPage() {
 
   const handleOpenEditModal = (port) => {
     setEditingPort(port);
+    const cName = port.country?.name || allCountries.find((c) => String(c.id) === String(port.countryId))?.name || "";
     setFormCountryId(port.countryId ? String(port.countryId) : "");
+    setFormCountryName(cName);
     setFormCustomCountryName("");
     setFormPortName(port.portName || "");
     setFormPortCode(port.portCode || "");
@@ -209,8 +214,9 @@ export default function PortMasterPage() {
     e.preventDefault();
     setFormError("");
 
-    if (!formCountryId && !formCustomCountryName.trim()) {
-      setFormError("Please select or enter a country");
+        const resolvedCountryName = formCountryName?.trim() || formCustomCountryName?.trim();
+    if (!formCountryId && !resolvedCountryName) {
+      setFormError("Please select a country");
       return;
     }
 
@@ -223,7 +229,7 @@ export default function PortMasterPage() {
     try {
       const payload = {
         countryId: formCountryId ? Number(formCountryId) : undefined,
-        countryName: !formCountryId ? formCustomCountryName.trim() : undefined,
+        countryName: !formCountryId ? resolvedCountryName : undefined,
         portName: formPortName.trim(),
         portCode: formPortCode.trim() || undefined,
         unlocode: formUnlocode.trim() || undefined,
@@ -547,23 +553,31 @@ export default function PortMasterPage() {
               />
             </div>
 
-            {/* Country Dropdown */}
+            {/* Country Dropdown (Searchable CountrySelect) */}
             <div>
-              <select
-                value={selectedCountry}
-                onChange={(e) => {
-                  setSelectedCountry(e.target.value);
+              <CountrySelect
+                value={
+                  selectedCountry && selectedCountry !== "all"
+                    ? (allCountries.find((c) => String(c.id) === String(selectedCountry))?.name || selectedCountry)
+                    : ""
+                }
+                onChange={(val) => {
+                  if (!val || !val.name) {
+                    setSelectedCountry("all");
+                    setCurrentPage(1);
+                    return;
+                  }
+                  const name = val.name.trim();
+                  const matched = allCountries.find(
+                    (c) =>
+                      c.name?.toLowerCase() === name.toLowerCase() ||
+                      (val.iso2Code && c.iso2Code?.toLowerCase() === val.iso2Code.toLowerCase())
+                  );
+                  setSelectedCountry(matched ? String(matched.id) : name);
                   setCurrentPage(1);
                 }}
-                className="w-full h-10 px-3 text-xs bg-white border border-[#E5E7EB] rounded-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-[#0F766E]"
-              >
-                <option value="all">All Countries</option>
-                {allCountries.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} {c.iso2Code ? `(${c.iso2Code})` : ""}
-                  </option>
-                ))}
-              </select>
+                placeholder="All Countries"
+              />
             </div>
 
             {/* Port Type Dropdown */}
@@ -893,19 +907,32 @@ export default function PortMasterPage() {
                   <label className="block text-[11px] font-semibold text-gray-700 mb-1">
                     Country <span className="text-rose-500">*</span>
                   </label>
-                  <select
-                    value={formCountryId}
-                    onChange={(e) => setFormCountryId(e.target.value)}
-                    className="w-full h-10 px-3 text-xs bg-white border border-[#E5E7EB] rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-[#0F766E]"
-                    required
-                  >
-                    <option value="">-- Select Country --</option>
-                    {allCountries.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} {c.iso2Code ? `(${c.iso2Code})` : ""}
-                      </option>
-                    ))}
-                  </select>
+                  <CountrySelect
+                    value={formCountryName}
+                    onChange={(val) => {
+                      if (!val) {
+                        setFormCountryName("");
+                        setFormCountryId("");
+                        setFormCustomCountryName("");
+                        return;
+                      }
+                      const name = val.name || "";
+                      setFormCountryName(name);
+                      const matched = allCountries.find(
+                        (c) =>
+                          c.name?.toLowerCase() === name.toLowerCase() ||
+                          (val.iso2Code && c.iso2Code?.toLowerCase() === val.iso2Code.toLowerCase())
+                      );
+                      if (matched) {
+                        setFormCountryId(String(matched.id));
+                        setFormCustomCountryName("");
+                      } else {
+                        setFormCountryId("");
+                        setFormCustomCountryName(name);
+                      }
+                    }}
+                    error={formError && !formCountryId && !formCountryName}
+                  />
                 </div>
 
                 {/* Port Name & Port Code */}

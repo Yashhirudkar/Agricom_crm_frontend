@@ -19,7 +19,7 @@ export default function PurchaseOverview({ contract, summary }) {
   const shipmentType =
     contract?.shipmentType?.name || salesContract.shipmentType?.name || "—";
   const currencyCode = salesContract.currencyCode || "USD";
-  const origin = salesContract.originCountry || "—";
+  const origin = contract?.loadingCountry || salesContract.originCountry || "—";
   const destination = salesContract.destinationCountry || "—";
   const portLoading = salesContract.portOfLoading || "—";
   const portDischarge = salesContract.portOfDischarge || "—";

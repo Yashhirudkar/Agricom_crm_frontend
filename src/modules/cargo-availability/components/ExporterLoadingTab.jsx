@@ -1,10 +1,15 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { Truck, Plus, AlertTriangle, ShieldCheck, FileText, ChevronRight, Ship } from "lucide-react";
+import { Search, RotateCcw, Truck, Plus, ChevronRight } from "lucide-react";
 
 export default function ExporterLoadingTab({
   loadingEntries = [],
+  metrics = {},
+  filters = {},
+  error = "",
+  onFilterChange,
+  onResetFilters,
   onOpenDrawer,
   onNewLoading,
 }) {
@@ -25,9 +30,13 @@ export default function ExporterLoadingTab({
     switch (status) {
       case "Completed":
       case "Verified":
+      case "Loading Completed":
+      case "Stuffing Completed":
         return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">{status}</span>;
       case "Dispatched":
         return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Dispatched</span>;
+      case "Stuffing Started":
+      case "Stuffing In Progress":
       case "Loading Started":
       case "Weighment In":
         return <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">{status}</span>;
@@ -37,7 +46,69 @@ export default function ExporterLoadingTab({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
+        {[
+          ["Stuffing Jobs", metrics.totalStuffingJobs],
+          ["Pending", metrics.pending],
+          ["In Progress", metrics.inProgress],
+          ["Completed", metrics.completed],
+          ["Today's Loading", `${Number(metrics.todaysLoading || 0).toFixed(2)} MT`],
+          ["Loaded", `${Number(metrics.totalLoadedQuantity || 0).toFixed(2)} MT`],
+          ["Remaining", `${Number(metrics.remainingQuantity || 0).toFixed(2)} MT`],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-xs">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+            <div className="mt-1 text-sm font-bold text-slate-900">{value ?? 0}</div>
+          </div>
+        ))}
+      </div>
+
+      {error && (
+        <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-xs">
+        {[
+          ["search", "Search shipment, buyer, seller, product"],
+          ["businessReference", "Business Ref"],
+          ["shipmentReference", "Shipment Ref"],
+          ["buyer", "Buyer"],
+          ["seller", "Seller"],
+          ["product", "Product"],
+        ].map(([key, placeholder]) => (
+          <div key={key} className="relative">
+            {key === "search" && <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />}
+            <input
+              value={filters[key] || ""}
+              onChange={(event) => onFilterChange(key, event.target.value)}
+              placeholder={placeholder}
+              aria-label={placeholder}
+              className={`w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none focus:border-indigo-500 ${key === "search" ? "pl-8" : ""}`}
+            />
+          </div>
+        ))}
+        <select
+          value={filters.status || ""}
+          onChange={(event) => onFilterChange("status", event.target.value)}
+          aria-label="Execution status"
+          className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none focus:border-indigo-500"
+        >
+          <option value="">All Statuses</option>
+          {["Pending", "Ready", "Truck Arrived", "Weighment In", "Stuffing Started", "Loading Started", "Stuffing In Progress", "Stuffing Completed", "Loading Completed", "Weighment Out", "Ready For Dispatch", "Dispatched", "Reached Destination", "Unloaded", "Verified", "Completed"].map((status) => (
+            <option key={status} value={status}>{status}</option>
+          ))}
+        </select>
+        <input type="date" aria-label="Loading date from" value={filters.dateFrom || ""} onChange={(event) => onFilterChange("dateFrom", event.target.value)} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs" />
+        <input type="date" aria-label="Loading date to" value={filters.dateTo || ""} onChange={(event) => onFilterChange("dateTo", event.target.value)} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs" />
+        <button type="button" onClick={onResetFilters} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+          <RotateCcw className="h-3.5 w-3.5" /> Reset
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
       <div className="px-4 py-3 bg-gray-50/60 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Truck className="h-4 w-4 text-indigo-600" />
@@ -56,7 +127,7 @@ export default function ExporterLoadingTab({
         <div className="p-8 text-center text-gray-400">
           <Truck className="h-8 w-8 text-gray-300 mx-auto mb-2" />
           <h4 className="text-xs font-bold text-gray-700">No Truck Loading Records</h4>
-          <p className="text-[11px] text-gray-400 mt-0.5">Click "+ New Truck Loading" to record truck arrival & loading execution.</p>
+          <p className="text-[11px] text-gray-400 mt-0.5">Click &quot;+ New Truck Loading&quot; to record truck arrival &amp; loading execution.</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -67,8 +138,13 @@ export default function ExporterLoadingTab({
                 <th className="py-2.5 px-4">Truck & Transporter</th>
                 <th className="py-2.5 px-4">Shipment Reference</th>
                 <th className="py-2.5 px-4">Business Ref No.</th>
+                <th className="py-2.5 px-4">Purchase Contract</th>
+                <th className="py-2.5 px-4">Buyer / Seller</th>
+                <th className="py-2.5 px-4">Product</th>
+                <th className="py-2.5 px-4 text-right">Allocated Qty</th>
                 <th className="py-2.5 px-4">Warehouse & Location</th>
                 <th className="py-2.5 px-4 text-right">Loaded Qty</th>
+                <th className="py-2.5 px-4 text-right">Remaining Qty</th>
                 <th className="py-2.5 px-4 text-right">Unloaded Wt</th>
                 <th className="py-2.5 px-4">Variance Audit</th>
                 <th className="py-2.5 px-4">Stage Status</th>
@@ -78,6 +154,8 @@ export default function ExporterLoadingTab({
             <tbody className="divide-y divide-gray-100 font-medium">
               {loadingEntries.map((row) => {
                 const shipment = row.shipment || {};
+                const contract = shipment.salesContract || {};
+                const firstItem = contract.items?.[0] || {};
                 const shipRef = shipment.shipmentReference || (row.shipmentId ? `Shipment #${row.shipmentId}` : null);
 
                 return (
@@ -93,7 +171,7 @@ export default function ExporterLoadingTab({
                     <td className="py-3 px-4">
                       <div className="font-bold text-gray-900 flex items-center gap-1.5">
                         <Truck className="h-3.5 w-3.5 text-indigo-500" />
-                        <span>{row.truckNo}</span>
+                        <span>{row.truckNo || "Truck pending"}</span>
                       </div>
                       <div className="text-[10px] text-gray-400">
                         Driver: {row.driverName || "—"} ({row.transporter || "—"})
@@ -121,13 +199,28 @@ export default function ExporterLoadingTab({
                       {row.businessReference || row.businessTransaction?.businessReference || "—"}
                     </td>
 
+                    <td className="py-3 px-4 font-mono text-slate-700">
+                      {contract.purchaseContracts?.[0]?.contractNumber || "—"}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="font-semibold text-slate-800">{contract.buyer?.entityName || "—"}</div>
+                      <div className="text-[10px] text-slate-500">{contract.seller?.entityName || "—"}</div>
+                    </td>
+                    <td className="py-3 px-4">{firstItem.product?.name || "—"}</td>
+                    <td className="py-3 px-4 text-right">
+                      {Number(row.shipmentAllocation?.allocatedQty || 0).toFixed(2)} MT
+                    </td>
                     <td className="py-3 px-4">
                       <div className="text-gray-800 font-semibold">{row.warehouseName || "Warehouse"}</div>
+                      <div className="text-[10px] text-slate-500">Warehouse: {row.warehouseStatus || "Pending"}</div>
                       <div className="text-[10px] text-gray-400">Seal: {row.sealNumber || "—"}</div>
                     </td>
 
                     <td className="py-3 px-4 text-right font-bold text-indigo-700 text-sm">
                       {row.loadedQty || row.loadedWeight || 0} MT
+                    </td>
+                    <td className="py-3 px-4 text-right font-semibold text-slate-700">
+                      {Number(row.remainingQty || 0).toFixed(2)} MT
                     </td>
 
                     <td className="py-3 px-4 text-right font-bold text-teal-600">
@@ -158,6 +251,7 @@ export default function ExporterLoadingTab({
           </table>
         </div>
       )}
+      </div>
     </div>
   );
 }
