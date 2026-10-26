@@ -86,27 +86,21 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Enquiry No.", "Business Ref No.", "Date", "Partner", "Product", "Destination", "Qty (MT)", "Shipment Date", isOrderMode ? "Price" : "Bid", "Created By", "Potential", "Actions"].map((h, index) => {
+            {["Enquiry No.", "Date", "Partner", "Product", "Destination", "Qty (MT)", "Shipment Date", isOrderMode ? "Price" : "Bid", "Created By", "Potential", "Actions"].map((h, index) => {
               let stickyClass = "";
               if (index === 0) {
                 stickyClass = "sticky left-0 z-30 bg-[#f9fafb] w-[120px] min-w-[120px] max-w-[120px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none";
-              } else if (index === 2) {
-                stickyClass = "sticky left-[260px] z-29 bg-[#f9fafb] w-[100px] min-w-[100px] max-w-[100px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none";
-              } else if (index === 3) {
-                stickyClass = "sticky left-[360px] z-28 bg-[#f9fafb] border-r border-gray-200/80 min-w-[220px] xl:static xl:z-auto xl:bg-transparent xl:border-r-0";
               } else if (index === 1) {
-                stickyClass = "sticky left-[120px] z-29 bg-[#f9fafb] w-[140px] min-w-[140px] max-w-[140px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none";
+                stickyClass = "sticky left-[120px] z-29 bg-[#f9fafb] w-[100px] min-w-[100px] max-w-[100px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none";
+              } else if (index === 2) {
+                stickyClass = "sticky left-[220px] z-28 bg-[#f9fafb] border-r border-gray-200/80 min-w-[160px] xl:static xl:z-auto xl:bg-transparent xl:border-r-0";
               }
               return (
                 <th
                   key={h}
                   className={`px-3 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap ${stickyClass}`}
                 >
-                  {h === "Business Ref No." && onSortBusinessReference ? (
-                    <button type="button" onClick={onSortBusinessReference} className="font-semibold hover:text-[#007aff]">
-                      {h}
-                    </button>
-                  ) : h}
+                  {h}
                 </th>
               );
             })}
@@ -122,14 +116,19 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                 <td className="px-3 py-3 font-mono font-bold text-[#007aff] whitespace-nowrap sticky left-0 z-30 bg-white group-hover:bg-gray-50/70 transition-colors w-[120px] min-w-[120px] max-w-[120px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none">
                   {e.enquiryNo}
                 </td>
-                <td className="px-3 py-3 font-mono font-semibold text-indigo-700 whitespace-nowrap sticky left-[120px] z-29 bg-white group-hover:bg-gray-50/70 transition-colors w-[140px] min-w-[140px] max-w-[140px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none">
-                  {e.businessReference || "—"}
-                </td>
-                <td className="px-3 py-3 text-gray-600 whitespace-nowrap sticky left-[260px] z-29 bg-white group-hover:bg-gray-50/70 transition-colors w-[100px] min-w-[100px] max-w-[100px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none">
+
+                <td className="px-3 py-3 text-gray-600 whitespace-nowrap sticky left-[120px] z-29 bg-white group-hover:bg-gray-50/70 transition-colors w-[100px] min-w-[100px] max-w-[100px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none">
                   {e.enquiryDate ? new Date(e.enquiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </td>
-                <td className="px-3 py-3 text-gray-800 font-medium whitespace-nowrap sticky left-[360px] z-28 bg-white group-hover:bg-gray-50/70 transition-colors border-r border-gray-100 min-w-[220px] xl:static xl:z-auto xl:bg-transparent xl:border-r-0" title={e.partnerName || ""}>
-                  {e.partnerName || "—"}
+                <td
+                  className="px-3 py-3 text-gray-800 font-medium whitespace-nowrap sticky left-[220px] z-28 bg-white group-hover:bg-gray-50/70 transition-colors border-r border-gray-100 min-w-[160px] max-w-[160px] xl:static xl:z-auto xl:bg-transparent xl:border-r-0"
+                  title={e.partnerName || ""}
+                >
+                  {e.partnerName
+                    ? e.partnerName.length > 20
+                      ? `${e.partnerName.slice(0, 20)}...`
+                      : e.partnerName
+                    : "—"}
                 </td>
                 <td className="px-3 py-3 text-gray-600 whitespace-nowrap max-w-[150px] truncate" title={e.productName || ""}>
                   {e.productName || "—"}
