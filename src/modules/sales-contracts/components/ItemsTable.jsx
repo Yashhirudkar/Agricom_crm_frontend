@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { Package, Plus, Trash2, ChevronDown } from "lucide-react";
+import { cleanNumberValue, formatInputVal, formatNumberDisplay } from "../utils/formatUtils";
 
 function getCurrencySymbol(code) {
   if (!code) return "";
@@ -61,7 +62,9 @@ export default function ItemsTable({ form, setForm, errors, masters, isView }) {
           </div>
           <div>
             <h2 className="text-sm font-bold text-gray-900">Product Items</h2>
-            <p className="text-[10px] text-gray-400">{items.length} item{items.length !== 1 ? "s" : ""} · Total: {totalQty.toLocaleString("en-IN")} MT · {currency && <span className="font-semibold">{currencySymbol}</span>}{totalAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</p>
+            <p className="text-[10px] text-gray-400">
+              {items.length} item{items.length !== 1 ? "s" : ""} · Total: {formatNumberDisplay(totalQty)} MT · {currency && <span className="font-semibold">{currencySymbol}</span>}{formatNumberDisplay(totalAmt)}
+            </p>
           </div>
         </div>
         {!isView && (
@@ -170,10 +173,30 @@ export default function ItemsTable({ form, setForm, errors, masters, isView }) {
                     </div>
                   </td>
                   <td className="px-3 py-2 min-w-[90px]">
-                    <input type="number" min="0" step="0.01" value={item.quantity || ""} onChange={e => updateItem(idx, "quantity", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={formatInputVal(item.quantity)}
+                      onChange={e => updateItem(idx, "quantity", e.target.value)}
+                      onBlur={() => updateItem(idx, "quantity", cleanNumberValue(item.quantity))}
+                      disabled={isView}
+                      className={inpCls}
+                      placeholder="0"
+                    />
                   </td>
                   <td className="px-3 py-2 min-w-[90px]">
-                    <input type="number" min="0" step="0.01" value={item.unitPrice || ""} onChange={e => updateItem(idx, "unitPrice", e.target.value)} disabled={isView} className={inpCls} placeholder="0.00" />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formatInputVal(item.unitPrice)}
+                      onChange={e => updateItem(idx, "unitPrice", e.target.value)}
+                      onBlur={() => updateItem(idx, "unitPrice", cleanNumberValue(item.unitPrice))}
+                      disabled={isView}
+                      className={inpCls}
+                      placeholder="0"
+                    />
                   </td>
                   <td className="px-3 py-2 min-w-[100px]">
                     <span className="font-semibold text-gray-800 tabular-nums flex items-center">
@@ -183,10 +206,7 @@ export default function ItemsTable({ form, setForm, errors, masters, isView }) {
                         </span>
                       )}
                       <span>
-                        {Number(item.amount || 0).toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                        {formatNumberDisplay(item.amount)}
                       </span>
                     </span>
                   </td>
@@ -206,9 +226,12 @@ export default function ItemsTable({ form, setForm, errors, masters, isView }) {
             <tfoot>
               <tr className="bg-gray-50 border-t border-gray-100 font-semibold">
                 <td colSpan={6} className="px-3 py-2.5 text-right text-xs text-gray-600">Total</td>
-                <td className="px-3 py-2.5 text-xs tabular-nums text-gray-900">{totalQty.toLocaleString("en-IN")}</td>
+                <td className="px-3 py-2.5 text-xs tabular-nums text-gray-900">{formatNumberDisplay(totalQty)}</td>
                 <td className="px-3 py-2.5"></td>
-                <td className="px-3 py-2.5 text-xs tabular-nums text-gray">{currency && <span className="text-gray-900 font-medium text-[10px] mr-0.5">{currencySymbol}</span>}{totalAmt.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
+                <td className="px-3 py-2.5 text-xs tabular-nums text-gray">
+                  {currency && <span className="text-gray-900 font-medium text-[10px] mr-0.5">{currencySymbol}</span>}
+                  {formatNumberDisplay(totalAmt)}
+                </td>
                 <td colSpan={2}></td>
               </tr>
             </tfoot>

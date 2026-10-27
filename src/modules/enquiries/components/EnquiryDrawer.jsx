@@ -67,6 +67,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     quantity: "",
     shipmentDate: "",
     buyingInterest: "",
+    offerAmount: "",
     bidCurrency: "",
     potentialEnquiry: false,
     bidType: "TARGET",
@@ -138,6 +139,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           quantity: editData.quantity != null && editData.quantity !== "" ? parseFloat(String(editData.quantity)) : "",
           shipmentDate: editData.shipmentDate ? editData.shipmentDate.split("T")[0] : "",
           buyingInterest: editData.buyingInterest != null && editData.buyingInterest !== "" ? parseFloat(String(editData.buyingInterest)) : "",
+          offerAmount: editData.offerAmount != null && editData.offerAmount !== "" ? parseInt(String(editData.offerAmount), 10) : "",
           bidCurrency: editData.bidCurrency || "",
           potentialEnquiry: editData.potentialEnquiry || false,
           bidType: editData.bidType || "TARGET",
@@ -181,6 +183,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                 quantity: fresh.quantity != null && fresh.quantity !== "" ? parseFloat(String(fresh.quantity)) : "",
                 shipmentDate: fresh.shipmentDate ? fresh.shipmentDate.split("T")[0] : "",
                 buyingInterest: fresh.buyingInterest != null && fresh.buyingInterest !== "" ? parseFloat(String(fresh.buyingInterest)) : "",
+                offerAmount: fresh.offerAmount != null && fresh.offerAmount !== "" ? parseInt(String(fresh.offerAmount), 10) : "",
                 bidCurrency: fresh.bidCurrency || "",
                 potentialEnquiry: fresh.potentialEnquiry || false,
                 bidType: fresh.bidType || "TARGET",
@@ -224,6 +227,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           quantity: "",
           shipmentDate: "",
           buyingInterest: "",
+          offerAmount: "",
           bidCurrency: "",
           potentialEnquiry: false,
           bidType: "TARGET",
@@ -510,6 +514,17 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       }
     }
 
+    if (form.offerAmount !== undefined && form.offerAmount !== null && form.offerAmount !== "") {
+      const valStr = String(form.offerAmount).trim();
+      const num = Number(valStr);
+      if (isNaN(num) || !Number.isInteger(num) || valStr.includes(".") || num < 0 || !/^\d+$/.test(valStr)) {
+        newErrors.offerAmount = "Offer must be a whole number (no decimals or negative values allowed)";
+      }
+      if (!form.bidCurrency) {
+        newErrors.bidCurrency = "Currency is required when Offer is entered";
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -535,6 +550,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
         packingTypeId: form.packingTypeId ? Number(form.packingTypeId) : undefined,
         quantity: form.quantity ? Number(form.quantity) : undefined,
         buyingInterest: form.buyingInterest ? Number(form.buyingInterest) : undefined,
+        offerAmount: form.offerAmount !== "" && form.offerAmount != null ? parseInt(String(form.offerAmount), 10) : null,
       };
 
       // clean up empty strings and UI-only fields
@@ -1078,107 +1094,167 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                     />
                   </div>
 
-                  {/* Quantity */}
-                  <div>
-                    <label className={lbl}>Quantity (MT)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={form.quantity !== "" && form.quantity != null ? parseFloat(String(form.quantity)) : ""}
-                      onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value ? parseFloat(e.target.value) : "" }))}
-                      disabled={isViewMode}
-                      placeholder="0"
-                      className={inp}
-                    />
-                  </div>
-
-                  {/* Bid Amount with Target / Bid Amount toggle */}
-                  <div>
-                    {/* Toggle label pill */}
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <div className="flex rounded-lg border border-gray-200 overflow-hidden text-[10px] font-bold">
-                        <button
-                          type="button"
+                  {/* Commercial Specifications: Quantity, Offer, Currency, Destination, Bid */}
+                  <div className="col-span-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Quantity */}
+                    <div>
+                      <label className={lbl}>Quantity (MT)</label>
+                      {isViewMode ? (
+                        <div className={inp}>
+                          {form.quantity !== "" && form.quantity != null
+                            ? Number(form.quantity).toLocaleString("en-IN")
+                            : "—"}
+                        </div>
+                      ) : (
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={form.quantity !== "" && form.quantity != null ? parseFloat(String(form.quantity)) : ""}
+                          onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value ? parseFloat(e.target.value) : "" }))}
                           disabled={isViewMode}
-                          onClick={() => setForm((f) => ({ ...f, bidType: "TARGET" }))}
-                          className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${form.bidType === "TARGET" || !form.bidType
-                            ? "bg-[#007aff] text-white"
-                            : "bg-white text-gray-500 hover:bg-gray-50"
-                            }`}
-                        >
-                          Target
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isViewMode}
-                          onClick={() => setForm((f) => ({ ...f, bidType: "BID" }))}
-                          className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${form.bidType === "BID"
-                            ? "bg-[#007aff] text-white"
-                            : "bg-white text-gray-500 hover:bg-gray-50"
-                            }`}
-                        >
-                          Bid Amount
-                        </button>
-                      </div>
+                          placeholder="0"
+                          className={inp}
+                        />
+                      )}
                     </div>
-                    <input
-                      type="text"
-                      value={
-                        form.buyingInterest !== "" && form.buyingInterest != null
-                          ? (typeof form.buyingInterest === "number"
-                            ? String(parseFloat(form.buyingInterest.toString()))
-                            : form.buyingInterest)
-                          : ""
-                      }
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "" || (/^\d*\.?\d{0,4}$/.test(val) && val.length <= 15)) {
-                          setForm((f) => ({ ...f, buyingInterest: val }));
-                        }
-                      }}
-                      placeholder="0.00"
-                      disabled={isViewMode}
-                      className={`${inp} ${errors.buyingInterest ? "border-red-300" : ""}`}
-                    />
-                    {errors.buyingInterest && <p className={err}>{errors.buyingInterest}</p>}
-                  </div>
 
-                  {/* Bid Currency (react-select Searchable Master Caching Select) */}
-                  <div>
-                    <label className={lbl}>Bid Currency</label>
-                    {isViewMode ? (
-                      <div className={inp}>{form.bidCurrency || "—"}</div>
-                    ) : (
-                      <Select
-                        isClearable
-                        options={currencyOptions}
-                        value={selectedCurrencyOption}
-                        onChange={(opt) => setForm((f) => ({ ...f, bidCurrency: opt ? opt.value : "" }))}
-                        styles={selectStyles}
-                        placeholder="Search currency..."
-                        menuPortalTarget={typeof document !== "undefined" ? document.body : null}
-                        menuPosition="fixed"
-                        className="text-xs"
-                      />
-                    )}
-                    {errors.bidCurrency && <p className={err}>{errors.bidCurrency}</p>}
-                  </div>
+                    {/* Offer */}
+                    <div>
+                      <label className={lbl}>Offer</label>
+                      {isViewMode ? (
+                        <div className={inp}>
+                          {form.offerAmount !== "" && form.offerAmount != null
+                            ? `${Number(form.offerAmount).toLocaleString("en-US")} ${form.bidCurrency || "USD"}`
+                            : "—"}
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={form.offerAmount !== "" && form.offerAmount != null ? form.offerAmount : ""}
+                          onChange={(e) => {
+                            const val = e.target.value.trim();
+                            if (val === "" || /^\d+$/.test(val)) {
+                              setForm((f) => ({ ...f, offerAmount: val }));
+                              if (errors.offerAmount) {
+                                setErrors((prev) => ({ ...prev, offerAmount: undefined }));
+                              }
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (["e", "E", "+", "-", "."].includes(e.key)) {
+                              e.preventDefault();
+                            }
+                          }}
+                          placeholder="0"
+                          disabled={isViewMode}
+                          className={`${inp} ${errors.offerAmount ? "border-red-300" : ""}`}
+                        />
+                      )}
+                      {errors.offerAmount && <p className={err}>{errors.offerAmount}</p>}
+                    </div>
 
-                  {/* Destination */}
-                  <div>
-                    <label className={lbl}>Destination</label>
-                    {isViewMode ? (
-                      <div className={inp}>{form.destinationCountry || "—"}</div>
-                    ) : (
-                      <input
-                        type="text"
-                        className={inp}
-                        placeholder="e.g. Rotterdam, Netherlands"
-                        value={form.destinationCountry}
-                        onChange={(e) => setForm((f) => ({ ...f, destinationCountry: e.target.value }))}
-                      />
-                    )}
+                    {/* Bid Currency (react-select Searchable Master Caching Select) */}
+                    <div>
+                      <label className={lbl}>Bid Currency</label>
+                      {isViewMode ? (
+                        <div className={inp}>{form.bidCurrency || "—"}</div>
+                      ) : (
+                        <Select
+                          isClearable
+                          options={currencyOptions}
+                          value={selectedCurrencyOption}
+                          onChange={(opt) => setForm((f) => ({ ...f, bidCurrency: opt ? opt.value : "" }))}
+                          styles={selectStyles}
+                          placeholder="Search currency..."
+                          menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                          menuPosition="fixed"
+                          className="text-xs"
+                        />
+                      )}
+                      {errors.bidCurrency && <p className={err}>{errors.bidCurrency}</p>}
+                    </div>
+
+                    {/* Destination */}
+                    <div>
+                      <label className={lbl}>Destination</label>
+                      {isViewMode ? (
+                        <div className={inp}>{form.destinationCountry || "—"}</div>
+                      ) : (
+                        <input
+                          type="text"
+                          className={inp}
+                          placeholder="e.g. Rotterdam, Netherlands"
+                          value={form.destinationCountry}
+                          onChange={(e) => setForm((f) => ({ ...f, destinationCountry: e.target.value }))}
+                        />
+                      )}
+                    </div>
+
+                    {/* Bid Amount with Target / Bid Amount toggle */}
+                    <div>
+                      {/* Toggle label pill */}
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <label className={lbl} style={{ marginBottom: 0 }}>
+                          Bid
+                        </label>
+                        <div className="flex rounded-lg border border-gray-200 overflow-hidden text-[10px] font-bold">
+                          <button
+                            type="button"
+                            disabled={isViewMode}
+                            onClick={() => setForm((f) => ({ ...f, bidType: "TARGET" }))}
+                            className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${
+                              form.bidType === "TARGET" || !form.bidType
+                                ? "bg-[#007aff] text-white"
+                                : "bg-white text-gray-500 hover:bg-gray-50"
+                            }`}
+                          >
+                            Target
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isViewMode}
+                            onClick={() => setForm((f) => ({ ...f, bidType: "BID" }))}
+                            className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${
+                              form.bidType === "BID"
+                                ? "bg-[#007aff] text-white"
+                                : "bg-white text-gray-500 hover:bg-gray-50"
+                            }`}
+                          >
+                            Bid Amount
+                          </button>
+                        </div>
+                      </div>
+                      {isViewMode ? (
+                        <div className={inp}>
+                          {form.buyingInterest !== "" && form.buyingInterest != null
+                            ? `${Math.round(Number(form.buyingInterest)).toLocaleString("en-US")} ${form.bidCurrency || "USD"}`
+                            : "—"}
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          value={
+                            form.buyingInterest !== "" && form.buyingInterest != null
+                              ? (typeof form.buyingInterest === "number"
+                                ? String(parseFloat(form.buyingInterest.toString()))
+                                : form.buyingInterest)
+                              : ""
+                          }
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "" || (/^\d*\.?\d{0,4}$/.test(val) && val.length <= 15)) {
+                              setForm((f) => ({ ...f, buyingInterest: val }));
+                            }
+                          }}
+                          placeholder="0.00"
+                          disabled={isViewMode}
+                          className={`${inp} ${errors.buyingInterest ? "border-red-300" : ""}`}
+                        />
+                      )}
+                      {errors.buyingInterest && <p className={err}>{errors.buyingInterest}</p>}
+                    </div>
                   </div>
 
                   {/* Broker Details */}

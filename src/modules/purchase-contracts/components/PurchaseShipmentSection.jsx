@@ -51,22 +51,22 @@ export default function PurchaseShipmentSection({
           </div>
           <div>
             <h2 className="text-sm font-bold text-gray-900">Shipment Schedule</h2>
-            <p className="text-[10px] text-gray-400">Auto-populated from selected shipments. Fill purchase rates, forex, &amp; freight.</p>
+            <p className="text-[10px] text-gray-400">Auto-populated from selected shipments.</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {isOverAllocated ? (
             <span className="text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg font-mono">
-              Stock Shortfall: -{Number(overAllocatedQty).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT 🔴
+              Stock Shortfall: -{Number.isInteger(Number(overAllocatedQty)) ? Number(overAllocatedQty).toLocaleString("en-IN") : Number(overAllocatedQty).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT 🔴
             </span>
           ) : (
             <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg font-mono">
-              Stock Available: +{Number(remainingBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT 🟢
+              Stock Available: +{Number.isInteger(Number(remainingBalance)) ? Number(remainingBalance).toLocaleString("en-IN") : Number(remainingBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT 🟢
             </span>
           )}
           <span className="text-xs font-bold text-[#007aff] bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 font-mono">
-            {shipments.length} Shipment{shipments.length !== 1 ? "s" : ""} · {totalQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT
+            {shipments.length} Shipment{shipments.length !== 1 ? "s" : ""} · {Number.isInteger(totalQty) ? totalQty.toLocaleString("en-IN") : totalQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT
           </span>
         </div>
       </div>
@@ -80,10 +80,6 @@ export default function PurchaseShipmentSection({
               <th className="px-3 py-2.5">Shipment Ref</th>
               <th className="px-3 py-2.5">Date</th>
               <th className="px-3 py-2.5 text-center">Containers</th>
-              <th className="px-3 py-2.5 min-w-[80px]">Currency</th>
-              <th className="px-3 py-2.5 min-w-[100px]">Purchase Rate</th>
-              <th className="px-3 py-2.5 min-w-[100px]">Forex</th>
-              <th className="px-3 py-2.5 min-w-[100px]">Freight</th>
               <th className="px-3 py-2.5 text-right min-w-[90px]">Qty (MT)</th>
               <th className="px-3 py-2.5 text-right min-w-[110px]">Stock Balance</th>
               <th className="px-3 py-2.5 min-w-[130px]">Remarks</th>
@@ -128,74 +124,9 @@ export default function PurchaseShipmentSection({
                     </span>
                   </td>
 
-                  {/* Currency */}
-                  <td className="px-3 py-2">
-                    {isView ? (
-                      <span className="font-mono font-semibold text-gray-800">{rowData.currencyCode || s.currencyCode || currencyCode || "INR"}</span>
-                    ) : (
-                      <input
-                        type="text"
-                        value={rowData.currencyCode || s.currencyCode || currencyCode || "INR"}
-                        onChange={(e) => handleChange(s.id, "currencyCode", e.target.value)}
-                        className={`${inpCls} uppercase font-mono font-semibold text-gray-800`}
-                      />
-                    )}
-                  </td>
-
-                  {/* Purchase Rate */}
-                  <td className="px-3 py-2">
-                    {isView ? (
-                      <span className="font-mono font-bold text-gray-900">{rowData.purchaseRate ?? s.purchaseRate ?? "\u00A0"}</span>
-                    ) : (
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={rowData.purchaseRate ?? s.purchaseRate ?? ""}
-                        onChange={(e) => handleChange(s.id, "purchaseRate", e.target.value)}
-                        placeholder="0.00"
-                        className={`${inpCls} font-mono font-bold text-gray-900`}
-                      />
-                    )}
-                  </td>
-
-                  {/* Forex */}
-                  <td className="px-3 py-2">
-                    {isView ? (
-                      <span className="font-mono text-gray-800">{rowData.forex ?? s.forex ?? "\u00A0"}</span>
-                    ) : (
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={rowData.forex ?? s.forex ?? ""}
-                        onChange={(e) => handleChange(s.id, "forex", e.target.value)}
-                        placeholder="0.00"
-                        className={`${inpCls} font-mono text-gray-800`}
-                      />
-                    )}
-                  </td>
-
-                  {/* Freight */}
-                  <td className="px-3 py-2">
-                    {isView ? (
-                      <span className="font-mono text-gray-800">{rowData.freight ?? s.freight ?? "\u00A0"}</span>
-                    ) : (
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={rowData.freight ?? s.freight ?? ""}
-                        onChange={(e) => handleChange(s.id, "freight", e.target.value)}
-                        placeholder="0.00"
-                        className={`${inpCls} font-mono text-gray-800`}
-                      />
-                    )}
-                  </td>
-
                   {/* Qty (MT) */}
                   <td className="px-3 py-2 text-right font-mono font-bold text-gray-900 whitespace-nowrap">
-                    {shpQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    {Number.isInteger(shpQty) ? shpQty.toLocaleString("en-IN") : shpQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </td>
 
                   {/* Stock Balance (Individual Row Calculation: Available Stock - Shipment Qty) */}
@@ -205,14 +136,14 @@ export default function PurchaseShipmentSection({
                         className="text-red-600 inline-flex items-center gap-1"
                         title="Shortfall"
                       >
-                        -{Math.abs(rowStockBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT
+                        -{Math.abs(rowStockBalance).toLocaleString("en-IN", { minimumFractionDigits: rowStockBalance % 1 !== 0 ? 2 : 0 })} MT
                       </span>
                     ) : (
                       <span
                         className="text-emerald-600 inline-flex items-center gap-1"
                         title="Stock Available"
                       >
-                        +{rowStockBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT
+                        +{rowStockBalance.toLocaleString("en-IN", { minimumFractionDigits: rowStockBalance % 1 !== 0 ? 2 : 0 })} MT
                       </span>
                     )}
                   </td>
@@ -249,7 +180,7 @@ export default function PurchaseShipmentSection({
 
             {shipments.length === 0 && (
               <tr>
-                <td colSpan={12} className="text-center py-10 text-gray-400">
+                <td colSpan={8} className="text-center py-10 text-gray-400">
                   <Ship className="h-8 w-8 mx-auto mb-2 text-gray-300 stroke-[1.2]" />
                   <p className="text-xs font-semibold text-gray-600">No shipments selected</p>
                   <p className="text-[11px] text-gray-400 mt-1">
@@ -271,16 +202,15 @@ export default function PurchaseShipmentSection({
                 <tr className="bg-gray-50/80 border-t border-gray-200 font-bold text-xs">
                   <td colSpan={3} className="px-3 py-2.5 text-right text-gray-600">Total:</td>
                   <td className="px-3 py-2.5 text-center font-mono text-gray-900">{totalContainers}</td>
-                  <td colSpan={4}></td>
-                  <td className="px-3 py-2.5 text-right font-mono text-gray-900">{totalQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT</td>
+                  <td className="px-3 py-2.5 text-right font-mono text-gray-900">{Number.isInteger(totalQty) ? totalQty.toLocaleString("en-IN") : totalQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT</td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap font-mono font-bold">
                     {totalStockBalance < 0 ? (
                       <span className="text-red-600" title="Total Shortfall">
-                        -{Math.abs(totalStockBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT
+                        -{Math.abs(totalStockBalance).toLocaleString("en-IN", { minimumFractionDigits: totalStockBalance % 1 !== 0 ? 2 : 0 })} MT
                       </span>
                     ) : (
                       <span className="text-emerald-600" title="Total Stock Available">
-                        +{totalStockBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT
+                        +{totalStockBalance.toLocaleString("en-IN", { minimumFractionDigits: totalStockBalance % 1 !== 0 ? 2 : 0 })} MT
                       </span>
                     )}
                   </td>

@@ -582,6 +582,31 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
           />
         </div>
 
+        {/* Offer */}
+        <div>
+          <label className={lbl}>Offer</label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={form.offerAmount !== "" && form.offerAmount != null ? form.offerAmount : ""}
+            onChange={e => {
+              const val = e.target.value.trim();
+              if (val === "" || /^\d+$/.test(val)) {
+                setForm(f => ({ ...f, offerAmount: val }));
+              }
+            }}
+            onKeyDown={e => {
+              if (["e", "E", "+", "-", "."].includes(e.key)) {
+                e.preventDefault();
+              }
+            }}
+            disabled={isView}
+            placeholder="0"
+            className={`${inp} ${errors?.offerAmount ? "border-red-300" : ""}`}
+          />
+          {errors?.offerAmount && <p className={err}>{errors.offerAmount}</p>}
+        </div>
+
         {/* Buying Interest */}
         <div>
           <label className={lbl}>Bid</label>

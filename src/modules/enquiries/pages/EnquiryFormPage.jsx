@@ -33,6 +33,7 @@ export default function EnquiryFormPage({ id }) {
     quantity: "",
     shipmentDate: "",
     buyingInterest: "",
+    offerAmount: "",
     potentialEnquiry: false,
   });
 
@@ -46,6 +47,14 @@ export default function EnquiryFormPage({ id }) {
     if (!form.productId) newErrors.productId = "Product is required";
     if (form.brokerRoleId && !form.brokerId) {
       newErrors.brokerId = "Partner is required when Broker Role is selected";
+    }
+
+    if (form.offerAmount !== undefined && form.offerAmount !== null && form.offerAmount !== "") {
+      const valStr = String(form.offerAmount).trim();
+      const num = Number(valStr);
+      if (isNaN(num) || !Number.isInteger(num) || valStr.includes(".") || num < 0 || !/^\d+$/.test(valStr)) {
+        newErrors.offerAmount = "Offer must be a non-negative whole number";
+      }
     }
     
     setErrors(newErrors);
@@ -71,6 +80,7 @@ export default function EnquiryFormPage({ id }) {
         packingTypeId: form.packingTypeId ? Number(form.packingTypeId) : undefined,
         quantity: form.quantity ? Number(form.quantity) : undefined,
         buyingInterest: form.buyingInterest ? Number(form.buyingInterest) : undefined,
+        offerAmount: form.offerAmount !== "" && form.offerAmount != null ? parseInt(String(form.offerAmount), 10) : undefined,
       };
 
       // clean up empty strings and UI-only fields

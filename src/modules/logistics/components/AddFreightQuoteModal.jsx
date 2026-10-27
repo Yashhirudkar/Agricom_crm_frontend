@@ -65,7 +65,7 @@ export default function AddFreightQuoteModal({
   quote = null,
   lastQuote = null,
   transportMode = "Road",
-  mode = "Domestic",
+  mode = "International",
   onOpenCreatePartner,
   onOpenAddContact,
   autoSelectPartner = null,

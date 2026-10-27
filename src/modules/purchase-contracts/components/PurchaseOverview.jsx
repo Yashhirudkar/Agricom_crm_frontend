@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React from "react";
 import {
   Building2,
@@ -14,7 +14,7 @@ export default function PurchaseOverview({ contract, summary }) {
   const salesContract = contract?.salesContract || {};
   const buyer = summary?.commercialInfo?.buyer || salesContract.buyer || {};
   const seller = summary?.commercialInfo?.seller || salesContract.seller || {};
-  const broker = summary?.commercialInfo?.broker || salesContract.broker || {};
+  const broker = summary?.commercialInfo?.broker || contract?.broker || {};
   const paymentTerm = summary?.commercialInfo?.paymentTerm?.name || salesContract.paymentTerm?.name || "—";
   const shipmentType =
     contract?.shipmentType?.name || salesContract.shipmentType?.name || "—";

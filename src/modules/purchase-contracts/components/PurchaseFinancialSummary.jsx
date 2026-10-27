@@ -18,7 +18,7 @@ export default function PurchaseFinancialSummary({ summary, loading }) {
   const metrics = [
     {
       label: "Total Executed Quantity",
-      value: `${Number(fin.totalQuantity || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })} MT`,
+      value: `${Number(fin.totalQuantity || 0) % 1 === 0 ? Math.floor(Number(fin.totalQuantity || 0)).toLocaleString("en-US") : Number(fin.totalQuantity || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })} MT`,
       icon: Scale,
       color: "text-purple-600 bg-purple-50",
     },

@@ -44,7 +44,7 @@ export default function AgainstShipmentSection({
 
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-bold text-[#007aff] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 font-mono">
-              Selected: {selectedCount} Shipment{selectedCount !== 1 ? "s" : ""} ({totalSelectedQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT)
+              Selected: {selectedCount} Shipment{selectedCount !== 1 ? "s" : ""} ({Number.isInteger(totalSelectedQty) ? totalSelectedQty.toLocaleString("en-IN") : totalSelectedQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT)
             </span>
           </div>
         </div>
@@ -189,17 +189,17 @@ export default function AgainstShipmentSection({
                 <div className="flex items-center gap-3 text-xs">
                   <div className="px-3 py-1 bg-gray-100 rounded-lg text-center">
                     <span className="text-[9px] text-gray-400 font-bold block uppercase">Contract Qty</span>
-                    <span className="font-mono font-bold text-gray-900">{itemContractQty.toFixed(2)} MT</span>
+                    <span className="font-mono font-bold text-gray-900">{Number.isInteger(itemContractQty) ? itemContractQty.toLocaleString("en-IN") : itemContractQty.toFixed(2)} MT</span>
                   </div>
 
                   <div className="px-3 py-1 bg-blue-50 rounded-lg text-center">
                     <span className="text-[9px] text-blue-600 font-bold block uppercase">Assigned</span>
-                    <span className="font-mono font-bold text-blue-700">{totalAssignedForProduct.toFixed(2)} MT</span>
+                    <span className="font-mono font-bold text-blue-700">{Number.isInteger(totalAssignedForProduct) ? totalAssignedForProduct.toLocaleString("en-IN") : totalAssignedForProduct.toFixed(2)} MT</span>
                   </div>
 
                   <div className="px-3 py-1 bg-emerald-50 rounded-lg text-center">
                     <span className="text-[9px] text-emerald-600 font-bold block uppercase">Remaining</span>
-                    <span className="font-mono font-bold text-emerald-700">{remainingQty.toFixed(2)} MT</span>
+                    <span className="font-mono font-bold text-emerald-700">{Number.isInteger(remainingQty) ? remainingQty.toLocaleString("en-IN") : remainingQty.toFixed(2)} MT</span>
                   </div>
 
                   {!isView && (
@@ -239,7 +239,7 @@ export default function AgainstShipmentSection({
 
                           <div className="flex items-center gap-2">
                             <span className="px-2 py-0.5 text-xs font-mono font-extrabold text-[#007aff] bg-blue-50 border border-blue-100 rounded-lg">
-                              {Number(alloc.allocatedQuantity).toFixed(2)} MT
+                              {Number.isInteger(Number(alloc.allocatedQuantity)) ? Number(alloc.allocatedQuantity).toLocaleString("en-IN") : Number(alloc.allocatedQuantity).toFixed(2)} MT
                             </span>
                             {!isView && (
                               <button

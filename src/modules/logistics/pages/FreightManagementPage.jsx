@@ -1123,7 +1123,7 @@ export default function FreightManagementPage() {
             }}
             quote={editTarget}
             transportMode={editTarget?.logistics?.transportMode || "Road"}
-            mode={editTarget?.logistics?.mode || "Domestic"}
+            mode={editTarget?.logistics?.mode || "International"}
             isReadOnly={editTarget?.isViewOnly || false}
           />
         )

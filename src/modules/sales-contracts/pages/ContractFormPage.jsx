@@ -7,6 +7,7 @@ import { useSalesMasters } from "../hooks/useSalesContracts";
 import { salesContractApi } from "../services/salesContractApi";
 import { enquiryApi } from "@/modules/enquiries/services/enquiryApi";
 import { getCurrentFinancialYear, getFinancialYearForDate } from "../utils/dateUtils";
+import { cleanNumberValue, formatNumberDisplay } from "../utils/formatUtils";
 import HeaderSection from "../components/HeaderSection";
 import PartySection from "../components/PartySection";
 import CommercialSection from "../components/CommercialSection";
@@ -56,7 +57,7 @@ const defaultForm = () => ({
   buyerAuthorizedSignatory: "",
   buyerSignature: "",
   buyerCompanySeal: "",
-  numShipments: 3,
+  numShipments: 1,
   items: [],
   shipments: [],
   documents: [],
@@ -87,8 +88,28 @@ function validate(form, isAutoNumber) {
     });
     if (itemErrors.length > 0) e.items = itemErrors.join(" · ");
   }
-  if (!form.shipments || form.shipments.length === 0 || !form.shipments.some(s => s.shipmentDate && s.quantity)) {
-    e.shipments = "At least one shipment with a date and quantity is required";
+  const totalProductQty = (form.items || []).reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
+  const totalShipmentQty = (form.shipments || []).reduce((sum, s) => sum + (parseFloat(s.quantity) || 0), 0);
+  const shipmentCount = parseInt(form.numShipments, 10);
+
+  if (!shipmentCount || shipmentCount < 1) {
+    e.shipments = "Shipment count cannot be less than 1";
+  } else if (!form.shipments || form.shipments.length === 0) {
+    e.shipments = "At least one shipment is required";
+  } else {
+    const hasNegativeQty = form.shipments.some(s => parseFloat(s.quantity) < 0);
+    const hasInvalidContainers = form.shipments.some(s => s.noOfContainers === "" || s.noOfContainers === null || parseInt(s.noOfContainers, 10) < 1);
+    const missingDate = form.shipments.some(s => !s.shipmentDate);
+
+    if (hasNegativeQty) {
+      e.shipments = "Shipment quantity cannot be negative";
+    } else if (hasInvalidContainers) {
+      e.shipments = "Every shipment must have at least 1 container";
+    } else if (missingDate) {
+      e.shipments = "Shipment date is required for all shipments";
+    } else if (totalProductQty > 0 && Math.abs(totalShipmentQty - totalProductQty) > 0.01) {
+      e.shipments = `Total shipment quantity (${formatNumberDisplay(totalShipmentQty)} MT) must equal total product quantity (${formatNumberDisplay(totalProductQty)} MT)`;
+    }
   }
   return e;
 }
@@ -162,16 +183,16 @@ export default function ContractFormPage({ editId, viewId }) {
           buyerAuthorizedSignatory: c.buyerAuthorizedSignatory || "",
           buyerSignature: c.buyerSignature || "",
           buyerCompanySeal: c.buyerCompanySeal || "",
-          numShipments: c.shipments?.length || 3,
+          numShipments: c.shipments?.length || 1,
           items: (c.items || []).map(item => ({
             id: item.id,
             productId: item.productId || "",
             bagTypeId: item.bagTypeId || "",
             packingTypeId: item.packingTypeId || "",
             bagSpecificationId: item.bagSpecificationId || null,
-            quantity: item.quantity || "",
-            unitPrice: item.unitPrice || "",
-            amount: item.amount || 0,
+            quantity: cleanNumberValue(item.quantity),
+            unitPrice: cleanNumberValue(item.unitPrice),
+            amount: cleanNumberValue(item.amount) || 0,
             marking: item.marking || "",
             remarks: item.remarks || "",
           })),
@@ -179,14 +200,14 @@ export default function ContractFormPage({ editId, viewId }) {
             id: s.id,
             shipmentNo: s.shipmentNo || i + 1,
             shipmentDate: s.shipmentDate ? s.shipmentDate.split("T")[0] : "",
-            quantity: s.quantity ?? "",
-            noOfContainers: s.noOfContainers != null ? s.noOfContainers : "",
-            ratePerMt: s.ratePerMt != null ? s.ratePerMt : "",
+            quantity: cleanNumberValue(s.quantity),
+            noOfContainers: s.noOfContainers != null && s.noOfContainers !== "" ? Math.max(1, parseInt(s.noOfContainers, 10)) : 1,
+            ratePerMt: cleanNumberValue(s.ratePerMt),
             // Normalize to Contract Currency — discard any row-level divergence from older data
             currencyCode: c.currencyCode || "",
-            purchaseRate: s.purchaseRate != null ? s.purchaseRate : "",
-            forex: s.forex != null ? s.forex : "",
-            freight: s.freight != null ? s.freight : "",
+            purchaseRate: cleanNumberValue(s.purchaseRate),
+            forex: cleanNumberValue(s.forex),
+            freight: cleanNumberValue(s.freight),
             remarks: s.remarks || "",
           })),
           documents: (c.documents || []).map(d => ({
@@ -308,14 +329,14 @@ export default function ContractFormPage({ editId, viewId }) {
           buyerAuthorizedSignatory: "",
           buyerSignature: "",
           buyerCompanySeal: "",
-          numShipments: eq.shipmentDate ? 1 : 3,
+          numShipments: 1,
           items: [{
             productId: eq.productId || "",
             bagTypeId: "",
             packingTypeId: eq.packingTypeId || "",
             bagSpecificationId: null,
-            quantity: eq.quantity || "",
-            unitPrice: eq.buyingInterest || "",
+            quantity: cleanNumberValue(eq.quantity),
+            unitPrice: cleanNumberValue(eq.buyingInterest),
             amount: parseFloat(((eq.quantity || 0) * (eq.buyingInterest || 0)).toFixed(2)) || 0,
             marking: "",
             remarks: "",
@@ -323,8 +344,8 @@ export default function ContractFormPage({ editId, viewId }) {
           shipments: eq.shipmentDate ? [{
             shipmentNo: 1,
             shipmentDate: eq.shipmentDate ? eq.shipmentDate.split("T")[0] : "",
-            quantity: eq.quantity || "",
-            noOfContainers: "",
+            quantity: cleanNumberValue(eq.quantity),
+            noOfContainers: 1,
             ratePerMt: "",
             // Inherit the Contract Currency set above (USD default from enquiry)
             currencyCode: "USD",
@@ -423,7 +444,7 @@ export default function ContractFormPage({ editId, viewId }) {
         shipmentNo: s.shipmentNo ? Number(s.shipmentNo) : undefined,
         shipmentDate: s.shipmentDate,
         quantity: parseFloat(s.quantity) || 0,
-        noOfContainers: s.noOfContainers !== "" && s.noOfContainers !== null && s.noOfContainers !== undefined ? parseInt(s.noOfContainers, 10) : null,
+        noOfContainers: s.noOfContainers !== "" && s.noOfContainers !== null && s.noOfContainers !== undefined ? Math.max(1, parseInt(s.noOfContainers, 10)) : 1,
         ratePerMt: s.ratePerMt !== "" && s.ratePerMt !== null && s.ratePerMt !== undefined ? parseFloat(s.ratePerMt) : null,
         purchaseRate: s.purchaseRate !== "" && s.purchaseRate !== null && s.purchaseRate !== undefined ? parseFloat(s.purchaseRate) : null,
         forex: s.forex !== "" && s.forex !== null && s.forex !== undefined ? parseFloat(s.forex) : null,
@@ -494,6 +515,9 @@ export default function ContractFormPage({ editId, viewId }) {
   }
 
   const hasErrors = Object.keys(errors).length > 0;
+  const productItems = form.items || [];
+  const totalProductQty = productItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
+  const numberOfShipments = Math.max(1, parseInt(form.numShipments, 10) || 1);
 
   return (
     <div className="p-6 md:p-8 max-w-[1400px] mx-auto space-y-5">
@@ -574,7 +598,17 @@ export default function ContractFormPage({ editId, viewId }) {
       <PartySection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
       <CommercialSection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
       <ItemsTable form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
-      <ShipmentTable form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
+      <ShipmentTable
+        form={form}
+        setForm={setForm}
+        errors={errors}
+        masters={masters}
+        isView={isView}
+        isEdit={isEdit}
+        totalProductQty={totalProductQty}
+        numberOfShipments={numberOfShipments}
+        productItems={productItems}
+      />
       <DocumentSection form={form} setForm={setForm} masters={masters} isView={isView} uploadedDocIds={uploadedDocIds} />
       <RemarksSection form={form} setForm={setForm} isView={isView} />
       <TermsSection form={form} setForm={setForm} isView={isView} />

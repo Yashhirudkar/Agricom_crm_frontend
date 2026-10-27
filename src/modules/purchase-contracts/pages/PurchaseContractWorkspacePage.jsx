@@ -173,10 +173,10 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         buyerName: salesContract.seller?.entityName || contract.buyer?.entityName || f.buyerName || "",
         sellerId: contract.sellerId || f.sellerId || null,
         supplierName: contract.seller?.entityName || f.supplierName || "",
-        brokerId: contract.brokerId || salesContract.brokerId || f.brokerId || null,
-        brokerName: contract.broker?.entityName || salesContract.broker?.entityName || f.brokerName || "",
-        brokerPartnerRoleId: contract.broker?.partnerRoleId || salesContract.broker?.partnerRoleId || f.brokerPartnerRoleId || null,
-        brokerCommission: contract.brokerCommission || f.brokerCommission || "",
+        brokerId: contract.brokerId || null,
+        brokerName: contract.broker?.entityName || "",
+        brokerPartnerRoleId: contract.broker?.partnerRoleId || null,
+        brokerCommission: contract.brokerCommission || "",
         sellerContractNo: contract.sellerContractNo || f.sellerContractNo || "",
         specificationNo: contract.specificationNo || f.specificationNo || "",
         specificationDate: contract.specificationDate || f.specificationDate || "",
@@ -199,7 +199,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         freightRequired: contract.freightRequired ?? f.freightRequired ?? false,
         notes: contract.notes || f.notes || "",
         currencyCode: contract.currencyCode || salesContract.currencyCode || f.currencyCode || "",
-        ratePerMt: firstItem.ratePerMt || f.ratePerMt || "",
+        ratePerMt: firstItem.ratePerMt != null ? Number(firstItem.ratePerMt) || "" : (f.ratePerMt ?? ""),
         placeOfLoading: contract.placeOfLoading || f.placeOfLoading || "",
         loadingCountry: contract.loadingCountry || salesContract.originCountry || f.loadingCountry || "",
         deliveryPlace: contract.deliveryPlace || salesContract.portOfLoading || f.deliveryPlace || "",
@@ -351,8 +351,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         ? masters?.domesticBrokerRoleId
         : masters?.internationalBrokerRoleId;
       const selectedBrokerRoleId = form.brokerPartnerRoleId
-        || contract?.broker?.partnerRoleId
-        || contract?.salesContract?.broker?.partnerRoleId;
+        || contract?.broker?.partnerRoleId;
       const brokerMatchesContractType = !form.brokerId
         || !expectedBrokerRoleId
         || String(selectedBrokerRoleId) === String(expectedBrokerRoleId);
@@ -542,7 +541,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
                 )}
                 {contract?.quantity && (
                   <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
-                    Qty: {contract.quantity} MT
+                    Qty: {Number(contract.quantity) % 1 === 0 ? Math.floor(Number(contract.quantity)) : contract.quantity} MT
                   </span>
                 )}
               </h1>
@@ -715,13 +714,13 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           />
         )}
 
-        {/* 8. Financial Summary (Totals Section) */}
-        {!isNew && (
+        {/* 8. Financial Summary (Totals Section) — hidden per UI requirements */}
+        {/* {!isNew && (
           <PurchaseFinancialSummary
             summary={summary}
             loading={loadingSummary}
           />
-        )}
+        )} */}
 
         {!isViewMode && (
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">

@@ -53,8 +53,7 @@ export default function PurchaseCommercialInformationSection({
   }, [brokerRoleId]);
 
   const selectedBrokerRoleId = form.brokerPartnerRoleId
-    || contract?.broker?.partnerRoleId
-    || contract?.salesContract?.broker?.partnerRoleId;
+    || contract?.broker?.partnerRoleId;
   const selectedBrokerId = form.brokerId
     && selectedBrokerRoleId
     && String(selectedBrokerRoleId) !== String(brokerRoleId)
@@ -210,7 +209,11 @@ export default function PurchaseCommercialInformationSection({
           <div>
             <label className={lbl}>Price *</label>
             {isView ? (
-              <div className="text-sm font-bold text-gray-900 py-1.5">{form.ratePerMt || "\u00A0"}</div>
+              <div className="text-sm font-bold text-gray-900 py-1.5">
+                {form.ratePerMt != null && form.ratePerMt !== ""
+                  ? (Number(form.ratePerMt) % 1 === 0 ? Math.floor(Number(form.ratePerMt)) : form.ratePerMt)
+                  : "\u00A0"}
+              </div>
             ) : (
               <input
                 type="number"

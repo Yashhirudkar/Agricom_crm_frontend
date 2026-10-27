@@ -368,8 +368,8 @@ export default function ShipmentsTable({
                   {/* Qty (MT) */}
                   <td className="px-4 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
                     {s.quantity
-                      ? Number(s.quantity).toLocaleString("en-US", { minimumFractionDigits: 2 })
-                      : "0.00"}
+                      ? (Number.isInteger(Number(s.quantity)) ? Number(s.quantity).toLocaleString("en-US") : Number(s.quantity).toLocaleString("en-US", { minimumFractionDigits: 2 }))
+                      : "0"}
                   </td>
 
                   {/* Cargo Allocation Column */}
