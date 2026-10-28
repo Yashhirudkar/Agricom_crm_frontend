@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { Link as LinkIcon, Building2, MapPin, Package, CreditCard, Ship } from "lucide-react";
+import { getShipmentTypeShortForm } from "@/modules/sales-contracts/utils/formatUtils";
 
 export default function LinkedSalesContractSection({ contract, summary }) {
   const salesContract = contract?.salesContract || {};
@@ -9,7 +10,7 @@ export default function LinkedSalesContractSection({ contract, summary }) {
   const dest = salesContract.destinationCountry || "—";
   const portLoading = salesContract.portOfLoading || "—";
   const portDischarge = salesContract.portOfDischarge || "—";
-  const shipmentType = salesContract.shipmentType?.name || "—";
+  const shipmentType = getShipmentTypeShortForm(salesContract.shipmentType) || "—";
   const paymentTerm = salesContract.paymentTerm?.name || "—";
   const products = summary?.productSummary || salesContract.items || [];
 

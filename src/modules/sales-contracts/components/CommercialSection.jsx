@@ -14,6 +14,7 @@ import {
 } from "../services/locationProvider";
 import CountrySelect from "@/components/common/CountrySelect";
 import { getAlpha2Code } from "@/lib/countryUtils";
+import { getShipmentTypeShortForm } from "../utils/formatUtils";
 
 
 // ---------------------------------------------------------------------------
@@ -86,8 +87,9 @@ const selectStyles = {
     borderRadius: "12px",
     borderColor: state.isFocused ? "#007aff" : "#e5e7eb",
     boxShadow: state.isFocused ? "0 0 0 3px rgba(0,122,255,0.12)" : "none",
-    "&:hover": { borderColor: "#007aff" },
-    backgroundColor: state.isDisabled ? "#f9fafb" : "#fff",
+    "&:hover": { borderColor: state.isDisabled ? "#e5e7eb" : "#007aff" },
+    backgroundColor: state.isDisabled ? "#f3f4f6" : "#fff",
+    opacity: state.isDisabled ? 0.75 : 1,
     cursor: state.isDisabled ? "not-allowed" : "default",
   }),
   option: (base, state) => ({
@@ -298,6 +300,22 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
     }));
   };
 
+  const selectedShipmentTypeObj = (masters?.shipmentTypes || []).find(
+    (s) => String(s.id) === String(form.shipmentTypeId)
+  );
+  const shipmentTypeName = selectedShipmentTypeObj?.name || "";
+  const shipmentTypeCode = selectedShipmentTypeObj?.code || "";
+  const shipmentTypeShort = getShipmentTypeShortForm(selectedShipmentTypeObj) || "";
+  const rawShipmentType = String(form.shipmentType || form.shipmentTypeId || "").toUpperCase();
+
+  const isFAS =
+    rawShipmentType === "FAS" ||
+    rawShipmentType === "FREE CARRIER ALONGSIDE" ||
+    shipmentTypeShort === "FAS" ||
+    shipmentTypeCode.toUpperCase() === "FAS" ||
+    shipmentTypeName.toUpperCase() === "FREE CARRIER ALONGSIDE" ||
+    shipmentTypeName.toUpperCase() === "FREE ALONGSIDE SHIP";
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
       {/* Section Header */}
@@ -460,22 +478,28 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
                   </div>
                 ) : (
                   <LocationSelect
-                    key={`dest-${destCode}-${destTransportMode}`}
+                    key={`dest-${destCode}-${destTransportMode}-${isFAS ? "fas" : "editable"}`}
                     value={form.destinationLocationName || ""}
-                    onChange={(val) => setForm((f) => ({ ...f, destinationLocationName: val }))}
+                    onChange={(val) => setForm((f) => ({ ...f, destinationLocationName: val, deliveryPlace: val }))}
                     options={destOptions}
                     loadOptions={loadDestOptions}
-                    placeholder={destCode ? destConfig.destPlaceholder : destConfig.noDestCountryHint}
-                    isDisabled={!destCode}
+                    placeholder={
+                      isFAS
+                        ? "Not applicable for FAS"
+                        : destCode
+                          ? destConfig.destPlaceholder
+                          : destConfig.noDestCountryHint
+                    }
+                    isDisabled={!destCode || isFAS}
                     isSearchable={destConfig.isSearchable}
-                    hasError={!!errors.destinationLocationName}
+                    hasError={!isFAS && !!errors.destinationLocationName}
                     onCreateCustom={(val) => saveCustomLocation(destCode, form.destinationCountry, destTransportMode, val)}
                   />
                 )}
-                {errors.destinationLocationName && (
+                {errors.destinationLocationName && !isFAS && (
                   <p className={err}>{errors.destinationLocationName}</p>
                 )}
-                {!destCode && !isView && (
+                {!destCode && !isView && !isFAS && (
                   <p className="text-[10px] text-gray-400 mt-1">
                     {destConfig.noDestCountryHint}
                   </p>
@@ -510,7 +534,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
                 <option value="">Select Shipment Type</option>
                 {masters.shipmentTypes.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name}
+                    {getShipmentTypeShortForm(s)}
                   </option>
                 ))}
               </select>

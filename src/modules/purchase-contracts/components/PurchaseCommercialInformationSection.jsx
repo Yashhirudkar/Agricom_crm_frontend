@@ -3,6 +3,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { DollarSign, ChevronDown, CreditCard, CalendarDays } from "lucide-react";
 import { mastersApi } from "@/modules/sales-contracts/services/salesContractApi";
 import CountrySelect from "@/components/common/CountrySelect";
+import { getShipmentTypeShortForm } from "@/modules/sales-contracts/utils/formatUtils";
 
 export default function PurchaseCommercialInformationSection({
   contract,
@@ -99,6 +100,22 @@ export default function PurchaseCommercialInformationSection({
   const stitchingOptions = getDropdownOptions(masters?.stitchingTypes, form.stitching);
   const markingOptions = getDropdownOptions(masters?.markingTypes, form.marking);
 
+  const selectedShipmentTypeObj = (masters?.shipmentTypes || []).find(
+    (s) => String(s.id) === String(form.shipmentTypeId)
+  );
+  const shipmentTypeName = selectedShipmentTypeObj?.name || "";
+  const shipmentTypeCode = selectedShipmentTypeObj?.code || "";
+  const shipmentTypeShort = getShipmentTypeShortForm(selectedShipmentTypeObj) || "";
+  const rawShipmentType = String(form.shipmentType || form.shipmentTypeId || "").toUpperCase();
+
+  const isFAS =
+    rawShipmentType === "FAS" ||
+    rawShipmentType === "FREE CARRIER ALONGSIDE" ||
+    shipmentTypeShort === "FAS" ||
+    shipmentTypeCode.toUpperCase() === "FAS" ||
+    shipmentTypeName.toUpperCase() === "FREE CARRIER ALONGSIDE" ||
+    shipmentTypeName.toUpperCase() === "FREE ALONGSIDE SHIP";
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
       {/* Section Header */}
@@ -126,7 +143,7 @@ export default function PurchaseCommercialInformationSection({
                   onChange={(e) => {
                     const pId = Number(e.target.value);
                     const pObj = productsMaster.find((p) => p.id === pId);
-                    
+
                     let newQuality = "";
                     if (pObj) {
                       newQuality = [pObj.qualitySubType, pObj.specification].filter(Boolean).join(" - ");
@@ -407,13 +424,14 @@ export default function PurchaseCommercialInformationSection({
             <label className={lbl}>Shipment Type / Incoterms</label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">
-                {masters?.shipmentTypes?.find(
-                  (shipmentType) =>
-                    String(shipmentType.id) === String(form.shipmentTypeId),
-                )?.name ||
-                  contract?.shipmentType?.name ||
-                  contract?.salesContract?.shipmentType?.name ||
-                  "—"}
+                {getShipmentTypeShortForm(
+                  masters?.shipmentTypes?.find(
+                    (shipmentType) =>
+                      String(shipmentType.id) === String(form.shipmentTypeId),
+                  ) ||
+                  contract?.shipmentType ||
+                  contract?.salesContract?.shipmentType
+                ) || "—"}
               </div>
             ) : (
               <div className="relative">
@@ -432,33 +450,14 @@ export default function PurchaseCommercialInformationSection({
                   <option value="">Select Shipment Type</option>
                   {(masters?.shipmentTypes || []).map((shipmentType) => (
                     <option key={shipmentType.id} value={shipmentType.id}>
-                      {shipmentType.name}
+                      {getShipmentTypeShortForm(shipmentType)}
                     </option>
                   ))}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
               </div>
             )}
-            <div className="mt-2.5 flex items-center gap-2">
-              <input
-                id="pc-freight-required"
-                type="checkbox"
-                disabled={isView}
-                checked={Boolean(form.freightRequired)}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, freightRequired: e.target.checked }))
-                }
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed"
-              />
-              <label
-                htmlFor="pc-freight-required"
-                className={`text-xs font-semibold cursor-pointer select-none ${
-                  form.freightRequired ? "text-blue-700" : "text-gray-600"
-                }`}
-              >
-                Freight Required
-              </label>
-            </div>
+
           </div>
 
           <div>
@@ -495,10 +494,12 @@ export default function PurchaseCommercialInformationSection({
             ) : (
               <input
                 type="text"
+                disabled={isFAS}
+                readOnly={isFAS}
                 value={form.deliveryPlace || ""}
                 onChange={(e) => setForm((f) => ({ ...f, deliveryPlace: e.target.value }))}
-                className={`${inp}`}
-                placeholder="e.g. Port of Discharge / Location"
+                className={`${inp} ${isFAS ? "!bg-gray-100 !cursor-not-allowed !text-gray-500 opacity-75 select-none" : ""}`}
+                placeholder={isFAS ? "Not applicable for FAS" : "e.g. Port of Discharge / Location"}
               />
             )}
           </div>
@@ -641,7 +642,7 @@ export default function PurchaseCommercialInformationSection({
 
               {/* Unloading Date */}
               <div>
-                <label className={lbl} htmlFor="pc-unloadingDate">Unloading Date</label>
+                <label className={lbl} htmlFor="pc-unloadingDate">Unloading Date (Tentative)</label>
                 {isView ? (
                   <div className="text-sm font-semibold text-gray-900 py-1.5">{form.unloadingDate || "—"}</div>
                 ) : (

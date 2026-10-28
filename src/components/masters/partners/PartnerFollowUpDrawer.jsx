@@ -10,20 +10,21 @@ import {
   Search,
   Clock,
   Send,
-  MoreVertical,
   User,
   Info,
   Edit2,
   FileText
 } from "lucide-react";
 import Drawer from "@/components/common/Drawer";
-import axiosClient, { getAvatarUrl } from "@/lib/axios";
+import axiosClient from "@/lib/axios";
 import { useQueryClient } from "@tanstack/react-query";
 import UserProfileModal from "@/modules/chat/components/Common/UserProfileModal";
 import HasPermission from "@/components/rbac/HasPermission";
 import CreateQuotationDrawer from "@/modules/follow-ups/components/CreateQuotationDrawer";
 import QuotationActivityCard from "@/modules/follow-ups/components/QuotationActivityCard";
 import QuotationPreviewDrawer from "@/modules/follow-ups/components/QuotationPreviewDrawer";
+import EnquiryActivityCard from "./EnquiryActivityCard";
+import { enquiriesApi } from "@/modules/enquiries/services/enquiriesApi";
 
 const getInitials = (name) => {
   if (!name) return "??";
@@ -59,7 +60,12 @@ function PartnerFollowUpDrawer({
   entityType,
 }) {
   const queryClient = useQueryClient();
+  const isEnquiry = Boolean(enquiryId);
+
   const [followUps, setFollowUps] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [hasMoreOlder, setHasMoreOlder] = useState(false);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [timelineSearch, setTimelineSearch] = useState("");
@@ -70,7 +76,7 @@ function PartnerFollowUpDrawer({
   const [isPreviewDrawerOpen, setIsPreviewDrawerOpen] = useState(false);
 
   const handleOpenQuotationPreview = (target) => {
-    const id = typeof target === 'object' ? target?.id : target;
+    const id = typeof target === "object" ? target?.id : target;
     if (id) {
       setPreviewQuotationId(id);
       setIsPreviewDrawerOpen(true);
@@ -79,7 +85,7 @@ function PartnerFollowUpDrawer({
 
   // Ref for the chat scroll container
   const chatContainerRef = useRef(null);
-  // Track whether the user is near the bottom (for background refresh behavior)
+  // Track whether the user is near the bottom
   const isNearBottomRef = useRef(true);
   // Set to true when the current user explicitly sends a message
   const isSendingRef = useRef(false);
@@ -90,10 +96,46 @@ function PartnerFollowUpDrawer({
     el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "instant" });
   };
 
-  const handleScroll = () => {
+  const handleScroll = async () => {
     const el = chatContainerRef.current;
     if (!el) return;
     isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+
+    // Detect scroll near top for lazy-loading older activities in Enquiry mode
+    if (
+      el.scrollTop < 40 &&
+      isEnquiry &&
+      hasMoreOlder &&
+      !isLoadingOlder &&
+      activities.length > 0
+    ) {
+      const oldestId = activities[0]?.id;
+      if (oldestId) {
+        setIsLoadingOlder(true);
+        const prevScrollHeight = el.scrollHeight;
+        try {
+          const older = await enquiriesApi.getActivity(enquiryId, {
+            limit: 50,
+            before: oldestId,
+          });
+          if (!older || older.length < 50) {
+            setHasMoreOlder(false);
+          }
+          if (older && older.length > 0) {
+            setActivities((prev) => [...older, ...prev]);
+            requestAnimationFrame(() => {
+              if (el) {
+                el.scrollTop = el.scrollHeight - prevScrollHeight;
+              }
+            });
+          }
+        } catch (err) {
+          console.error("Failed to load older activities", err);
+        } finally {
+          setIsLoadingOlder(false);
+        }
+      }
+    }
   };
 
   const {
@@ -101,7 +143,6 @@ function PartnerFollowUpDrawer({
     handleSubmit,
     reset,
     watch,
-    formState: { errors },
   } = useForm({
     defaultValues: {
       followupDate: new Date().toISOString().split("T")[0],
@@ -117,7 +158,7 @@ function PartnerFollowUpDrawer({
   const selectedNextDate = watch("nextFollowupDate");
 
   useEffect(() => {
-    if (isOpen && partner) {
+    if (isOpen && (partner || enquiryId)) {
       setEditingId(null);
       isNearBottomRef.current = true;
       reset({
@@ -129,15 +170,24 @@ function PartnerFollowUpDrawer({
         status: "Pending",
         priority: "Medium",
       });
-      fetchFollowUps(true);
+
+      if (isEnquiry) {
+        fetchEnquiryActivities(true);
+      } else {
+        fetchFollowUps(true);
+      }
     }
-  }, [isOpen, partner, reset]);
+  }, [isOpen, partner, enquiryId, isEnquiry, reset]);
 
   useEffect(() => {
     const handleQuotationChanged = () => {
-      if (isOpen && partner) {
+      if (isOpen) {
         isSendingRef.current = true;
-        fetchFollowUps(false);
+        if (isEnquiry) {
+          fetchEnquiryActivities(false);
+        } else {
+          fetchFollowUps(false);
+        }
       }
     };
     window.addEventListener("quotation-created", handleQuotationChanged);
@@ -146,16 +196,32 @@ function PartnerFollowUpDrawer({
       window.removeEventListener("quotation-created", handleQuotationChanged);
       window.removeEventListener("quotation-deleted", handleQuotationChanged);
     };
-  }, [isOpen, partner]);
+  }, [isOpen, isEnquiry, partner]);
 
   useEffect(() => {
-    // isSendingRef = user just sent → always scroll to bottom (fires after DOM paint)
+    // isSendingRef = user just sent → always scroll to bottom
     // isNearBottomRef = user was already near bottom → keep them there
     if (isSendingRef.current || isNearBottomRef.current) {
       scrollToBottom();
       isSendingRef.current = false;
     }
-  }, [followUps]);
+  }, [followUps, activities]);
+
+  const fetchEnquiryActivities = async (showLoading = true) => {
+    if (!enquiryId) return;
+    if (showLoading) setIsLoading(true);
+    try {
+      const data = await enquiriesApi.getActivity(enquiryId, { limit: 50 });
+      const items = Array.isArray(data) ? data : data?.data ?? [];
+      setActivities(items);
+      setHasMoreOlder(items.length >= 50);
+      isSendingRef.current = true;
+    } catch (err) {
+      console.error("Failed to fetch enquiry activity timeline", err);
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
+  };
 
   const fetchFollowUps = async (showLoading = true) => {
     if (!partner) return;
@@ -167,8 +233,8 @@ function PartnerFollowUpDrawer({
       const res = await axiosClient.get(`/masters/partners/${partner.id}/follow-ups`, {
         params: {
           entityType: eType,
-          entityId: eId
-        }
+          entityId: eId,
+        },
       });
       const sorted = [...res.data].sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -184,12 +250,18 @@ function PartnerFollowUpDrawer({
   const handleEdit = (item) => {
     setEditingId(item.id);
     reset({
-      followupDate: item.followupDate ? new Date(item.followupDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      followupDate: item.followupDate
+        ? new Date(item.followupDate).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
       communicationType: item.communicationType || "Call",
-      buyerRemark: item.buyerRemark || "",
-      ourResponse: item.ourResponse || "",
-      nextFollowupDate: item.nextFollowupDate ? new Date(item.nextFollowupDate).toISOString().split("T")[0] : "",
-      status: item.status || "Pending",
+      buyerRemark: item.buyerRemark || item.metadata?.buyerRemark || item.message || "",
+      ourResponse: item.ourResponse || item.metadata?.ourResponse || "",
+      nextFollowupDate: item.nextFollowupDate
+        ? new Date(item.nextFollowupDate).toISOString().split("T")[0]
+        : item.metadata?.nextFollowupDate
+        ? new Date(item.metadata.nextFollowupDate).toISOString().split("T")[0]
+        : "",
+      status: item.status || item.metadata?.status || "Pending",
       priority: item.priority || "Medium",
     });
   };
@@ -213,7 +285,9 @@ function PartnerFollowUpDrawer({
       const payload = {
         ...data,
         followupDate: new Date(data.followupDate).toISOString(),
-        nextFollowupDate: data.nextFollowupDate ? new Date(data.nextFollowupDate).toISOString() : null,
+        nextFollowupDate: data.nextFollowupDate
+          ? new Date(data.nextFollowupDate).toISOString()
+          : null,
       };
       const pId = partnerId || partner?.id;
       if (pId) payload.partnerId = Number(pId);
@@ -224,7 +298,6 @@ function PartnerFollowUpDrawer({
 
       payload.entityType = eType;
       if (eType === "enquiry") {
-        // Enquiries use UUID string keys, so we don't map entityId to a number/integer
         payload.entityId = undefined;
       } else {
         payload.entityId = Number(eId);
@@ -237,7 +310,7 @@ function PartnerFollowUpDrawer({
         await axiosClient.post(`/masters/partners/${partner.id}/follow-ups`, payload);
       }
 
-      // Reset only the text fields, keep the preferences (like comm type)
+      // Reset text fields
       reset({
         ...data,
         buyerRemark: "",
@@ -245,13 +318,14 @@ function PartnerFollowUpDrawer({
         nextFollowupDate: "",
       });
 
-      // Mark as sending so the useEffect fires scroll AFTER the new message is in the DOM
       isSendingRef.current = true;
-      await fetchFollowUps(false);
+      if (isEnquiry) {
+        await fetchEnquiryActivities(false);
+      } else {
+        await fetchFollowUps(false);
+      }
 
-      // Invalidate React Query follow-up cache to update dashboard/header stats
       queryClient.invalidateQueries({ queryKey: ["follow-ups"] });
-
       if (onSaveSuccess) onSaveSuccess();
     } catch (err) {
       console.error("Failed to save follow up", err);
@@ -277,19 +351,32 @@ function PartnerFollowUpDrawer({
     return "bg-gray-100 text-gray-700";
   };
 
+  const displayList = isEnquiry ? activities : followUps;
+
   const filteredTimeline = useMemo(() => {
-    return followUps.filter((item) => {
+    return displayList.filter((item) => {
       if (timelineSearch) {
         const search = timelineSearch.toLowerCase();
+        if (isEnquiry) {
+          return (
+            (item.message && item.message.toLowerCase().includes(search)) ||
+            (item.type && item.type.toLowerCase().includes(search)) ||
+            (item.activityType && item.activityType.toLowerCase().includes(search)) ||
+            (item.metadata?.productName && item.metadata.productName.toLowerCase().includes(search)) ||
+            (item.metadata?.partnerName && item.metadata.partnerName.toLowerCase().includes(search)) ||
+            (item.metadata?.buyerRemark && item.metadata.buyerRemark.toLowerCase().includes(search)) ||
+            (item.metadata?.ourResponse && item.metadata.ourResponse.toLowerCase().includes(search))
+          );
+        }
         return (
           (item.buyerRemark && item.buyerRemark.toLowerCase().includes(search)) ||
           (item.ourResponse && item.ourResponse.toLowerCase().includes(search)) ||
-          item.communicationType.toLowerCase().includes(search)
+          item.communicationType?.toLowerCase().includes(search)
         );
       }
       return true;
     });
-  }, [followUps, timelineSearch]);
+  }, [displayList, timelineSearch, isEnquiry]);
 
   return (
     <Drawer
@@ -302,44 +389,47 @@ function PartnerFollowUpDrawer({
       <div className="flex flex-col h-full bg-[#E5ECEF] relative overflow-hidden">
 
         {/* --- CHAT HEADER --- */}
-        {partner && (
-          <div className="bg-white px-5 py-3 flex items-center justify-between shadow-sm z-20 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md">
-                {partner.entityName?.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-gray-800 leading-tight flex items-center gap-2">
-                  {partner.entityName}
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" title="Active Partner"></span>
-                </h2>
-                <div className="text-xs text-gray-500 font-medium flex items-center gap-1.5 mt-0.5">
-                  <span className="truncate max-w-[150px]">{partner.partnerRole?.name || "Business Partner"}</span>
-                  <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                  <span>{partner.country || "Global"}</span>
-                </div>
-              </div>
+        <div className="bg-white px-5 py-3 flex items-center justify-between shadow-sm z-20 shrink-0 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md">
+              {partner?.entityName ? partner.entityName.charAt(0).toUpperCase() : "A"}
             </div>
-
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="h-4 w-4 absolute left-2.5 top-2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search chat..."
-                  value={timelineSearch}
-                  onChange={(e) => setTimelineSearch(e.target.value)}
-                  className="w-36 transition-all focus:w-48 pl-8 pr-3 py-1.5 bg-gray-100 border-none rounded-full text-xs focus:ring-2 focus:ring-blue-100 outline-none"
-                />
+            <div>
+              <h2 className="text-base font-bold text-gray-800 leading-tight flex items-center gap-2">
+                {isEnquiry ? "Activity Timeline" : partner?.entityName || "Follow-up Chat"}
+                {isEnquiry && partner?.entityName && (
+                  <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                    {partner.entityName}
+                  </span>
+                )}
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" title="Active"></span>
+              </h2>
+              <div className="text-xs text-gray-500 font-medium flex items-center gap-1.5 mt-0.5">
+                <span className="truncate max-w-[150px]">{partner?.partnerRole?.name || "Enquiry Activity"}</span>
+                <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                <span>{partner?.country || "Global"}</span>
               </div>
-              <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors">
-                <X className="h-5 w-5" />
-              </button>
             </div>
           </div>
-        )}
 
-        {/* --- CHAT BODY (MESSAGES) --- */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="h-4 w-4 absolute left-2.5 top-2 text-gray-400" />
+              <input
+                type="text"
+                placeholder={isEnquiry ? "Search timeline..." : "Search chat..."}
+                value={timelineSearch}
+                onChange={(e) => setTimelineSearch(e.target.value)}
+                className="w-36 transition-all focus:w-48 pl-8 pr-3 py-1.5 bg-gray-100 border-none rounded-full text-xs focus:ring-2 focus:ring-blue-100 outline-none"
+              />
+            </div>
+            <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors cursor-pointer">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* --- CHAT BODY (MESSAGES / TIMELINE) --- */}
         <div
           ref={chatContainerRef}
           onScroll={handleScroll}
@@ -347,22 +437,69 @@ function PartnerFollowUpDrawer({
           style={{ backgroundImage: 'radial-gradient(#d1d5db 1px, transparent 0)', backgroundSize: '20px 20px' }}
         >
 
+          {/* Lazy load older spinner */}
+          {isLoadingOlder && (
+            <div className="flex justify-center py-2 mb-3">
+              <div className="px-3.5 py-1.5 bg-white/90 backdrop-blur-xs rounded-full shadow-xs text-xs font-semibold text-gray-500 flex items-center gap-2 border border-gray-200">
+                <div className="h-3 w-3 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+                Loading older activities...
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="flex justify-center items-center h-full">
               <div className="px-4 py-2 bg-white rounded-full shadow-sm text-sm text-gray-500 flex items-center gap-2">
                 <div className="h-4 w-4 rounded-full border-2 border-[#007aff] border-t-transparent animate-spin" />
-                Loading history...
+                Loading timeline...
               </div>
             </div>
           ) : filteredTimeline.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center opacity-70">
-              <div className="bg-white p-4 rounded-full mb-3 shadow-sm text-blue-500">
-                <MessageCircle className="h-8 w-8" />
+            isEnquiry ? (
+              /* Section 1 Required Empty State for Enquiry */
+              <div className="flex flex-col items-center justify-center h-full text-center px-6 py-12">
+                <div className="bg-white p-4 rounded-3xl mb-4 shadow-sm border border-gray-100 text-[#007aff]">
+                  <Clock className="h-8 w-8" />
+                </div>
+                <h3 className="text-base font-extrabold text-gray-800">No activities yet.</h3>
+                <p className="text-xs text-gray-500 mt-2 max-w-xs leading-relaxed">
+                  Activities such as enquiry creation,
+                  price negotiations,
+                  WhatsApp messages,
+                  follow-ups,
+                  quotations
+                  and orders
+                  will appear here.
+                </p>
               </div>
-              <p className="text-sm font-semibold text-gray-600">No conversation history</p>
-              <p className="text-xs text-gray-500 mt-1">Start by logging a new follow-up below.</p>
+            ) : (
+              /* Empty state for non-enquiry partner chat */
+              <div className="flex flex-col items-center justify-center h-full text-center opacity-70">
+                <div className="bg-white p-4 rounded-full mb-3 shadow-sm text-blue-500">
+                  <MessageCircle className="h-8 w-8" />
+                </div>
+                <p className="text-sm font-semibold text-gray-600">No conversation history</p>
+                <p className="text-xs text-gray-500 mt-1">Start by logging a new follow-up below.</p>
+              </div>
+            )
+          ) : isEnquiry ? (
+            /* ──────────────── ENQUIRY COMPLETE ACTIVITY TIMELINE ──────────────── */
+            <div className="space-y-4">
+              {filteredTimeline.map((item) => (
+                <div
+                  key={item.id}
+                  className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+                >
+                  <EnquiryActivityCard
+                    activity={item}
+                    onOpenQuotation={handleOpenQuotationPreview}
+                    onOpenUserProfile={setSelectedUserProfile}
+                  />
+                </div>
+              ))}
             </div>
           ) : (
+            /* ──────────────── PARTNER FOLLOW-UP CHAT ──────────────── */
             <div className="space-y-6">
               {filteredTimeline.map((item) => (
                 <div key={item.id} className="flex flex-col space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -377,19 +514,11 @@ function PartnerFollowUpDrawer({
                         {getCommunicationIcon(item.communicationType)}
                         {item.communicationType}
                       </span>
-                      {item.entityType === 'enquiry' && (
-                        <>
-                          <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                          <span className="text-purple-600 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded text-[9px] font-black leading-none">
-                            Enquiry
-                          </span>
-                        </>
-                      )}
                     </span>
                   </div>
 
-                  {/* Check for QUOTATION timeline activity */}
-                  {item.communicationType === 'QUOTATION' || item.communicationType === 'Quotation' || item.entityType === 'Quotation' ? (
+                  {/* Quotation card */}
+                  {item.communicationType === "QUOTATION" || item.communicationType === "Quotation" || item.entityType === "Quotation" ? (
                     <div className="flex justify-center my-1">
                       <QuotationActivityCard
                         quotation={item.quotation}
@@ -398,7 +527,7 @@ function PartnerFollowUpDrawer({
                     </div>
                   ) : (
                     <>
-                      {/* Buyer Remark (Incoming Message - Left) */}
+                      {/* Buyer Remark */}
                       {item.buyerRemark && (
                         <div className="flex items-end gap-2 self-start max-w-[85%] sm:max-w-[75%]">
                           <div className="w-7 h-7 rounded-full bg-gray-200 flex-shrink-0 flex items-center justify-center text-gray-600 shadow-sm border border-gray-300">
@@ -410,7 +539,7 @@ function PartnerFollowUpDrawer({
                         </div>
                       )}
 
-                      {/* Our Action (Outgoing Message - Right) */}
+                      {/* Our Action */}
                       <div className="flex items-end gap-2 self-end max-w-[90%] sm:max-w-[80%] group">
                         <button
                           onClick={() => handleEdit(item)}
@@ -426,7 +555,6 @@ function PartnerFollowUpDrawer({
                               <p className="text-[13px] text-gray-800 whitespace-pre-wrap leading-relaxed px-1">
                                 {item.ourResponse}
                               </p>
-                              {/* Created By Details */}
                               <div
                                 onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
                                 className="mt-1.5 pt-1 border-t border-gray-100/80 flex items-center gap-1 justify-end cursor-pointer hover:opacity-80 transition-opacity"
@@ -435,11 +563,6 @@ function PartnerFollowUpDrawer({
                                 <span className="text-[9.5px] font-bold text-blue-600 hover:underline">
                                   {item.createdBy?.name || "Unknown User"}
                                 </span>
-                                {item.createdBy?.role && (
-                                  <span className="text-[8.5px] font-semibold text-gray-400">
-                                    ({item.createdBy.role})
-                                  </span>
-                                )}
                               </div>
                             </div>
                           )}
@@ -456,30 +579,18 @@ function PartnerFollowUpDrawer({
                             </span>
                           </div>
                         </div>
-                        {item.createdBy?.avatar ? (
-                          <img
-                            src={getAvatarUrl(item.createdBy.avatar)}
-                            alt={item.createdBy.name}
-                            onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
-                            className="w-7 h-7 rounded-full border border-blue-200 object-cover shadow-xs shrink-0 cursor-pointer hover:scale-105 transition-transform"
-                            title={item.createdBy.name}
-                          />
-                        ) : (
-                          <div
-                            onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
-                            className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getAvatarColor(item.createdBy?.name || "Unknown User")} text-white font-extrabold flex items-center justify-center text-[9px] shadow-sm border border-blue-200 shrink-0 cursor-pointer hover:scale-105 transition-transform`}
-                            title={item.createdBy?.name || "Unknown User"}
-                          >
-                            {getInitials(item.createdBy?.name || "Unknown User")}
-                          </div>
-                        )}
+                        <div
+                          onClick={() => item.createdBy && setSelectedUserProfile(item.createdBy)}
+                          className={`w-7 h-7 rounded-full bg-gradient-to-tr ${getAvatarColor(item.createdBy?.name || "Unknown User")} text-white font-extrabold flex items-center justify-center text-[9px] shadow-sm border border-blue-200 shrink-0 cursor-pointer hover:scale-105 transition-transform`}
+                          title={item.createdBy?.name || "Unknown User"}
+                        >
+                          {getInitials(item.createdBy?.name || "Unknown User")}
+                        </div>
                       </div>
                     </>
                   )}
-
                 </div>
               ))}
-              {/* No chatEndRef needed — we scroll the container directly */}
             </div>
           )}
         </div>
@@ -493,7 +604,7 @@ function PartnerFollowUpDrawer({
               </span>
               <button
                 onClick={handleCancelEdit}
-                className="text-[10px] font-bold text-gray-500 hover:text-gray-800 uppercase tracking-wider px-2 py-0.5 bg-white border border-gray-200 rounded shadow-sm"
+                className="text-[10px] font-bold text-gray-500 hover:text-gray-800 uppercase tracking-wider px-2 py-0.5 bg-white border border-gray-200 rounded shadow-sm cursor-pointer"
               >
                 Cancel
               </button>
@@ -555,7 +666,7 @@ function PartnerFollowUpDrawer({
                     if (e.target.showPicker) {
                       try {
                         e.target.showPicker();
-                      } catch (err) { }
+                      } catch { }
                     }
                   }}
                   className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
@@ -605,7 +716,7 @@ function PartnerFollowUpDrawer({
               <button
                 type="submit"
                 disabled={isSaving}
-                className={`mb-1 h-12 w-12 shrink-0 ${editingId ? 'bg-yellow-500 hover:bg-yellow-600 shadow-yellow-500/30' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30'} text-white rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-md`}
+                className={`mb-1 h-12 w-12 shrink-0 ${editingId ? 'bg-yellow-500 hover:bg-yellow-600 shadow-yellow-500/30' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30'} text-white rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-md cursor-pointer`}
               >
                 {isSaving ? (
                   <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
@@ -630,7 +741,11 @@ function PartnerFollowUpDrawer({
         followUp={{ partner, id: editingId || undefined }}
         onQuotationCreated={() => {
           isSendingRef.current = true;
-          fetchFollowUps(false);
+          if (isEnquiry) {
+            fetchEnquiryActivities(false);
+          } else {
+            fetchFollowUps(false);
+          }
         }}
       />
       <QuotationPreviewDrawer

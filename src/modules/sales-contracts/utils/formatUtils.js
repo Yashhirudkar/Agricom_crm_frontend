@@ -41,3 +41,53 @@ export const formatNumberDisplay = (val, maxDecimals = 2) => {
   });
 };
 
+/**
+ * Standard Incoterms short form mapping.
+ */
+export const INCOTERM_SHORT_FORMS = {
+  "DELIVERY AT PLACE": "DAP",
+  "DELIVERED AT PLACE": "DAP",
+  "COST INSURANCE AND FREIGHT": "CIF",
+  "COST INSURANCE & FREIGHT": "CIF",
+  "COST AND FREIGHT": "CFR",
+  "COST & FREIGHT": "CFR",
+  "FREE ONBOARD": "FOB",
+  "FREE ON BOARD": "FOB",
+  "FREE CARRIER ALONGSIDE": "FAS",
+  "FREE ALONGSIDE SHIP": "FAS",
+  "FREE CARRIER": "FCA",
+  "EX WORKS": "EXW",
+  "CARRIAGE PAID TO": "CPT",
+  "CARRIAGE AND INSURANCE PAID TO": "CIP",
+  "DELIVERED AT TERMINAL": "DAT",
+  "DELIVERED AT PLACE UNLOADED": "DPU",
+  "DELIVERED DUTY PAID": "DDP",
+};
+
+/**
+ * Returns the short form / acronym for a shipment type or incoterm.
+ * e.g. "DELIVERY AT PLACE" -> "DAP", "COST INSURANCE AND FREIGHT" -> "CIF"
+ */
+export const getShipmentTypeShortForm = (item) => {
+  if (!item) return "";
+  if (typeof item === "string") {
+    const trimmed = item.trim();
+    const upper = trimmed.toUpperCase();
+    if (INCOTERM_SHORT_FORMS[upper]) return INCOTERM_SHORT_FORMS[upper];
+    if (trimmed.length <= 5 && !trimmed.includes(" ")) return upper;
+    return trimmed;
+  }
+  const code = typeof item.code === "string" ? item.code.trim().toUpperCase() : "";
+  const name = typeof item.name === "string" ? item.name.trim() : "";
+  const nameUpper = name.toUpperCase();
+
+  if (code && code.length <= 6) {
+    return code;
+  }
+  if (nameUpper && INCOTERM_SHORT_FORMS[nameUpper]) {
+    return INCOTERM_SHORT_FORMS[nameUpper];
+  }
+  return code || name || "";
+};
+
+

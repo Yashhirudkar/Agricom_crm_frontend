@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { salesContractApi } from "../services/salesContractApi";
 import RichTextEditor from "@/components/editor/RichTextEditor";
+import { getShipmentTypeShortForm } from "../utils/formatUtils";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -571,7 +572,7 @@ export default function ContractViewModal({ contractId, onClose }) {
 
                     {/* BROKER */}
                     {hasBroker && (
-                      <Row label="Broker" className="mb-8">
+                      <Row label="Broker" className="mb-4">
                         {renderValue("broker", partnerAddress(contract.broker))}
                       </Row>
                     )}
@@ -579,7 +580,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                     <div className={hasBroker ? "" : "mb-4"} />
 
                     {/* ORIGIN */}
-                    {(contract.originLocationName || contract.portOfLoading || contract.originCountry) && (
+                    {/* {(contract.originLocationName || contract.portOfLoading || contract.originCountry) && (
                       <Row label="Origin Port">
                         {renderValue(
                           "originPort",
@@ -591,10 +592,10 @@ export default function ContractViewModal({ contractId, onClose }) {
                             .join(", ")
                         )}
                       </Row>
-                    )}
+                    )} */}
 
                     {/* DESTINATION */}
-                    {(contract.destinationLocationName || contract.portOfDischarge || contract.destinationCountry) && (
+                    {/* {(contract.destinationLocationName || contract.portOfDischarge || contract.destinationCountry) && (
                       <Row label="Dest. Port">
                         {renderValue(
                           "destPort",
@@ -606,14 +607,14 @@ export default function ContractViewModal({ contractId, onClose }) {
                             .join(", ")
                         )}
                       </Row>
-                    )}
+                    )} */}
 
                     {/* SHIPMENT TYPE */}
-                    {contract.shipmentType?.name && (
+                    {/* {contract.shipmentType?.name && (
                       <Row label="Shipment Type">
-                        {renderValue("shipmentType", contract.shipmentType.name.toUpperCase())}
+                        {renderValue("shipmentType", getShipmentTypeShortForm(contract.shipmentType))}
                       </Row>
-                    )}
+                    )} */}
 
                     <div className="mb-4" />
 
@@ -714,7 +715,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                     <Row label="Payment">
                       {renderValue("payment", contract.paymentTerm?.name?.toUpperCase() || "—")}
                       <div className="mt-3 text-[13px] text-black font-serif leading-snug">
-                        IN THE EVENT OF DELAY IN PAYMENT FOR THE GOODS BEYOND THE TERMS SPECIFIED IN THIS CONTRACT, THE BUYER SHALL BE ENTITLED TO A PENALTY, WHICH SHALL BE CALCULATED AT 0.1% OF THE VALUE OF THE COMMERCIAL INVOICE FOR EACH DAY OF DELAY
+                        IN THE EVENT OF DELAY IN PAYMENT FOR THE GOODS BEYOND THE TERMS SPECIFIED IN THIS CONTRACT, THE BUYER SHALL BE ENTITLED TO A PENALTY, WHICH SHALL BE CALCULATED AT 0.5 % OF THE VALUE OF THE COMMERCIAL INVOICE FOR EACH DAY OF DELAY. THE PROPERTY RIGHT TO A CARGO PASSES FROM THE SELLER TO THE BUYER AFTER 100% PAYMENT OF CARGO
                       </div>
                     </Row>
 

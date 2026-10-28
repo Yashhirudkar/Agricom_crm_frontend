@@ -1082,20 +1082,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                     </div>
                   </div>
 
-                  {/* Expected Shipment Date */}
-                  <div>
-                    <label className={lbl}>Expected Shipment Date</label>
-                    <input
-                      type="date"
-                      value={form.shipmentDate}
-                      onChange={(e) => setForm((f) => ({ ...f, shipmentDate: e.target.value }))}
-                      disabled={isViewMode}
-                      className={inp}
-                    />
-                  </div>
-
                   {/* Commercial Specifications: Quantity, Offer, Currency, Destination, Bid */}
-                  <div className="col-span-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="col-span-full grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* Quantity */}
                     <div>
                       <label className={lbl}>Quantity (MT)</label>
@@ -1118,10 +1106,45 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                         />
                       )}
                     </div>
+                    {/* Destination */}
+                    <div>
+                      <label className={lbl}>Destination</label>
+                      {isViewMode ? (
+                        <div className={inp}>{form.destinationCountry || "—"}</div>
+                      ) : (
+                        <input
+                          type="text"
+                          className={inp}
+                          placeholder="e.g. Rotterdam, Netherlands"
+                          value={form.destinationCountry}
+                          onChange={(e) => setForm((f) => ({ ...f, destinationCountry: e.target.value }))}
+                        />
+                      )}
+                    </div>
+                    {/* Expected Shipment Date */}
+                    <div>
+                      <label className={lbl}>Expected Shipment Date</label>
+                      <input
+                        type="date"
+                        value={form.shipmentDate}
+                        onChange={(e) => setForm((f) => ({ ...f, shipmentDate: e.target.value }))}
+                        disabled={isViewMode}
+                        className={inp}
+                      />
+                    </div>
+
+
+                    {/* Broker Details */}
+                    <div className="col-span-full pt-3 pb-0.5">
+                      <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                        <span>Price Details</span>
+                        <div className="h-px bg-gray-100 flex-1" />
+                      </div>
+                    </div>
 
                     {/* Offer */}
                     <div>
-                      <label className={lbl}>Offer</label>
+                      <label className={lbl}>Offer Price</label>
                       {isViewMode ? (
                         <div className={inp}>
                           {form.offerAmount !== "" && form.offerAmount != null
@@ -1155,60 +1178,19 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                       {errors.offerAmount && <p className={err}>{errors.offerAmount}</p>}
                     </div>
 
-                    {/* Bid Currency (react-select Searchable Master Caching Select) */}
-                    <div>
-                      <label className={lbl}>Bid Currency</label>
-                      {isViewMode ? (
-                        <div className={inp}>{form.bidCurrency || "—"}</div>
-                      ) : (
-                        <Select
-                          isClearable
-                          options={currencyOptions}
-                          value={selectedCurrencyOption}
-                          onChange={(opt) => setForm((f) => ({ ...f, bidCurrency: opt ? opt.value : "" }))}
-                          styles={selectStyles}
-                          placeholder="Search currency..."
-                          menuPortalTarget={typeof document !== "undefined" ? document.body : null}
-                          menuPosition="fixed"
-                          className="text-xs"
-                        />
-                      )}
-                      {errors.bidCurrency && <p className={err}>{errors.bidCurrency}</p>}
-                    </div>
-
-                    {/* Destination */}
-                    <div>
-                      <label className={lbl}>Destination</label>
-                      {isViewMode ? (
-                        <div className={inp}>{form.destinationCountry || "—"}</div>
-                      ) : (
-                        <input
-                          type="text"
-                          className={inp}
-                          placeholder="e.g. Rotterdam, Netherlands"
-                          value={form.destinationCountry}
-                          onChange={(e) => setForm((f) => ({ ...f, destinationCountry: e.target.value }))}
-                        />
-                      )}
-                    </div>
-
                     {/* Bid Amount with Target / Bid Amount toggle */}
                     <div>
                       {/* Toggle label pill */}
                       <div className="flex items-center gap-2 mb-1.5">
-                        <label className={lbl} style={{ marginBottom: 0 }}>
-                          Bid
-                        </label>
                         <div className="flex rounded-lg border border-gray-200 overflow-hidden text-[10px] font-bold">
                           <button
                             type="button"
                             disabled={isViewMode}
                             onClick={() => setForm((f) => ({ ...f, bidType: "TARGET" }))}
-                            className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${
-                              form.bidType === "TARGET" || !form.bidType
-                                ? "bg-[#007aff] text-white"
-                                : "bg-white text-gray-500 hover:bg-gray-50"
-                            }`}
+                            className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${form.bidType === "TARGET" || !form.bidType
+                              ? "bg-[#007aff] text-white"
+                              : "bg-white text-gray-500 hover:bg-gray-50"
+                              }`}
                           >
                             Target
                           </button>
@@ -1216,11 +1198,10 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                             type="button"
                             disabled={isViewMode}
                             onClick={() => setForm((f) => ({ ...f, bidType: "BID" }))}
-                            className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${
-                              form.bidType === "BID"
-                                ? "bg-[#007aff] text-white"
-                                : "bg-white text-gray-500 hover:bg-gray-50"
-                            }`}
+                            className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${form.bidType === "BID"
+                              ? "bg-[#007aff] text-white"
+                              : "bg-white text-gray-500 hover:bg-gray-50"
+                              }`}
                           >
                             Bid Amount
                           </button>
@@ -1255,7 +1236,30 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                       )}
                       {errors.buyingInterest && <p className={err}>{errors.buyingInterest}</p>}
                     </div>
+
+                    {/* Bid Currency (react-select Searchable Master Caching Select) */}
+                    <div>
+                      <label className={lbl}>Currency</label>
+                      {isViewMode ? (
+                        <div className={inp}>{form.bidCurrency || "—"}</div>
+                      ) : (
+                        <Select
+                          isClearable
+                          options={currencyOptions}
+                          value={selectedCurrencyOption}
+                          onChange={(opt) => setForm((f) => ({ ...f, bidCurrency: opt ? opt.value : "" }))}
+                          styles={selectStyles}
+                          placeholder="Search currency..."
+                          menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                          menuPosition="fixed"
+                          className="text-xs"
+                        />
+                      )}
+                      {errors.bidCurrency && <p className={err}>{errors.bidCurrency}</p>}
+                    </div>
+
                   </div>
+
 
                   {/* Broker Details */}
                   <div className="col-span-full pt-3 pb-0.5">

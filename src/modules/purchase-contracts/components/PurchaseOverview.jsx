@@ -17,7 +17,7 @@ export default function PurchaseOverview({ contract, summary }) {
   const broker = summary?.commercialInfo?.broker || contract?.broker || {};
   const paymentTerm = summary?.commercialInfo?.paymentTerm?.name || salesContract.paymentTerm?.name || "—";
   const shipmentType =
-    contract?.shipmentType?.name || salesContract.shipmentType?.name || "—";
+    getShipmentTypeShortForm(contract?.shipmentType || salesContract.shipmentType) || "—";
   const currencyCode = salesContract.currencyCode || "USD";
   const origin = contract?.loadingCountry || salesContract.originCountry || "—";
   const destination = salesContract.destinationCountry || "—";

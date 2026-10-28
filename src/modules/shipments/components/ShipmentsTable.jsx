@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   Ship,
-  Clipboard,
   User,
   Loader2,
   Check,
@@ -9,7 +8,6 @@ import {
   CheckCircle2,
   XCircle,
   Package,
-  ShieldCheck,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -18,6 +16,7 @@ import { shipmentsApi } from "../services/shipmentsApi";
 
 import ManualReadinessModal from "./ManualReadinessModal";
 import ShipmentStuffingExecutionModal from "./ShipmentStuffingExecutionModal";
+import ShipmentRefTooltip from "./ShipmentRefTooltip";
 
 // Standardized Timeline Color Map
 const TIMELINE_STYLES = {
@@ -71,18 +70,10 @@ export default function ShipmentsTable({
   setSelectedShipments,
 }) {
   const router = useRouter();
-  const [copiedId, setCopiedId] = useState(null);
   const [manualReadinessShipment, setManualReadinessShipment] = useState(null);
   const [stuffingShipment, setStuffingShipment] = useState(null);
   const [executingId, setExecutingId] = useState(null);
   const [executedShipmentIds, setExecutedShipmentIds] = useState(new Set());
-
-  const handleCopy = (e, text, id) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 1500);
-  };
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
@@ -198,7 +189,6 @@ export default function ShipmentsTable({
                   className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
                 />
               </th>
-              <th className="px-4 py-3 whitespace-nowrap">Shipment Ref</th>
               <th className="px-4 py-3 whitespace-nowrap">
                 {onSortBusinessReference ? (
                   <button type="button" onClick={onSortBusinessReference} className="hover:text-blue-600 font-medium">
@@ -258,35 +248,13 @@ export default function ShipmentsTable({
                     />
                   </td>
 
-                  {/* Shipment Ref */}
-                  <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap group">
-                    <div className="flex items-center gap-2">
-                      <span title={s.shipmentReference || ""}>
-                        {s.shipmentReference
-                          ? s.shipmentReference.length > 8
-                            ? `${s.shipmentReference.slice(0, 8)}...`
-                            : s.shipmentReference
-                          : "â€”"}
-                      </span>
-                      {s.shipmentReference && (
-                        <button
-                          onClick={(e) => handleCopy(e, s.shipmentReference, `ref-${s.id}`)}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-gray-700 transition-opacity"
-                          title="Copy Reference"
-                        >
-                          {copiedId === `ref-${s.id}` ? (
-                            <Check className="h-3.5 w-3.5 text-green-600" />
-                          ) : (
-                            <Clipboard className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </td>
-
                   {/* Business Ref */}
                   <td className="px-4 py-3 font-medium text-blue-600 whitespace-nowrap">
-                    {s.businessReference || s.businessTransaction?.businessReference || "â€”"}
+                    <ShipmentRefTooltip shipment={s}>
+                      <span className="hover:underline cursor-pointer">
+                        {s.businessReference || s.businessTransaction?.businessReference || "—"}
+                      </span>
+                    </ShipmentRefTooltip>
                   </td>
 
                   {/* Timeline */}
@@ -423,33 +391,6 @@ export default function ShipmentsTable({
                   {/* Actions - Execute Stuffing Form & Readiness Control */}
                   <td className="px-4 py-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1.5">
-                      {/* Shipment Readiness Control (Manual Override) */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setManualReadinessShipment(s);
-                        }}
-                        className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-md border text-xs font-medium transition-all cursor-pointer ${s.isManualOverride
-                            ? s.manualReadyOverride
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
-                              : "bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100"
-                            : "bg-white text-gray-500 hover:text-gray-800 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                          }`}
-                        title={
-                          s.isManualOverride
-                            ? `Manual Override active: ${s.manualReadyOverride ? "Force Ready" : "Block Execution"}. Click to change.`
-                            : "Shipment Readiness Control (Manual Override)"
-                        }
-                      >
-                        <ShieldCheck className={`h-3.5 w-3.5 ${s.isManualOverride ? (s.manualReadyOverride ? "text-emerald-600" : "text-rose-600") : "text-gray-400"}`} />
-                        {s.isManualOverride && (
-                          <span className="text-[10px] font-bold">
-                            {s.manualReadyOverride ? "Override" : "Blocked"}
-                          </span>
-                        )}
-                      </button>
-
                       {/* Execute Button */}
                       {isExecuted ? (
                         <button

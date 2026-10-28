@@ -1,5 +1,6 @@
 import React from "react";
 import { MessageCircle, Trash2, FileSignature, Edit2, Eye, Truck, MapPin } from "lucide-react";
+import PriceHistoryTooltip from "./PriceHistoryTooltip";
 
 export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelete, onExecute, onEdit, onView, onOpenTransport, onOpenLoadingPoints, onSortBusinessReference, isOrderMode }) {
   if (loading) {
@@ -144,12 +145,20 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                 </td>
                 <td className="px-3 py-3 text-gray-800 font-semibold tabular-nums whitespace-nowrap">
                   {e.buyingInterest != null && e.buyingInterest !== ""
-                    ? Math.round(Number(e.buyingInterest)).toLocaleString("en-US") + " " + (e.bidCurrency || "USD")
+                    ? (
+                        <PriceHistoryTooltip enquiryId={e.id} type="BID" currency={e.bidCurrency}>
+                          {Math.round(Number(e.buyingInterest)).toLocaleString("en-US") + " " + (e.bidCurrency || "USD")}
+                        </PriceHistoryTooltip>
+                      )
                     : "—"}
                 </td>
                 <td className="px-3 py-3 text-gray-800 font-semibold tabular-nums whitespace-nowrap">
                   {e.offerAmount != null && e.offerAmount !== ""
-                    ? Math.round(Number(e.offerAmount)).toLocaleString("en-US") + " " + (e.bidCurrency || "USD")
+                    ? (
+                        <PriceHistoryTooltip enquiryId={e.id} type="OFFER" currency={e.bidCurrency}>
+                          {Math.round(Number(e.offerAmount)).toLocaleString("en-US") + " " + (e.bidCurrency || "USD")}
+                        </PriceHistoryTooltip>
+                      )
                     : "—"}
                 </td>
                 <td className="px-3 py-3 text-gray-700 font-medium whitespace-nowrap max-w-[110px] truncate" title={e.createdByName || e.creator?.name || ""}>

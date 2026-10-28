@@ -14,6 +14,12 @@ export const enquiriesApi = {
     axiosClient.get(`/enquiries/${id}/destinations`).then((res) => res.data?.data ?? res.data ?? []),
   updateDestinations: (id, destinations) =>
     axiosClient.put(`/enquiries/${id}/destinations`, { destinations }),
+  getActivity: (id, params) =>
+    axiosClient.get(`/enquiries/${id}/activity`, { params }).then((res) => res.data?.data ?? res.data ?? []),
+  createActivity: (id, data) =>
+    axiosClient.post(`/enquiries/${id}/activity`, data).then((res) => res.data?.data ?? res.data),
+  getPriceHistory: (id) =>
+    axiosClient.get(`/enquiries/${id}/price-history`).then((res) => res.data?.data ?? res.data),
 };
 
 
