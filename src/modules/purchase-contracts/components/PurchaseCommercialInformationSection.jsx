@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 import React, { useRef, useState, useEffect } from "react";
 import { DollarSign, ChevronDown, CreditCard, CalendarDays } from "lucide-react";
 import { mastersApi } from "@/modules/sales-contracts/services/salesContractApi";
 import CountrySelect from "@/components/common/CountrySelect";
 import { getShipmentTypeShortForm } from "@/modules/sales-contracts/utils/formatUtils";
+import { formatPurchaseDate } from "../utils/purchaseDate";
 
 export default function PurchaseCommercialInformationSection({
   contract,
@@ -612,7 +613,6 @@ export default function PurchaseCommercialInformationSection({
                   />
                 )}
               </div>
-
               {/* Payment Due Date */}
               <div>
                 <label className={lbl} htmlFor="pc-paymentDueDate">
@@ -620,23 +620,15 @@ export default function PurchaseCommercialInformationSection({
                   <span className="ml-1 text-[10px] font-normal text-gray-500">(Tentative)</span>
                 </label>
                 {isView ? (
-                  <div className="text-sm font-semibold text-gray-900 py-1.5">{form.paymentDueDate || "—"}</div>
+                  <div className="text-sm font-semibold text-gray-900 py-1.5">{formatPurchaseDate(form.paymentDueDate) || form.paymentDueDate || "-"}</div>
                 ) : (
-                  <div className="relative">
-                    <input
-                      id="pc-paymentDueDate"
-                      ref={paymentDueDateRef}
-                      type="date"
-                      value={form.paymentDueDate || ""}
-                      onChange={(e) => setForm((f) => ({ ...f, paymentDueDate: e.target.value }))}
-                      onClick={() => paymentDueDateRef.current?.showPicker?.()}
-                      className={`${inp} pr-9 cursor-pointer`}
-                    />
-                    <CalendarDays
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 cursor-pointer hover:text-blue-500 transition-colors"
-                      onClick={() => paymentDueDateRef.current?.showPicker?.()}
-                    />
-                  </div>
+                  <input
+                    id="pc-paymentDueDate"
+                    type="date"
+                    value={form.paymentDueDate || ""}
+                    readOnly
+                    className={`${inp} !bg-gray-100 text-gray-500 cursor-not-allowed`}
+                  />
                 )}
               </div>
 

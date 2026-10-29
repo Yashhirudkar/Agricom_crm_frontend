@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { MessageCircle, Trash2, FileSignature, Edit2, Eye, Truck, MapPin } from "lucide-react";
 import PriceHistoryTooltip from "./PriceHistoryTooltip";
 
@@ -87,7 +87,7 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Enquiry No.", "Date", "Partner", "Product", "Destination", "Qty (MT)", "Shipment Date", isOrderMode ? "Price" : "Bid", "Offer", "Created By", "Potential", "Actions"].map((h, index) => {
+            {["Enquiry No.", "Date", "Partner", "Product", "Destination", "Qty (MT)", "Shipment Date", isOrderMode ? "Price" : "Bid", "Offer", "Created By", "Actions"].map((h, index) => {
               let stickyClass = "";
               if (index === 0) {
                 stickyClass = "sticky left-0 z-30 bg-[#f9fafb] w-[120px] min-w-[120px] max-w-[120px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none";
@@ -164,10 +164,6 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                 <td className="px-3 py-3 text-gray-700 font-medium whitespace-nowrap max-w-[110px] truncate" title={e.createdByName || e.creator?.name || ""}>
                   {formatShortCreatorName(e.createdByName || e.creator?.name)}
                 </td>
-                <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
-                  {e.potentialEnquiry ? "Yes" : "No"}
-                </td>
-
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-1">
                     <button

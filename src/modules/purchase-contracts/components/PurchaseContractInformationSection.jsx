@@ -1,7 +1,7 @@
 "use client";
 import React, { useRef, useState } from "react";
 import { FileText, ChevronDown, Plus, Minus, CalendarDays } from "lucide-react";
-import { formatPurchaseDate, parsePurchaseDate } from "../utils/purchaseDate";
+import { formatPurchaseDate, parsePurchaseDate, calculatePaymentDueDate } from "../utils/purchaseDate";
 
 export default function PurchaseContractInformationSection({
   contract,
@@ -65,12 +65,20 @@ export default function PurchaseContractInformationSection({
           <div>
             <label className={lbl}>Contract Date</label>
             {isView ? (
-              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.contractDate || new Date().toISOString().split("T")[0] || "\u00A0"}</div>
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{formatPurchaseDate(form.contractDate) || form.contractDate || "\u00A0"}</div>
             ) : (
               <input
                 type="date"
-                value={form.contractDate || new Date().toISOString().split("T")[0]}
-                onChange={(e) => setForm((f) => ({ ...f, contractDate: e.target.value }))}
+                value={form.contractDate || ""}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  const newDueDate = calculatePaymentDueDate(newDate);
+                  setForm((f) => ({
+                    ...f,
+                    contractDate: newDate,
+                    paymentDueDate: newDueDate,
+                  }));
+                }}
                 className={`${inp} font-medium`}
               />
             )}
@@ -194,6 +202,10 @@ export default function PurchaseContractInformationSection({
                       ...f,
                       purchaseDateInput: value,
                       purchaseDate: value === "" ? "" : (parsedDate || f.purchaseDate),
+                      ...(parsedDate && !f.contractDate ? {
+                        contractDate: parsedDate,
+                        paymentDueDate: calculatePaymentDueDate(parsedDate),
+                      } : {}),
                     }));
                   }}
                   onBlur={() => {
@@ -231,6 +243,10 @@ export default function PurchaseContractInformationSection({
                     ...f,
                     purchaseDate: e.target.value,
                     purchaseDateInput: formatPurchaseDate(e.target.value),
+                    ...(e.target.value && !f.contractDate ? {
+                      contractDate: e.target.value,
+                      paymentDueDate: calculatePaymentDueDate(e.target.value),
+                    } : {}),
                   }))}
                   className="sr-only"
                   tabIndex={-1}

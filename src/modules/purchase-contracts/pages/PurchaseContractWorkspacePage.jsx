@@ -15,7 +15,7 @@ import {
 } from "../hooks/usePurchaseContracts";
 import { useSalesMasters } from "@/modules/sales-contracts/hooks/useSalesContracts";
 import { purchaseContractApi } from "../services/purchaseContractApi";
-import { formatPurchaseDate, parsePurchaseDate } from "../utils/purchaseDate";
+import { formatPurchaseDate, parsePurchaseDate, calculatePaymentDueDate } from "../utils/purchaseDate";
 
 import PurchaseContractInformationSection from "../components/PurchaseContractInformationSection";
 import PurchaseCommercialInformationSection from "../components/PurchaseCommercialInformationSection";
@@ -65,9 +65,10 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
   const isManual = isNew || contract?.purchaseType === "MTT" || !contract?.salesContractId;
 
   // Form State
+  const initialContractDate = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState({
     purchaseType: isNew ? "MTT" : "SC",
-    contractDate: new Date().toISOString().split("T")[0],
+    contractDate: initialContractDate,
     purchaseDate: "",
     purchaseDateInput: "",
     contractNumber: "",
@@ -103,7 +104,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     advancePercent: "",
     balancePercent: "",
     penaltyPercent: "",
-    paymentDueDate: "",
+    paymentDueDate: isNew ? calculatePaymentDueDate(initialContractDate) : "",
     brokerId: null,
     brokerName: "",
     brokerPartnerRoleId: null,
@@ -163,9 +164,17 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         }
       }
 
+      const rawContractDate = contract.contractDate
+        || salesContract.contractDate
+        || contract.purchaseDate
+        || "";
+      const loadedContractDate = rawContractDate ? rawContractDate.split("T")[0] : "";
+
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm((f) => ({
         ...f,
         purchaseType: contract.purchaseType || "SC",
+        contractDate: loadedContractDate || f.contractDate || new Date().toISOString().split("T")[0],
         purchaseDate: contract.purchaseDate ? contract.purchaseDate.split("T")[0] : "",
         purchaseDateInput: formatPurchaseDate(contract.purchaseDate),
         contractNumber: contract.contractNumber || "",
@@ -211,7 +220,9 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         advancePercent: contract.advancePercent ?? f.advancePercent ?? "",
         balancePercent: contract.advancePercent != null ? Math.max(0, 100 - Number(contract.advancePercent)) : (f.balancePercent ?? ""),
         penaltyPercent: contract.penaltyPercent ?? f.penaltyPercent ?? "",
-        paymentDueDate: contract.paymentDueDate ? contract.paymentDueDate.split("T")[0] : (f.paymentDueDate || ""),
+        paymentDueDate: contract.paymentDueDate
+          ? contract.paymentDueDate.split("T")[0]
+          : (loadedContractDate ? calculatePaymentDueDate(loadedContractDate) : (f.paymentDueDate || "")),
         unloadingDate: contract.unloadingDate ? contract.unloadingDate.split("T")[0] : (f.unloadingDate || ""),
         terms: (contract.terms && contract.terms.length > 0) ? contract.terms : (salesContract.terms || []),
         items: itemsList.map((it) => ({
@@ -362,7 +373,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         buyerId: form.buyerId || null,
         sellerId: form.sellerId || null,
         sellerContractNo: form.sellerContractNo || null,
-        purchaseDate: form.purchaseDate || null,
+        contractDate: form.contractDate || null,
+        purchaseDate: form.purchaseDate || form.contractDate || null,
         specificationNo: form.specificationNo || null,
         specificationDate: form.specificationDate || null,
         paymentTermId: form.paymentTermId || null,
