@@ -1,11 +1,9 @@
 import React, { useState, useMemo, useCallback, useRef } from "react";
-import { Pin, Ban } from "lucide-react";
-import Avatar from "./Avatar";
+import { Ban } from "lucide-react";
 import MessageStatus from "./MessageStatus";
 import MessageActionsMenu from "./MessageActionsMenu";
 import ReactionBadges from "./ReactionBadges";
 import MessageRenderer from "./MessageRenderer";
-import UserProfileModal from "../Common/UserProfileModal";
 import { toast } from "sonner";
 
 function formatTime(dateStr) {
@@ -13,40 +11,9 @@ function formatTime(dateStr) {
   return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-// Outgoing SVG tail (bottom-right) — matches the gradient bubble via currentColor + gradient defs
-const OutgoingTail = () => (
-  <svg
-    className="absolute bottom-0 -right-[5.5px] h-[10px] w-[8px] z-10 pointer-events-none"
-    viewBox="0 0 8 10"
-    fill="url(#outgoingTailGradient)"
-  >
-    <defs>
-      <linearGradient id="outgoingTailGradient" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#4F92F6" />
-        <stop offset="100%" stopColor="#3B6FE0" />
-      </linearGradient>
-    </defs>
-    <path d="M0,10 C4,10 8,8 8,0 L8,10 Z" />
-  </svg>
-);
-
-// Incoming SVG tail (bottom-left)
-const IncomingTail = () => (
-  <svg
-    className="absolute bottom-0 -left-[5.5px] text-white h-[10px] w-[8px] z-10 pointer-events-none drop-shadow-[0_1px_0.5px_rgba(0,0,0,0.02)]"
-    viewBox="0 0 8 10"
-    fill="currentColor"
-  >
-    <path d="M8,10 C4,10 0,8 0,0 L0,10 Z" />
-  </svg>
-);
-
 const MessageBubble = React.memo(({
   msg,
   isOutgoing,
-  showAvatar,
-  showSenderName,
-  bubblePosition,
   onReact,
   onPin,
   onUnpin,
@@ -56,32 +23,11 @@ const MessageBubble = React.memo(({
   onEdit,
   onDelete,
   onReply,
-  dispatch,
   conversation,
-  currentUser,
-  presence
+  currentUser
 }) => {
   const [hovered, setHovered] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const touchTimer = useRef(null);
-
-  const isPinned = !!msg.pinnedAt;
-  const isEdited = !!msg.editedAt;
-
-  // WhatsApp/Telegram style grouping corners: tail bottom-right or bottom-left on last/single stack item
-  const getBubbleCorners = useCallback(() => {
-    const isLastOrSingle = bubblePosition === "end" || bubblePosition === "single";
-    const isFirstOrSingle = bubblePosition === "start" || bubblePosition === "single";
-    if (isOutgoing) {
-      if (isLastOrSingle) return "rounded-[14px] rounded-br-[4px]";
-      if (isFirstOrSingle) return "rounded-[14px] rounded-tr-[4px]";
-      return "rounded-[14px] rounded-r-[4px]";
-    } else {
-      if (isLastOrSingle) return "rounded-[14px] rounded-bl-[4px]";
-      if (isFirstOrSingle) return "rounded-[14px] rounded-tl-[4px]";
-      return "rounded-[14px] rounded-l-[4px]";
-    }
-  }, [isOutgoing, bubblePosition]);
 
   // Real-time O(1) Read Receipts validation logic
   const otherMember = useMemo(() => {
@@ -141,8 +87,6 @@ const MessageBubble = React.memo(({
     if (onViewEditHistory) onViewEditHistory(msg.id);
   }, [msg.id, onViewEditHistory]);
 
-  const isLastOrSingle = bubblePosition === "end" || bubblePosition === "single";
-
   return (
     <div
       className={`flex items-start gap-2 group ${isOutgoing ? "flex-row-reverse" : "flex-row"} relative`}
@@ -152,15 +96,8 @@ const MessageBubble = React.memo(({
       onTouchEnd={handleTouchEnd}
       onTouchMove={handleTouchEnd}
     >
-      {/* Avatar block — aligned to first message only */}
-      <div className="w-8 flex-shrink-0 self-start mt-0.5 select-none">
-        {showAvatar && !isOutgoing && (
-          <Avatar sender={msg.sender} presence={presence} size="sm" />
-        )}
-      </div>
-
       {/* Bubble Content column */}
-      <div className={`flex flex-col max-w-[72%] w-fit ${isOutgoing ? "items-end" : "items-start"}`}>
+      <div className={`flex flex-col max-w-[65%] w-fit ${isOutgoing ? "items-end" : "items-start"}`}>
         <div className="relative">
           {hovered && !msg.isDeleted && (
             <MessageActionsMenu
@@ -182,63 +119,12 @@ const MessageBubble = React.memo(({
           {/* SVG tails removed as requested to avoid side-tail clipping/overflow artifacts */}
 
           <div
-            className={`relative px-3 pt-1.5 pb-4 min-w-[75px] ${getBubbleCorners()} transition-all duration-150 text-left
+            className={`relative px-[14px] py-[10px] min-w-[75px] rounded-[18px] transition-all duration-200 ease-in-out hover:-translate-y-px text-left
               ${isOutgoing
-                ? "text-white shadow-[0_1px_2px_rgba(59,111,224,0.25)]"
-                : "bg-white text-slate-800 border border-slate-200/70 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                ? "bg-[#DCF8C6] text-[#111827] shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                : "bg-[#FFFFFF] text-[#1F2937] shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
               } ${msg.isOptimistic && msg.status !== "FAILED" ? "opacity-60" : ""}`}
-            style={
-              isOutgoing
-                ? { background: "linear-gradient(135deg, #4F92F6 0%, #3B6FE0 100%)" }
-                : undefined
-            }
           >
-            {showSenderName && !isOutgoing && conversation?.type !== "DIRECT" && (
-              <>
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowProfileModal(true);
-                  }}
-                  className="text-[10px] font-bold text-blue-600 block mb-0.5 select-none leading-none tracking-tight cursor-pointer hover:underline"
-                >
-                  {msg.sender?.name || "Unknown"}
-                </span>
-                {showProfileModal && (
-                  <UserProfileModal
-                    user={msg.sender ? { ...msg.sender, presence } : null}
-                    isOpen={showProfileModal}
-                    onClose={() => setShowProfileModal(false)}
-                  />
-                )}
-              </>
-            )}
-
-            {/* Telegram style Reply Preview */}
-            {msg.parentMessage && !msg.isDeleted && (
-              <div
-                className={`mb-1 px-2 py-0.5 rounded-sm border-l-[3px] text-left overflow-hidden select-none
-                  ${isOutgoing
-                    ? "bg-white/10 border-white/60"
-                    : "bg-slate-50 border-blue-500"
-                  }`}
-              >
-                <span className={`text-[9.5px] font-bold block leading-none mb-0.5 ${isOutgoing ? "text-white/80" : "text-blue-600"}`}>
-                  {msg.parentMessage.sender?.name || "Unknown"}
-                </span>
-                <span className={`block truncate text-[11px] leading-tight ${isOutgoing ? "text-white/70" : "text-slate-500"}`}>
-                  {msg.parentMessage.content}
-                </span>
-              </div>
-            )}
-
-            {isPinned && !msg.isDeleted && (
-              <div className="flex items-center gap-1 mb-0.5 opacity-70">
-                <Pin className={`h-2.5 w-2.5 ${isOutgoing ? "text-blue-100" : "text-amber-600"}`} />
-                <span className={`text-[8px] font-bold uppercase tracking-wider ${isOutgoing ? "text-blue-100" : "text-amber-600"}`}>Pinned</span>
-              </div>
-            )}
-
             {/* Message Content Body */}
             <div className="text-[13.5px] leading-[1.5] break-words pr-4 text-slate-850 select-text">
               {msg.isDeleted ? (
@@ -259,14 +145,7 @@ const MessageBubble = React.memo(({
 
             {/* Absolute Telegram-style inline bottom-right timestamp */}
             <div className="absolute bottom-0.5 right-1.5 flex items-center gap-1 select-none">
-              {isEdited && (
-                <span className={`text-[8.5px] italic leading-none ${isOutgoing ? "text-white/60" : "text-slate-400/60"
-                  }`}>
-                  edited
-                </span>
-              )}
-              <span className={`text-[9px] leading-none ${isOutgoing ? "text-white/80" : "text-slate-400"
-                }`}>
+              <span className="text-[11px] leading-none text-[#9CA3AF]">
                 {formatTime(msg.createdAt)}
               </span>
               <MessageStatus

@@ -731,9 +731,9 @@ export default function MessageTimeline({
         /* Subtle dot-grid texture on the timeline background,
            purely decorative and GPU-cheap (single repeating radial-gradient). */
         .chat-bg-texture {
-          background-color: #F4F6FA;
+          background-color: #F7F8FA;
           background-image:
-            radial-gradient(circle at 1px 1px, rgba(100, 116, 139, 0.07) 1px, transparent 0);
+            radial-gradient(circle at 1px 1px, rgba(100, 116, 139, 0.045) 1px, transparent 0);
           background-size: 22px 22px;
         }
 

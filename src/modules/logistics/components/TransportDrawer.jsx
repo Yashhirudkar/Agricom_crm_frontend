@@ -71,7 +71,7 @@ const DEFAULT_DOC_CATEGORIES = [
   "Other",
 ];
 
-export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly = false }) {
+export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly = false, targetShipmentId = null }) {
   const company = useSelector(selectActiveCompany);
   const companyCountry = company?.country;
 
@@ -83,6 +83,79 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
   // Quote modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
+  const [targetShipmentForQuote, setTargetShipmentForQuote] = useState(null);
+  const [executingShipmentId, setExecutingShipmentId] = useState(null);
+  const [collapsedShipments, setCollapsedShipments] = useState(new Set());
+
+  const toggleShipmentCollapse = (shipmentId) => {
+    setCollapsedShipments((prev) => {
+      const next = new Set(prev);
+      if (next.has(shipmentId)) next.delete(shipmentId);
+      else next.add(shipmentId);
+      return next;
+    });
+  };
+
+  const effectiveTargetShipmentId = useMemo(() => {
+    if (targetShipmentId) return String(targetShipmentId);
+    if (enquiry?.targetShipmentId) return String(enquiry.targetShipmentId);
+    if (typeof window !== "undefined") {
+      const param = new URLSearchParams(window.location.search).get("shipmentId");
+      if (param) return String(param);
+    }
+    return null;
+  }, [targetShipmentId, enquiry]);
+
+  useEffect(() => {
+    if (effectiveTargetShipmentId && details?.shipments?.length > 0) {
+      setCollapsedShipments((prev) => {
+        const next = new Set(prev);
+        next.delete(Number(effectiveTargetShipmentId));
+        next.delete(String(effectiveTargetShipmentId));
+        return next;
+      });
+      setTimeout(() => {
+        const el = document.getElementById(`shipment-card-${effectiveTargetShipmentId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 250);
+    }
+  }, [effectiveTargetShipmentId, details?.shipments]);
+
+  const handleOpenAddQuoteForShipment = (shipment) => {
+    setSelectedQuote(null);
+    setTargetShipmentForQuote(shipment);
+    if (availableRoutes.length > 0) {
+      const matched = availableRoutes.find(
+        (r) =>
+          r.origin?.toLowerCase() === shipment.origin?.toLowerCase() &&
+          r.destination?.toLowerCase() === shipment.destination?.toLowerCase()
+      );
+      setSelectedRoute(matched || availableRoutes[0]);
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditQuoteForShipment = (quote, shipment) => {
+    setSelectedQuote(quote);
+    setTargetShipmentForQuote(shipment);
+    setIsModalOpen(true);
+  };
+
+  const handleExecuteShipment = async (shipmentId, shipmentRef) => {
+    if (isReadOnly) return;
+    setExecutingShipmentId(shipmentId);
+    try {
+      await logisticsApi.executeShipment(shipmentId);
+      toast.success(`Shipment ${shipmentRef || ""} executed successfully!`);
+      loadDetails();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to execute shipment.");
+    } finally {
+      setExecutingShipmentId(null);
+    }
+  };
 
   // Attachments & Custom Document Categories
   const [attachments, setAttachments] = useState([]);
@@ -841,18 +914,477 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
             </div>
 
             {/* ================================================================================= */}
-            {/* 4. FREIGHT MATRIX CONTENT */}
+            {/* 4. FREIGHT MATRIX CONTENT (SHIPMENT-WISE & ROUTE FALLBACK) */}
             {/* ================================================================================= */}
             <div className="flex-1 min-h-0 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
               <div className="p-4 flex-1 overflow-y-auto">
-                <div className="space-y-5">
+                {details?.shipments && details.shipments.length > 0 ? (
+                  /* ================= SHIPMENT-WISE FREIGHT MANAGEMENT ================= */
+                  <div className="space-y-6">
+                    {/* Contract Group Banner */}
+                    <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-4 text-white shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
+                          <Layers className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs uppercase font-extrabold tracking-wider text-slate-300">
+                              Purchase Contract Group:
+                            </span>
+                            <span className="font-mono text-sm font-black text-white bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-700">
+                              {details?.purchaseContract?.contractNumber || enquiry?.purchaseContract?.contractNumber || "Contract"}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/30 text-blue-300 border border-blue-400/30">
+                              {details.shipments.length} {details.shipments.length === 1 ? "Shipment" : "Shipments"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            Each shipment maintains its own independent freight quotes, preferred carrier, transit parameters, and execution gate.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-semibold text-slate-300 bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-700/60">
+                          Total Commodity: <strong>{Number(enquiry?.quantity || details?.purchaseContract?.quantity || 0).toLocaleString()} MT</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Shipments List */}
+                    <div className="space-y-5">
+                      {details.shipments.map((s, sIdx) => {
+                        const isTargeted = String(s.id) === String(effectiveTargetShipmentId);
+                        const isCollapsed = collapsedShipments.has(s.id) && !isTargeted;
+                        const sQuotes = s.quotes || [];
+                        const prefQuote = s.preferredQuote || sQuotes.find(q => q.isPreferred);
+
+                        return (
+                          <div
+                            key={s.id}
+                            id={`shipment-card-${s.id}`}
+                            className={`rounded-2xl border transition-all duration-300 overflow-hidden bg-white ${
+                              isTargeted
+                                ? "border-blue-500 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/10"
+                                : "border-slate-200/90 shadow-2xs hover:border-slate-300"
+                            }`}
+                          >
+                            {/* Shipment Header Bar */}
+                            <div className={`p-4 transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
+                              isTargeted
+                                ? "bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-white border-b border-blue-200"
+                                : isCollapsed
+                                ? "hover:bg-slate-50/80 bg-white"
+                                : "bg-slate-50/60 border-b border-slate-100"
+                            }`}>
+                              {/* Left: Collapsible Toggle, Ref, Route, Qty */}
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleShipmentCollapse(s.id)}
+                                  className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors cursor-pointer shrink-0"
+                                  title={isCollapsed ? "Expand Shipment Details" : "Collapse Shipment Details"}
+                                >
+                                  {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                                </button>
+
+                                <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-black uppercase text-slate-400">
+                                      #{s.shipmentNo || sIdx + 1}
+                                    </span>
+                                    <span className="px-2.5 py-1 rounded-lg text-xs font-black font-mono tracking-wider bg-blue-600 text-white shadow-2xs">
+                                      {s.shipmentReference || `REF-${String(s.id).padStart(5, "0")}`}
+                                    </span>
+                                  </div>
+
+                                  {isTargeted && (
+                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-600 text-white shadow-xs animate-pulse">
+                                      Targeted Shipment
+                                    </span>
+                                  )}
+
+                                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 shadow-2xs text-xs font-bold text-slate-800">
+                                    <MapPin className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                                    <span className="text-slate-900">{s.origin || "—"}</span>
+                                    <ArrowRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                    <span className="text-slate-900">{s.destination || "—"}</span>
+                                  </div>
+
+                                  <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-blue-50 text-blue-700 border border-blue-200/80">
+                                    {s.quantity ? `${Number(s.quantity).toLocaleString()} MT` : "— MT"}
+                                  </span>
+
+                                  {s.noOfContainers > 0 && (
+                                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                      {s.noOfContainers} {s.noOfContainers === 1 ? "Container" : "Containers"}
+                                    </span>
+                                  )}
+
+                                  {s.shipmentDate && (
+                                    <span className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                                      {new Date(s.shipmentDate).toLocaleDateString("en-IN", {
+                                        day: "2-digit",
+                                        month: "short",
+                                        year: "numeric",
+                                      })}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Right: Gate Badges & Action Buttons */}
+                              <div className="flex items-center gap-2.5 flex-wrap justify-end shrink-0">
+                                {/* Cargo Gate */}
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-black border flex items-center gap-1.5 ${
+                                  s.cargoReady
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-amber-50 text-amber-700 border-amber-200"
+                                }`}>
+                                  {s.cargoReady ? <CheckCircle className="h-3.5 w-3.5 text-emerald-600" /> : <Clock className="h-3.5 w-3.5 text-amber-600" />}
+                                  <span>Cargo: {s.cargoReady ? "Ready" : "Pending"}</span>
+                                </span>
+
+                                {/* Freight Gate */}
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-black border flex items-center gap-1.5 ${
+                                  s.freightReady || Boolean(prefQuote)
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-rose-50 text-rose-700 border-rose-200"
+                                }`}>
+                                  {s.freightReady || Boolean(prefQuote) ? (
+                                    <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                                  ) : (
+                                    <Clock className="h-3.5 w-3.5 text-rose-500" />
+                                  )}
+                                  <span>Freight: {s.freightReady || Boolean(prefQuote) ? "Allocated" : "Pending"}</span>
+                                </span>
+
+                                {/* Status */}
+                                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                  {s.status || "Pending"}
+                                </span>
+
+                                {!isReadOnly && (
+                                  <>
+                                    {/* + Add Quote for THIS Shipment */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenAddQuoteForShipment(s)}
+                                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl flex items-center gap-1.5 text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
+                                    >
+                                      <Plus className="h-3.5 w-3.5" />
+                                      Add Freight Quote
+                                    </button>
+
+                                    {/* Independent Execute button */}
+                                    {s.status === "Executed" ? (
+                                      <span className="px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl font-bold flex items-center gap-1.5 text-xs select-none">
+                                        <CheckCircle className="h-3.5 w-3.5 text-emerald-600" /> Executed
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        disabled={!s.readyForShipment || executingShipmentId === s.id}
+                                        onClick={() => handleExecuteShipment(s.id, s.shipmentReference)}
+                                        title={
+                                          s.readyForShipment
+                                            ? "Click to execute this shipment independently"
+                                            : s.readinessReason || "Both Cargo and Freight allocations are required before execution"
+                                        }
+                                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl flex items-center gap-1.5 text-xs shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95"
+                                      >
+                                        {executingShipmentId === s.id ? (
+                                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        ) : (
+                                          <FileCheck className="h-3.5 w-3.5" />
+                                        )}
+                                        Execute Shipment
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Shipment Body Content */}
+                            {!isCollapsed && (
+                              <div className="p-4 bg-slate-50/40 space-y-4">
+                                {/* Preferred Quote Highlight Ribbon */}
+                                {prefQuote && (
+                                  <div className="bg-gradient-to-r from-purple-50 via-indigo-50/60 to-purple-50/40 border border-purple-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                                    <div className="flex items-center gap-3">
+                                      <div className="h-8 w-8 rounded-lg bg-purple-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                                        <Star className="h-4 w-4 fill-white" />
+                                      </div>
+                                      <div>
+                                        <div className="text-xs font-extrabold text-purple-950 flex items-center gap-2">
+                                          <span>Preferred Carrier:</span>
+                                          <span className="font-black text-purple-700 bg-white px-2 py-0.5 rounded border border-purple-200">
+                                            {prefQuote.seller?.entityName || prefQuote.carrier || "Transport Partner"}
+                                          </span>
+                                        </div>
+                                        <div className="text-[11px] text-purple-700 font-medium flex items-center gap-2 mt-1">
+                                          <span className="flex items-center gap-1">
+                                            <Clock className="h-3 w-3" /> {prefQuote.transitDays} Transit Days
+                                          </span>
+                                          <span>•</span>
+                                          <span>Quote #{prefQuote.quoteNumber || "Q-1"}</span>
+                                          {prefQuote.validityDate && (
+                                            <>
+                                              <span>•</span>
+                                              <span>
+                                                Valid till{" "}
+                                                {new Date(prefQuote.validityDate).toLocaleDateString("en-IN", {
+                                                  day: "2-digit",
+                                                  month: "short",
+                                                  year: "numeric",
+                                                })}
+                                              </span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 self-end sm:self-auto">
+                                      <div className="text-right">
+                                        <div className="text-[10px] font-bold uppercase tracking-wider text-purple-600">
+                                          Locked Freight Rate
+                                        </div>
+                                        <div className="text-sm font-black text-purple-950 font-mono">
+                                          {prefQuote.currency || "INR"}{" "}
+                                          {Number(prefQuote.freightAmount || 0).toLocaleString("en-US", {
+                                            minimumFractionDigits: 2,
+                                          })}
+                                        </div>
+                                      </div>
+                                      <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase bg-purple-600 text-white shadow-2xs">
+                                        Locked
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Quotes Table for this Shipment */}
+                                {sQuotes.length > 0 ? (
+                                  <div className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-2xs">
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-left text-xs text-slate-700 border-collapse">
+                                        <thead className="bg-slate-50/90 border-b border-slate-200 text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
+                                          <tr>
+                                            <th className="px-3 py-2.5">Transport Partner</th>
+                                            <th className="px-3 py-2.5">Contact Person</th>
+                                            <th className="px-3 py-2.5 text-center">Transit</th>
+                                            <th className="px-3 py-2.5">Validity</th>
+                                            <th className="px-3 py-2.5 text-right">Freight Rate</th>
+                                            <th className="px-3 py-2.5 text-center">Preferred Status</th>
+                                            <th className="px-3 py-2.5 text-right">Actions</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 font-medium">
+                                          {sQuotes.map((q) => {
+                                            const totalCost =
+                                              Number(q.freightAmount || 0) +
+                                              Number(q.fuelCharges || 0) +
+                                              Number(q.additionalCharges || 0);
+                                            const isPreferred = q.isPreferred || (prefQuote && prefQuote.id === q.id);
+                                            const isExpiring = expiringSoonIds.includes(q.id);
+                                            const initials = getPartnerInitials(q.seller?.entityName);
+
+                                            return (
+                                              <tr
+                                                key={q.id}
+                                                className={`transition-colors hover:bg-slate-50/80 ${
+                                                  isPreferred ? "bg-purple-50/40 font-semibold" : ""
+                                                }`}
+                                              >
+                                                {/* Transport Partner */}
+                                                <td className="px-3 py-2">
+                                                  <div className="flex items-center gap-3">
+                                                    <div className="h-7 w-7 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 shadow-xs">
+                                                      {initials}
+                                                    </div>
+                                                    <div>
+                                                      <div className="font-extrabold text-slate-900 flex items-center gap-1.5 text-xs">
+                                                        <span>{q.seller?.entityName || "Logistics Seller"}</span>
+                                                        {isPreferred && (
+                                                          <span className="px-1.5 py-0.2 rounded bg-purple-600 text-white text-[9px] font-extrabold flex items-center gap-0.5">
+                                                            <Star className="h-2 w-2 fill-white" /> Preferred
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                      <div className="text-[9px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5">
+                                                        <span className="font-mono text-slate-700">{q.quoteNumber}</span>
+                                                        <span>•</span>
+                                                        <span>v{q.version}</span>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                </td>
+
+                                                {/* Contact Person */}
+                                                <td className="px-3 py-2">
+                                                  <div>
+                                                    <div className="font-bold text-slate-800 text-[11px]">
+                                                      {q.contactPerson || "N/A"}
+                                                    </div>
+                                                    <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                                                      {q.contactNumber ? `📞 ${q.contactNumber}` : "N/A"}
+                                                    </div>
+                                                  </div>
+                                                </td>
+
+                                                {/* Transit */}
+                                                <td className="px-3 py-2 text-center">
+                                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 font-extrabold text-[10px]">
+                                                    <Clock className="h-3 w-3 text-blue-600" /> {q.transitDays} Days
+                                                  </span>
+                                                </td>
+
+                                                {/* Validity */}
+                                                <td className="px-3 py-2">
+                                                  <div className="font-bold text-slate-800 text-[11px]">
+                                                    {q.validityDate
+                                                      ? new Date(q.validityDate).toLocaleDateString("en-IN", {
+                                                          day: "2-digit",
+                                                          month: "short",
+                                                          year: "numeric",
+                                                        })
+                                                      : "N/A"}
+                                                  </div>
+                                                  {isExpiring && (
+                                                    <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded mt-0.5">
+                                                      <AlertTriangle className="h-2.5 w-2.5 text-amber-600" /> Expiring Soon
+                                                    </span>
+                                                  )}
+                                                </td>
+
+                                                {/* Freight Rate */}
+                                                <td className="px-3 py-2 text-right">
+                                                  <div className="flex flex-wrap items-center justify-end gap-2">
+                                                    {(!Array.isArray(q.containerRates) || q.containerRates.length === 0) &&
+                                                      (!Array.isArray(q.charges) || q.charges.length === 0) && (
+                                                        <div className="text-sm font-extrabold text-emerald-600 tabular-nums">
+                                                          {q.currency || "INR"}{" "}
+                                                          {totalCost.toLocaleString("en-US", {
+                                                            minimumFractionDigits: 2,
+                                                            maximumFractionDigits: 2,
+                                                          })}
+                                                        </div>
+                                                      )}
+                                                    {Array.isArray(q.containerRates) && q.containerRates.length > 0 &&
+                                                      q.containerRates.map((cr, idx) => (
+                                                        <div
+                                                          key={cr.id || idx}
+                                                          className="flex min-w-[130px] flex-col items-start rounded-lg border border-slate-200/80 bg-white p-2"
+                                                        >
+                                                          <span className="text-slate-500 font-bold text-[9px] uppercase tracking-wider">
+                                                            {cr.containerSize || "Container"} {cr.containerType || ""}
+                                                          </span>
+                                                          <span className="font-mono font-extrabold text-emerald-600 text-[11px] mt-0.5">
+                                                            {q.currency || "USD"}{" "}
+                                                            {Number(cr.freightAmount).toLocaleString("en-US", {
+                                                              minimumFractionDigits: 2,
+                                                            })}
+                                                          </span>
+                                                        </div>
+                                                      ))}
+                                                  </div>
+                                                </td>
+
+                                                {/* Preferred Selection */}
+                                                <td className="px-3 py-2 text-center">
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => !isReadOnly && handleSetPreferred(q.id)}
+                                                    disabled={isReadOnly}
+                                                    className={`px-2.5 py-1 rounded-lg font-extrabold text-[10px] transition-all inline-flex items-center gap-1.5 ${
+                                                      isPreferred
+                                                        ? "bg-purple-600 text-white shadow-xs"
+                                                        : isReadOnly
+                                                        ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+                                                        : "bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 cursor-pointer"
+                                                    }`}
+                                                  >
+                                                    <Star className={`h-2.5 w-2.5 ${isPreferred ? "fill-white" : ""}`} />
+                                                    {isPreferred ? "Selected" : "Select"}
+                                                  </button>
+                                                </td>
+
+                                                {/* Edit / Delete */}
+                                                <td className="px-3 py-2 text-right">
+                                                  <div className="flex items-center justify-end gap-1">
+                                                    {isReadOnly ? (
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => handleOpenEditQuoteForShipment(q, s)}
+                                                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                                        title="View Quote Details"
+                                                      >
+                                                        <Eye className="h-3.5 w-3.5" />
+                                                      </button>
+                                                    ) : (
+                                                      <>
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => handleOpenEditQuoteForShipment(q, s)}
+                                                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                                          title="Revise Quote"
+                                                        >
+                                                          <Edit2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button
+                                                          type="button"
+                                                          disabled={isPreferred}
+                                                          onClick={() => handleDeleteQuote(q.id)}
+                                                          className={`p-1.5 rounded-lg transition-colors ${
+                                                            isPreferred
+                                                              ? "text-slate-300 cursor-not-allowed"
+                                                              : "text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                                          }`}
+                                                          title={isPreferred ? "Cannot delete preferred quote" : "Delete"}
+                                                        >
+                                                          <Trash2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                      </>
+                                                    )}
+                                                  </div>
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="rounded-xl border border-dashed border-slate-200 bg-white p-6 py-8 text-center text-slate-400">
+                                    <Truck className="h-7 w-7 text-slate-300 mx-auto mb-2" />
+                                    <p className="text-xs font-bold text-slate-600">
+                                      No freight quotes recorded yet for {s.shipmentReference || `Shipment #${s.shipmentNo || sIdx + 1}`}.
+                                    </p>
+                                    <p className="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">
+                                      Click &quot;Add Freight Quote&quot; above to enter quotations from transport partners specifically for this shipment.
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  /* ================= FALLBACK: ROUTE-BASED CARDS FOR STANDALONE ENQUIRIES ================= */
+                  <div className="space-y-5">
                     {(() => {
                       const routesToRender = availableRoutes.filter(r => r.id !== 'all');
                       const routesArray = routesToRender.length > 0 ? routesToRender : [{ id: 'all', origin: '—', destination: '—' }];
                       
                       return routesArray.map((route, rIdx) => {
                         const routeQuotes = details?.logistics?.quotes?.filter(q => route.id === 'all' || q.routeId === route.id || (!q.routeId && routesArray.length === 1)) || [];
-                        const isExpiring = expiringSoonIds; // Required for table below
+                        const isExpiring = expiringSoonIds;
                         const isCollapsed = collapsedRoutes.has(route.id);
                         
                         return (
@@ -932,268 +1464,137 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                             {!isCollapsed && (
                               <div className="bg-slate-50/30 p-4">
                                 {routeQuotes.length > 0 ? (
-                                <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white">
-                                  <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400">
-                                    <table className="w-full text-left text-xs text-slate-700 border-collapse">
-                                      <thead className="bg-slate-50/80 border-b border-slate-200 text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
-                                        <tr>
-                                          <th className="px-3 py-2.5">Transport Partner</th>
-                                          <th className="px-3 py-2.5">Contact Person</th>
-                                          <th className="px-3 py-2.5 text-center">Transit</th>
-                                          <th className="px-3 py-2.5">Validity</th>
-                                          {(() => {
-                                              const tMode = (transportMode || "").toLowerCase();
-                                              if (tMode === "sea") {
-                                                return (
-                                                  <>
-                                                    <th className="px-3 py-2.5 text-right min-w-[140px]">20 FT Freight Amount</th>
-                                                    <th className="px-3 py-2.5 text-right min-w-[140px]">40 FT Freight Amount</th>
-                                                  </>
-                                                );
-                                              }
-                                              let title = "Vehicle Rates";
-                                              if (tMode === "air") title = "Air Rates";
-                                              if (tMode === "rail") title = "Rail Rates";
-                                              return <th className="px-3 py-2.5 text-right">{title}</th>;
-                                            })()}
-                                          <th className="px-3 py-2.5 text-center">Preferred</th>
-                                          <th className="px-3 py-2.5 text-right">Actions</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-slate-100 font-medium">
-                                        {routeQuotes.map((q) => {
-                                  const totalCost =
-                                    Number(q.freightAmount) +
-                                    Number(q.fuelCharges || 0) +
-                                    Number(q.additionalCharges || 0);
+                                  <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white">
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-left text-xs text-slate-700 border-collapse">
+                                        <thead className="bg-slate-50/80 border-b border-slate-200 text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">
+                                          <tr>
+                                            <th className="px-3 py-2.5">Transport Partner</th>
+                                            <th className="px-3 py-2.5">Contact Person</th>
+                                            <th className="px-3 py-2.5 text-center">Transit</th>
+                                            <th className="px-3 py-2.5">Validity</th>
+                                            <th className="px-3 py-2.5 text-right">Freight Amount</th>
+                                            <th className="px-3 py-2.5 text-center">Preferred</th>
+                                            <th className="px-3 py-2.5 text-right">Actions</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 font-medium">
+                                          {routeQuotes.map((q) => {
+                                            const totalCost =
+                                              Number(q.freightAmount || 0) +
+                                              Number(q.fuelCharges || 0) +
+                                              Number(q.additionalCharges || 0);
+                                            const isPreferred = q.isPreferred;
+                                            const isExpiring = expiringSoonIds.includes(q.id);
+                                            const initials = getPartnerInitials(q.seller?.entityName);
 
-                                  const isPreferred = q.isPreferred;
-                                  const isExpiring = expiringSoonIds.includes(q.id);
-
-                                  const initials = getPartnerInitials(q.seller?.entityName);
-
-                                  return (
-                                    <tr
-                                      key={q.id}
-                                      className={`transition-colors hover:bg-slate-50/80 ${isPreferred ? "bg-purple-50/30 font-semibold" : ""
-                                        }`}
-                                    >
-                                      <td className="px-3 py-2">
-                                        <div className="flex items-center gap-3">
-                                          <div className="h-7 w-7 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 shadow-xs">
-                                            {initials}
-                                          </div>
-                                          <div>
-                                            <div className="font-extrabold text-slate-900 flex items-center gap-1.5 text-xs">
-                                              <span>{q.seller?.entityName || "Logistics Seller"}</span>
-                                              {isPreferred && (
-                                                <span className="px-1.5 py-0.2 rounded bg-purple-600 text-white text-[9px] font-extrabold flex items-center gap-0.5">
-                                                  <Star className="h-2 w-2 fill-white" /> Preferred
-                                                </span>
-                                              )}
-                                            </div>
-                                            <div className="text-[9px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5">
-                                              <span className="font-mono text-slate-700">{q.quoteNumber}</span>
-                                              <span>•</span>
-                                              <span>v{q.version}</span>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </td>
-
-                                      <td className="px-3 py-2">
-                                        <div>
-                                          <div className="font-bold text-slate-800 text-[11px]">
-                                            {q.contactPerson || "N/A"}
-                                          </div>
-                                          <div className="text-[10px] font-mono text-slate-500 mt-0.5">
-                                            {q.contactNumber ? `📞 ${q.contactNumber}` : "N/A"}
-                                          </div>
-                                        </div>
-                                      </td>
-
-                                      <td className="px-3 py-2 text-center">
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 font-extrabold text-[10px]">
-                                          <Clock className="h-3 w-3 text-blue-600" /> {q.transitDays} Days
-                                        </span>
-                                      </td>
-
-                                      <td className="px-3 py-2">
-                                        <div className="font-bold text-slate-800 text-[11px]">
-                                          {q.validityDate
-                                            ? new Date(q.validityDate).toLocaleDateString("en-IN", {
-                                              day: "2-digit",
-                                              month: "short",
-                                              year: "numeric",
-                                            })
-                                            : "N/A"}
-                                        </div>
-                                        {isExpiring && (
-                                          <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded mt-0.5">
-                                            <AlertTriangle className="h-2.5 w-2.5 text-amber-600" /> Expiring Soon
-                                          </span>
-                                        )}
-                                      </td>
-
-                                      {(() => {
-                                        const tMode = (transportMode || "").toLowerCase();
-
-                                        if (tMode === "sea") {
-                                          const rates20 = Array.isArray(q.containerRates) ? q.containerRates.filter(cr => (cr.containerSize || "").includes("20")) : [];
-                                          const rates40 = Array.isArray(q.containerRates) ? q.containerRates.filter(cr => (cr.containerSize || "").includes("40")) : [];
-                                          
-                                          return (
-                                            <>
-                                              <td className="px-3 py-2 align-top text-right min-w-[140px]">
-                                                {rates20.length === 0 ? (
-                                                  <div className="text-slate-400 font-extrabold text-[10px] mt-2 mr-4">N/A</div>
-                                                ) : (
-                                                  <div className="flex flex-col gap-2 items-end">
-                                                    {rates20.map((cr, idx) => (
-                                                      <div key={cr.id || idx} className="flex flex-col items-start bg-white border border-slate-200/80 p-2 rounded-lg shadow-xs w-[130px]">
-                                                        <span className="text-slate-500 font-bold text-[9px] uppercase tracking-wider truncate w-full text-left">{cr.containerType || "Standard"}</span>
-                                                        <span className="font-mono font-extrabold text-emerald-600 text-[11px] mt-0.5">
-                                                          {q.currency} {Number(cr.freightAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                                                        </span>
-                                                      </div>
-                                                    ))}
-                                                  </div>
-                                                )}
-                                              </td>
-                                              <td className="px-3 py-2 align-top text-right min-w-[140px]">
-                                                {rates40.length === 0 ? (
-                                                  <div className="text-slate-400 font-extrabold text-[10px] mt-2 mr-4">N/A</div>
-                                                ) : (
-                                                  <div className="flex flex-col gap-2 items-end">
-                                                    {rates40.map((cr, idx) => (
-                                                      <div key={cr.id || idx} className="flex flex-col items-start bg-white border border-slate-200/80 p-2 rounded-lg shadow-xs w-[130px]">
-                                                        <span className="text-slate-500 font-bold text-[9px] uppercase tracking-wider truncate w-full text-left">{cr.containerType || "Standard"}</span>
-                                                        <span className="font-mono font-extrabold text-emerald-600 text-[11px] mt-0.5">
-                                                          {q.currency} {Number(cr.freightAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                                                        </span>
-                                                      </div>
-                                                    ))}
-                                                  </div>
-                                                )}
-                                              </td>
-                                            </>
-                                          );
-                                        }
-
-                                        return (
-                                          <td className="px-3 py-2 text-right">
-                                            <div className="flex flex-wrap items-center justify-end gap-2">
-                                              {(!Array.isArray(q.containerRates) || q.containerRates.length === 0) &&
-                                                (!Array.isArray(q.charges) || q.charges.length === 0) && (
-                                                <div className="text-sm font-extrabold text-emerald-600 tabular-nums">
-                                                  {q.currency} {totalCost.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                </div>
-                                              )}
-
-                                              {Array.isArray(q.containerRates) && q.containerRates.length > 0 &&
-                                                q.containerRates.map((cr, idx) => (
-                                                  <div key={cr.id || idx} className="flex min-w-[130px] flex-col items-start rounded-lg border border-slate-200/80 bg-white p-2">
-                                                    <span className="text-slate-500 font-bold text-[9px] uppercase tracking-wider">
-                                                      {cr.containerSize || "Container"} {cr.containerType || ""}
-                                                    </span>
-                                                    <span className="font-mono font-extrabold text-emerald-600 text-[11px] mt-0.5">
-                                                      {q.currency} {Number(cr.freightAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                                                    </span>
-                                                  </div>
-                                                ))}
-
-                                              {Array.isArray(q.charges) && q.charges.length > 0 &&
-                                                  q.charges.map((c, idx) => (
-                                                    <div key={c.id || idx} className="flex flex-col items-start rounded-lg border border-slate-200/80 bg-slate-50 p-2 text-left">
-                                                      <span className="text-slate-500 font-bold text-[9px] uppercase tracking-wider whitespace-nowrap max-w-[120px] truncate" title={c.chargeName}>
-                                                        {c.chargeName}
-                                                      </span>
-                                                      <span className="font-mono font-extrabold text-slate-700 text-xs whitespace-nowrap mt-0.5">
-                                                        {q.currency} {Number(c.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                                                      </span>
+                                            return (
+                                              <tr
+                                                key={q.id}
+                                                className={`transition-colors hover:bg-slate-50/80 ${isPreferred ? "bg-purple-50/30 font-semibold" : ""}`}
+                                              >
+                                                <td className="px-3 py-2">
+                                                  <div className="flex items-center gap-3">
+                                                    <div className="h-7 w-7 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 font-extrabold text-[10px] flex items-center justify-center shrink-0 shadow-xs">
+                                                      {initials}
                                                     </div>
-                                                  ))}
-                                            </div>
-                                          </td>
-                                        );
-                                      })()}
-
-                                      <td className="px-3 py-2 text-center">
-                                        <button
-                                          onClick={() => !isReadOnly && handleSetPreferred(q.id)}
-                                          disabled={isReadOnly}
-                                          className={`px-2 py-1 rounded-lg font-extrabold text-[10px] transition-all inline-flex items-center gap-1.5 ${isPreferred
-                                            ? "bg-purple-600 text-white shadow-sm"
-                                            : isReadOnly
-                                              ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
-                                              : "bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 cursor-pointer"
-                                            }`}
-                                        >
-                                          <Star className={`h-2.5 w-2.5 ${isPreferred ? "fill-white" : ""}`} />
-                                          {isPreferred ? "Selected" : "Select"}
-                                        </button>
-                                      </td>
-
-                                      <td className="px-3 py-2 text-right">
-                                        <div className="flex items-center justify-end gap-1">
-                                          {isReadOnly ? (
-                                            <button
-                                              onClick={() => {
-                                                setSelectedQuote(q);
-                                                setIsModalOpen(true);
-                                              }}
-                                              className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                                              title="View Quote Details"
-                                            >
-                                              <Eye className="h-3.5 w-3.5" />
-                                            </button>
-                                          ) : (
-                                            <>
-                                              <button
-                                                onClick={() => {
-                                                  setSelectedQuote(q);
-                                                  setIsModalOpen(true);
-                                                }}
-                                                className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                                                title="Revise Quote"
-                                              >
-                                                <Edit2 className="h-3.5 w-3.5" />
-                                              </button>
-                                              <button
-                                                disabled={isPreferred}
-                                                onClick={() => handleDeleteQuote(q.id)}
-                                                className={`p-1.5 rounded-lg transition-colors ${isPreferred
-                                                  ? "text-slate-300 cursor-not-allowed"
-                                                  : "text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                                                  }`}
-                                                title={isPreferred ? "Cannot delete preferred quote" : "Delete"}
-                                              >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                              </button>
-                                            </>
-                                          )}
-                                        </div>
-                                      </td>
-                                        </tr>
-                                      );
-                                      })}
-                                    </tbody>
-                                  </table>
-                                </div>
+                                                    <div>
+                                                      <div className="font-extrabold text-slate-900 flex items-center gap-1.5 text-xs">
+                                                        <span>{q.seller?.entityName || "Logistics Seller"}</span>
+                                                        {isPreferred && (
+                                                          <span className="px-1.5 py-0.2 rounded bg-purple-600 text-white text-[9px] font-extrabold flex items-center gap-0.5">
+                                                            <Star className="h-2 w-2 fill-white" /> Preferred
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                      <div className="text-[9px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5">
+                                                        <span className="font-mono text-slate-700">{q.quoteNumber}</span>
+                                                        <span>•</span>
+                                                        <span>v{q.version}</span>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                  <div>
+                                                    <div className="font-bold text-slate-800 text-[11px]">{q.contactPerson || "N/A"}</div>
+                                                    <div className="text-[10px] font-mono text-slate-500 mt-0.5">{q.contactNumber ? `📞 ${q.contactNumber}` : "N/A"}</div>
+                                                  </div>
+                                                </td>
+                                                <td className="px-3 py-2 text-center">
+                                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 font-extrabold text-[10px]">
+                                                    <Clock className="h-3 w-3 text-blue-600" /> {q.transitDays} Days
+                                                  </span>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                  <div className="font-bold text-slate-800 text-[11px]">
+                                                    {q.validityDate ? new Date(q.validityDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "N/A"}
+                                                  </div>
+                                                </td>
+                                                <td className="px-3 py-2 text-right font-mono font-extrabold text-emerald-600 text-sm">
+                                                  {q.currency || "INR"} {totalCost.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="px-3 py-2 text-center">
+                                                  <button
+                                                    onClick={() => !isReadOnly && handleSetPreferred(q.id)}
+                                                    disabled={isReadOnly}
+                                                    className={`px-2 py-1 rounded-lg font-extrabold text-[10px] transition-all inline-flex items-center gap-1.5 ${
+                                                      isPreferred
+                                                        ? "bg-purple-600 text-white shadow-sm"
+                                                        : "bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 cursor-pointer"
+                                                    }`}
+                                                  >
+                                                    <Star className={`h-2.5 w-2.5 ${isPreferred ? "fill-white" : ""}`} />
+                                                    {isPreferred ? "Selected" : "Select"}
+                                                  </button>
+                                                </td>
+                                                <td className="px-3 py-2 text-right">
+                                                  <div className="flex items-center justify-end gap-1">
+                                                    <button
+                                                      onClick={() => {
+                                                        setSelectedQuote(q);
+                                                        setIsModalOpen(true);
+                                                      }}
+                                                      className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                                      title="Revise Quote"
+                                                    >
+                                                      <Edit2 className="h-3.5 w-3.5" />
+                                                    </button>
+                                                    <button
+                                                      disabled={isPreferred}
+                                                      onClick={() => handleDeleteQuote(q.id)}
+                                                      className={`p-1.5 rounded-lg transition-colors ${
+                                                        isPreferred
+                                                          ? "text-slate-300 cursor-not-allowed"
+                                                          : "text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                                      }`}
+                                                      title={isPreferred ? "Cannot delete preferred quote" : "Delete"}
+                                                    >
+                                                      <Trash2 className="h-3.5 w-3.5" />
+                                                    </button>
+                                                  </div>
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2 rounded-2xl border border-slate-200/80 bg-white p-6 py-12 text-center text-slate-400">
+                                    <p className="text-xs font-bold text-slate-500">No freight quotes added yet for this route.</p>
+                                    <p className="text-[11px] text-slate-400">Click &quot;Add Freight Quote&quot; above to enter quotations from transport partners.</p>
+                                  </div>
+                                )}
                               </div>
-                            ) : (
-                            <div className="space-y-2 rounded-2xl border border-slate-200/80 bg-white p-6 py-12 text-center text-slate-400">
-                                <p className="text-xs font-bold text-slate-500">No freight quotes added yet for this route.</p>
-                                <p className="text-[11px] text-slate-400">Click &quot;Add Freight Quote&quot; above to enter quotations from transport partners.</p>
-                              </div>
-                            )}
-                            </div>
                             )}
                           </div>
-                      );
+                        );
                       });
                     })()}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

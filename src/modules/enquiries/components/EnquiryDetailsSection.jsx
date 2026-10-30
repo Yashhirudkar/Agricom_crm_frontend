@@ -1,4 +1,26 @@
+
 "use client";
+
+function formatClosedDate(dateStr) {
+  if (!dateStr) return "N/A";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "N/A";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = d.toLocaleString("en-GB", { month: "short" });
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const formattedHours = String(hours).padStart(2, "0");
+    return `${day}-${month}-${year} ${formattedHours}:${minutes} ${ampm}`;
+  } catch {
+    return "N/A";
+  }
+}
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Package, ChevronDown, Search, X, Loader2 } from "lucide-react";
 import { PORTS_BY_COUNTRY } from "@/constants/portsData";
@@ -200,6 +222,16 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
           <p className="text-[10px] text-gray-400">Partner, product, and shipping requirements</p>
         </div>
       </div>
+
+      {(String(form.status || "").toUpperCase() === "CLOSED") && (
+        <div className="mx-5 mt-3 flex h-9 items-center rounded-md border-l-[3px] border-red-600 bg-red-50 px-3 text-xs text-gray-600">
+          <span className="mr-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-red-600" />
+          <span className="font-medium">Reason for Closure:</span>
+          <span className="ml-1 font-bold text-gray-800">{form.closureReason || "N/A"}</span>
+          <span className="mx-2 text-gray-400">|</span>
+          <span className="font-medium text-gray-800">{formatClosedDate(form.closedAt)}</span>
+        </div>
+      )}
 
       <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
@@ -621,6 +653,7 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
             className={inp}
           />
         </div>
+
 
         {/* Potential Enquiry */}
         <div className="flex items-center pt-5">

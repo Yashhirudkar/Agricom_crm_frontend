@@ -17,6 +17,7 @@ export const logisticsApi = {
   setPreferredQuote: (id, quoteId) =>
     axiosClient.patch(`/logistics/${id}/quotes/${quoteId}/preferred`),
   updateStatus: (id, data) => axiosClient.patch(`/logistics/${id}/status`, data),
+  executeShipment: (shipmentId) => axiosClient.post(`/logistics/shipments/${shipmentId}/execute`),
   generateShipment: (id) => axiosClient.post(`/logistics/${id}/generate-shipment`),
 
   // Polymorphic Attachments

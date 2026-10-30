@@ -1,3 +1,22 @@
+
+function formatClosedDate(dateStr) {
+  if (!dateStr) return "N/A";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "N/A";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = d.toLocaleString("en-GB", { month: "short" });
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+    return `${day}-${month}-${year} ${String(hours).padStart(2, "0")}:${minutes} ${ampm}`;
+  } catch {
+    return "N/A";
+  }
+}
+
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Drawer from "@/components/common/Drawer";
 import Select from "react-select";
@@ -72,6 +91,18 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     potentialEnquiry: false,
     bidType: "TARGET",
     note: "",
+          status: "",
+          closureReason: "",
+          closureRemark: "",
+          closedBy: "",
+          closedByName: "",
+          closedAt: "",
+    status: "",
+    closureReason: "",
+    closureRemark: "",
+    closedBy: "",
+    closedByName: "",
+    closedAt: "",
   });
 
   const [initialFormState, setInitialFormState] = useState({});
@@ -144,6 +175,12 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           potentialEnquiry: editData.potentialEnquiry || false,
           bidType: editData.bidType || "TARGET",
           note: editData.note || "",
+          status: editData.status || "",
+          closureReason: editData.closureReason || "",
+          closureRemark: editData.closureRemark || "",
+          closedBy: editData.closedBy || editData.closedByUser?.id || "",
+          closedByName: editData.closedByName || editData.closedByUser?.name || "",
+          closedAt: editData.closedAt || "",
         };
         setForm(initialForm);
         setInitialFormState(initialForm);
@@ -188,6 +225,12 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                 potentialEnquiry: fresh.potentialEnquiry || false,
                 bidType: fresh.bidType || "TARGET",
                 note: fresh.note || "",
+                status: fresh.status || "",
+                closureReason: fresh.closureReason || "",
+                closureRemark: fresh.closureRemark || "",
+                closedBy: fresh.closedBy || fresh.closedByUser?.id || "",
+                closedByName: fresh.closedByName || fresh.closedByUser?.name || "",
+                closedAt: fresh.closedAt || "",
               };
               setForm(freshForm);
               setInitialFormState(freshForm);
@@ -675,6 +718,20 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
             </div>
           ) : (
             <div className="space-y-6">
+              {/* Closed enquiry summary */}
+              {(String(form.status || editData?.status || "").toUpperCase() === "CLOSED") && (
+                <div className="flex h-9 items-center rounded-md border-l-[3px] border-red-600 bg-red-50 px-3 text-xs text-gray-600">
+                  <span className="mr-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-red-600" />
+                  <span className="font-medium">Reason for Closure:</span>
+                  <span className="ml-1 font-bold text-gray-800">
+                    {form.closureReason || editData?.closureReason || "N/A"}
+                  </span>
+                  <span className="mx-2 text-gray-400">|</span>
+                  <span className="font-medium text-gray-800">
+                    {formatClosedDate(form.closedAt || editData?.closedAt)}
+                  </span>
+                </div>
+              )}
 
               {/* SECTION 1: Basic Information */}
               <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
@@ -1382,7 +1439,6 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
 
                   {/* Empty 3rd column placeholder to balance the 3-column grid cleanly */}
                   <div className="hidden md:block" />
-
 
                   {/* Note */}
                   <div className="col-span-full">

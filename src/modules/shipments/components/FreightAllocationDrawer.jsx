@@ -114,6 +114,8 @@ export default function FreightAllocationDrawer({
     if (shipment.salesContract?.enquiryId) {
       params.set("enquiryId", String(shipment.salesContract.enquiryId));
     }
+    params.set("shipmentId", String(shipment.id));
+    if (shipment.shipmentReference) params.set("shipmentRef", shipment.shipmentReference);
     params.set("openDrawer", "true");
     router.push(`/logistics/transport-management?${params.toString()}`);
     onClose();

@@ -71,6 +71,8 @@ export default function AddFreightQuoteModal({
   autoSelectPartner = null,
   isReadOnly = false,
   selectedRoute = null,
+  targetShipment = null,
+  purchaseContractId = null,
 }) {
   // Form State
   const [sellerId, setSellerId] = useState("");
@@ -806,6 +808,8 @@ export default function AddFreightQuoteModal({
         ...(paymentTerms && paymentTerms.trim() && { paymentTerms: paymentTerms.trim() }),
         ...(remarks && remarks.trim() && { remarks: remarks.trim() }),
         ...(selectedRoute?.id && selectedRoute.id !== 'all' && { routeId: selectedRoute.id }),
+        ...(targetShipment?.id && { shipmentId: targetShipment.id }),
+        ...((targetShipment?.purchaseContractId || purchaseContractId) && { purchaseContractId: targetShipment?.purchaseContractId || purchaseContractId }),
 
         ...(modeNorm === "road" && { truckType: truckType.trim(), truckCapacity: truckCapacity.trim(), vehicleType: truckType.trim() }),
         ...(modeNorm === "sea" && {
@@ -899,6 +903,37 @@ export default function AddFreightQuoteModal({
               <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-100 rounded-xl text-red-700 font-medium text-sm">
                 <AlertCircle className="h-5 w-5 shrink-0 text-red-500" />
                 <span>{error}</span>
+              </div>
+            )}
+
+            {/* Shipment Context Banner */}
+            {targetShipment && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50/50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-xs shrink-0 tracking-wider shadow-xs">
+                    SHIP
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">
+                        {targetShipment.shipmentReference || `Shipment #${targetShipment.shipmentNo || targetShipment.id}`}
+                      </span>
+                      {targetShipment.quantity && (
+                        <span className="px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                          {targetShipment.quantity} MT
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 mt-0.5 flex items-center gap-1.5 font-medium">
+                      <span>{targetShipment.origin || "Origin"}</span>
+                      <span className="text-blue-500 font-bold">➔</span>
+                      <span>{targetShipment.destination || "Destination"}</span>
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-semibold text-blue-700 bg-white px-2.5 py-1 rounded-md border border-blue-200 shadow-2xs">
+                  Shipment-Specific Freight
+                </span>
               </div>
             )}
 

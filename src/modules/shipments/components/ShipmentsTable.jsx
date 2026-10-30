@@ -128,6 +128,8 @@ export default function ShipmentsTable({
         if (s.salesContract?.enquiryId) {
           params.set("enquiryId", String(s.salesContract.enquiryId));
         }
+        params.set("shipmentId", String(s.id));
+        if (s.shipmentReference) params.set("shipmentRef", s.shipmentReference);
         params.set("openDrawer", "true");
         router.push(`/logistics/transport-management?${params.toString()}`);
       }
@@ -149,7 +151,9 @@ export default function ShipmentsTable({
       if (s.salesContract?.enquiryId) {
         params.set("enquiryId", String(s.salesContract.enquiryId));
       }
-      params.set("openDrawer", "true");
+      params.set("shipmentId", String(s.id));
+        if (s.shipmentReference) params.set("shipmentRef", s.shipmentReference);
+        params.set("openDrawer", "true");
       router.push(`/logistics/transport-management?${params.toString()}`);
     }
   };

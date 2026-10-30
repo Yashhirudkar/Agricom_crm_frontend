@@ -2,25 +2,11 @@ import React, { useState } from "react";
 import { getAvatarUrl } from "@/lib/axios";
 import UserProfileModal from "../Common/UserProfileModal";
 
-const AVATAR_COLORS = [
-  "from-rose-400 to-rose-500 text-white",
-  "from-sky-400 to-sky-500 text-white",
-  "from-emerald-400 to-emerald-500 text-white",
-  "from-amber-400 to-amber-500 text-white",
-  "from-purple-400 to-purple-500 text-white",
-  "from-pink-400 to-pink-500 text-white",
-  "from-indigo-400 to-indigo-500 text-white",
-  "from-teal-400 to-teal-500 text-white",
-  "from-orange-400 to-orange-500 text-white",
-  "from-cyan-400 to-cyan-500 text-white",
-];
-
-function getAvatarColor(name = "") {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+function getAvatarColor(sender) {
+  const role = String(sender?.role || sender?.type || sender?.userType || "").toUpperCase();
+  return role.includes("ADMIN") || role.includes("STAFF") || role.includes("EMPLOYEE")
+    ? "bg-[#DBEAFE] text-[#2563EB]"
+    : "bg-[#E5E7EB] text-[#4B5563]";
 }
 
 function getInitials(name = "") {
@@ -83,9 +69,9 @@ const Avatar = React.memo(({ sender, size = "md", presence, onClick, disableModa
       );
     }
 
-    const gradientClass = getAvatarColor(sender?.name || "");
+    const avatarClass = getAvatarColor(sender);
     return (
-      <div className={`w-full h-full rounded-full bg-gradient-to-br ${gradientClass} flex items-center justify-center font-bold tracking-wider select-none shadow-inner`}>
+      <div className={`w-full h-full rounded-full ${avatarClass} flex items-center justify-center font-bold tracking-wider select-none shadow-inner`}>
         {getInitials(sender?.name)}
       </div>
     );
@@ -124,4 +110,3 @@ const Avatar = React.memo(({ sender, size = "md", presence, onClick, disableModa
 Avatar.displayName = "Avatar";
 
 export default Avatar;
-

@@ -26,6 +26,7 @@ export default function LogisticsQueuePage() {
   const urlOpenDrawer = searchParams?.get("openDrawer") === "true";
   const urlLogisticsId = searchParams?.get("logisticsId") || "";
   const urlEnquiryId = searchParams?.get("enquiryId") || "";
+  const urlShipmentId = searchParams?.get("shipmentId") || "";
 
   // Initial values based on deep-link query parameters
   const initialSearch = urlSearch || urlBusinessRef || "";
@@ -94,6 +95,15 @@ export default function LogisticsQueuePage() {
   // Matching helper to identify targeted row for drawer opening
   const findMatchingEnquiry = useCallback((list) => {
     if (!list || list.length === 0) return null;
+    if (urlShipmentId) {
+      const match = list.find((e) => {
+        const directShipmentMatch = e.shipments?.some((s) => String(s.id) === String(urlShipmentId));
+        const pcShipmentMatch = e.purchaseContract?.shipments?.some((s) => String(s.id) === String(urlShipmentId));
+        return directShipmentMatch || pcShipmentMatch;
+      });
+      if (match) return match;
+    }
+    if (!list || list.length === 0) return null;
     if (urlEnquiryId) {
       const match = list.find((e) => String(e.id) === String(urlEnquiryId));
       if (match) return match;
@@ -132,7 +142,7 @@ export default function LogisticsQueuePage() {
     if (list.length === 1) return list[0];
     if ((urlBusinessRef || urlSearch) && list.length > 0) return list[0];
     return null;
-  }, [urlEnquiryId, urlLogisticsId, urlBusinessRef, urlSearch]);
+  }, [urlEnquiryId, urlLogisticsId, urlBusinessRef, urlSearch, urlShipmentId]);
 
   // Main data fetch - runs whenever any filter, page, or refreshKey changes
   useEffect(() => {
@@ -465,6 +475,7 @@ export default function LogisticsQueuePage() {
         isOpen={drawerOpen}
         onClose={handleCloseDrawer}
         enquiry={selectedEnquiry}
+        targetShipmentId={urlShipmentId}
       />
 
       <ConfirmModal

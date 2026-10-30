@@ -1,3 +1,4 @@
+import { CLOSURE_REASONS } from "@/components/masters/partners/PartnerFollowUpDrawer";
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -9,6 +10,8 @@ import ReusableModal from "@/components/modals/Modal";
 export default function FollowUpCompleteModal({ isOpen, onClose, followUp }) {
   const [status, setStatus] = useState("Confirmed");
   const [ourResponse, setOurResponse] = useState("");
+  const [closureReason, setClosureReason] = useState("");
+  const [closureRemark, setClosureRemark] = useState("");
 
   const completeMutation = useCompleteFollowUpMutation();
 
@@ -16,6 +19,8 @@ export default function FollowUpCompleteModal({ isOpen, onClose, followUp }) {
     if (isOpen) {
       setStatus("Confirmed");
       setOurResponse("");
+      setClosureReason("");
+      setClosureRemark("");
     }
   }, [isOpen]);
 
@@ -24,7 +29,7 @@ export default function FollowUpCompleteModal({ isOpen, onClose, followUp }) {
     if (!followUp) return;
 
     completeMutation.mutate(
-      { id: followUp.id, status, ourResponse },
+      { id: followUp.id, status, ourResponse, closureReason, closureRemark },
       {
         onSuccess: () => {
           onClose();

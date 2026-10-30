@@ -1,5 +1,5 @@
 import React from "react";
-import { Package, ArrowRight, Clock, CheckCheck } from "lucide-react";
+import { ArrowRight, CheckCheck } from "lucide-react";
 
 export function formatTimelineDate(dateStr) {
   if (!dateStr) return "";
@@ -162,20 +162,11 @@ export default function EnquiryActivityCard({ activity, onOpenQuotation }) {
   // ─────────────────────────────────────────────────────────────
   if (currentType === "WHATSAPP_SENT") {
     return (
-      <div className="w-fit my-2 bg-[#dcf8c6] rounded-lg rounded-tr-none border border-[#c4e8ab] shadow-sm p-2 max-w-[85%] self-end ml-auto relative">
-        <div className="flex items-center justify-between gap-4 mb-1">
-          <div className="flex items-center gap-1">
-            <span className="text-[10px]">📲</span>
-            <span className="text-[9px] font-bold text-[#075e54] uppercase">Sent</span>
-          </div>
-          {metadata?.recipient && (
-            <span className="text-[8px] font-mono text-gray-500">{metadata.recipient.split("@")[0]}</span>
-          )}
-        </div>
-        <div className="text-[11px] text-gray-800 leading-tight whitespace-pre-wrap">
+      <div className="w-fit my-2 bg-[#DCF8C6] rounded-2xl rounded-tr-xs border border-[#d0ecb8]/70 shadow-sm p-3 max-w-[65%] sm:max-w-[70%] ml-auto relative">
+        <div className="text-[13px] text-[#111827] leading-relaxed whitespace-pre-wrap">
           {formatWhatsAppMessage(message)}
         </div>
-        <div className="flex items-center justify-end gap-1 mt-1 text-[8px] text-gray-500">
+        <div className="flex items-center justify-end gap-1 mt-1 text-[9px] text-gray-500/80">
           <span>{timeFormatted}</span>
           <CheckCheck className="w-3 h-3 text-blue-500" />
         </div>
@@ -184,24 +175,15 @@ export default function EnquiryActivityCard({ activity, onOpenQuotation }) {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // 4. WHATSAPP_RECEIVED
+  // 4. WHATSAPP_RECEIVED (Buyer incoming message)
   // ─────────────────────────────────────────────────────────────
   if (currentType === "WHATSAPP_RECEIVED") {
     return (
-      <div className="w-fit my-2 bg-white rounded-lg rounded-tl-none border border-gray-200 shadow-sm p-2 max-w-[85%] self-start mr-auto relative">
-        <div className="flex items-center justify-between gap-4 mb-1">
-          <div className="flex items-center gap-1">
-            <span className="text-[10px]">💬</span>
-            <span className="text-[9px] font-bold text-emerald-800 uppercase">Customer</span>
-          </div>
-          {metadata?.senderJid && (
-            <span className="text-[8px] font-mono text-gray-400">{metadata.senderJid.split("@")[0]}</span>
-          )}
-        </div>
-        <div className="text-[11px] text-gray-900 leading-tight whitespace-pre-wrap">
+      <div className="w-fit my-2 bg-white rounded-[14px] sm:rounded-[16px] rounded-tl-xs border border-gray-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.05)] p-3 max-w-[65%] sm:max-w-[70%] mr-auto relative">
+        <div className="text-[13px] text-[#111827] leading-relaxed whitespace-pre-wrap">
           {message}
         </div>
-        <div className="text-right mt-1 text-[8px] text-gray-400">
+        <div className="text-right mt-1 text-[9px] text-gray-400">
           {timeFormatted}
         </div>
       </div>
@@ -214,44 +196,39 @@ export default function EnquiryActivityCard({ activity, onOpenQuotation }) {
   if (currentType === "FOLLOW_UP") {
     const buyerRemark = metadata?.buyerRemark;
     const ourResponse = metadata?.ourResponse;
-    const status = metadata?.status;
 
     return (
-      <div className="w-fit mx-auto my-2 min-w-[200px] max-w-[90%] bg-blue-50/20 rounded-lg border border-blue-100 shadow-sm p-2 hover:shadow-md transition-shadow">
-        <div className="flex items-center gap-6 mb-1.5">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px]">📝</span>
-            <span className="text-[10px] font-bold text-blue-900 uppercase">Follow-up</span>
-            {status && (
-              <span className="text-[8px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded uppercase">
-                {status}
-              </span>
-            )}
+      <div className="space-y-2 my-2">
+        {(metadata?.status === "Closed" || metadata?.closureReason) && (
+          <div className="w-fit bg-red-50 text-red-700 rounded-lg px-2.5 py-1 text-[11px] border border-red-200 mr-auto my-1">
+            <span className="font-bold">Closed:</span> {metadata?.closureReason || "No reason specified"}
+            {metadata?.closureRemark && <p className="italic text-[10px] text-gray-600 mt-0.5">&ldquo;{metadata.closureRemark}&rdquo;</p>}
           </div>
-          <div className="text-[9px] text-gray-400 flex items-center gap-1 ml-auto">
-            <span>{authorName}</span>
-            <span>•</span>
-            <span>{timeFormatted}</span>
+        )}
+        {buyerRemark && (
+          <div className="w-fit bg-white rounded-[14px] sm:rounded-[16px] rounded-tl-xs border border-gray-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.05)] p-3 max-w-[65%] sm:max-w-[70%] mr-auto relative">
+            <p className="text-[13px] text-[#111827] leading-relaxed whitespace-pre-wrap">{buyerRemark}</p>
+            <div className="text-right mt-1 text-[9px] text-gray-400">
+              {timeFormatted}
+            </div>
           </div>
-        </div>
-
-        <div className="text-[11px] space-y-1">
-          {buyerRemark && (
-            <div className="flex gap-1.5">
-              <span className="text-gray-400 shrink-0">Buyer:</span>
-              <span className="text-gray-800">{buyerRemark}</span>
+        )}
+        {message && !buyerRemark && (
+          <div className="w-fit bg-white rounded-[14px] sm:rounded-[16px] rounded-tl-xs border border-gray-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.05)] p-3 max-w-[65%] sm:max-w-[70%] mr-auto relative">
+            <p className="text-[13px] text-[#111827] leading-relaxed whitespace-pre-wrap">{message}</p>
+            <div className="text-right mt-1 text-[9px] text-gray-400">
+              {timeFormatted}
             </div>
-          )}
-          {message && !buyerRemark && (
-            <p className="text-gray-800">{message}</p>
-          )}
-          {ourResponse && (
-            <div className="flex gap-1.5">
-              <span className="text-blue-400 shrink-0">Us:</span>
-              <span className="text-gray-800">{ourResponse}</span>
+          </div>
+        )}
+        {ourResponse && (
+          <div className="w-fit bg-[#DCF8C6] rounded-[14px] sm:rounded-[16px] rounded-tr-xs border border-[#d0ecb8]/70 shadow-sm p-3 max-w-[65%] sm:max-w-[70%] ml-auto relative">
+            <p className="text-[13px] text-[#111827] leading-relaxed whitespace-pre-wrap">{ourResponse}</p>
+            <div className="text-right mt-1 text-[9px] text-gray-500/80">
+              {timeFormatted}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -260,15 +237,28 @@ export default function EnquiryActivityCard({ activity, onOpenQuotation }) {
   // 6. STATUS_CHANGED
   // ─────────────────────────────────────────────────────────────
   if (currentType === "STATUS_CHANGED") {
+    const isClosed = metadata?.newStatus === "CLOSED" || metadata?.newStatus === "Closed";
     return (
-      <div className="w-fit mx-auto my-2 bg-white border border-gray-200 shadow-sm px-2 py-1 rounded-full flex items-center gap-1.5 text-[10px] text-gray-500">
-        <span>🔄</span>
-        <span>Status:</span>
-        <span className="line-through">{metadata?.oldStatus || "—"}</span>
-        <ArrowRight className="w-2.5 h-2.5 text-gray-400" />
-        <span className="font-bold text-blue-600">{metadata?.newStatus || "—"}</span>
-        <span className="text-gray-300 mx-1">|</span>
-        <span className="text-[9px] text-gray-400">{timeFormatted}</span>
+      <div className="w-fit mx-auto my-2 bg-white border border-gray-200 shadow-sm px-3 py-1.5 rounded-xl flex flex-col items-center gap-1 text-[10px] text-gray-500">
+        <div className="flex items-center gap-1.5">
+          <span>🔄</span>
+          <span>Status:</span>
+          <span className="line-through">{metadata?.oldStatus || "—"}</span>
+          <ArrowRight className="w-2.5 h-2.5 text-gray-400" />
+          <span className="font-bold text-blue-600">{metadata?.newStatus || "—"}</span>
+          <span className="text-gray-300 mx-1">|</span>
+          <span className="text-[9px] text-gray-400">{timeFormatted}</span>
+        </div>
+        {isClosed && (metadata?.closureReason || metadata?.closureRemark) && (
+          <div className="flex flex-col items-center text-center text-[10px] text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-100 max-w-sm mt-0.5">
+            {metadata.closureReason && (
+              <span className="font-semibold">Reason: {metadata.closureReason}</span>
+            )}
+            {metadata.closureRemark && (
+              <span className="italic text-gray-600 text-[9.5px]">&ldquo;{metadata.closureRemark}&rdquo;</span>
+            )}
+          </div>
+        )}
       </div>
     );
   }
