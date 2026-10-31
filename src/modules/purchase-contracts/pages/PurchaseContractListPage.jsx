@@ -57,9 +57,52 @@ export default function PurchaseContractListPage() {
   const { data: dashboard } = usePurchaseContractDashboard();
   const { mutate: clearDrafts, isPending: clearingDrafts } = useClearPurchaseContractDrafts();
 
-  const contracts = listData?.data || [];
-  const total = listData?.total || 0;
-  const totalPages = listData?.totalPages || 1;
+  const allContracts = listData?.data || [];
+  const normalizedSearch = search.trim().toLowerCase();
+  const contracts = normalizedSearch
+    ? allContracts.filter((contract) => {
+      const buyerName =
+        contract.salesContract?.buyer?.entityName ||
+        contract.buyer?.entityName ||
+        contract.buyer?.name ||
+        "";
+      const productNames = contract.productNames?.length
+        ? contract.productNames
+        : contract.salesContract?.items?.map((item) => item.product?.name).filter(Boolean) || [];
+      const searchableValues = [
+        contract.businessReference,
+        contract.businessTransaction?.businessReference,
+        contract.contractNumber,
+        buyerName,
+        ...productNames,
+      ];
+      return searchableValues.some((value) =>
+        String(value || "").toLowerCase().includes(normalizedSearch)
+      );
+    }).slice((page - 1) * 10, page * 10)
+    : allContracts;
+  const total = normalizedSearch
+    ? allContracts.filter((contract) => {
+      const buyerName =
+        contract.salesContract?.buyer?.entityName ||
+        contract.buyer?.entityName ||
+        contract.buyer?.name ||
+        "";
+      const productNames = contract.productNames?.length
+        ? contract.productNames
+        : contract.salesContract?.items?.map((item) => item.product?.name).filter(Boolean) || [];
+      return [
+        contract.businessReference,
+        contract.businessTransaction?.businessReference,
+        contract.contractNumber,
+        buyerName,
+        ...productNames,
+      ].some((value) => String(value || "").toLowerCase().includes(normalizedSearch));
+    }).length
+    : (listData?.total || 0);
+  const totalPages = normalizedSearch
+    ? Math.max(1, Math.ceil(total / 10))
+    : (listData?.totalPages || 1);
 
   const stats = dashboard?.contracts || {};
   const shipments = dashboard?.shipments || {};
@@ -146,7 +189,7 @@ export default function PurchaseContractListPage() {
           <Search className="h-3.5 w-3.5 text-gray-400 absolute left-2.5 top-2.5" />
           <input
             type="text"
-            placeholder="Search contract number..."
+            placeholder="Search contract, buyer, product..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full text-xs pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 focus:outline-hidden"
@@ -155,11 +198,11 @@ export default function PurchaseContractListPage() {
 
         <input
           type="text"
-          aria-label="Business Ref No."
-          placeholder="Business Ref No."
+          aria-label="Reference"
+          placeholder="Reference (e.g. REF-000001)"
           value={businessReference}
           onChange={(e) => { setBusinessReference(e.target.value); setPage(1); }}
-          className="w-full max-w-[11rem] text-xs px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg font-mono focus:ring-2 focus:ring-purple-400 focus:outline-hidden"
+          className="w-full max-w-[13rem] text-xs px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg font-mono focus:ring-2 focus:ring-purple-400 focus:outline-hidden"
         />
 
         {/* Status Filter */}
@@ -194,13 +237,16 @@ export default function PurchaseContractListPage() {
             <table className="w-full text-xs text-left">
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-500 font-bold uppercase tracking-wider text-[9px]">
-                  <th className="px-3.5 py-2.5">Contract Number</th>
                   <th className="px-3.5 py-2.5">
                     <button
                       type="button"
                       onClick={() => setBusinessReferenceSortOrder((order) => order === "ASC" ? "DESC" : "ASC")}
+                      className="inline-flex items-center gap-1 hover:text-gray-700 font-bold uppercase tracking-wider text-[9px]"
                     >
-                      Business Ref No.
+                      <span>Reference</span>
+                      {businessReferenceSortOrder && (
+                        <span className="text-[10px]">{businessReferenceSortOrder === "ASC" ? "▲" : "▼"}</span>
+                      )}
                     </button>
                   </th>
                   <th className="px-3.5 py-2.5">Status</th>
@@ -208,13 +254,13 @@ export default function PurchaseContractListPage() {
                   <th className="px-3.5 py-2.5">Product</th>
                   <th className="px-3.5 py-2.5">Packing</th>
                   <th className="px-3.5 py-2.5 text-right">Qty</th>
-                  <th className="px-3.5 py-2.5 text-right">Total Containers</th>
+                  <th className="px-3.5 py-2.5 text-right">Containers</th>
                   <th className="px-3.5 py-2.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {contracts.map((pc) => {
-                  const pcNo = pc.contractNumber || `PC-${pc.salesContract?.contractNumber || pc.id}`;
+                  const refNo = pc.businessReference || pc.businessTransaction?.businessReference || "—";
                   const buyerName = pc.salesContract?.buyer?.entityName || pc.buyer?.entityName || "—";
                   const productNames = (pc.productNames && pc.productNames.length > 0)
                     ? pc.productNames.join(", ")
@@ -230,12 +276,16 @@ export default function PurchaseContractListPage() {
                       onClick={() => router.push(`/sales/purchase-contracts/${pc.id}`)}
                       className="hover:bg-purple-50/40 cursor-pointer transition-colors group"
                     >
-                      <td className="px-3.5 py-2.5 font-mono font-bold text-purple-700 flex items-center gap-1.5">
-                        <FileText className="h-3.5 w-3.5 text-purple-500" />
-                        <span>{pcNo}</span>
-                      </td>
-                      <td className="px-3.5 py-2.5 font-mono font-semibold text-indigo-700 whitespace-nowrap">
-                        {pc.businessReference || pc.businessTransaction?.businessReference || "—"}
+                      <td className="px-3.5 py-2.5 font-mono whitespace-nowrap">
+                        <span
+                          className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/sales/purchase-contracts/${pc.id}`);
+                          }}
+                        >
+                          {refNo}
+                        </span>
                       </td>
 
                       <td className="px-3.5 py-2.5 whitespace-nowrap">
@@ -299,7 +349,7 @@ export default function PurchaseContractListPage() {
 
                 {contracts.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="text-center py-8 text-gray-400">
+                    <td colSpan={8} className="text-center py-8 text-gray-400">
                       <FileText className="h-6 w-6 mx-auto mb-1 text-gray-300 stroke-[1.2]" />
                       <p className="text-xs font-semibold text-gray-600">No purchase contracts found</p>
                     </td>

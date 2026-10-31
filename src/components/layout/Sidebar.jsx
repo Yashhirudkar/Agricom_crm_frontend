@@ -96,13 +96,40 @@ export function Sidebar() {
 
   const { hasPermission } = usePermissions();
   const hasFollowupPermission = hasPermission("follow_up:view");
+  const hasStockPermission =
+    userType === "super_admin" ||
+    userType === "client_admin" ||
+    hasPermission("stock:view") ||
+    hasPermission("stock:read") ||
+    hasPermission("purchase-contracts:view") ||
+    hasPermission("sales_contract:read") ||
+    hasPermission("sales-contracts:view");
 
   const formattedMenu = menuConfig
     .map(section => {
       if (section.items) {
         return {
           ...section,
-          items: section.items.filter(item => item.href !== "/chat")
+          items: (() => {
+            let filtered = section.items.filter(item => item.href !== "/chat");
+            const isSalesSection =
+              (section.title && section.title.toLowerCase().includes("sales")) ||
+              (section.name && section.name.toLowerCase().includes("sales")) ||
+              section.id === "sales";
+            const hasStockItem = filtered.some(
+              it => it.href === "/sales/stock" || it.href === "/stock"
+            );
+            if (isSalesSection && !hasStockItem && hasStockPermission) {
+              filtered.push({
+                id: "stock-management",
+                name: "Stock Management",
+                icon: "Layers",
+                href: "/sales/stock",
+                permission: "stock:view",
+              });
+            }
+            return filtered;
+          })()
         };
       }
       return section;

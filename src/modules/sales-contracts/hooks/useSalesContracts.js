@@ -27,9 +27,8 @@ export function useSalesContracts() {
     setLoading(true);
     try {
       const params = {
-        page,
-        limit,
-        ...(search && { search }),
+        page: search.trim() ? 1 : page,
+        limit: search.trim() ? 100 : limit,
         ...(statusFilter && { status: statusFilter }),
         ...(financialYearFilter && { financialYear: financialYearFilter }),
         ...(businessReference && { businessReference }),
@@ -39,9 +38,42 @@ export function useSalesContracts() {
         }),
       };
       const res = await salesContractApi.getAll(params);
-      setContracts(res.data.data || []);
-      setTotal(res.data.total || 0);
-      setTotalPages(res.data.totalPages || 1);
+      const fetchedContracts = res.data.data || [];
+      const normalizedSearch = search.trim().toLowerCase();
+      const filteredContracts = normalizedSearch
+        ? fetchedContracts.filter((contract) => {
+          const searchableValues = [
+            contract.contractNumber,
+            contract.businessReference,
+            contract.buyer?.name,
+            contract.buyer?.entityName,
+            contract.seller?.name,
+            contract.seller?.entityName,
+            contract.productName,
+            contract.product?.name,
+            contract.product?.productName,
+            ...(contract.items || []).flatMap((item) => [
+              item.productName,
+              item.product?.name,
+              item.product?.productName,
+            ]),
+          ];
+          return searchableValues.some((value) =>
+            String(value || "").toLowerCase().includes(normalizedSearch)
+          );
+        })
+        : fetchedContracts;
+      const visibleContracts = normalizedSearch
+        ? filteredContracts.slice((page - 1) * limit, page * limit)
+        : filteredContracts;
+
+      setContracts(visibleContracts);
+      setTotal(normalizedSearch ? filteredContracts.length : (res.data.total || 0));
+      setTotalPages(
+        normalizedSearch
+          ? Math.max(1, Math.ceil(filteredContracts.length / limit))
+          : (res.data.totalPages || 1)
+      );
     } catch (e) {
       console.error("Failed to fetch contracts", e);
     } finally {

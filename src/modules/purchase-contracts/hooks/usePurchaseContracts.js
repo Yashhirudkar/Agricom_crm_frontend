@@ -18,7 +18,12 @@ export function usePurchaseContractsList(params = {}) {
   return useQuery({
     queryKey: ["purchase-contracts", "list", params],
     queryFn: async () => {
-      const res = await purchaseContractApi.getAll(params);
+      const { search, ...apiParams } = params;
+      const res = await purchaseContractApi.getAll(
+        search?.trim()
+          ? { ...apiParams, page: 1, limit: 100 }
+          : apiParams
+      );
       return res.data;
     },
     staleTime: 15000,
@@ -266,4 +271,3 @@ export function useDeletePurchaseContractAttachment(id) {
     },
   });
 }
-

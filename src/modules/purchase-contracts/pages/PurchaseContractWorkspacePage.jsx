@@ -522,6 +522,20 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     ? "New Manual MTT Contract"
     : (contract?.contractNumber || (contract?.salesContract?.contractNumber ? `PC-${contract.salesContract.contractNumber}` : `PC-${id}`));
 
+  const isClosed = String(contract?.status || "").toUpperCase() === "CLOSED";
+  const closureReason = contract?.closureReason || contract?.closeReason || summary?.closureReason || "N/A";
+  const closedAt = contract?.closedAt || contract?.closedOn || summary?.closedAt;
+  const closedAtDisplay = closedAt
+    ? new Date(closedAt).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }).replace(",", "")
+    : "N/A";
+
 
 
   return (
@@ -607,6 +621,18 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           </div>
         </div>
       </div>
+
+      {isClosed && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex h-9 items-center rounded-md border-l-[3px] border-red-600 bg-red-50 px-3 text-xs text-gray-600">
+            <span className="mr-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-red-600" />
+            <span className="font-medium">Reason for Closure:</span>
+            <span className="ml-1 font-bold text-gray-800">{closureReason}</span>
+            <span className="mx-2 text-gray-400">|</span>
+            <span className="font-medium text-gray-800">{closedAtDisplay}</span>
+          </div>
+        </div>
+      )}
 
       {/* Main Form Flow Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">

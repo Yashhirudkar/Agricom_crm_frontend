@@ -17,10 +17,11 @@ export function useEnquiries(companyId, status = "", externalSearch = null, with
   const fetchEnquiries = useCallback(async () => {
     setLoading(true);
     try {
+      const normalizedSearch = currentSearch.trim();
       const params = {
         page,
         limit,
-        ...(currentSearch && { search: currentSearch }),
+        ...(normalizedSearch && { search: normalizedSearch }),
         ...(status && { status }),
         ...(withoutSalesContract && { withoutSalesContract: true }),
         ...(withoutPurchaseContract && { withoutPurchaseContract: true }),
