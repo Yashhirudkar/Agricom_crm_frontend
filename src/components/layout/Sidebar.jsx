@@ -96,6 +96,8 @@ export function Sidebar() {
 
   const { hasPermission } = usePermissions();
   const hasFollowupPermission = hasPermission("follow_up:view");
+  // TEMPORARY: Hide Stock Management (/sales/stock) from Sidebar (set to false to unhide)
+  const HIDE_STOCK_MANAGEMENT = true;
   const hasStockPermission =
     userType === "super_admin" ||
     userType === "client_admin" ||
@@ -112,6 +114,10 @@ export function Sidebar() {
           ...section,
           items: (() => {
             let filtered = section.items.filter(item => item.href !== "/chat");
+            // TEMP: hide /sales/stock from items (remove this condition or toggle HIDE_STOCK_MANAGEMENT to restore)
+            if (HIDE_STOCK_MANAGEMENT) {
+              filtered = filtered.filter(item => item.href !== "/sales/stock" && item.href !== "/stock" && item.id !== "stock-management");
+            }
             const isSalesSection =
               (section.title && section.title.toLowerCase().includes("sales")) ||
               (section.name && section.name.toLowerCase().includes("sales")) ||
@@ -119,7 +125,8 @@ export function Sidebar() {
             const hasStockItem = filtered.some(
               it => it.href === "/sales/stock" || it.href === "/stock"
             );
-            if (isSalesSection && !hasStockItem && hasStockPermission) {
+            // TEMP: Do not auto-add Stock Management when HIDE_STOCK_MANAGEMENT is true
+            if (!HIDE_STOCK_MANAGEMENT && isSalesSection && !hasStockItem && hasStockPermission) {
               filtered.push({
                 id: "stock-management",
                 name: "Stock Management",
@@ -136,6 +143,8 @@ export function Sidebar() {
     })
     .filter(section => {
       if (section.type === "item" && section.href === "/chat") return false;
+      // TEMP: Hide top-level item if it links to stock
+      if (HIDE_STOCK_MANAGEMENT && section.type === "item" && (section.href === "/sales/stock" || section.href === "/stock")) return false;
       if (section.items && section.items.length === 0) return false;
       return true;
     });
