@@ -132,6 +132,7 @@ function PartnerDrawer({
       panNo: "",
       innNo: "",
       financialStatus: "",
+      annualTurnover: "",
       isActive: true,
       productIds: [],
       productNotes: "",
@@ -340,6 +341,7 @@ function PartnerDrawer({
           panNo: editData.panNo || "",
           innNo: editData.innNo || "",
           financialStatus: editData.financialStatus || "",
+          annualTurnover: editData.annualTurnover !== null && editData.annualTurnover !== undefined ? editData.annualTurnover : "",
           isActive: editData.isActive,
           productNotes: editData.productNotes || "",
           productIds: editData.products ? editData.products.map((p) => p.id) : [],
@@ -370,6 +372,7 @@ function PartnerDrawer({
           panNo: "",
           innNo: "",
           financialStatus: "",
+          annualTurnover: "",
           isActive: true,
           productNotes: "",
           productIds: [],
@@ -430,8 +433,19 @@ function PartnerDrawer({
 
     payload.partnerRoleId = parseInt(payload.partnerRoleId, 10);
 
-    if (!editData && dnbDraft?.selectedFile) {
-      payload.dnbDraft = dnbDraft;
+    if (payload.annualTurnover !== undefined && payload.annualTurnover !== "" && payload.annualTurnover !== null) {
+      payload.annualTurnover = Number(payload.annualTurnover);
+    } else {
+      payload.annualTurnover = null;
+    }
+
+    if (!editData && dnbDraft) {
+      if (dnbDraft.annualTurnover !== undefined && dnbDraft.annualTurnover !== "" && dnbDraft.annualTurnover !== null) {
+        payload.annualTurnover = Number(dnbDraft.annualTurnover);
+      }
+      if (dnbDraft.selectedFile) {
+        payload.dnbDraft = dnbDraft;
+      }
     }
 
     onSubmit(payload);

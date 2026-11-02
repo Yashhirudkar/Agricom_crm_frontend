@@ -22,6 +22,7 @@ export default function EnquiryFormPage({ id }) {
     enquiryDate: new Date().toISOString().split("T")[0],
     partnerRoleId: "",
     partnerId: "",
+    partnerAnnualTurnover: null,
     brokerRoleId: "",
     brokerId: "",
     productId: "",
@@ -73,6 +74,7 @@ export default function EnquiryFormPage({ id }) {
         shipmentDate: form.shipmentDate ? new Date(form.shipmentDate).toISOString() : undefined,
         partnerRoleId: Number(form.partnerRoleId),
         partnerId: Number(form.partnerId),
+        partnerAnnualTurnover: form.partnerAnnualTurnover !== undefined && form.partnerAnnualTurnover !== null && form.partnerAnnualTurnover !== "" ? Number(form.partnerAnnualTurnover) : null,
         brokerRoleId: form.brokerRoleId ? Number(form.brokerRoleId) : undefined,
         brokerId: form.brokerId ? Number(form.brokerId) : undefined,
         productId: Number(form.productId),
@@ -190,6 +192,7 @@ export default function EnquiryFormPage({ id }) {
           errors={errors}
           masters={masters}
           isView={isView}
+          isEdit={isEdit}
         />
       </div>
       

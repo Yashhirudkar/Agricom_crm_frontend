@@ -181,11 +181,12 @@ export default function LogisticsQueueTable({
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
                   {(() => {
-                    const hasPurchaseContract = Boolean(e.purchaseContract);
+                    const sc = e.salesContract;
+                    const hasSc = Boolean(sc && (sc.destinationLocationName || sc.deliveryPlace));
                     const dests = getDestinations(e);
                     const defaultDest = dests[0] || "—";
-                    const destDisplay = hasPurchaseContract
-                      ? (e.purchaseContract.deliveryPlace || defaultDest)
+                    const destDisplay = hasSc
+                      ? (sc.destinationLocationName || sc.deliveryPlace || defaultDest)
                       : defaultDest;
 
                     return (
@@ -193,13 +194,13 @@ export default function LogisticsQueueTable({
                         <span className="max-w-[170px] truncate font-medium text-gray-800" title={destDisplay}>
                           {destDisplay}
                         </span>
-                        {hasPurchaseContract ? (
+                        {hasSc ? (
                           <span
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help max-w-fit"
-                            title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70 select-none cursor-help max-w-fit"
+                            title={"Source: Linked Sales Contract → Delivery Place\n\nAlways auto-derived from linked Sales Contract."}
                           >
-                            <FileText className="h-2.5 w-2.5 text-blue-600 shrink-0" />
-                            <span>Purchase Contract</span>
+                            <FileText className="h-2.5 w-2.5 text-emerald-600 shrink-0" />
+                            <span>Sales Contract</span>
                           </span>
                         ) : (
                           dests.length > 1 && (

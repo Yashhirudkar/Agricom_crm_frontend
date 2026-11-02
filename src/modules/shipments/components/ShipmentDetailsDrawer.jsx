@@ -180,6 +180,50 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
+          {/* Auto Route Source Mapping (Purchase Contract → Sales Contract) */}
+          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="h-9 w-9 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+                <Ship className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 min-w-0">
+                {/* Origin */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Origin (Loading Point)</span>
+                    <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                      Purchase Contract
+                    </span>
+                  </div>
+                  <p className="text-xs font-black text-slate-900 mt-0.5 truncate" title={shipment.origin || "—"}>
+                    {shipment.origin || "—"}
+                  </p>
+                </div>
+
+                <div className="hidden sm:flex text-slate-400 font-bold self-center">➔</div>
+
+                {/* Destination */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Destination (Delivery Place)</span>
+                    <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                      Sales Contract
+                    </span>
+                  </div>
+                  <p className="text-xs font-black text-slate-900 mt-0.5 truncate" title={shipment.destination || "—"}>
+                    {shipment.destination || "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="shrink-0 flex items-center gap-2">
+              <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full select-none">
+                Read-Only Route
+              </span>
+            </div>
+          </div>
+
           {/* Top Key Metrics Banner */}
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] grid grid-cols-2 md:grid-cols-5 gap-3 items-center">
             <div className="border-r border-slate-100 last:border-r-0 pr-3">
@@ -273,6 +317,9 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                         if (shipment.salesContract?.enquiryId) {
                           params.set("enquiryId", String(shipment.salesContract.enquiryId));
                         }
+                        params.set("shipmentId", String(shipment.id));
+                        if (shipment.shipmentReference) params.set("shipmentRef", shipment.shipmentReference);
+                        params.set("from", "shipments");
                         params.set("openDrawer", "true");
                         router.push(`/logistics/transport-management?${params.toString()}`);
                       }
@@ -293,6 +340,9 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                       if (shipment.salesContract?.enquiryId) {
                         params.set("enquiryId", String(shipment.salesContract.enquiryId));
                       }
+                      params.set("shipmentId", String(shipment.id));
+                      if (shipment.shipmentReference) params.set("shipmentRef", shipment.shipmentReference);
+                      params.set("from", "shipments");
                       params.set("openDrawer", "true");
                       router.push(`/logistics/transport-management?${params.toString()}`);
                     }
@@ -388,12 +438,22 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Buyer / Client</span>
-                    <p className="text-xs font-bold text-slate-800 mt-1">{buyer.entityName || "—"}</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Buyer (Sales Contract)</span>
+                      <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">SC</span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-800 truncate" title={shipment.buyer || buyer.entityName || "—"}>
+                      {shipment.buyer || buyer.entityName || "—"}
+                    </p>
                   </div>
                   <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Seller / Entity</span>
-                    <p className="text-xs font-bold text-slate-800 mt-1">{seller.entityName || "—"}</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Supplier (Purchase Contract)</span>
+                      <span className="text-[9px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">PC</span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-800 truncate" title={shipment.supplier || shipment.purchaseContract?.sellerName || seller.entityName || "—"}>
+                      {shipment.supplier || shipment.purchaseContract?.sellerName || seller.entityName || "—"}
+                    </p>
                   </div>
                 </div>
               </div>

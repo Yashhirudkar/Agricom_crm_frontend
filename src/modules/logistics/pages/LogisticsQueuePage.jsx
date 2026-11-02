@@ -27,6 +27,8 @@ export default function LogisticsQueuePage() {
   const urlLogisticsId = searchParams?.get("logisticsId") || "";
   const urlEnquiryId = searchParams?.get("enquiryId") || "";
   const urlShipmentId = searchParams?.get("shipmentId") || "";
+  const urlShipmentRef = searchParams?.get("shipmentRef") || "";
+  const urlFrom = searchParams?.get("from") || "";
 
   // Initial values based on deep-link query parameters
   const initialSearch = urlSearch || urlBusinessRef || "";
@@ -172,7 +174,7 @@ export default function LogisticsQueuePage() {
           setTotalPages(res.data?.totalPages || 1);
 
           // Deep-link auto-open handling
-          if (urlOpenDrawer && !autoOpenHandled.current) {
+          if ((urlOpenDrawer || urlShipmentId) && !autoOpenHandled.current) {
             const matched = findMatchingEnquiry(list);
             if (matched) {
               autoOpenHandled.current = true;
@@ -476,6 +478,8 @@ export default function LogisticsQueuePage() {
         onClose={handleCloseDrawer}
         enquiry={selectedEnquiry}
         targetShipmentId={urlShipmentId}
+        targetShipmentRef={urlShipmentRef}
+        fromSource={urlFrom}
       />
 
       <ConfirmModal

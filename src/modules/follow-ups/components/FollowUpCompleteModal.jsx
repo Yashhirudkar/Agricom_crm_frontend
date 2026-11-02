@@ -1,6 +1,6 @@
-import { CLOSURE_REASONS } from "@/components/masters/partners/PartnerFollowUpDrawer";
 "use client";
 
+import { CLOSURE_REASONS } from "@/components/masters/partners/PartnerFollowUpDrawer";
 import React, { useState, useEffect } from "react";
 import { useCompleteFollowUpMutation } from "../mutations/follow-ups.mutation";
 

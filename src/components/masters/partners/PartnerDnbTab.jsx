@@ -183,6 +183,7 @@ export default function PartnerDnbTab({
       reportDate: dnbDraft?.reportDate || new Date().toISOString().split("T")[0],
       riskFactor: dnbDraft?.riskFactor || "LOW",
       creditLimit: dnbDraft?.creditLimit || "",
+      annualTurnover: dnbDraft?.annualTurnover || "",
       failureScore: dnbDraft?.failureScore || "MODERATE",
       paydex: dnbDraft?.paydex || "",
       dnbRating: dnbDraft?.dnbRating || "",
@@ -214,6 +215,7 @@ export default function PartnerDnbTab({
     watchAllFields.reportDate,
     watchAllFields.riskFactor,
     watchAllFields.creditLimit,
+    watchAllFields.annualTurnover,
     watchAllFields.failureScore,
     watchAllFields.paydex,
     watchAllFields.dnbRating,
@@ -221,6 +223,7 @@ export default function PartnerDnbTab({
   ]);
 
   const [partnerYearOfEst, setPartnerYearOfEst] = useState("");
+  const [partnerAnnualTurnover, setPartnerAnnualTurnover] = useState("");
 
   const loadReports = useCallback(async () => {
     if (!partnerId) return;
@@ -240,6 +243,15 @@ export default function PartnerDnbTab({
       if (estYear) {
         setPartnerYearOfEst(String(estYear));
         setValue("yearOfEstablishment", String(estYear));
+      }
+
+      const turnover =
+        partnerRes?.data?.annualTurnover ??
+        fetchedReports[0]?.partner?.annualTurnover ??
+        "";
+      if (turnover !== "" && turnover !== null && turnover !== undefined) {
+        setPartnerAnnualTurnover(String(turnover));
+        setValue("annualTurnover", String(turnover));
       }
 
       if (fetchedReports.length === 0) {
@@ -292,6 +304,7 @@ export default function PartnerDnbTab({
       reportDate: new Date().toISOString().split("T")[0],
       riskFactor: "LOW",
       creditLimit: "",
+      annualTurnover: partnerAnnualTurnover || "",
       failureScore: "MODERATE",
       paydex: "",
       dnbRating: "",
@@ -409,6 +422,9 @@ export default function PartnerDnbTab({
       formData.append("reportDate", data.reportDate);
       formData.append("riskFactor", data.riskFactor);
       formData.append("creditLimit", data.creditLimit);
+      if (data.annualTurnover !== undefined && data.annualTurnover !== "") {
+        formData.append("annualTurnover", data.annualTurnover);
+      }
       formData.append("failureScore", data.failureScore);
       formData.append("paydex", data.paydex);
       formData.append("dnbRating", data.dnbRating.toUpperCase().trim());
@@ -417,11 +433,16 @@ export default function PartnerDnbTab({
         headers: { "Content-Type": "multipart/form-data" },
       });
 
+      const partnerPatchPayload = {};
       if (data.yearOfEstablishment) {
+        partnerPatchPayload.yearOfEstablishment = parseInt(data.yearOfEstablishment, 10);
+      }
+      if (data.annualTurnover !== undefined && data.annualTurnover !== "") {
+        partnerPatchPayload.annualTurnover = parseFloat(data.annualTurnover);
+      }
+      if (Object.keys(partnerPatchPayload).length > 0) {
         try {
-          await axiosClient.patch(`/masters/partners/${partnerId}`, {
-            yearOfEstablishment: parseInt(data.yearOfEstablishment, 10),
-          });
+          await axiosClient.patch(`/masters/partners/${partnerId}`, partnerPatchPayload);
         } catch (e) {
           // ignore minor sync error
         }
@@ -453,12 +474,24 @@ export default function PartnerDnbTab({
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header bar when reports exist */}
       {reports.length > 0 && !isCreatingNew && (
-        <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-emerald-600" />
-            <span className="text-xs font-bold text-gray-800 uppercase tracking-wider">
-              Recorded Assessments ({reports.length})
-            </span>
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-emerald-600" />
+              <span className="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                Recorded Assessments ({reports.length})
+              </span>
+            </div>
+            {partnerAnnualTurnover && (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 rounded-xl border border-emerald-200">
+                <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
+                  Annual Turnover:
+                </span>
+                <span className="text-xs font-extrabold text-emerald-700">
+                  {formatCurrency(partnerAnnualTurnover)}
+                </span>
+              </div>
+            )}
           </div>
           <button
             type="button"
@@ -506,8 +539,8 @@ export default function PartnerDnbTab({
                     const val = e.target.value;
                     setValue("establishmentDate", val);
                     if (val) {
-                      const year = new Date(val).getFullYear();
-                      if (!isNaN(year)) setValue("yearOfEstablishment", year);
+                       const year = new Date(val).getFullYear();
+                       if (!isNaN(year)) setValue("yearOfEstablishment", year);
                     }
                   }}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-xs focus:outline-none focus:ring-0 text-gray-700 bg-gray-50/30 font-semibold"
@@ -555,6 +588,40 @@ export default function PartnerDnbTab({
                     {errors.dnbRating.message}
                   </p>
                 )}
+              </div>
+
+              {/* Annual Sales (Turnover) */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                  Annual Sales (Turnover) (₹ INR) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs font-bold text-gray-400">
+                    ₹
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="9999999999999999.99"
+                    {...register("annualTurnover", {
+                      required: "Annual Sales (Turnover) is required",
+                      min: { value: 0, message: "Turnover cannot be negative" },
+                      max: { value: 9999999999999999.99, message: "Turnover exceeds maximum limit" },
+                    })}
+                    placeholder="5303520"
+                    className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2.5 text-xs focus:outline-none focus:ring-0 text-gray-700 font-semibold bg-gray-50/30"
+                  />
+                </div>
+                {watchAllFields.annualTurnover && !isNaN(Number(watchAllFields.annualTurnover)) && Number(watchAllFields.annualTurnover) >= 0 ? (
+                  <p className="text-[10px] text-gray-500 mt-1 font-semibold flex items-center gap-1">
+                    Preview: <span className="text-[#007aff] font-extrabold">{formatCurrency(watchAllFields.annualTurnover)}</span>
+                  </p>
+                ) : errors.annualTurnover ? (
+                  <p className="text-red-500 text-[10px] mt-1 font-semibold">
+                    {errors.annualTurnover.message}
+                  </p>
+                ) : null}
               </div>
 
               {/* 4. Credit Limit */}
@@ -825,8 +892,20 @@ export default function PartnerDnbTab({
                     </div>
                   )}
 
-                  {/* Grid details (5 Columns) */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  {/* Grid details (6 Columns) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+                    <div>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                        Annual Turnover
+                      </span>
+                      <span className="text-xs font-extrabold text-gray-900 mt-0.5 block">
+                        {report.partner?.annualTurnover != null
+                          ? formatCurrency(report.partner.annualTurnover)
+                          : partnerAnnualTurnover
+                          ? formatCurrency(partnerAnnualTurnover)
+                          : "—"}
+                      </span>
+                    </div>
                     <div>
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                         Establishment Year

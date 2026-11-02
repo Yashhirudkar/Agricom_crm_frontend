@@ -43,6 +43,7 @@ import { logisticsApi } from "../services/logisticsApi";
 import AddFreightQuoteModal from "./AddFreightQuoteModal";
 import PartnerDrawer from "@/components/masters/partners/PartnerDrawer";
 import VirtualizedAuditLogTimeline from "./VirtualizedAuditLogTimeline";
+import SingleShipmentWorkspace from "./SingleShipmentWorkspace";
 import axiosClient from "@/lib/axios";
 import { resolvePhone } from "@/lib/contactUtils";
 import { useSelector } from "react-redux";
@@ -71,7 +72,15 @@ const DEFAULT_DOC_CATEGORIES = [
   "Other",
 ];
 
-export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly = false, targetShipmentId = null }) {
+export default function TransportDrawer({
+  isOpen,
+  onClose,
+  enquiry,
+  isReadOnly = false,
+  targetShipmentId = null,
+  targetShipmentRef = null,
+  fromSource = null,
+}) {
   const company = useSelector(selectActiveCompany);
   const companyCountry = company?.country;
 
@@ -106,6 +115,33 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
     return null;
   }, [targetShipmentId, enquiry]);
 
+  const effectiveTargetShipmentRef = useMemo(() => {
+    if (targetShipmentRef) return String(targetShipmentRef);
+    if (enquiry?.targetShipmentRef) return String(enquiry.targetShipmentRef);
+    if (typeof window !== "undefined") {
+      const param = new URLSearchParams(window.location.search).get("shipmentRef");
+      if (param) return String(param);
+    }
+    return null;
+  }, [targetShipmentRef, enquiry]);
+
+  const effectiveFrom = useMemo(() => {
+    if (fromSource) return String(fromSource);
+    if (typeof window !== "undefined") {
+      const param = new URLSearchParams(window.location.search).get("from");
+      if (param) return String(param);
+    }
+    return null;
+  }, [fromSource]);
+
+  const isSingleShipmentMode = Boolean(
+    effectiveTargetShipmentId ||
+    effectiveFrom === "shipments" ||
+    (details?.shipments && details.shipments.length === 1)
+  );
+
+  const isSingleShipmentView = isSingleShipmentMode;
+
   useEffect(() => {
     if (effectiveTargetShipmentId && details?.shipments?.length > 0) {
       setCollapsedShipments((prev) => {
@@ -122,6 +158,33 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
       }, 250);
     }
   }, [effectiveTargetShipmentId, details?.shipments]);
+
+  const [shipmentNotFoundError, setShipmentNotFoundError] = useState(false);
+
+  const visibleShipments = useMemo(() => {
+    const list = details?.shipments || [];
+    if (!isSingleShipmentView) return list;
+    return list.filter(
+      (s) =>
+        String(s.id) === String(effectiveTargetShipmentId) ||
+        (effectiveTargetShipmentRef && s.shipmentReference === effectiveTargetShipmentRef)
+    );
+  }, [details?.shipments, isSingleShipmentView, effectiveTargetShipmentId, effectiveTargetShipmentRef]);
+
+  const singleShipment = useMemo(() => {
+    const list = details?.shipments || [];
+    if (list.length === 0) return null;
+    if (effectiveTargetShipmentId) {
+      const found = list.find((s) => String(s.id) === String(effectiveTargetShipmentId));
+      if (found) return found;
+    }
+    if (effectiveTargetShipmentRef) {
+      const found = list.find((s) => s.shipmentReference === effectiveTargetShipmentRef);
+      if (found) return found;
+    }
+    if (list.length === 1) return list[0];
+    return null;
+  }, [details?.shipments, effectiveTargetShipmentId, effectiveTargetShipmentRef]);
 
   const handleOpenAddQuoteForShipment = (shipment) => {
     setSelectedQuote(null);
@@ -198,20 +261,24 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
 
   const availableRoutes = useMemo(() => {
     const pc = details?.purchaseContract || enquiry?.purchaseContract;
+    const sc = details?.salesContract || enquiry?.salesContract;
     const hasPc = Boolean(pc);
+    const hasSc = Boolean(sc);
+
+    const pcOrigin = (hasPc && pc.placeOfLoading) ? pc.placeOfLoading : null;
+    const scDest = (hasSc && (sc.destinationLocationName || sc.portOfDischarge || sc.deliveryPlace))
+      ? (sc.destinationLocationName || sc.portOfDischarge || sc.deliveryPlace)
+      : (details?.destination !== "—" ? details?.destination : null);
 
     if (!details?.logistics?.routes || details.logistics.routes.length === 0) {
-      if (hasPc && (pc.placeOfLoading || pc.deliveryPlace)) {
-        const o = pc.placeOfLoading || "—";
-        const d = pc.deliveryPlace || "—";
-        return [{ id: "pc", origin: o, destination: d, label: `${o} → ${d}` }];
-      }
-      return [{ id: "all", origin: "—", destination: "—", label: "— → —" }];
+      const o = pcOrigin || "—";
+      const d = scDest || "—";
+      return [{ id: "pc-sc", origin: o, destination: d, label: `${o} → ${d}` }];
     }
     
     return details.logistics.routes.map(r => {
-      const origin = hasPc && pc.placeOfLoading ? pc.placeOfLoading : r.origin;
-      const destination = hasPc && pc.deliveryPlace ? pc.deliveryPlace : r.destination;
+      const origin = pcOrigin || r.origin;
+      const destination = scDest || r.destination;
       return {
         id: r.id,
         origin,
@@ -328,8 +395,10 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
   const loadDetails = useCallback(async () => {
     if (!enquiry?.id) return;
     setLoading(true);
+    setShipmentNotFoundError(false);
     try {
-      const res = await logisticsApi.getDetails(enquiry.id);
+      const sId = effectiveTargetShipmentId ? Number(effectiveTargetShipmentId) : undefined;
+      const res = await logisticsApi.getDetails(enquiry.id, sId);
       setDetails(res.data);
 
       const log = res.data?.logistics;
@@ -344,11 +413,15 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
       }
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load transport details.");
+      if (err.response?.status === 404 && effectiveTargetShipmentId) {
+        setShipmentNotFoundError(true);
+      } else {
+        toast.error("Failed to load transport details.");
+      }
     } finally {
       setLoading(false);
     }
-  }, [enquiry]);
+  }, [enquiry, effectiveTargetShipmentId]);
 
   useEffect(() => {
     if (isOpen && enquiry?.id) {
@@ -792,15 +865,13 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                         <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 truncate" title={Array.from(new Set(availableRoutes.filter(r => r.destination !== "—").map(r => r.destination))).join(", ") || "—"}>
                           {Array.from(new Set(availableRoutes.filter(r => r.destination !== "—").map(r => r.destination))).join(", ") || "—"}
                         </div>
-                        {Boolean(details?.purchaseContract || enquiry?.purchaseContract) && (
-                          <span
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help w-fit"
-                            title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
-                          >
-                            <FileText className="h-2.5 w-2.5 text-blue-600 shrink-0" />
-                            <span>Purchase Contract</span>
-                          </span>
-                        )}
+                        <span
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70 select-none cursor-help w-fit"
+                          title={"Source: Linked Sales Contract → Delivery Place\n\nAlways auto-derived from linked Sales Contract."}
+                        >
+                          <FileText className="h-2.5 w-2.5 text-emerald-600 shrink-0" />
+                          <span>Sales Contract</span>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -827,15 +898,13 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                   <div>
                     <div className="flex items-center gap-1.5 mb-1">
                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">To</p>
-                      {Boolean(details?.purchaseContract || enquiry?.purchaseContract) && (
-                        <span
-                          className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-medium bg-blue-50 text-blue-700 border border-blue-200/60 select-none cursor-help"
-                          title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
-                        >
-                          <FileText className="h-2 w-2 text-blue-600 shrink-0" />
-                          <span>PC</span>
-                        </span>
-                      )}
+                      <span
+                        className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none cursor-help"
+                        title={"Source: Linked Sales Contract → Delivery Place\n\nAlways auto-derived from linked Sales Contract."}
+                      >
+                        <FileText className="h-2 w-2 text-emerald-600 shrink-0" />
+                        <span>SC</span>
+                      </span>
                     </div>
                     <p className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 truncate">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" /> {selectedRoute ? selectedRoute.destination : "—"}
@@ -849,7 +918,11 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                   </div>
                   <div>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Quantity</p>
-                    <p className="font-extrabold text-xs text-slate-800 tabular-nums">{Number(enquiry?.quantity || 0).toLocaleString()} MT</p>
+                    <p className="font-extrabold text-xs text-slate-800 tabular-nums">
+                      {isSingleShipmentView && singleShipment?.quantity
+                        ? `${Number(singleShipment.quantity).toLocaleString()} MT`
+                        : `${Number(enquiry?.quantity || 0).toLocaleString()} MT`}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -918,10 +991,39 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
             {/* ================================================================================= */}
             <div className="flex-1 min-h-0 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
               <div className="p-4 flex-1 overflow-y-auto">
-                {details?.shipments && details.shipments.length > 0 ? (
-                  /* ================= SHIPMENT-WISE FREIGHT MANAGEMENT ================= */
+                {isSingleShipmentMode ? (
+                  singleShipment ? (
+                    /* ================= DEDICATED SINGLE SHIPMENT WORKSPACE ================= */
+                    <SingleShipmentWorkspace
+                      shipment={singleShipment}
+                      details={details}
+                      isReadOnly={isReadOnly}
+                      onAddQuote={handleOpenAddQuoteForShipment}
+                      onEditQuote={handleOpenEditQuoteForShipment}
+                      onDeleteQuote={handleDeleteQuote}
+                      onSetPreferred={handleSetPreferred}
+                      onExecuteShipment={handleExecuteShipment}
+                      executingShipmentId={executingShipmentId}
+                      expiringSoonIds={expiringSoonIds}
+                      getPartnerInitials={getPartnerInitials}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-white rounded-2xl border-2 border-dashed border-rose-200 m-2">
+                      <div className="h-12 w-12 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-500 mb-3 shadow-xs">
+                        <AlertTriangle className="h-6 w-6" />
+                      </div>
+                      <h3 className="text-sm font-black text-slate-800">Selected shipment not found</h3>
+                      <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                        {effectiveTargetShipmentRef
+                          ? `Shipment "${effectiveTargetShipmentRef}" could not be found.`
+                          : "The requested shipment could not be located in this transport workspace."}
+                      </p>
+                    </div>
+                  )
+                ) : details?.shipments && details.shipments.length > 0 ? (
+                  /* ================= GROUPED PURCHASE CONTRACT WORKSPACE ================= */
                   <div className="space-y-6">
-                    {/* Contract Group Banner */}
+                    {/* Contract Group Banner - Only in Grouped Multi-Shipment View */}
                     <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-4 text-white shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
@@ -951,11 +1053,11 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                       </div>
                     </div>
 
-                    {/* Shipments List */}
+                    {/* Shipments List (Grouped Multi-Shipment Layout) */}
                     <div className="space-y-5">
                       {details.shipments.map((s, sIdx) => {
                         const isTargeted = String(s.id) === String(effectiveTargetShipmentId);
-                        const isCollapsed = collapsedShipments.has(s.id) && !isTargeted;
+                        const isCollapsed = isSingleShipmentView ? false : (collapsedShipments.has(s.id) && !isTargeted);
                         const sQuotes = s.quotes || [];
                         const prefQuote = s.preferredQuote || sQuotes.find(q => q.isPreferred);
 
@@ -979,26 +1081,28 @@ export default function TransportDrawer({ isOpen, onClose, enquiry, isReadOnly =
                             }`}>
                               {/* Left: Collapsible Toggle, Ref, Route, Qty */}
                               <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleShipmentCollapse(s.id)}
-                                  className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors cursor-pointer shrink-0"
-                                  title={isCollapsed ? "Expand Shipment Details" : "Collapse Shipment Details"}
-                                >
-                                  {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                                </button>
+                                {!isSingleShipmentView && (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleShipmentCollapse(s.id)}
+                                    className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 hover:bg-slate-200/70 transition-colors cursor-pointer shrink-0"
+                                    title={isCollapsed ? "Expand Shipment Details" : "Collapse Shipment Details"}
+                                  >
+                                    {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                                  </button>
+                                )}
 
                                 <div className="flex items-center gap-2.5 flex-wrap min-w-0">
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-black uppercase text-slate-400">
-                                      #{s.shipmentNo || sIdx + 1}
+                                    <span className="text-xs font-black uppercase text-slate-500">
+                                      {isSingleShipmentView ? "Shipment Ref:" : `#${s.shipmentNo || sIdx + 1}`}
                                     </span>
                                     <span className="px-2.5 py-1 rounded-lg text-xs font-black font-mono tracking-wider bg-blue-600 text-white shadow-2xs">
                                       {s.shipmentReference || `REF-${String(s.id).padStart(5, "0")}`}
                                     </span>
                                   </div>
 
-                                  {isTargeted && (
+                                  {!isSingleShipmentView && isTargeted && (
                                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-600 text-white shadow-xs animate-pulse">
                                       Targeted Shipment
                                     </span>

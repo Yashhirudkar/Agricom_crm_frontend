@@ -1,4 +1,3 @@
-
 "use client";
 
 function formatClosedDate(dateStr) {
@@ -28,7 +27,7 @@ import CountrySelect from "@/components/common/CountrySelect";
 import { getAlpha2Code } from "@/lib/countryUtils";
 import axiosClient from "@/lib/axios";
 
-export default function EnquiryDetailsSection({ form, setForm, errors, masters = {}, isView }) {
+export default function EnquiryDetailsSection({ form, setForm, errors, masters = {}, isView, isEdit = false }) {
   const {
     countries = [],
     partnerRoles = [],
@@ -47,6 +46,7 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
   const [partnerSearch, setPartnerSearch] = useState("");
   const [isPartnerOpen, setIsPartnerOpen] = useState(false);
   const [selectedPartnerName, setSelectedPartnerName] = useState("");
+  const [partnerTurnoverHasMasterValue, setPartnerTurnoverHasMasterValue] = useState(false);
   const partnerDropdownRef = useRef(null);
 
   // States for broker selection
@@ -97,24 +97,37 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
     return () => clearTimeout(timer);
   }, [partnerSearch, form.partnerRoleId, fetchPartnerOptions]);
 
-  // Sync selected partner entityName if partnerId changes
+  // Sync selected partner entityName and turnover if partnerId changes
   useEffect(() => {
     if (form.partnerId) {
       const found = partnerOptions.find((p) => p.id === form.partnerId);
       if (found) {
         setSelectedPartnerName(found.entityName);
+        setPartnerTurnoverHasMasterValue(Number(found.annualTurnover) > 0);
+        if (!isEdit && !isView) {
+          setForm((f) => ({ ...f, partnerAnnualTurnover: found.annualTurnover ?? null }));
+        }
       } else if (!selectedPartnerName) {
         // If partner is selected but not present in current search results, fetch single partner option
         axiosClient.get(`/masters/partners/${form.partnerId}`).then((res) => {
-          if (res.data?.entityName) {
-            setSelectedPartnerName(res.data.entityName);
+          const partnerData = res.data?.data || res.data;
+          if (partnerData?.entityName) {
+            setSelectedPartnerName(partnerData.entityName);
+          }
+          setPartnerTurnoverHasMasterValue(Number(partnerData?.annualTurnover) > 0);
+          if (!isEdit && !isView && partnerData?.annualTurnover !== undefined) {
+            setForm((f) => ({ ...f, partnerAnnualTurnover: partnerData.annualTurnover ?? null }));
           }
         }).catch(() => {});
       }
     } else {
       setSelectedPartnerName("");
+      setPartnerTurnoverHasMasterValue(false);
+      if (!isEdit && !isView) {
+        setForm((f) => ({ ...f, partnerAnnualTurnover: null }));
+      }
     }
-  }, [form.partnerId, partnerOptions]);
+  }, [form.partnerId, partnerOptions, isEdit, isView]);
 
   // Click outside to close partner dropdown
   useEffect(() => {
@@ -233,7 +246,7 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
         </div>
       )}
 
-      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
         {/* Partner Role */}
         <div>
@@ -243,8 +256,9 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
               value={form.partnerRoleId || ""}
               onChange={e => {
                 const newRoleId = e.target.value ? Number(e.target.value) : "";
-                setForm(f => ({ ...f, partnerRoleId: newRoleId, partnerId: "" }));
+                setForm(f => ({ ...f, partnerRoleId: newRoleId, partnerId: "", ...(!isEdit && !isView ? { partnerAnnualTurnover: null } : {}) }));
                 setSelectedPartnerName("");
+                setPartnerTurnoverHasMasterValue(false);
                 setPartnerSearch("");
               }}
               disabled={isView}
@@ -325,8 +339,9 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
                           key={p.id}
                           type="button"
                           onClick={() => {
-                            setForm((f) => ({ ...f, partnerId: p.id }));
+                            setForm((f) => ({ ...f, partnerId: p.id, ...(!isEdit && !isView ? { partnerAnnualTurnover: p.annualTurnover ?? null } : {}) }));
                             setSelectedPartnerName(p.entityName);
+                            setPartnerTurnoverHasMasterValue(Number(p.annualTurnover) > 0);
                             setIsPartnerOpen(false);
                           }}
                           className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${
@@ -345,6 +360,37 @@ export default function EnquiryDetailsSection({ form, setForm, errors, masters =
             </div>
           )}
           {errors.partnerId && <p className={err}>{errors.partnerId}</p>}
+        </div>
+
+        {/* Annual Sales (Turnover) */}
+        <div>
+          <label className={lbl}>Annual Sales (Turnover)</label>
+          <div className="relative">
+            <input
+              type={partnerTurnoverHasMasterValue || isEdit || isView ? "text" : "number"}
+              min="0"
+              step="any"
+              readOnly={isEdit || isView || partnerTurnoverHasMasterValue}
+              disabled={isEdit || isView || partnerTurnoverHasMasterValue}
+              tabIndex={isEdit || isView || partnerTurnoverHasMasterValue ? -1 : undefined}
+              value={
+                (partnerTurnoverHasMasterValue || isEdit || isView) &&
+                form.partnerAnnualTurnover !== null &&
+                form.partnerAnnualTurnover !== undefined &&
+                form.partnerAnnualTurnover !== "" &&
+                !isNaN(Number(form.partnerAnnualTurnover))
+                  ? new Intl.NumberFormat("en-IN", {
+                      style: "currency",
+                      currency: "INR",
+                      maximumFractionDigits: 2,
+                    }).format(Number(form.partnerAnnualTurnover))
+                    : form.partnerAnnualTurnover ?? ""
+              }
+              onChange={(e) => setForm((f) => ({ ...f, partnerAnnualTurnover: e.target.value }))}
+              className={`${inp} ${partnerTurnoverHasMasterValue || isEdit || isView ? "bg-gray-100 text-gray-700 cursor-not-allowed select-none" : "bg-white"} font-medium`}
+              placeholder="Enter turnover"
+            />
+          </div>
         </div>
 
         {/* Product */}

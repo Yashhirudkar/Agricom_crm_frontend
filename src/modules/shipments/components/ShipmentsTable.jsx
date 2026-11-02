@@ -105,6 +105,31 @@ export default function ShipmentsTable({
     }
   };
 
+  const handleExecuteShipmentWorkspace = (e, s) => {
+    e.stopPropagation();
+    const searchVal =
+      s.businessReference ||
+      s.businessTransaction?.businessReference ||
+      s.shipmentReference ||
+      "";
+    const params = new URLSearchParams();
+    if (searchVal) {
+      params.set("search", searchVal);
+      params.set("businessRef", searchVal);
+    }
+    if (s.logisticsId) {
+      params.set("logisticsId", String(s.logisticsId));
+    }
+    if (s.salesContract?.enquiryId) {
+      params.set("enquiryId", String(s.salesContract.enquiryId));
+    }
+    params.set("shipmentId", String(s.id));
+    if (s.shipmentReference) params.set("shipmentRef", s.shipmentReference);
+    params.set("from", "shipments");
+    params.set("openDrawer", "true");
+    router.push(`/logistics/transport-management?${params.toString()}`);
+  };
+
   const handleFreightClick = (e, s) => {
     e.stopPropagation();
     if (s.freightReady) {
@@ -130,6 +155,7 @@ export default function ShipmentsTable({
         }
         params.set("shipmentId", String(s.id));
         if (s.shipmentReference) params.set("shipmentRef", s.shipmentReference);
+        params.set("from", "shipments");
         params.set("openDrawer", "true");
         router.push(`/logistics/transport-management?${params.toString()}`);
       }
@@ -152,8 +178,9 @@ export default function ShipmentsTable({
         params.set("enquiryId", String(s.salesContract.enquiryId));
       }
       params.set("shipmentId", String(s.id));
-        if (s.shipmentReference) params.set("shipmentRef", s.shipmentReference);
-        params.set("openDrawer", "true");
+      if (s.shipmentReference) params.set("shipmentRef", s.shipmentReference);
+      params.set("from", "shipments");
+      params.set("openDrawer", "true");
       router.push(`/logistics/transport-management?${params.toString()}`);
     }
   };
@@ -204,9 +231,10 @@ export default function ShipmentsTable({
               </th>
               <th className="px-4 py-3 whitespace-nowrap">Timeline</th>
               <th className="px-4 py-3 whitespace-nowrap">Shipment Date</th>
+              <th className="px-4 py-3 whitespace-nowrap">Route (Origin → Destination)</th>
               <th className="px-4 py-3 whitespace-nowrap">Buyer</th>
-              <th className="px-4 py-3 whitespace-nowrap">Seller</th>
-              <th className="px-4 py-3 whitespace-nowrap">Product</th>
+              <th className="px-4 py-3 whitespace-nowrap">Supplier</th>
+              <th className="px-4 py-3 whitespace-nowrap">Commodity</th>
               <th className="px-4 py-3 text-right whitespace-nowrap">Qty (MT)</th>
               <th className="px-4 py-3 text-center whitespace-nowrap">Cargo Allocation</th>
               <th className="px-4 py-3 text-center whitespace-nowrap">Freight Allocation</th>
@@ -412,17 +440,9 @@ export default function ShipmentsTable({
                       ) : (
                         <button
                           type="button"
-                          disabled={!s.readyForShipment}
-                          title={getExecuteDisabledTooltip(s)}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!s.readyForShipment) return;
-                            setStuffingShipment(s);
-                          }}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-xs ${s.readyForShipment
-                            ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer"
-                            : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                            }`}
+                          title="Execute shipment freight & transport workflow"
+                          onClick={(e) => handleExecuteShipmentWorkspace(e, s)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer"
                         >
                           <Rocket className="h-3.5 w-3.5" />
                           <span>Execute</span>

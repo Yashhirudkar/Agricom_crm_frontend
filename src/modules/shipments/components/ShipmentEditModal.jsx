@@ -126,6 +126,35 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
         {/* Form Body */}
         <form onSubmit={handleSave}>
           <div className="p-5 max-h-[70vh] overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            {/* Auto Route Source Mapping (Read-Only) */}
+            <div className="sm:col-span-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Assigned Route (Auto-Derived)</span>
+                <span className="text-[10px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">Read-Only</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200/80">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Origin (Loading Point)</span>
+                    <span className="text-[9px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">Purchase Contract</span>
+                  </div>
+                  <p className="font-extrabold text-slate-900 truncate" title={shipment.origin || "—"}>
+                    {shipment.origin || "—"}
+                  </p>
+                </div>
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200/80">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Destination (Delivery Place)</span>
+                    <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">Sales Contract</span>
+                  </div>
+                  <p className="font-extrabold text-slate-900 truncate" title={shipment.destination || "—"}>
+                    {shipment.destination || "—"}
+                  </p>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 italic">Origin and Destination are locked and automatically derived from source contracts.</p>
+            </div>
             
             {/* Shipment Number */}
             <div>

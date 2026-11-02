@@ -247,6 +247,9 @@ function PartnersContent() {
         if (dnbDraft?.yearOfEstablishment && !createPayload.yearOfEstablishment) {
           createPayload.yearOfEstablishment = parseInt(dnbDraft.yearOfEstablishment, 10);
         }
+        if (dnbDraft?.annualTurnover !== undefined && dnbDraft.annualTurnover !== null && dnbDraft.annualTurnover !== "" && !createPayload.annualTurnover) {
+          createPayload.annualTurnover = Number(dnbDraft.annualTurnover);
+        }
 
         const createdPartner = await dispatch(createPartner(createPayload)).unwrap();
 
@@ -260,6 +263,9 @@ function PartnersContent() {
             formData.append("failureScore", dnbDraft.failureScore || "MODERATE");
             formData.append("paydex", dnbDraft.paydex || 0);
             formData.append("dnbRating", (dnbDraft.dnbRating || "EE1").toUpperCase().trim());
+            if (dnbDraft.annualTurnover !== undefined && dnbDraft.annualTurnover !== null && dnbDraft.annualTurnover !== "") {
+              formData.append("annualTurnover", dnbDraft.annualTurnover);
+            }
 
             await axiosClient.post(`/masters/partners/${createdPartner.id}/dnb-reports`, formData, {
               headers: { "Content-Type": "multipart/form-data" },

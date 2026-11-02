@@ -228,9 +228,10 @@ export default function FreightManagementPage() {
     return data.map(quote => {
       const enquiry = quote.logistics?.enquiry;
       const pc = quote.purchaseContract || enquiry?.purchaseContract;
+      const sc = quote.salesContract || enquiry?.salesContract;
       const hasPurchaseContract = Boolean(pc);
       const pcOrigin = pc?.placeOfLoading || null;
-      const pcDestination = pc?.deliveryPlace || null;
+      const pcDestination = pc?.salesContractDestination || sc?.destinationLocationName || sc?.deliveryPlace || pc?.deliveryPlace || null;
 
       const productName = quote.isDirect ? (quote.product?.name || "N/A") : (enquiry?.product?.name || "N/A");
       

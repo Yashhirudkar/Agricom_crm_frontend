@@ -1,4 +1,3 @@
-
 function formatClosedDate(dateStr) {
   if (!dateStr) return "N/A";
   try {
@@ -63,6 +62,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     enquiryDate: new Date().toISOString().split("T")[0],
     partnerRoleId: "",
     partnerId: "",
+    partnerAnnualTurnover: null,
     brokerRoleId: "",
     brokerId: "",
     productId: "",
@@ -115,6 +115,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
   const [partnerSearch, setPartnerSearch] = useState("");
   const [isPartnerOpen, setIsPartnerOpen] = useState(false);
   const [selectedPartnerName, setSelectedPartnerName] = useState("");
+  const [partnerTurnoverHasMasterValue, setPartnerTurnoverHasMasterValue] = useState(false);
   const partnerDropdownRef = useRef(null);
 
   // States for broker selection inside Drawer
@@ -147,6 +148,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           enquiryDate: editData.enquiryDate ? editData.enquiryDate.split("T")[0] : "",
           partnerRoleId: editData.partnerRoleId || "",
           partnerId: editData.partnerId || "",
+          partnerAnnualTurnover: editData.partnerAnnualTurnover ?? null,
           brokerRoleId: editData.brokerRoleId || editData.brokerRole?.id || "",
           brokerId: editData.brokerId || editData.broker?.id || "",
           productId: editData.productId || "",
@@ -197,6 +199,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                 enquiryDate: fresh.enquiryDate ? fresh.enquiryDate.split("T")[0] : "",
                 partnerRoleId: fresh.partnerRoleId || "",
                 partnerId: fresh.partnerId || "",
+                partnerAnnualTurnover: fresh.partnerAnnualTurnover ?? null,
                 brokerRoleId: fresh.brokerRoleId || fresh.brokerRole?.id || "",
                 brokerId: fresh.brokerId || fresh.broker?.id || "",
                 productId: fresh.productId || "",
@@ -247,6 +250,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           enquiryDate: new Date().toISOString().split("T")[0],
           partnerRoleId: "",
           partnerId: "",
+          partnerAnnualTurnover: null,
           brokerRoleId: "",
           brokerId: "",
           productId: "",
@@ -327,22 +331,35 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     return () => clearTimeout(timer);
   }, [partnerSearch, form.partnerRoleId, fetchPartnerOptions]);
 
-  useEffect(() => {
+    useEffect(() => {
     if (form.partnerId) {
       const found = partnerOptions.find((p) => p.id === form.partnerId);
       if (found) {
         setSelectedPartnerName(found.entityName);
+        setPartnerTurnoverHasMasterValue(Number(found.annualTurnover) > 0);
+        if (!editData) {
+          setForm((f) => ({ ...f, partnerAnnualTurnover: found.annualTurnover ?? null }));
+        }
       } else if (!selectedPartnerName) {
         axiosClient.get(`/masters/partners/${form.partnerId}`).then((res) => {
-          if (res.data?.entityName) {
-            setSelectedPartnerName(res.data.entityName);
+          const partnerData = res.data?.data || res.data;
+          if (partnerData?.entityName) {
+            setSelectedPartnerName(partnerData.entityName);
+          }
+          setPartnerTurnoverHasMasterValue(Number(partnerData?.annualTurnover) > 0);
+          if (!editData && partnerData?.annualTurnover !== undefined) {
+            setForm((f) => ({ ...f, partnerAnnualTurnover: partnerData.annualTurnover ?? null }));
           }
         }).catch(() => { });
       }
     } else {
       setSelectedPartnerName("");
+      setPartnerTurnoverHasMasterValue(false);
+      if (!editData) {
+        setForm((f) => ({ ...f, partnerAnnualTurnover: null }));
+      }
     }
-  }, [form.partnerId, partnerOptions]);
+  }, [form.partnerId, partnerOptions, editData]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -625,6 +642,16 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
         delete payload.destinationZipCode;
       }
 
+      if (!editData) {
+        if (form.partnerAnnualTurnover !== undefined && form.partnerAnnualTurnover !== null && form.partnerAnnualTurnover !== "") {
+          payload.partnerAnnualTurnover = Number(form.partnerAnnualTurnover);
+        } else {
+          payload.partnerAnnualTurnover = null;
+        }
+      } else {
+        delete payload.partnerAnnualTurnover;
+      }
+
       if (notifyGroup) {
         payload.notifyGroup = true;
       }
@@ -639,7 +666,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
         setSavingType('SENDING'); // 'Sending WhatsApp...'
         // Simulate a tiny delay for UX so user sees "Sending WhatsApp..."
         await new Promise(r => setTimeout(r, 500));
-        setSuccessMsg("✅ Enquiry updated and notification sent.");
+        setSuccessMsg("âœ… Enquiry updated and notification sent.");
         await new Promise(r => setTimeout(r, 1500));
       }
 
@@ -703,7 +730,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
 
           {successMsg && (
             <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-start gap-3">
-              <div className="h-5 w-5 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 mt-0.5 text-[10px]">✓</div>
+              <div className="h-5 w-5 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 mt-0.5 text-[10px]">âœ“</div>
               <div>
                 <h3 className="text-sm font-bold text-green-800">Success</h3>
                 <p className="text-xs text-green-600 mt-1">{successMsg}</p>
@@ -798,9 +825,9 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                         className={`${inp} appearance-none pr-8 ${errors.shipmentMode ? "border-red-300" : ""}`}
                       >
                         <option value="">Select Shipment Mode</option>
-                        <option value="SHIP">🚢 Ship</option>
-                        <option value="ROAD">🚛 Road</option>
-                        <option value="RAIL">🚆 Rail / Wagon</option>
+                        <option value="SHIP">ðŸš¢ Ship</option>
+                        <option value="ROAD">ðŸš› Road</option>
+                        <option value="RAIL">ðŸš† Rail / Wagon</option>
                       </select>
                       <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
                     </div>
@@ -947,7 +974,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                   <h3 className="text-xs font-bold text-gray-800">Commercial Specifications</h3>
                 </div>
 
-                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Partner Role */}
                   <div>
                     <label className={lbl}>Partner Role <span className="text-red-500">*</span></label>
@@ -956,8 +983,9 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                         value={form.partnerRoleId || ""}
                         onChange={(e) => {
                           const newRoleId = e.target.value ? Number(e.target.value) : "";
-                          setForm((f) => ({ ...f, partnerRoleId: newRoleId, partnerId: "" }));
+                          setForm((f) => ({ ...f, partnerRoleId: newRoleId, partnerId: "", ...(!editData ? { partnerAnnualTurnover: null } : {}) }));
                           setSelectedPartnerName("");
+                          setPartnerTurnoverHasMasterValue(false);
                           setPartnerSearch("");
                         }}
                         disabled={isViewMode}
@@ -1038,8 +1066,9 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                                     key={p.id}
                                     type="button"
                                     onClick={() => {
-                                      setForm((f) => ({ ...f, partnerId: p.id }));
+                                      setForm((f) => ({ ...f, partnerId: p.id, ...(!editData ? { partnerAnnualTurnover: p.annualTurnover ?? null } : {}) }));
                                       setSelectedPartnerName(p.entityName);
+                                      setPartnerTurnoverHasMasterValue(Number(p.annualTurnover) > 0);
                                       setIsPartnerOpen(false);
                                     }}
                                     className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${form.partnerId === p.id
@@ -1056,7 +1085,43 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                         )}
                       </div>
                     )}
-                    {errors.partnerId && <p className={err}>{errors.partnerId}</p>}
+                                        {errors.partnerId && <p className={err}>{errors.partnerId}</p>}
+                  </div>
+
+                  {/* Annual Sales (Turnover) */}
+                  <div>
+                    <label className={lbl}>Annual Sales (Turnover)</label>
+                    <div className="relative">
+                      <input
+                        type={partnerTurnoverHasMasterValue || editData || isViewMode ? "text" : "number"}
+                        min="0"
+                        step="any"
+                        readOnly={!!editData || isViewMode || partnerTurnoverHasMasterValue}
+                        disabled={!!editData || isViewMode || partnerTurnoverHasMasterValue}
+                        tabIndex={editData || isViewMode || partnerTurnoverHasMasterValue ? -1 : undefined}
+                        value={
+                          (partnerTurnoverHasMasterValue || editData || isViewMode) &&
+                          form.partnerAnnualTurnover !== null &&
+                          form.partnerAnnualTurnover !== undefined &&
+                          form.partnerAnnualTurnover !== "" &&
+                          !isNaN(Number(form.partnerAnnualTurnover))
+                            ? new Intl.NumberFormat("en-IN", {
+                                style: "currency",
+                                currency: "INR",
+                                maximumFractionDigits: 2,
+                              }).format(Number(form.partnerAnnualTurnover))
+                            : form.partnerAnnualTurnover ?? ""
+                        }
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            partnerAnnualTurnover: e.target.value,
+                          }))
+                        }
+                        className={`${inp} ${partnerTurnoverHasMasterValue || editData || isViewMode ? "bg-gray-100 text-gray-700 cursor-not-allowed select-none" : "bg-white"} font-medium`}
+                        placeholder="Enter turnover"
+                      />
+                    </div>
                   </div>
 
                   {/* Product */}
