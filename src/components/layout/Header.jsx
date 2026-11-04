@@ -248,9 +248,9 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-200/50 bg-white backdrop-blur-xl transition-all duration-300">
-      <div className="w-full px-4 h-16 flex items-center justify-between">
+      <div className="w-full min-w-0 px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
         {/* Left Side: Logo & Workspace Switcher */}
-        <div className="flex items-center gap-4 md:gap-6">
+        <div className="min-w-0 flex items-center gap-2 md:gap-6">
           {/* Mobile Sidebar Hamburger Toggle */}
           <button
             onClick={() => {
@@ -262,14 +262,14 @@ export function Header() {
             <Menu className="h-5.5 w-5.5" />
           </button>
 
-          <div className="flex items-center gap-2 cursor-pointer group" onClick={() => router.push("/")}>
+          <div className="shrink-0 flex items-center gap-2 cursor-pointer group" onClick={() => router.push("/")}>
             <div className="relative overflow-hidden rounded-lg transition-transform duration-300 group-hover:scale-102 flex items-center h-10">
               <Image
                 src="/agri_logo.png"
                 alt="Agricom CRM Logo"
                 width={160}
                 height={45}
-                className="object-contain h-full w-auto"
+                className="object-contain h-full w-auto max-w-[120px] sm:max-w-none"
                 priority
               />
             </div>
@@ -290,7 +290,7 @@ export function Header() {
                 className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200/60 rounded-xl text-xs font-semibold text-amber-700 transition-all cursor-pointer shadow-xs"
               >
                 <Building2 className="h-3.5 w-3.5 text-amber-500" />
-                <span>{activeCompany?.name || companies.find(c => c.id.toString() === activeCompanyId)?.name || "Select Company"}</span>
+                <span className="max-w-[30vw] truncate">{activeCompany?.name || companies.find(c => c.id.toString() === activeCompanyId)?.name || "Select Company"}</span>
                 <ChevronDown className="h-3 w-3 text-amber-500" />
               </button>
 
@@ -339,7 +339,7 @@ export function Header() {
                 className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 transition-all cursor-pointer shadow-xs"
               >
                 <Building2 className="h-3.5 w-3.5 text-gray-400" />
-                <span>{activeWorkspace?.name || "Select Workspace"}</span>
+                <span className="max-w-[30vw] truncate">{activeWorkspace?.name || "Select Workspace"}</span>
                 <ChevronDown className="h-3 w-3 text-gray-400" />
               </button>
 
@@ -409,7 +409,7 @@ export function Header() {
         </div>
 
         {/* Right Side: Notifications Dropdown, Profile, Logout */}
-        <div className="flex items-center gap-4">
+        <div className="shrink-0 flex items-center gap-2 sm:gap-4">
           {/* Follow-up Center Trigger */}
           {canViewFollowUps && (
             <button

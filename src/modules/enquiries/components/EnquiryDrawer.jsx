@@ -620,6 +620,34 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       if (!payload.shipmentDate) delete payload.shipmentDate;
       if (!payload.shipmentMode) delete payload.shipmentMode; // empty string fails enum validation
       delete payload.enquiryNo;
+      delete payload.closedByName;
+
+      // Optional DTO fields must be omitted when the form stores them as empty
+      // strings. Sending "" makes class-validator reject fields such as status,
+      // closedBy, or bidType with a 400 response.
+      [
+        "status",
+        "originCountryId",
+        "originPort",
+        "destinationPort",
+        "originState",
+        "originCity",
+        "destinationCountry",
+        "destinationState",
+        "destinationCity",
+        "originZipCode",
+        "destinationZipCode",
+        "originStationCode",
+        "destinationStationCode",
+        "bidCurrency",
+        "bidType",
+        "note",
+        "closureReason",
+        "closureRemark",
+        "closedBy",
+      ].forEach((field) => {
+        if (payload[field] === "") delete payload[field];
+      });
 
       if (payload.shipmentMode === "SHIP") {
         delete payload.originState;

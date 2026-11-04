@@ -1,6 +1,7 @@
 import React from "react";
 import Modal from "@/components/modals/Modal";
-import { UploadCloud, FileText } from "lucide-react";
+import { UploadCloud, FileText, Users } from "lucide-react";
+import EmployeeMultiSelect from "@/components/common/EmployeeMultiSelect";
 
 export default function ApplyLeaveModal({
   isApplyModalOpen,
@@ -10,6 +11,9 @@ export default function ApplyLeaveModal({
   handleApplyChange,
   leaveTypes,
   isSubmitting,
+  employeeOptions = [],
+  loadingEmployees = false,
+  onHandoverChange,
 }) {
   return (
     <Modal
@@ -88,6 +92,32 @@ export default function ApplyLeaveModal({
           </label>
         </div>
 
+        {/* Work Handover * */}
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-blue-600" />
+              Work Handover <span className="text-red-500">*</span>
+            </span>
+            <span className="text-[10px] text-gray-400 font-normal">
+              Minimum 1 employee required
+            </span>
+          </label>
+          <EmployeeMultiSelect
+            options={employeeOptions}
+            value={applyForm.handoverUserIds || []}
+            onChange={onHandoverChange}
+            placeholder="Assign Employees..."
+            isLoading={loadingEmployees}
+          />
+          {(!applyForm.handoverUserIds ||
+            applyForm.handoverUserIds.length === 0) && (
+            <p className="text-[10.5px] text-amber-600 font-medium">
+              * Please assign work handover to at least 1 employee.
+            </p>
+          )}
+        </div>
+
         <div className="space-y-1">
           <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
             Reason <span className="text-red-500">*</span>
@@ -147,7 +177,11 @@ export default function ApplyLeaveModal({
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={
+              isSubmitting ||
+              !applyForm.handoverUserIds ||
+              applyForm.handoverUserIds.length === 0
+            }
             className="px-4 py-2 bg-[#007aff] text-white rounded-xl hover:bg-blue-600 text-xs font-semibold disabled:opacity-50 transition-colors shadow-sm shadow-blue-500/20 cursor-pointer"
           >
             {isSubmitting ? "Applying..." : "Submit Request"}

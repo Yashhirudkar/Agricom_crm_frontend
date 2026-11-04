@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
+import BusinessReference from "@/components/common/BusinessReference";
 import {
   X,
   Ship,
@@ -86,11 +87,10 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
 
       {/* Slide-over Drawer Panel */}
       <div
-        className="fixed right-0 top-0 bottom-0 z-[160] bg-slate-50/50 shadow-2xl flex flex-col font-sans border-l border-slate-200 animate-in slide-in-from-right duration-300"
-        style={{ width: "72vw", maxWidth: "1280px", minWidth: "540px" }}
+        className="fixed right-0 top-0 bottom-0 z-[160] w-full md:w-[85vw] lg:w-[72vw] lg:max-w-[1280px] bg-slate-50/50 shadow-2xl flex flex-col font-sans border-l border-slate-200 animate-in slide-in-from-right duration-300"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-200 bg-white flex-shrink-0">
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-slate-200 bg-white flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
               <Ship className="h-4 w-4" />
@@ -110,9 +110,10 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
               <p className="text-[11px] text-slate-400 font-mono tracking-tight">
                 {shipment.shipmentReference || "DRAFT"}
               </p>
-              <p className="text-[11px] text-indigo-700 font-mono font-semibold">
-                Business Ref No.: {shipment.businessReference || shipment.businessTransaction?.businessReference || "—"}
-              </p>
+              <BusinessReference
+                reference={shipment.businessReference || shipment.businessTransaction?.businessReference}
+                className="mt-1"
+              />
             </div>
           </div>
 

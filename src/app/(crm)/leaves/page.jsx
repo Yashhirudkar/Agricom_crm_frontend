@@ -583,6 +583,7 @@ function AdminLeavesContent() {
                           if (leave.status === "PENDING") return <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-[10px] font-bold">Pending</span>;
                           if (leave.status === "APPROVED") return <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[10px] font-bold">Approved</span>;
                           if (leave.status === "REJECTED") return <span className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 rounded-xl text-[10px] font-bold">Rejected</span>;
+                          if (leave.status === "CANCELLED_AFTER_APPROVAL" || leave.cancelledAfterApproval) return <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-[10px] font-bold">Cancelled After Approval</span>;
                           return <span className="px-2.5 py-1 bg-gray-50 text-gray-600 border border-gray-200 rounded-xl text-[10px] font-bold">Cancelled</span>;
                         })()}
                       </div>
@@ -590,14 +591,53 @@ function AdminLeavesContent() {
                       {leave.reason && (
                         <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs text-gray-600">
                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">Reason</span>
-                          "{leave.reason}"
+                          &quot;{leave.reason}&quot;
+                        </div>
+                      )}
+
+                      {leave.handoverUsers && leave.handoverUsers.length > 0 && (
+                        <div className="bg-slate-50 p-3 rounded-xl border border-gray-100 text-xs text-gray-600">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                            Work Handover
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {leave.handoverUsers.map((hu) => (
+                              <span
+                                key={hu.id || hu.userId}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold shadow-2xs"
+                              >
+                                <span className="text-[11px]">👤</span>
+                                {hu.name || hu.user?.name || "Colleague"}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {(leave.status === "CANCELLED_AFTER_APPROVAL" || leave.cancelledAfterApproval) && (
+                        <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200/60 text-xs text-gray-700 space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span>Cancelled By: <strong className="text-gray-800">{leave.cancelledByName || leave.cancelledBy || "HR Manager"}</strong></span>
+                            {leave.cancelledAt && <span className="text-[10px] text-gray-400">{format(parseISO(leave.cancelledAt), "dd-MMM-yyyy hh:mm a")}</span>}
+                          </div>
+                          {leave.cancellationReason && (
+                            <div className="text-[10.5px] italic text-gray-600 bg-white/70 p-2 rounded-lg border border-amber-100">
+                              <span className="font-bold text-gray-500 text-[9.5px] uppercase tracking-wider block mb-0.5">Cancellation Reason:</span>
+                              &quot;{leave.cancellationReason}&quot;
+                            </div>
+                          )}
+                          {leave.approverName && (
+                            <div className="text-[10px] text-gray-400 pt-0.5 border-t border-amber-200/40">
+                              Originally Approved by: {leave.approverName}
+                            </div>
+                          )}
                         </div>
                       )}
 
                       {leave.approverName && (
                         <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
                           <span>Approver: <strong className="text-gray-700">{leave.approverName}</strong></span>
-                          {leave.remarks && <span className="italic truncate max-w-[200px]">"{leave.remarks}"</span>}
+                          {leave.remarks && <span className="italic truncate max-w-[200px]">&quot;{leave.remarks}&quot;</span>}
                         </div>
                       )}
                     </div>

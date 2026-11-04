@@ -1,4 +1,4 @@
-﻿export const getScheduleStatus = (contractDate) => {
+export const getScheduleStatus = (contractDate) => {
   if (!contractDate) return null;
 
   const today = new Date();
@@ -14,74 +14,115 @@
 };
 
 /**
- * Distributes total product quantity evenly across a specified number of shipments.
- * Ensures the sum of distributed quantities strictly equals totalProductQty by placing
- * any rounding remainder in the final shipment.
+ * Checks whether Product Qty is an exact multiple of Qty Per Count.
+ * Handles floating point precision cleanly.
  *
- * @param {number|string} totalProductQty - Total product quantity in MT
- * @param {number|string} numShipments - Number of shipments (>= 1)
- * @returns {number[]} Array of shipment quantities
+ * @param {number|string} totalProductQty
+ * @param {number|string} qtyPerCount
+ * @returns {boolean}
  */
-export function distributeShipmentQuantities(totalProductQty, numShipments) {
-  const count = Math.max(1, parseInt(numShipments, 10) || 1);
-  const total = Math.max(0, Math.round(parseFloat(totalProductQty) || 0));
-
-  if (total === 0) {
-    return Array.from({ length: count }, () => 0);
-  }
-
-  const baseQty = 22; // Each shipment carries max 22 MT whole integer
-  const quantities = [];
-  let allocated = 0;
-
-  for (let i = 0; i < count - 1; i++) {
-    quantities.push(baseQty);
-    allocated += baseQty;
-  }
-
-  const remainder = total - allocated;
-  quantities.push(remainder);
-
-  return quantities;
+export function isDivisible(totalProductQty, qtyPerCount) {
+  const total = parseFloat(totalProductQty) || 0;
+  const perCount = parseFloat(qtyPerCount) || 0;
+  if (total <= 0 || perCount <= 0) return false;
+  const quotient = Math.round((total / perCount) * 1000000) / 1000000;
+  return Number.isInteger(quotient) || Math.abs(quotient - Math.round(quotient)) < 0.0001;
 }
 
 /**
- * Generates shipment schedule rows with auto-distributed quantities and default container counts.
+ * Distributes total product quantity using Qty Per Count.
+ *
+ * New Business Rule:
+ * Shipment Qty must ALWAYS equal Qty Per Count.
+ * Every shipment must contain exactly Qty Per Count.
+ * Partial/remaining shipment is NOT allowed.
+ *
+ * If Product Qty % Qty Per Count !== 0, returns an empty array (no rows generated).
+ *
+ * @param {number|string} totalProductQty - Total product quantity in MT
+ * @param {number|string} qtyPerCount - Qty Per Count in MT
+ * @returns {number[]} Array of shipment quantities (each strictly equal to qtyPerCount)
+ */
+export function distributeShipmentQuantities(totalProductQty, qtyPerCount) {
+  const total = Math.max(0, parseFloat(totalProductQty) || 0);
+  const perCount = Math.max(0, parseFloat(qtyPerCount) || 0);
+
+  if (total === 0 || perCount === 0) {
+    return [];
+  }
+
+  // Strict rule: partial/remainder is NOT allowed.
+  if (!isDivisible(total, perCount)) {
+    return [];
+  }
+
+  const count = Math.round(total / perCount);
+  return Array.from({ length: count }, () => perCount);
+}
+
+/**
+ * Generates shipment schedule rows when Product Qty is an exact multiple of Qty Per Count.
+ * Every shipment row strictly has quantity = Qty Per Count.
+ * If Product Qty % Qty Per Count !== 0, returns an empty array.
+ * Every shipment row automatically receives defaultShipmentDate (Contract Date).
  * Preserves user-entered shipment dates and remarks from existing rows.
  *
  * @param {Object} params
  * @param {number|string} params.totalProductQty - Total product quantity in MT
- * @param {number|string} params.numShipments - Total shipment rows to generate
+ * @param {number|string} [params.qtyPerCount] - Qty Per Count in MT
+ * @param {number|string} [params.numShipments] - Fallback shipment count
  * @param {Array} [params.existingShipments=[]] - Existing shipment rows
  * @param {string} [params.currencyCode=""] - Contract currency code
+ * @param {string} [params.defaultShipmentDate=""] - Default shipment date (Contract Date)
  * @returns {Array} Array of shipment objects
  */
 export function generateAutoShipments({
   totalProductQty,
+  qtyPerCount,
   numShipments,
   existingShipments = [],
   currencyCode = "",
+  defaultShipmentDate = "",
 }) {
-  const count = Math.max(1, parseInt(numShipments, 10) || 1);
   const totalQty = Math.max(0, parseFloat(totalProductQty) || 0);
-  const distributedQuantities = distributeShipmentQuantities(totalQty, count);
+  const perCount = parseFloat(qtyPerCount) || 0;
 
-  return Array.from({ length: count }, (_, i) => {
-    const prev = existingShipments[i] || {};
-    const qty = distributedQuantities[i];
+  if (totalQty > 0 && perCount > 0) {
+    // If not divisible, do NOT generate shipment rows.
+    if (!isDivisible(totalQty, perCount)) {
+      return [];
+    }
 
-    return {
-      ...(prev.id ? { id: prev.id } : {}),
-      shipmentNo: i + 1,
-      shipmentDate: prev.shipmentDate || "",
-      noOfContainers: (prev.noOfContainers != null && prev.noOfContainers !== "" && parseInt(prev.noOfContainers, 10) >= 1) ? parseInt(prev.noOfContainers, 10) : 1,
-      quantity: totalQty > 0 ? (qty > 0 ? qty : 0) : "",
-      ratePerMt: 0,
-      purchaseRate: 0,
-      forex: 0,
-      freight: 0,
-      currencyCode: currencyCode || prev.currencyCode || "",
-      remarks: prev.remarks || "",
-    };
-  });
+    const count = Math.round(totalQty / perCount);
+    return Array.from({ length: count }, (_, i) => {
+      const prev = existingShipments[i] || {};
+
+      return {
+        ...(prev.id ? { id: prev.id } : {}),
+        shipmentNo: i + 1,
+        shipmentDate: prev.shipmentDate || defaultShipmentDate || "",
+        isDateCustomized:
+          prev.isDateCustomized ||
+          (prev.shipmentDate && defaultShipmentDate && prev.shipmentDate !== defaultShipmentDate) ||
+          false,
+        noOfContainers:
+          prev.noOfContainers != null &&
+          prev.noOfContainers !== "" &&
+          parseInt(prev.noOfContainers, 10) >= 1
+            ? parseInt(prev.noOfContainers, 10)
+            : 1,
+        quantity: perCount,
+        ratePerMt: prev.ratePerMt ?? 0,
+        purchaseRate: prev.purchaseRate ?? 0,
+        forex: prev.forex ?? 0,
+        freight: prev.freight ?? 0,
+        currencyCode: currencyCode || prev.currencyCode || "",
+        remarks: prev.remarks || "",
+      };
+    });
+  }
+
+  // Fallback for older contracts without qtyPerCount
+  const count = Math.max(1, parseInt(numShipments, 10) || 1);
+  return existingShipments.slice(0, count);
 }

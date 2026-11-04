@@ -5,7 +5,7 @@ import { getDynamicFinancialYears } from "../utils/dateUtils";
 
 const CONTRACT_TYPES = ["Export", "Import", "MTT"];
 
-export default function HeaderSection({ form, setForm, errors, masters, isView, contractNumberPreview, isLoadingContractNumber }) {
+export default function HeaderSection({ form, setForm, errors, isView, contractNumberPreview, isLoadingContractNumber, onContractDateChange }) {
   const inp = "w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white transition-all";
   const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
   const err = "text-[10px] text-red-500 mt-1";
@@ -28,7 +28,7 @@ export default function HeaderSection({ form, setForm, errors, masters, isView, 
         </div>
       </div>
 
-      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Financial Year */}
         <div>
           <label className={lbl}>Financial Year <span className="text-red-500">*</span></label>
@@ -108,7 +108,14 @@ export default function HeaderSection({ form, setForm, errors, masters, isView, 
           <input
             type="date"
             value={form.contractDate || ""}
-            onChange={e => setForm(f => ({ ...f, contractDate: e.target.value }))}
+            onChange={e => {
+              const newDate = e.target.value;
+              if (onContractDateChange) {
+                onContractDateChange(newDate);
+              } else {
+                setForm(f => ({ ...f, contractDate: newDate }));
+              }
+            }}
             disabled={isView}
             className={`${inp} ${errors.contractDate ? "border-red-300" : ""}`}
           />

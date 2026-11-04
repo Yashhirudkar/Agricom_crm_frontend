@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ArrowLeft, Save, CheckCircle, X, Pencil } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -19,11 +19,11 @@ import { formatPurchaseDate, parsePurchaseDate, calculatePaymentDueDate } from "
 
 import PurchaseContractInformationSection from "../components/PurchaseContractInformationSection";
 import PurchaseCommercialInformationSection from "../components/PurchaseCommercialInformationSection";
-import AgainstShipmentSection from "../components/AgainstShipmentSection";
 import PurchaseShipmentSection from "../components/PurchaseShipmentSection";
 import TermsSection from "@/modules/sales-contracts/components/TermsSection";
 import PurchaseAttachmentsSection from "../components/PurchaseAttachmentsSection";
 import PurchaseFinancialSummary from "../components/PurchaseFinancialSummary";
+import BusinessReference from "@/components/common/BusinessReference";
 
 export default function PurchaseContractWorkspacePage({ contractId, isNew = false }) {
   const router = useRouter();
@@ -271,6 +271,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
       }
 
       if (targetIds.length > 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedShipmentIds(targetIds);
         setIsShipmentsInitialized(true);
         return;
@@ -294,6 +295,135 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
       }
     }
   }, [shipments, allAvailableShipments, isShipmentsInitialized, targetShipmentIdParam, searchParams, isNew]);
+
+  // Determine if the current quantity is different from the persisted contract quantity (showing live preview)
+  const savedContractQuantity = Number(
+    contract?.items?.[0]?.quantity ?? contract?.quantity ?? 0
+  );
+  const isPreviewingAllocation = Boolean(
+    contract?.salesContractId &&
+    form.quantity !== "" &&
+    Number(form.quantity) > 0 &&
+    Math.abs(Number(form.quantity) - savedContractQuantity) > 0.0001
+  );
+
+  // Live Allocation Preview: Calculate temporary shipment allocation on the frontend matching the backend engine
+  const previewShipments = useMemo(() => {
+    // For manual MTT contracts (not linked to a sales contract), return manual selections/allocations
+    if (!contract?.salesContractId) {
+      if (shipmentAllocations.length > 0) {
+        return shipmentAllocations.map((a) => ({
+          id: a.shipmentId,
+          shipmentId: a.shipmentId,
+          shipmentReference: a.shipment?.shipmentReference || `Shipment #${a.shipmentId}`,
+          quantity: a.allocatedQuantity,
+          ...a.shipment,
+        }));
+      }
+      return allAvailableShipments.filter((s) => selectedShipmentIds.includes(s.id));
+    }
+
+    const availableSalesShipments = contract?.salesContract?.shipments || [];
+    if (!availableSalesShipments.length) {
+      return shipments || [];
+    }
+
+    // Sort all Sales Contract shipments by sequence, number, and id (exact backend ordering)
+    const sortedShipments = [...availableSalesShipments].sort((a, b) => {
+      const seqA = Number(a.shipmentSequence) || 0;
+      const seqB = Number(b.shipmentSequence) || 0;
+      if (seqA !== seqB) return seqA - seqB;
+      const noA = Number(a.shipmentNo) || 0;
+      const noB = Number(b.shipmentNo) || 0;
+      if (noA !== noB) return noA - noB;
+      return (Number(a.id) || 0) - (Number(b.id) || 0);
+    });
+
+    const liveQty = Number(form.quantity);
+    if (isNaN(liveQty) || liveQty <= 0) {
+      return [];
+    }
+
+    // Active purchase contracts list for this Sales Contract
+    const activePcs = (contract.activePurchaseContracts?.length > 0)
+      ? contract.activePurchaseContracts.map((p) => ({ ...p }))
+      : [{ id: contract.id, quantity: savedContractQuantity || liveQty }];
+
+    // Ensure the current contract is present in the list
+    if (!activePcs.some((p) => Number(p.id) === Number(contract.id))) {
+      activePcs.push({
+        id: contract.id,
+        quantity: liveQty,
+      });
+    }
+
+    // Sort active PCs by ID ASC (exact backend rule)
+    activePcs.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+
+    // Allocate shipments sequentially to active PCs, matching the backend allocation engine
+    let shipmentIndex = 0;
+    const currentPcAllocatedShipments = [];
+
+    for (const pc of activePcs) {
+      const isCurrentPc = Number(pc.id) === Number(contract.id);
+      const targetQty = isCurrentPc ? liveQty : (Number(pc.quantity) || 0);
+
+      let remainingNeeded = Math.round(targetQty * 100) / 100;
+      const assignedShipments = [];
+
+      while (remainingNeeded > 0.0001 && shipmentIndex < sortedShipments.length) {
+        const shipment = sortedShipments[shipmentIndex];
+        const shipQty = Math.round((Number(shipment.quantity) || 0) * 100) / 100;
+
+        if (shipQty <= 0) {
+          shipmentIndex++;
+          continue;
+        }
+
+        assignedShipments.push(shipment);
+        remainingNeeded = Math.round((remainingNeeded - shipQty) * 100) / 100;
+        shipmentIndex++;
+      }
+
+      if (isCurrentPc) {
+        currentPcAllocatedShipments.push(...assignedShipments);
+      }
+    }
+
+    // Map each assigned shipment to the format expected by PurchaseShipmentSection
+    const backendShipmentsMap = new Map((shipments || []).map((s) => [Number(s.shipmentId || s.id), s]));
+
+    return currentPcAllocatedShipments.map((s) => {
+      const existing = backendShipmentsMap.get(Number(s.id));
+      if (existing) {
+        return existing;
+      }
+      return {
+        ...s,
+        id: s.id,
+        shipmentId: s.id,
+        shipmentNo: s.shipmentNo,
+        shipmentReference: s.shipmentReference || `SC-${contract.salesContract?.contractNumber || ""}/${s.shipmentNo}`,
+        shipmentDate: s.shipmentDate,
+        quantity: Number(s.quantity) || 0,
+        sourceQuantity: Number(s.quantity) || 0,
+        noOfContainers: s.noOfContainers,
+        remarks: s.remarks,
+        salesContract: contract.salesContract,
+      };
+    });
+  }, [
+    contract?.salesContractId,
+    contract?.salesContract,
+    contract?.activePurchaseContracts,
+    contract?.id,
+    savedContractQuantity,
+    form.quantity,
+    shipments,
+    shipmentAllocations,
+    allAvailableShipments,
+    selectedShipmentIds,
+  ]);
 
   const handleToggleShipment = (shipmentId) => {
     setSelectedShipmentIds((prev) =>
@@ -355,6 +485,77 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
             allocatedQuantity: 0,
           }));
 
+      if (!contract?.salesContractId && Number(form.quantity) > 0) {
+        const scheduledQuantity = formattedAllocations.reduce(
+          (sum, allocation) => sum + (Number(allocation.allocatedQuantity) || 0),
+          0,
+        );
+        if (Math.abs(scheduledQuantity - Number(form.quantity)) > 0.01) {
+          toast.error(
+            `Shipment Schedule total (${scheduledQuantity.toFixed(2)} MT) must equal Purchase Quantity (${Number(form.quantity).toFixed(2)} MT).`,
+          );
+          setSaving(false);
+          return;
+        }
+      }
+
+      if (contract?.salesContractId && Number(form.quantity) > 0) {
+        const scItems = contract?.salesContract?.items || [];
+        const scShipments = contract?.salesContract?.shipments || [];
+        const qtyPerCount =
+          Number(contract?.qtyPerCount) ||
+          Number(scItems.find((it) => Number(it.qtyPerCount) > 0)?.qtyPerCount) ||
+          Number(scShipments.find((s) => Number(s.quantity) > 0)?.quantity) ||
+          0;
+
+        const scTotalQty =
+          Number(contract?.salesContract?.totalQuantity) ||
+          scItems.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0) ||
+          scShipments.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0) ||
+          0;
+
+        const otherAllocated =
+          (contract?.activePurchaseContracts && contract.activePurchaseContracts.length > 0)
+            ? contract.activePurchaseContracts
+                .filter((p) => Number(p.id) !== Number(contract?.id))
+                .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0)
+            : Number(summary?.allocationSummary?.alreadyAllocatedQty ?? contract?.allocationSummary?.alreadyAllocatedQty ?? 0);
+
+        const maxAllowedForThisPc = Math.max(
+          0,
+          Math.round((scTotalQty - otherAllocated) * 100) / 100
+        );
+
+        const q = Number(form.quantity);
+
+        if (maxAllowedForThisPc > 0 && q > maxAllowedForThisPc + 0.0001) {
+          toast.error(
+            `Total Purchase Contract Quantity (${q + otherAllocated} MT) exceeds Sales Contract Quantity (${scTotalQty} MT). Available for this contract: ${maxAllowedForThisPc} MT (Other Purchase Contracts: ${otherAllocated} MT).`,
+          );
+          setSaving(false);
+          return;
+        }
+
+        if (qtyPerCount > 0) {
+          const rem = q % qtyPerCount;
+          const isMultiple = Math.abs(rem) < 0.0001 || Math.abs(rem - qtyPerCount) < 0.0001;
+          if (!isMultiple) {
+            const allowed = [];
+            const upperLimit = maxAllowedForThisPc > 0 ? maxAllowedForThisPc : scTotalQty;
+            if (upperLimit > 0) {
+              for (let val = qtyPerCount; val <= upperLimit + 0.0001; val += qtyPerCount) {
+                allowed.push(Math.round(val * 100) / 100);
+              }
+            }
+            toast.error(
+              `Invalid Purchase Quantity. Purchase Contract quantity must be in multiples of the Sales Contract shipment size (${qtyPerCount} MT). Allowed values: ${allowed.join(", ")}`,
+            );
+            setSaving(false);
+            return;
+          }
+        }
+      }
+
       const purchaseContractType = isManual
         ? "MTT"
         : (contract?.salesContract?.contractType || "Import");
@@ -404,9 +605,13 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         marking: form.marking || null,
         currencyCode: form.currencyCode || null,
         items: formattedItems,
-        shipmentAllocations: formattedAllocations,
-        shipmentIds: (selectedShipmentIds || []).map(Number).filter((n) => !isNaN(n)),
-        shipmentScheduleData: shipmentScheduleData || {},
+        ...(contract?.salesContractId
+          ? {}
+          : {
+              shipmentAllocations: formattedAllocations,
+              shipmentIds: (selectedShipmentIds || []).map(Number).filter((n) => !isNaN(n)),
+              shipmentScheduleData: shipmentScheduleData || {},
+            }),
       };
 
       if (isNew) {
@@ -443,47 +648,48 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
       }
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to save contract");
-    } fontFinally: {
+    } finally {
       setSaving(false);
     }
   };
 
-  // Derive allocation summary
-  const backendAllocation = summary?.allocationSummary || contract?.allocationSummary || {};
-  const formQty = Number(form.quantity);
-  const salesContractQty = !isNaN(formQty) && formQty > 0 ? formQty : Number(backendAllocation.salesContractQty ?? 0);
-  const alreadyAllocatedQty = Number(backendAllocation.alreadyAllocatedQty ?? 0);
+  // Derive live allocation summary
+  const liveAllocationSummary = useMemo(() => {
+    const base = summary?.allocationSummary || contract?.allocationSummary || {};
+    if (!contract?.salesContractId) return base;
 
-  const liveCurrentPurchaseQty = React.useMemo(() => {
-    if (shipmentAllocations.length > 0) {
-      return shipmentAllocations.reduce((sum, a) => sum + (Number(a.allocatedQuantity) || 0), 0);
-    }
-    return allAvailableShipments
-      .filter((s) => selectedShipmentIds.includes(s.id))
-      .reduce((sum, s) => {
-        const customQty = shipmentScheduleData[s.id]?.quantity;
-        const qty = customQty !== undefined && customQty !== "" ? Number(customQty) : Number(s.quantity || 0);
-        return sum + (isNaN(qty) ? 0 : qty);
-      }, 0);
-  }, [allAvailableShipments, selectedShipmentIds, shipmentScheduleData, shipmentAllocations]);
+    const scTotalQty =
+      Number(contract?.salesContract?.totalQuantity) ||
+      (contract?.salesContract?.items || []).reduce((sum, it) => sum + (Number(it.quantity) || 0), 0) ||
+      (contract?.salesContract?.shipments || []).reduce((sum, s) => sum + (Number(s.quantity) || 0), 0) ||
+      0;
 
-  const liveAllocationSummary = React.useMemo(() => {
-    const rawAvailable = salesContractQty - alreadyAllocatedQty;
-    const availableBalanceQty = Math.max(0, rawAvailable);
-    const isOverAllocated = liveCurrentPurchaseQty > availableBalanceQty;
-    const overAllocatedQty = isOverAllocated ? liveCurrentPurchaseQty - availableBalanceQty : 0;
-    const remainingBalance = isOverAllocated ? 0 : Math.max(0, availableBalanceQty - liveCurrentPurchaseQty);
+    const liveQty = Number(form.quantity) || 0;
+    const otherPcsQty = (contract.activePurchaseContracts || [])
+      .filter((p) => Number(p.id) !== Number(contract.id))
+      .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+
+    const totalActiveQty = Math.round((otherPcsQty + liveQty) * 100) / 100;
+    const isOverAllocated = scTotalQty > 0 && totalActiveQty > scTotalQty + 0.0001;
+    const overAllocatedQty = isOverAllocated ? Math.round((totalActiveQty - scTotalQty) * 100) / 100 : 0;
+    const remainingBalance = Math.max(0, Math.round((scTotalQty - totalActiveQty) * 100) / 100);
 
     return {
-      salesContractQty,
-      alreadyAllocatedQty,
-      availableBalanceQty,
-      currentPurchaseQty: liveCurrentPurchaseQty,
-      remainingBalance,
-      overAllocatedQty,
+      ...base,
+      totalActiveQty,
       isOverAllocated,
+      overAllocatedQty,
+      remainingBalance,
     };
-  }, [salesContractQty, alreadyAllocatedQty, liveCurrentPurchaseQty]);
+  }, [
+    summary?.allocationSummary,
+    contract?.allocationSummary,
+    contract?.salesContractId,
+    contract?.salesContract,
+    contract?.activePurchaseContracts,
+    contract?.id,
+    form.quantity,
+  ]);
 
   if (!isNew && (loadingDetail || loadingSummary)) {
     return (
@@ -552,22 +758,23 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-base font-bold text-gray-900 tracking-tight flex items-center gap-2">
+              <h1 className="text-base font-bold text-gray-900 tracking-tight flex items-center gap-2 flex-wrap">
                 <span>Purchase Contract Workspace</span>
                 <span className="text-xs font-mono font-extrabold text-[#007aff] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-100">
                   {contractDisplayNo}
                 </span>
-                <span className="text-xs font-mono font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
-                  Business Ref No.: {contract?.businessReference || contract?.businessTransaction?.businessReference || "—"}
-                </span>
+                <BusinessReference
+                  reference={contract?.businessReference || contract?.businessTransaction?.businessReference}
+                  className="ml-1"
+                />
                 {contract?.salesContract?.buyer?.entityName && (
                   <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2.5 py-0.5 rounded-md border border-gray-200">
                     Buyer: {contract.salesContract.buyer.entityName}
                   </span>
                 )}
-                {contract?.quantity && (
+                {Number(form.quantity) > 0 && (
                   <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
-                    Qty: {Number(contract.quantity) % 1 === 0 ? Math.floor(Number(contract.quantity)) : contract.quantity} MT
+                    Qty: {Number(form.quantity) % 1 === 0 ? Math.floor(Number(form.quantity)) : Number(form.quantity)} MT
                   </span>
                 )}
               </h1>
@@ -657,42 +864,9 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           isView={isViewMode}
         />
 
-        {/* 3. Against Shipment (Product-wise & Partial Allocations) */}
-        <AgainstShipmentSection
-          isManual={isManual}
-          productItems={form.items && form.items.length > 0 ? form.items : [
-            {
-              id: form.items?.[0]?.id || null,
-              productId: form.productId,
-              productName: form.productName || "Primary Commodity",
-              quantity: Number(form.quantity) || 0,
-            }
-          ]}
-          contractBuyerId={form.buyerId}
-          shipmentAllocations={shipmentAllocations}
-          onUpdateAllocations={(updatedAllocs) => {
-            setShipmentAllocations(updatedAllocs);
-            setSelectedShipmentIds(updatedAllocs.map((a) => a.shipmentId));
-          }}
-          allAvailableShipments={allAvailableShipments}
-          selectedShipmentIds={selectedShipmentIds}
-          onToggleShipment={handleToggleShipment}
-          isView={isViewMode}
-        />
-
-        {/* 4. Shipment Schedule Table */}
+        {/* 3. Shipment Schedule Table */}
         <PurchaseShipmentSection
-          shipments={
-            shipmentAllocations.length > 0
-              ? shipmentAllocations.map((a) => ({
-                  id: a.shipmentId,
-                  shipmentId: a.shipmentId,
-                  shipmentReference: a.shipment?.shipmentReference || `Shipment #${a.shipmentId}`,
-                  quantity: a.allocatedQuantity,
-                  ...a.shipment,
-                }))
-              : allAvailableShipments.filter((s) => selectedShipmentIds.includes(s.id))
-          }
+          shipments={previewShipments}
           allocationSummary={liveAllocationSummary}
           shipmentScheduleData={shipmentScheduleData}
           onUpdateShipmentSchedule={(shipmentId, field, val) => {
@@ -705,7 +879,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
             }));
           }}
           loading={loadingShipments}
-          isView={isViewMode}
+          isView={isViewMode || Boolean(contract?.salesContractId)}
+          isPreview={isPreviewingAllocation}
         />
 
         {/* 5. Notes Section */}

@@ -80,6 +80,7 @@ export default function VirtualizedLeaveGrid({
   cardRefs,
   onApprove,
   onRejectClick,
+  onCancelApprovedClick,
 }) {
   const containerRef = useRef(null);
   // Track container width for responsive column count
@@ -216,6 +217,7 @@ export default function VirtualizedLeaveGrid({
                         highlightedId={highlightedId}
                         onApprove={onApprove}
                         onRejectClick={onRejectClick}
+                        onCancelApprovedClick={onCancelApprovedClick}
                       />
                     </div>
                   ))}

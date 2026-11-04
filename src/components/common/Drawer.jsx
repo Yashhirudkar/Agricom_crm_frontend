@@ -46,7 +46,7 @@ export default function Drawer({
       {/* Drawer */}
       <div className="absolute inset-y-0 right-0 flex max-w-full">
         <div
-          className={`h-full bg-white shadow-2xl transition-transform duration-300 ease-in-out transform flex flex-col ${widthClass} ${
+          className={`h-full max-w-[100vw] bg-white shadow-2xl transition-transform duration-300 ease-in-out transform flex flex-col ${widthClass} ${
             show ? "translate-x-0" : "translate-x-full"
           }`}
         >

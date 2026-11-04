@@ -70,6 +70,15 @@ export const rejectLeave = createAsyncThunk("entities/leaveRequests/reject", asy
   }
 });
 
+export const cancelApprovedLeave = createAsyncThunk("entities/leaveRequests/cancelApproved", async ({ id, reason }, { rejectWithValue }) => {
+  try {
+    const res = await axiosClient.put(`/leave-requests/${id}/cancel-approved`, { reason });
+    return { id, ...res.data };
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || "Failed to cancel approved leave");
+  }
+});
+
 export const cancelLeave = createAsyncThunk("entities/leaveRequests/cancel", async ({ id, reason }, { rejectWithValue }) => {
   try {
     const res = await axiosClient.put(`/leave-requests/${id}/cancel`, { reason });
@@ -151,6 +160,13 @@ const leaveRequestsSlice = createSlice({
         }
       })
       .addCase(rejectLeave.fulfilled, (state, action) => {
+        if (action.payload?.id) {
+          leaveRequestsAdapter.upsertOne(state, action.payload);
+        } else {
+          leaveRequestsAdapter.removeOne(state, action.meta.arg.id);
+        }
+      })
+      .addCase(cancelApprovedLeave.fulfilled, (state, action) => {
         if (action.payload?.id) {
           leaveRequestsAdapter.upsertOne(state, action.payload);
         } else {

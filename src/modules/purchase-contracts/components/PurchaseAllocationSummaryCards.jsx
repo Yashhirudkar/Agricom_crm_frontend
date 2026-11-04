@@ -81,7 +81,7 @@ export default function PurchaseAllocationSummaryCards({
       : {
           title: "Remaining Balance",
           value: `${Number(remainingBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT`,
-          subtitle: "Unallocated Balance",
+          subtitle: "Unallocated Purchase Qty",
           icon: Scale,
           color: "text-emerald-700 bg-emerald-100 border-emerald-200",
           bgCard: "bg-emerald-50/40 border-emerald-200/80",

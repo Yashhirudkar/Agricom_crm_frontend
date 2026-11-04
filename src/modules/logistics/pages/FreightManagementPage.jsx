@@ -496,6 +496,19 @@ export default function FreightManagementPage() {
     setAddModalOpen(true);
   };
 
+  const handleCopyReference = async (event, reference) => {
+    event.stopPropagation();
+    if (!reference || reference === "—") return;
+
+    try {
+      await navigator.clipboard.writeText(reference);
+      toast.success("Business reference copied");
+    } catch (error) {
+      console.error("Failed to copy business reference", error);
+      toast.error("Unable to copy business reference");
+    }
+  };
+
   // Sort indicator helper
   const SortIcon = ({ col }) => {
     if (sortBy !== col) return <ArrowUpDown className="h-3 w-3 text-gray-300 ml-1 inline" />;
@@ -773,7 +786,27 @@ export default function FreightManagementPage() {
                         )}
                       </td>
                       <td className="px-5 py-3.5 font-mono font-semibold text-indigo-700 whitespace-nowrap">
-                        {quote.businessReference || quote.businessTransaction?.businessReference || quote.logistics?.enquiry?.businessReference || "—"}
+                        {(() => {
+                          const reference = quote.businessReference ||
+                            quote.businessTransaction?.businessReference ||
+                            quote.logistics?.enquiry?.businessReference;
+                          return (
+                            <div className="flex items-center gap-2">
+                              <span>{reference || "—"}</span>
+                              {reference && (
+                                <button
+                                  type="button"
+                                  onClick={(event) => handleCopyReference(event, reference)}
+                                  className="text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                                  title="Copy business reference"
+                                  aria-label="Copy business reference"
+                                >
+                                  <Copy className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-5 py-3.5 text-center font-semibold text-slate-600">{quote.stats.totalQuotes}</td>
                       <td className="px-5 py-3.5 font-bold text-emerald-600">

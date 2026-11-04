@@ -1,7 +1,8 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { Search, RotateCcw, Truck, Plus, ChevronRight } from "lucide-react";
+import { Search, RotateCcw, Truck, Plus, ChevronRight, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ExporterLoadingTab({
   loadingEntries = [],
@@ -13,6 +14,19 @@ export default function ExporterLoadingTab({
   onOpenDrawer,
   onNewLoading,
 }) {
+  const handleCopyReference = async (event, reference) => {
+    event.stopPropagation();
+    if (!reference || reference === "—") return;
+
+    try {
+      await navigator.clipboard.writeText(reference);
+      toast.success("Business reference copied");
+    } catch (error) {
+      console.error("Failed to copy business reference", error);
+      toast.error("Unable to copy business reference");
+    }
+  };
+
   const getVarianceBadge = (level) => {
     switch (level) {
       case "Yellow Alert":
@@ -196,7 +210,23 @@ export default function ExporterLoadingTab({
                     </td>
 
                     <td className="py-3 px-4 font-mono font-semibold text-indigo-700 whitespace-nowrap">
-                      {row.businessReference || row.businessTransaction?.businessReference || "—"}
+                      <div className="flex items-center gap-2">
+                        <span>{row.businessReference || row.businessTransaction?.businessReference || "—"}</span>
+                        {(row.businessReference || row.businessTransaction?.businessReference) && (
+                          <button
+                            type="button"
+                            onClick={(event) => handleCopyReference(
+                              event,
+                              row.businessReference || row.businessTransaction?.businessReference
+                            )}
+                            className="text-gray-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                            title="Copy business reference"
+                            aria-label="Copy business reference"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
 
                     <td className="py-3 px-4 font-mono text-slate-700">

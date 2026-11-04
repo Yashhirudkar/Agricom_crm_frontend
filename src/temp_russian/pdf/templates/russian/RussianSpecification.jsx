@@ -65,6 +65,7 @@ export default function RussianSpecification({ contract, renderValue }) {
   const item = contract.items?.[0];
   const productName = item?.product?.name || "Семена льна масличного (коричневый)";
   const productQuality =
+    item?.quality ||
     [item?.product?.qualitySubType, item?.product?.specification].filter(Boolean).join(" - ") ||
     "не для посева, урожай 2025 года (Linum usitatissimum)";
   const qtyNum = item ? Number(item.quantity) : 490;

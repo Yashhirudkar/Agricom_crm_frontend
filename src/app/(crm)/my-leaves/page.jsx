@@ -17,6 +17,7 @@ import {
 import { Plus, Calendar as CalendarIcon, Check, AlertCircle, Clock, XCircle, CalendarDays, UserX } from "lucide-react";
 import { startOfMonth, endOfMonth, eachDayOfInterval, getDay, parseISO } from "date-fns";
 import { getFriendlyError } from "@/lib/errorMessages";
+import axiosClient from "@/lib/axios";
 import { subscribeToSocketEvent, unsubscribeFromSocketEvent } from "@/lib/socket";
 
 import LeaveBalanceWidget from "@/components/my-leaves/LeaveBalanceWidget";
@@ -81,7 +82,7 @@ function MyLeavesContent() {
   }, [dispatch, user, isEmployee, currentPage, activeTab, viewMode]);
 
   useEffect(() => {
-    setCurrentPage(1);
+    setTimeout(() => setCurrentPage(1), 0);
   }, [activeTab, viewMode]);
 
   // Realtime: refetch when any LEAVE_REQUEST notification arrives on the socket
@@ -122,9 +123,10 @@ function MyLeavesContent() {
         APPROVED: "APPROVED",
         REJECTED: "REJECTED",
         CANCELLED: "CANCELLED",
+        CANCELLED_AFTER_APPROVAL: "CANCELLED",
       };
       const targetTab = tabMap[leave.status] || "PENDING";
-      setActiveTab(targetTab);
+      setTimeout(() => setActiveTab(targetTab), 0);
 
       setTimeout(() => {
         const el = rowRefs.current[id];
@@ -144,14 +146,51 @@ function MyLeavesContent() {
   // Apply Leave Modal
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [handoverEmployees, setHandoverEmployees] = useState([]);
+  const [loadingHandoverEmployees, setLoadingHandoverEmployees] = useState(false);
   const [applyForm, setApplyForm] = useState({
     leaveTypeId: "",
     fromDate: "",
     toDate: "",
     reason: "",
     isHalfDay: false,
-    file: null
+    file: null,
+    handoverUserIds: []
   });
+
+  const openApplyModal = () => {
+    setLoadingHandoverEmployees(true);
+    setIsApplyModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (!isApplyModalOpen) return;
+    let isMounted = true;
+    axiosClient
+      .get("/leave-requests/handover-employees")
+      .then((res) => {
+        if (!isMounted) return;
+        const options = res.data || [];
+        const filtered = options.filter(
+          (emp) =>
+            emp.userId !== user?.id &&
+            emp.employeeId !== (user?.employeeId || user?.employee?.id)
+        );
+        setHandoverEmployees(filtered);
+      })
+      .catch((err) => {
+        console.error("Failed to load handover employees:", err);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoadingHandoverEmployees(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isApplyModalOpen, user]);
 
   const handleApplyChange = (e) => {
     const { name, value, type, checked, files } = e.target;
@@ -164,6 +203,10 @@ function MyLeavesContent() {
 
   const submitApplyLeave = async (e) => {
     e.preventDefault();
+    if (!applyForm.handoverUserIds || applyForm.handoverUserIds.length === 0) {
+      showToast("Please assign at least one employee for work handover", "error");
+      return;
+    }
     setIsSubmitting(true);
     
     try {
@@ -173,6 +216,7 @@ function MyLeavesContent() {
       formData.append("toDate", applyForm.toDate);
       formData.append("reason", applyForm.reason);
       formData.append("isHalfDay", applyForm.isHalfDay);
+      formData.append("handoverUserIds", JSON.stringify(applyForm.handoverUserIds));
       if (applyForm.file) {
         formData.append("file", applyForm.file);
       }
@@ -180,7 +224,7 @@ function MyLeavesContent() {
       await dispatch(applyLeave(formData)).unwrap();
       showToast("Leave applied successfully");
       setIsApplyModalOpen(false);
-      setApplyForm({ leaveTypeId: "", fromDate: "", toDate: "", reason: "", isHalfDay: false, file: null });
+      setApplyForm({ leaveTypeId: "", fromDate: "", toDate: "", reason: "", isHalfDay: false, file: null, handoverUserIds: [] });
       // Refresh
       dispatch(fetchMyLeaves({}));
       dispatch(fetchLeaveBalances({ employeeId: user?.employeeId || user?.employee?.id || "me", year: new Date().getFullYear() }));
@@ -220,12 +264,22 @@ function MyLeavesContent() {
     PENDING: { label: "Pending", className: "bg-yellow-50 text-yellow-600 border border-yellow-100", icon: Clock },
     APPROVED: { label: "Approved", className: "bg-green-50 text-green-600 border border-green-100", icon: Check },
     REJECTED: { label: "Rejected", className: "bg-red-50 text-red-600 border border-red-100", icon: XCircle },
-    CANCELLED: { label: "Cancelled", className: "bg-gray-50 text-gray-500 border border-gray-100", icon: AlertCircle }
+    CANCELLED: { label: "Cancelled", className: "bg-gray-50 text-gray-500 border border-gray-100", icon: AlertCircle },
+    CANCELLED_AFTER_APPROVAL: { label: "Cancelled After Approval", className: "bg-amber-50 text-amber-700 border border-amber-200", icon: AlertCircle }
   };
 
   // In list view, myLeaves is already filtered by backend
   // In calendar view, myLeaves has all statuses
-  const filteredLeaves = viewMode === "list" ? myLeaves : myLeaves.filter(l => l.status === activeTab);
+  const filteredLeaves =
+    viewMode === "list"
+      ? myLeaves
+      : myLeaves.filter((l) =>
+          activeTab === "CANCELLED"
+            ? l.status === "CANCELLED" ||
+              l.status === "CANCELLED_AFTER_APPROVAL" ||
+              l.cancelledAfterApproval
+            : l.status === activeTab
+        );
 
   // Calendar Helpers
   const daysInMonth = eachDayOfInterval({
@@ -237,7 +291,12 @@ function MyLeavesContent() {
 
   const getLeaveStatusForDay = (date) => {
     for (const req of myLeaves) {
-      if (req.status === "CANCELLED") continue;
+      if (
+        req.status === "CANCELLED" ||
+        req.status === "CANCELLED_AFTER_APPROVAL" ||
+        req.cancelledAfterApproval
+      )
+        continue;
       const start = parseISO(req.fromDate);
       const end = parseISO(req.toDate);
       if (date >= start && date <= end) {
@@ -293,7 +352,7 @@ function MyLeavesContent() {
           </p>
         </div>
         <button
-          onClick={() => setIsApplyModalOpen(true)}
+          onClick={openApplyModal}
           className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 transition-colors cursor-pointer"
         >
           <Plus className="h-4 w-4" /> Apply Leave
@@ -355,6 +414,9 @@ function MyLeavesContent() {
         handleApplyChange={handleApplyChange}
         leaveTypes={leaveTypes}
         isSubmitting={isSubmitting}
+        employeeOptions={handoverEmployees}
+        loadingEmployees={loadingHandoverEmployees}
+        onHandoverChange={(ids) => setApplyForm(prev => ({ ...prev, handoverUserIds: ids }))}
       />
 
       <CancelLeaveModal

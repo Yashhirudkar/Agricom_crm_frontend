@@ -626,10 +626,12 @@ export default function ContractViewModal({ contractId, onClose }) {
                         </Row>
 
                         <Row label="Quality">
-                          {renderValue(`quality_${idx}`, [
-                            item.product?.qualitySubType,
-                            item.product?.specification || item.quality,
-                          ].filter(Boolean).join(" - ")?.toUpperCase() || "—")}
+                          {renderValue(`quality_${idx}`, (
+                            item.quality ||
+                            [item.product?.qualitySubType, item.product?.specification]
+                              .filter(Boolean)
+                              .join(" - ")
+                          )?.toUpperCase() || "—")}
                         </Row>
 
                         <Row label="Quantity">

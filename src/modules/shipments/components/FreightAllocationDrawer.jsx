@@ -132,11 +132,10 @@ export default function FreightAllocationDrawer({
 
       {/* Slide-over Drawer Panel */}
       <div
-        className="fixed right-0 top-0 bottom-0 z-[160] bg-slate-50 shadow-2xl flex flex-col font-sans border-l border-slate-200 animate-in slide-in-from-right duration-300"
-        style={{ width: "70vw", maxWidth: "1000px", minWidth: "500px" }}
+        className="fixed right-0 top-0 bottom-0 z-[160] w-full md:w-[85vw] lg:w-[70vw] lg:max-w-[1000px] bg-slate-50 shadow-2xl flex flex-col font-sans border-l border-slate-200 animate-in slide-in-from-right duration-300"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-200 bg-white flex-shrink-0">
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-slate-200 bg-white flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
               <Truck className="h-4 w-4" />

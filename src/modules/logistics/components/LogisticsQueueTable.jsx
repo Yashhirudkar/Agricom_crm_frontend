@@ -1,5 +1,6 @@
 import React from "react";
-import { Truck, Ship, Train, ArrowRight, Eye, EyeOff, FileText } from "lucide-react";
+import { Truck, Ship, Train, ArrowRight, Eye, EyeOff, FileText, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 const LOGISTICS_STATUS_CLASSES = {
   "Pending": "bg-gray-50 text-gray-600 border-gray-100",
@@ -23,6 +24,19 @@ export default function LogisticsQueueTable({
   highlightedRowId,
   onSortBusinessReference,
 }) {
+  const handleCopyReference = async (event, reference) => {
+    event.stopPropagation();
+    if (!reference || reference === "—") return;
+
+    try {
+      await navigator.clipboard.writeText(reference);
+      toast.success("Business reference copied");
+    } catch (error) {
+      console.error("Failed to copy business reference", error);
+      toast.error("Unable to copy business reference");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -133,7 +147,23 @@ export default function LogisticsQueueTable({
                   </div>
                 </td>
                 <td className="px-4 py-4.5 font-mono font-semibold text-indigo-700 whitespace-nowrap">
-                  {e.purchaseContract?.businessReference || e.businessReference || e.businessTransaction?.businessReference || "—"}
+                  <div className="flex items-center gap-2">
+                    <span>{e.purchaseContract?.businessReference || e.businessReference || e.businessTransaction?.businessReference || "—"}</span>
+                    {(e.purchaseContract?.businessReference || e.businessReference || e.businessTransaction?.businessReference) && (
+                      <button
+                        type="button"
+                        onClick={(event) => handleCopyReference(
+                          event,
+                          e.purchaseContract?.businessReference || e.businessReference || e.businessTransaction?.businessReference
+                        )}
+                        className="text-gray-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                        title="Copy business reference"
+                        aria-label="Copy business reference"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
                   {(e.purchaseContract?.purchaseDate || e.enquiryDate)

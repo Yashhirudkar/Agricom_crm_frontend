@@ -82,7 +82,7 @@ const TRANSPORT_ICONS = {
 const selectStyles = {
   control: (base, state) => ({
     ...base,
-    minHeight: "34px",
+    minHeight: "36px",
     fontSize: "12px",
     borderRadius: "12px",
     borderColor: state.isFocused ? "#007aff" : "#e5e7eb",
@@ -194,8 +194,8 @@ function LocationSelect({ value, onChange, options, loadOptions, placeholder, is
 // Main CommercialSection component
 // ---------------------------------------------------------------------------
 export default function CommercialSection({ form, setForm, errors, masters, isView }) {
-  const inp = "w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white transition-all";
-  const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
+  const inp = "w-full h-[36px] min-h-[36px] box-border px-3 py-1 text-xs leading-5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white transition-all";
+  const lbl = "block text-[11px] font-semibold text-gray-600 mb-1";
   const err = "text-[10px] text-red-500 mt-1";
 
   // Resolve country ISO codes
@@ -319,7 +319,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
       {/* Section Header */}
-      <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2.5">
+      <div className="px-5 py-2.5 border-b border-gray-100 flex items-center gap-2.5">
         <div className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
           <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
         </div>
@@ -329,41 +329,39 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
         </div>
       </div>
 
-      <div className="p-5 flex flex-col gap-6">
+      <div className="p-4 flex flex-col gap-4">
 
         {/* ── Split Section: Origin vs Destination ──────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
           {/* Origin Section */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-            <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+          <div className="bg-slate-50 px-3.5 py-3 rounded-xl border border-slate-100">
+            <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
               <OriginTransportIcon className="h-3.5 w-3.5 text-blue-500" />
               Origin / Shipment
             </h3>
 
-            <div className="mb-4">
-              <label className={lbl}>
-                Transport Mode
-              </label>
-              <div className="relative">
-                <select
-                  id="originTransportMode"
-                  value={originTransportMode}
-                  onChange={(e) => handleOriginTransportModeChange(e.target.value)}
-                  disabled={isView}
-                  className={`${inp} appearance-none pr-8`}
-                >
-                  {TRANSPORT_MODES.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1.4fr] gap-3">
+              <div>
+                <label className={lbl}>Transport Mode</label>
+                <div className="relative">
+                  <select
+                    id="originTransportMode"
+                    value={originTransportMode}
+                    onChange={(e) => handleOriginTransportModeChange(e.target.value)}
+                    disabled={isView}
+                    className={`${inp} appearance-none pr-8`}
+                  >
+                    {TRANSPORT_MODES.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Origin Country */}
               <div>
                 <label className={lbl}>
@@ -418,35 +416,33 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
           </div>
 
           {/* Destination Section */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-            <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+          <div className="bg-slate-50 px-3.5 py-3 rounded-xl border border-slate-100">
+            <h3 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5 text-emerald-500" />
               Destination
             </h3>
 
-            <div className="mb-4">
-              <label className={lbl}>
-                Transport Mode
-              </label>
-              <div className="relative">
-                <select
-                  id="destinationTransportMode"
-                  value={destTransportMode}
-                  onChange={(e) => handleDestTransportModeChange(e.target.value)}
-                  disabled={isView}
-                  className={`${inp} appearance-none pr-8`}
-                >
-                  {TRANSPORT_MODES.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1.4fr] gap-3">
+              <div>
+                <label className={lbl}>Transport Mode</label>
+                <div className="relative">
+                  <select
+                    id="destinationTransportMode"
+                    value={destTransportMode}
+                    onChange={(e) => handleDestTransportModeChange(e.target.value)}
+                    disabled={isView}
+                    className={`${inp} appearance-none pr-8`}
+                  >
+                    {TRANSPORT_MODES.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Destination Country */}
               <div>
                 <label className={lbl}>
@@ -511,7 +507,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
         </div>
 
         {/* ── Common Commercial Terms ────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-gray-100">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1.5 border-t border-gray-100">
 
           {/* Shipment Type */}
           <div>

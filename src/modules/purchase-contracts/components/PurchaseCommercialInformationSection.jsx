@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useRef, useState, useEffect } from "react";
 import { DollarSign, ChevronDown, CreditCard, CalendarDays } from "lucide-react";
 import { mastersApi } from "@/modules/sales-contracts/services/salesContractApi";
@@ -19,7 +19,74 @@ export default function PurchaseCommercialInformationSection({
     "w-full text-xs bg-gray-50/60 border border-gray-200 rounded-xl p-2.5 font-medium text-gray-900 focus:bg-white focus:border-[#007aff] focus:ring-2 focus:ring-[#007aff]/20 focus:outline-none transition-all disabled:opacity-75 disabled:bg-gray-100";
 
   const paymentDueDateRef = useRef(null);
+  const [qtyError, setQtyError] = useState("");
+
   const isManual = contract?.purchaseType === "MTT" || !contract?.salesContractId;
+  const scItems = contract?.salesContract?.items || [];
+  const scShipments = contract?.salesContract?.shipments || [];
+  const qtyPerCount =
+    Number(contract?.qtyPerCount) ||
+    Number(scItems.find((it) => Number(it.qtyPerCount) > 0)?.qtyPerCount) ||
+    Number(scShipments.find((s) => Number(s.quantity) > 0)?.quantity) ||
+    0;
+
+  const scTotalQty =
+    Number(contract?.salesContract?.totalQuantity) ||
+    scItems.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0) ||
+    scShipments.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0) ||
+    0;
+
+  const otherAllocated =
+    (contract?.activePurchaseContracts && contract.activePurchaseContracts.length > 0)
+      ? contract.activePurchaseContracts
+          .filter((p) => Number(p.id) !== Number(contract?.id))
+          .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0)
+      : Number(summary?.allocationSummary?.alreadyAllocatedQty ?? contract?.allocationSummary?.alreadyAllocatedQty ?? 0);
+
+  const maxAllowedForThisPc = Math.max(
+    0,
+    Math.round((scTotalQty - otherAllocated) * 100) / 100
+  );
+
+  const allowedQuantities = [];
+  if (qtyPerCount > 0 && maxAllowedForThisPc > 0) {
+    for (let q = qtyPerCount; q <= maxAllowedForThisPc + 0.0001; q += qtyPerCount) {
+      allowedQuantities.push(Math.round(q * 100) / 100);
+    }
+  }
+
+  const validateQty = (val) => {
+    if (!val || isManual || qtyPerCount <= 0) {
+      setQtyError("");
+      return;
+    }
+    const q = Number(val);
+    if (isNaN(q) || q <= 0) {
+      setQtyError("Quantity must be greater than 0");
+      return;
+    }
+    const rem = q % qtyPerCount;
+    const isMultiple = Math.abs(rem) < 0.0001 || Math.abs(rem - qtyPerCount) < 0.0001;
+    if (!isMultiple) {
+      setQtyError(
+        `Must be in multiples of ${qtyPerCount} MT${allowedQuantities.length > 0 ? ` (${allowedQuantities.join(", ")})` : ""}`,
+      );
+    } else if (maxAllowedForThisPc > 0 && q > maxAllowedForThisPc + 0.0001) {
+      setQtyError(
+        `Exceeds available quantity (${maxAllowedForThisPc} MT). Other Purchase Contracts: ${otherAllocated} MT (SC Total: ${scTotalQty} MT).`,
+      );
+    } else if (scTotalQty > 0 && q > scTotalQty + 0.0001) {
+      setQtyError(`Exceeds Sales Contract total (${scTotalQty} MT)`);
+    } else {
+      setQtyError("");
+    }
+  };
+
+  useEffect(() => {
+    if (form.quantity) {
+      validateQty(form.quantity);
+    }
+  }, [maxAllowedForThisPc, qtyPerCount, form.quantity]);
   const contractType = isManual ? "MTT" : (contract?.salesContract?.contractType || "Import");
   const brokerRoleId = contractType.toLowerCase() === "export"
     ? masters?.domesticBrokerRoleId
@@ -117,6 +184,7 @@ export default function PurchaseCommercialInformationSection({
     shipmentTypeName.toUpperCase() === "FREE CARRIER ALONGSIDE" ||
     shipmentTypeName.toUpperCase() === "FREE ALONGSIDE SHIP";
 
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
       {/* Section Header */}
@@ -204,23 +272,40 @@ export default function PurchaseCommercialInformationSection({
             {isView ? (
               <div className="text-sm font-bold text-gray-900 py-1.5">{form.quantity || "\u00A0"}</div>
             ) : (
-              <input
-                type="number"
-                step="0.01"
-                value={form.quantity ?? ""}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setForm((f) => {
-                    const updatedItems = [...(f.items || [])];
-                    if (updatedItems.length > 0) {
-                      updatedItems[0] = { ...updatedItems[0], quantity: parseFloat(val) || 0 };
-                    }
-                    return { ...f, quantity: val, items: updatedItems };
-                  });
-                }}
-                placeholder="e.g. 200"
-                className={`${inp} font-bold text-gray-900 tabular-nums`}
-              />
+              <>
+                <input
+                  type="number"
+                  step={!isManual && qtyPerCount > 0 ? qtyPerCount : "0.01"}
+                  min={!isManual && qtyPerCount > 0 ? qtyPerCount : undefined}
+                  max={!isManual && maxAllowedForThisPc > 0 ? maxAllowedForThisPc : undefined}
+                  value={form.quantity ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setForm((f) => {
+                      const updatedItems = [...(f.items || [])];
+                      if (updatedItems.length > 0) {
+                        updatedItems[0] = { ...updatedItems[0], quantity: parseFloat(val) || 0 };
+                      }
+                      return { ...f, quantity: val, items: updatedItems };
+                    });
+                    validateQty(val);
+                  }}
+                  onBlur={(e) => validateQty(e.target.value)}
+                  placeholder={!isManual && qtyPerCount > 0 ? `Multiples of ${qtyPerCount}` : "e.g. 200"}
+                  className={`${inp} ${qtyError ? "border-rose-400 focus:border-rose-500 focus:ring-rose-200" : ""} font-bold text-gray-900 tabular-nums`}
+                />
+                {qtyError ? (
+                  <p className="mt-1 text-[11px] text-rose-600 font-medium">{qtyError}</p>
+                ) : (!isManual && qtyPerCount > 0 && allowedQuantities.length > 0) ? (
+                  <p className="mt-1 text-[10px] text-gray-500 font-medium">
+                    Multiples of {qtyPerCount} MT (Allowed: {allowedQuantities.join(", ")}{otherAllocated > 0 ? ` · Max Available: ${maxAllowedForThisPc} MT` : ""})
+                  </p>
+                ) : (!isManual && maxAllowedForThisPc <= 0 && scTotalQty > 0) ? (
+                  <p className="mt-1 text-[10px] text-rose-600 font-medium">
+                    Fully allocated: All {scTotalQty} MT is allocated to other Purchase Contracts ({otherAllocated} MT).
+                  </p>
+                ) : null}
+              </>
             )}
           </div>
 

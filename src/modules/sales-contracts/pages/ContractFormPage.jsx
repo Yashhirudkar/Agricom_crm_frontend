@@ -8,6 +8,7 @@ import { salesContractApi } from "../services/salesContractApi";
 import { enquiryApi } from "@/modules/enquiries/services/enquiryApi";
 import { getCurrentFinancialYear, getFinancialYearForDate } from "../utils/dateUtils";
 import { cleanNumberValue, formatNumberDisplay } from "../utils/formatUtils";
+import { isDivisible } from "../utils/scheduleUtils";
 import HeaderSection from "../components/HeaderSection";
 import PartySection from "../components/PartySection";
 import CommercialSection from "../components/CommercialSection";
@@ -20,6 +21,7 @@ import OtherConditionsSection, { DEFAULT_OTHER_CONDITIONS } from "../components/
 import DisputeResolutionSection from "../components/DisputeResolutionSection";
 import ForceMajeureSection from "../components/ForceMajeureSection";
 import ContractAcceptanceSection from "../components/ContractAcceptanceSection";
+import BusinessReference from "@/components/common/BusinessReference";
 
 const defaultForm = () => ({
   enquiryId: null,
@@ -82,7 +84,12 @@ function validate(form, isAutoNumber) {
       if (!item.productId) rowErrors.push("Product");
       if (!item.bagTypeId) rowErrors.push("Bag Type");
       if (!item.packingTypeId) rowErrors.push("Packing Type");
+      if (!item.quality?.trim()) rowErrors.push("Quality");
+      if (!item.qtyPerCount || parseFloat(item.qtyPerCount) <= 0) rowErrors.push("Qty Per Count");
       if (!item.quantity || parseFloat(item.quantity) <= 0) rowErrors.push("Quantity");
+      if (item.quantity && item.qtyPerCount && parseFloat(item.qtyPerCount) > 0 && !isDivisible(item.quantity, item.qtyPerCount)) {
+        rowErrors.push(`Product Quantity (${item.quantity} MT) is not divisible by Qty Per Count (${item.qtyPerCount} MT). Product Quantity must be an exact multiple of Qty Per Count.`);
+      }
       if (!item.unitPrice || parseFloat(item.unitPrice) <= 0) rowErrors.push("Unit Price");
       if (rowErrors.length > 0) itemErrors.push(`Item ${idx + 1}: ${rowErrors.join(", ")} required`);
     });
@@ -90,25 +97,36 @@ function validate(form, isAutoNumber) {
   }
   const totalProductQty = (form.items || []).reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
   const totalShipmentQty = (form.shipments || []).reduce((sum, s) => sum + (parseFloat(s.quantity) || 0), 0);
-  const shipmentCount = parseInt(form.numShipments, 10);
 
-  if (!shipmentCount || shipmentCount < 1) {
-    e.shipments = "Shipment count cannot be less than 1";
-  } else if (!form.shipments || form.shipments.length === 0) {
-    e.shipments = "At least one shipment is required";
-  } else {
-    const hasNegativeQty = form.shipments.some(s => parseFloat(s.quantity) < 0);
-    const hasInvalidContainers = form.shipments.some(s => s.noOfContainers === "" || s.noOfContainers === null || parseInt(s.noOfContainers, 10) < 1);
-    const missingDate = form.shipments.some(s => !s.shipmentDate);
+  const hasDivisibilityError = (form.items || []).some(
+    (item) =>
+      parseFloat(item.quantity) > 0 &&
+      parseFloat(item.qtyPerCount) > 0 &&
+      !isDivisible(item.quantity, item.qtyPerCount)
+  );
 
-    if (hasNegativeQty) {
-      e.shipments = "Shipment quantity cannot be negative";
-    } else if (hasInvalidContainers) {
-      e.shipments = "Every shipment must have at least 1 container";
-    } else if (missingDate) {
-      e.shipments = "Shipment date is required for all shipments";
-    } else if (totalProductQty > 0 && Math.abs(totalShipmentQty - totalProductQty) > 0.01) {
-      e.shipments = `Total shipment quantity (${formatNumberDisplay(totalShipmentQty)} MT) must equal total product quantity (${formatNumberDisplay(totalProductQty)} MT)`;
+  // Suppress duplicate shipment errors when divisibility error is active
+  if (!hasDivisibilityError) {
+    const shipmentCount = parseInt(form.numShipments, 10);
+
+    if (!shipmentCount || shipmentCount < 1) {
+      e.shipments = "Shipment count cannot be less than 1";
+    } else if (!form.shipments || form.shipments.length === 0) {
+      e.shipments = "At least one shipment is required";
+    } else {
+      const hasNegativeQty = form.shipments.some(s => parseFloat(s.quantity) < 0);
+      const hasInvalidContainers = form.shipments.some(s => s.noOfContainers === "" || s.noOfContainers === null || parseInt(s.noOfContainers, 10) < 1);
+      const missingDate = form.shipments.some(s => !s.shipmentDate);
+
+      if (hasNegativeQty) {
+        e.shipments = "Shipment quantity cannot be negative";
+      } else if (hasInvalidContainers) {
+        e.shipments = "Every shipment must have at least 1 container";
+      } else if (missingDate) {
+        e.shipments = "Shipment date is required for all shipments";
+      } else if (totalProductQty > 0 && Math.abs(totalShipmentQty - totalProductQty) > 0.001) {
+        e.shipments = `Shipment Quantity Total (${formatNumberDisplay(totalShipmentQty)} MT) does not match Product Quantity (${formatNumberDisplay(totalProductQty)} MT).`;
+      }
     }
   }
   return e;
@@ -135,6 +153,24 @@ export default function ContractFormPage({ editId, viewId }) {
   const isEdit = !!editId;
   const isView = !!viewId && !editId;
   const contractId = editId || viewId;
+
+  // Handle contract date change: update shipment dates if user hasn't manually customized them
+  const handleContractDateChange = (newDate) => {
+    setForm((f) => {
+      const oldDate = f.contractDate;
+      const updatedShipments = (f.shipments || []).map((s) => {
+        if (!s.isDateCustomized && (s.shipmentDate === oldDate || !s.shipmentDate)) {
+          return { ...s, shipmentDate: newDate };
+        }
+        return s;
+      });
+      return {
+        ...f,
+        contractDate: newDate,
+        shipments: updatedShipments,
+      };
+    });
+  };
 
   // Load existing contract for edit/view
   useEffect(() => {
@@ -187,9 +223,18 @@ export default function ContractFormPage({ editId, viewId }) {
           items: (c.items || []).map(item => ({
             id: item.id,
             productId: item.productId || "",
+            origin: item.origin || item.originCountry || "",
+            quality: item.quality || [
+              item.product?.qualitySubType,
+              item.product?.specification,
+              item.productQuality,
+              c.quality,
+            ].filter(Boolean).join(" - "),
+            marking: item.marking || "",
             bagTypeId: item.bagTypeId || "",
             packingTypeId: item.packingTypeId || "",
             bagSpecificationId: item.bagSpecificationId || null,
+            qtyPerCount: cleanNumberValue(item.qtyPerCount),
             quantity: cleanNumberValue(item.quantity),
             unitPrice: cleanNumberValue(item.unitPrice),
             amount: cleanNumberValue(item.amount) || 0,
@@ -268,6 +313,7 @@ export default function ContractFormPage({ editId, viewId }) {
   useEffect(() => {
     if (isEdit || isView) return;
     if (form.sellerId && form.buyerId && form.financialYear) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchContractNumberPreview(form.sellerId, form.buyerId, form.financialYear);
     } else {
       // Reset auto number state when seller, buyer, or FY is cleared
@@ -335,6 +381,9 @@ export default function ContractFormPage({ editId, viewId }) {
             bagTypeId: "",
             packingTypeId: eq.packingTypeId || "",
             bagSpecificationId: null,
+            origin: "",
+            quality: "",
+            qtyPerCount: "",
             quantity: cleanNumberValue(eq.quantity),
             unitPrice: cleanNumberValue(eq.buyingInterest),
             amount: parseFloat(((eq.quantity || 0) * (eq.buyingInterest || 0)).toFixed(2)) || 0,
@@ -431,13 +480,17 @@ export default function ContractFormPage({ editId, viewId }) {
       items: validItems.map(i => ({
         ...(i.id ? { id: Number(i.id) } : {}),
         productId: Number(i.productId),
+        origin: i.origin || i.originCountry || null,
+        quality: i.quality || null,
+        marking: i.marking || null,
         bagTypeId: Number(i.bagTypeId),
         packingTypeId: Number(i.packingTypeId),
         bagSpecificationId: i.bagSpecificationId ? Number(i.bagSpecificationId) : null,
+        qtyPerCount: i.qtyPerCount !== "" && i.qtyPerCount !== null && i.qtyPerCount !== undefined ? parseFloat(i.qtyPerCount) : null,
         quantity: parseFloat(i.quantity) || 0,
         unitPrice: parseFloat(i.unitPrice) || 0,
         amount: parseFloat(i.amount) || 0,
-        remarks: [i.marking, i.remarks].filter(Boolean).join(" | ") || null,
+        remarks: i.remarks || null,
       })),
       shipments: validShipments.map(s => ({
         ...(s.id ? { id: Number(s.id) } : {}),
@@ -517,6 +570,16 @@ export default function ContractFormPage({ editId, viewId }) {
   const hasErrors = Object.keys(errors).length > 0;
   const productItems = form.items || [];
   const totalProductQty = productItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
+  const totalShipmentQty = (form.shipments || []).reduce((sum, s) => sum + (parseFloat(s.quantity) || 0), 0);
+  const hasDivisibilityError = productItems.some(
+    (item) =>
+      parseFloat(item.quantity) > 0 &&
+      parseFloat(item.qtyPerCount) > 0 &&
+      !isDivisible(item.quantity, item.qtyPerCount)
+  );
+  const isTotalMismatched =
+    totalProductQty > 0 && Math.abs(totalShipmentQty - totalProductQty) > 0.001;
+  const isFormBlocked = saving || isTotalMismatched || hasDivisibilityError;
   const numberOfShipments = Math.max(1, parseInt(form.numShipments, 10) || 1);
 
   return (
@@ -530,10 +593,13 @@ export default function ContractFormPage({ editId, viewId }) {
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">
-              {isView ? "View Contract" : isEdit ? "Edit Contract" : "New Sales Contract"}
-            </h1>
+          <div className="min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+              <h1 className="text-xl font-bold text-gray-900 whitespace-nowrap">
+                {isView ? "View Contract" : isEdit ? "Edit Contract" : "New Sales Contract"}
+              </h1>
+              {isEdit && <BusinessReference reference={form.businessReference} />}
+            </div>
             <p className="text-[11px] text-gray-400 mt-0.5">
               {isView ? form.contractNumber : isEdit ? `Editing ${form.contractNumber || "..."}` : "Create a new export/import contract"}
             </p>
@@ -550,16 +616,16 @@ export default function ContractFormPage({ editId, viewId }) {
             </button>
             <button
               onClick={() => handleSave(true)}
-              disabled={saving}
-              className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+              disabled={isFormBlocked}
+              className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Save Draft
             </button>
             <button
               onClick={() => handleSave(false)}
-              disabled={saving}
-              className="px-5 py-2 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
+              disabled={isFormBlocked}
+              className="px-5 py-2 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
               {isEdit ? "Update" : "Save"}
@@ -594,10 +660,11 @@ export default function ContractFormPage({ editId, viewId }) {
         isView={isView}
         contractNumberPreview={isAutoNumber ? contractNumberPreview : undefined}
         isLoadingContractNumber={isLoadingContractNumber}
+        onContractDateChange={handleContractDateChange}
       />
       <PartySection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
-      <CommercialSection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
       <ItemsTable form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
+      <CommercialSection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
       <ShipmentTable
         form={form}
         setForm={setForm}
@@ -629,16 +696,16 @@ export default function ContractFormPage({ editId, viewId }) {
             </button>
             <button
               onClick={() => handleSave(true)}
-              disabled={saving}
-              className="cursor-pointer px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+              disabled={isFormBlocked}
+              className="cursor-pointer px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               {saving && <Loader2 className="h-3 w-3 animate-spin" />}
               Save Draft
             </button>
             <button
               onClick={() => handleSave(false)}
-              disabled={saving}
-              className="cursor-pointer px-4 py-1.5 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
+              disabled={isFormBlocked}
+              className="cursor-pointer px-4 py-1.5 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
             >
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
               {isEdit ? "Update" : "Save & Activate"}

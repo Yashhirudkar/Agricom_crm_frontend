@@ -61,10 +61,10 @@ export default function Pagination({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 font-medium select-none">
+    <div className="min-w-0 px-3 sm:px-5 py-3 border-t border-gray-100 bg-gray-50/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 font-medium select-none">
       {/* Left side: Range text & Items per page */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <span className="text-gray-600 font-semibold">{rangeText}</span>
+      <div className="min-w-0 max-w-full flex items-center gap-3 sm:gap-4 flex-wrap">
+        <span className="max-w-full truncate text-gray-600 font-semibold">{rangeText}</span>
 
         {onLimitChange && (
           <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
@@ -85,7 +85,7 @@ export default function Pagination({
       </div>
 
       {/* Right side: Pagination buttons */}
-      <div className="flex items-center gap-1 flex-wrap">
+      <div className="max-w-full flex items-center justify-center gap-1 flex-wrap">
         {/* First page button */}
         <button
           disabled={page <= 1}
@@ -156,4 +156,3 @@ export default function Pagination({
     </div>
   );
 }
-

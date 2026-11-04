@@ -11,7 +11,9 @@ import {
   Clock,
   Truck,
   Eye,
+  Copy,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function CargoMainGrid({
   data = [],
@@ -21,6 +23,19 @@ export default function CargoMainGrid({
   onSelectRecord,
   onSortBusinessReference,
 }) {
+  const handleCopyReference = async (event, reference) => {
+    event.stopPropagation();
+    if (!reference || reference === "—") return;
+
+    try {
+      await navigator.clipboard.writeText(reference);
+      toast.success("Business reference copied");
+    } catch (error) {
+      console.error("Failed to copy business reference", error);
+      toast.error("Unable to copy business reference");
+    }
+  };
+
   // Helper to ensure single, accurate business status
   const getRowBusinessStatus = (row) => {
     if (
@@ -199,10 +214,27 @@ export default function CargoMainGrid({
                   </td>
 
                   <td className="py-3 px-4 font-mono font-semibold text-indigo-700 whitespace-nowrap">
-                    {row.businessReference ||
-                      row.businessTransaction?.businessReference ||
-                      contract.businessReference ||
-                      "—"}
+                    {(() => {
+                      const reference = row.businessReference ||
+                        row.businessTransaction?.businessReference ||
+                        contract.businessReference;
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span>{reference || "—"}</span>
+                          {reference && (
+                            <button
+                              type="button"
+                              onClick={(event) => handleCopyReference(event, reference)}
+                              className="text-gray-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                              title="Copy business reference"
+                              aria-label="Copy business reference"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
 
                   <td className="py-3 px-4">

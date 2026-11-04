@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Ship,
   User,
@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   XCircle,
   Package,
+  Copy,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -18,14 +19,45 @@ import ManualReadinessModal from "./ManualReadinessModal";
 import ShipmentStuffingExecutionModal from "./ShipmentStuffingExecutionModal";
 import ShipmentRefTooltip from "./ShipmentRefTooltip";
 
-// Standardized Timeline Color Map
-const TIMELINE_STYLES = {
-  today: "bg-green-100 text-green-800 border-green-200",
-  tomorrow: "bg-blue-100 text-blue-800 border-blue-200",
-  upcoming: "bg-indigo-100 text-indigo-800 border-indigo-200",
-  overdue: "bg-red-100 text-red-800 border-red-200",
-  completed: "bg-gray-100 text-gray-800 border-gray-200",
-  cancelled: "bg-gray-100 text-gray-500 border-gray-200",
+const getTimelineDisplay = (timeline = {}) => {
+  const parsedDays = Number(timeline.days);
+  const days = Number.isFinite(parsedDays)
+    ? parsedDays
+    : Number(timeline.daysRemaining);
+  const isOverdue = timeline.type === "overdue" || (Number.isFinite(days) && days < 0);
+  const dayCount = Number.isFinite(days)
+    ? Math.abs(days)
+    : Math.abs(Number(timeline.label?.match(/\d+/)?.[0] || 0));
+
+  if (!Number.isFinite(days) && !timeline.label?.match(/\d+/)) {
+    return {
+      value: "—",
+      className: "text-gray-500",
+      title: timeline.label || "Timeline unavailable",
+    };
+  }
+
+  if (isOverdue) {
+    return {
+      value: dayCount,
+      className: "text-red-600",
+      title: `Overdue by ${dayCount} days`,
+    };
+  }
+
+  if (timeline.type === "today" || dayCount === 0) {
+    return {
+      value: 0,
+      className: "text-green-600",
+      title: "Due Today",
+    };
+  }
+
+  return {
+    value: dayCount,
+    className: "text-green-600",
+    title: `Due in ${dayCount} days`,
+  };
 };
 
 // Dynamic Tooltip Reason Helper for Shipment Readiness
@@ -74,6 +106,7 @@ export default function ShipmentsTable({
   const [stuffingShipment, setStuffingShipment] = useState(null);
   const [executingId, setExecutingId] = useState(null);
   const [executedShipmentIds, setExecutedShipmentIds] = useState(new Set());
+  const tableScrollRef = useRef(null);
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
@@ -89,6 +122,19 @@ export default function ShipmentsTable({
       setSelectedShipments((prev) => [...prev, id]);
     } else {
       setSelectedShipments((prev) => prev.filter((item) => item !== id));
+    }
+  };
+
+  const handleCopyBusinessReference = async (e, reference) => {
+    e.stopPropagation();
+    if (!reference || reference === "—") return;
+
+    try {
+      await navigator.clipboard.writeText(reference);
+      toast.success("Business reference copied");
+    } catch (error) {
+      console.error("Failed to copy business reference", error);
+      toast.error("Unable to copy business reference");
     }
   };
 
@@ -208,11 +254,29 @@ export default function ShipmentsTable({
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left border-collapse">
+      <div className="shipment-table-shell flex min-h-0 flex-1 w-full min-w-0 flex-col">
+        <div
+          ref={tableScrollRef}
+          className="shipment-table-wrapper min-h-0 flex-1 w-full min-w-0 overflow-x-auto overflow-y-auto overscroll-contain"
+          style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "thin" }}
+        >
+        <table className="shipment-table w-full table-auto whitespace-nowrap text-sm text-left border-collapse">
+          <colgroup>
+            <col style={{ width: "40px" }} />
+            <col style={{ width: "130px" }} />
+            <col style={{ width: "80px" }} />
+            <col style={{ width: "120px" }} />
+            <col style={{ width: "160px" }} />
+            <col style={{ width: "180px" }} />
+            <col style={{ width: "160px" }} />
+            <col style={{ width: "70px" }} />
+            <col style={{ width: "120px" }} />
+            <col style={{ width: "120px" }} />
+            <col style={{ width: "120px" }} />
+          </colgroup>
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
-              <th className="px-4 py-3 w-12 text-center">
+              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 w-12 text-center">
                 <input
                   type="checkbox"
                   onChange={handleSelectAll}
@@ -220,7 +284,7 @@ export default function ShipmentsTable({
                   className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
                 />
               </th>
-              <th className="px-4 py-3 whitespace-nowrap">
+              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">
                 {onSortBusinessReference ? (
                   <button type="button" onClick={onSortBusinessReference} className="hover:text-blue-600 font-medium">
                     Business Ref No.
@@ -229,16 +293,15 @@ export default function ShipmentsTable({
                   "Business Ref No."
                 )}
               </th>
-              <th className="px-4 py-3 whitespace-nowrap">Timeline</th>
-              <th className="px-4 py-3 whitespace-nowrap">Shipment Date</th>
-              <th className="px-4 py-3 whitespace-nowrap">Route (Origin → Destination)</th>
-              <th className="px-4 py-3 whitespace-nowrap">Buyer</th>
-              <th className="px-4 py-3 whitespace-nowrap">Supplier</th>
-              <th className="px-4 py-3 whitespace-nowrap">Commodity</th>
-              <th className="px-4 py-3 text-right whitespace-nowrap">Qty (MT)</th>
-              <th className="px-4 py-3 text-center whitespace-nowrap">Cargo Allocation</th>
-              <th className="px-4 py-3 text-center whitespace-nowrap">Freight Allocation</th>
-              <th className="px-4 py-3 text-right whitespace-nowrap">Action</th>
+              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-center whitespace-nowrap">Timeline (Days)</th>
+              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">Shipment Date</th>
+              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">Buyer</th>
+              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">Supplier</th>
+              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">Commodity</th>
+              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-center whitespace-nowrap">Qty (MT)</th>
+              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-center whitespace-nowrap">Cargo Allocation</th>
+              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-center whitespace-nowrap">Freight Allocation</th>
+              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-right whitespace-nowrap">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -247,6 +310,7 @@ export default function ShipmentsTable({
               const buyer = contract.buyer || {};
               const seller = contract.seller || {};
               const timelineObj = s.timeline || {};
+              const timelineDisplay = getTimelineDisplay(timelineObj);
 
               const productsList = s.products || [];
               const primaryProduct = productsList[0]?.name || "â€”";
@@ -271,7 +335,7 @@ export default function ShipmentsTable({
                     }`}
                 >
                   {/* Checkbox */}
-                  <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={isSelected}
@@ -281,22 +345,38 @@ export default function ShipmentsTable({
                   </td>
 
                   {/* Business Ref */}
-                  <td className="px-4 py-3 font-medium text-blue-600 whitespace-nowrap">
-                    <ShipmentRefTooltip shipment={s}>
-                      <span className="hover:underline cursor-pointer">
-                        {s.businessReference || s.businessTransaction?.businessReference || "—"}
-                      </span>
-                    </ShipmentRefTooltip>
+                  <td className="px-3 py-3 font-medium text-blue-600 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <ShipmentRefTooltip shipment={s}>
+                        <span className="hover:underline cursor-pointer">
+                          {s.businessReference || s.businessTransaction?.businessReference || "—"}
+                        </span>
+                      </ShipmentRefTooltip>
+                      {(s.businessReference || s.businessTransaction?.businessReference) && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleCopyBusinessReference(
+                            e,
+                            s.businessReference || s.businessTransaction?.businessReference,
+                          )}
+                          className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                          title="Copy business reference"
+                          aria-label="Copy business reference"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </td>
 
                   {/* Timeline */}
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex flex-col items-start gap-1">
+                  <td className="px-3 py-3 text-center whitespace-nowrap">
+                    <div className="flex flex-col items-center gap-1">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-xs font-medium capitalize ${TIMELINE_STYLES[timelineObj.type] || "bg-gray-100 text-gray-700 border-gray-200"
-                          }`}
+                        title={timelineDisplay.title}
+                        className={`text-sm font-semibold ${timelineDisplay.className}`}
                       >
-                        {timelineObj.label || "Unknown"}
+                        {timelineDisplay.value}
                       </span>
                       {s.executionStatus && (
                         <span className="text-[10px] font-semibold text-indigo-700">
@@ -307,7 +387,7 @@ export default function ShipmentsTable({
                   </td>
 
                   {/* Shipment Date */}
-                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                  <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
                     {s.shipmentDate
                       ? new Date(s.shipmentDate).toLocaleDateString("en-GB", {
                         day: "2-digit",
@@ -318,28 +398,25 @@ export default function ShipmentsTable({
                   </td>
 
                   {/* Buyer */}
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-900 font-medium" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-3 whitespace-nowrap text-gray-900 font-medium" onClick={(e) => e.stopPropagation()}>
                     {buyer.entityName ? (
                       buyer.id ? (
                         <button
                           onClick={() => router.push(`/masters/partners?partnerId=${buyer.id}`)}
-                          className="hover:text-blue-600 hover:underline flex items-center gap-1.5"
-                          title={buyer.entityName}
+                          className="group relative max-w-full hover:text-blue-600 hover:underline flex items-center gap-1.5"
                         >
                           <User className="h-4 w-4 text-gray-400 shrink-0" />
-                          <span>
-                            {buyer.entityName.length > 10
-                              ? `${buyer.entityName.slice(0, 10)}...`
-                              : buyer.entityName}
+                          <span className="min-w-0 max-w-[112px] truncate">{buyer.entityName}</span>
+                          <span className="pointer-events-none invisible absolute left-0 top-full z-30 mt-1 max-w-xs whitespace-normal rounded-md bg-white px-2.5 py-1.5 text-xs font-normal text-gray-700 opacity-0 shadow-lg ring-1 ring-gray-200 transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 [transition-delay:200ms]">
+                            {buyer.entityName}
                           </span>
                         </button>
                       ) : (
-                        <span className="flex items-center gap-1.5 text-gray-900" title={buyer.entityName}>
+                        <span className="group relative flex max-w-full items-center gap-1.5 text-gray-900">
                           <User className="h-4 w-4 text-gray-400 shrink-0" />
-                          <span>
-                            {buyer.entityName.length > 10
-                              ? `${buyer.entityName.slice(0, 10)}...`
-                              : buyer.entityName}
+                          <span className="min-w-0 max-w-[112px] truncate">{buyer.entityName}</span>
+                          <span className="pointer-events-none invisible absolute left-0 top-full z-30 mt-1 max-w-xs whitespace-normal rounded-md bg-white px-2.5 py-1.5 text-xs font-normal text-gray-700 opacity-0 shadow-lg ring-1 ring-gray-200 transition-opacity group-hover:visible group-hover:opacity-100 [transition-delay:200ms]">
+                            {buyer.entityName}
                           </span>
                         </span>
                       )
@@ -349,16 +426,23 @@ export default function ShipmentsTable({
                   </td>
 
                   {/* Seller */}
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-600" title={seller.entityName || ""}>
-                    {seller.entityName || "â€”"}
+                  <td className="group relative px-3 py-3 whitespace-nowrap text-gray-600">
+                    <span className="block max-w-[124px] truncate">
+                      {seller.entityName || "â€”"}
+                    </span>
+                    {seller.entityName && (
+                      <span className="pointer-events-none invisible absolute left-3 top-full z-30 mt-1 max-w-xs whitespace-normal rounded-md bg-white px-2.5 py-1.5 text-xs text-gray-700 opacity-0 shadow-lg ring-1 ring-gray-200 transition-opacity group-hover:visible group-hover:opacity-100 [transition-delay:200ms]">
+                        {seller.entityName}
+                      </span>
+                    )}
                   </td>
 
                   {/* Product */}
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     {productsList.length > 0 ? (
                       <div className="flex items-center gap-2 text-gray-700" title={primaryProduct}>
                         <Package className="h-4 w-4 text-gray-400" />
-                        <span className="truncate max-w-[150px]">{productDisplay}</span>
+                        <span>{productDisplay}</span>
                       </div>
                     ) : (
                       "â€”"
@@ -366,14 +450,14 @@ export default function ShipmentsTable({
                   </td>
 
                   {/* Qty (MT) */}
-                  <td className="px-4 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                  <td className="px-3 py-3 text-center font-medium text-gray-900 whitespace-nowrap">
                     {s.quantity
                       ? (Number.isInteger(Number(s.quantity)) ? Number(s.quantity).toLocaleString("en-US") : Number(s.quantity).toLocaleString("en-US", { minimumFractionDigits: 2 }))
                       : "0"}
                   </td>
 
                   {/* Cargo Allocation Column */}
-                  <td className="px-4 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
                       onClick={(e) => handleCargoClick(e, s)}
@@ -397,7 +481,7 @@ export default function ShipmentsTable({
                   </td>
 
                   {/* Freight Allocation Column */}
-                  <td className="px-4 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
                       onClick={(e) => handleFreightClick(e, s)}
@@ -421,7 +505,7 @@ export default function ShipmentsTable({
                   </td>
 
                   {/* Actions - Execute Stuffing Form & Readiness Control */}
-                  <td className="px-4 py-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1.5">
                       {/* Execute Button */}
                       {isExecuted ? (
@@ -454,7 +538,8 @@ export default function ShipmentsTable({
               );
             })}
           </tbody>
-        </table>
+      </table>
+      </div>
       </div>
 
       <ManualReadinessModal

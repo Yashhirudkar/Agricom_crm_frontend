@@ -367,7 +367,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
   ];
 
   return (
-    <div className="p-6 md:p-8 max-w-[1700px] mx-auto space-y-6 print:p-0 print:shadow-none">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden p-3 sm:p-4 lg:p-5 xl:p-6 max-w-[1700px] mx-auto space-y-2 lg:space-y-3 print:p-0 print:shadow-none">
 
       {/* Toast Notification */}
       {toastMsg && (
@@ -382,7 +382,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
 
       {/* Smart Context Breadcrumb Banner (shown when navigated via URL params) */}
       {(preSelectedShipmentId || contextContractNo) && (
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50/80 border border-indigo-100 rounded-xl text-xs font-semibold text-indigo-700 print:hidden">
+        <div className="flex flex-wrap items-center gap-2 px-3 sm:px-4 py-2.5 bg-indigo-50/80 border border-indigo-100 rounded-xl text-xs font-semibold text-indigo-700 print:hidden">
           <Boxes className="h-3.5 w-3.5 text-indigo-500 flex-shrink-0" />
           <Link href="/sales/cargo-availability" className="hover:underline text-indigo-600">Cargo Availability</Link>
           <ChevronRight className="h-3 w-3 text-indigo-400" />
@@ -400,58 +400,42 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
       )}
 
       {/* Header section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 print:hidden">
+        <div className="min-w-0">
+          <h1 className="text-xl max-sm:text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
             <Ship className="h-5.5 w-5.5 text-[#007aff]" />
             Shipments Management
           </h1>
-          <p className="text-xs text-gray-400 font-medium mt-1">
+          <p className="text-xs text-gray-400 font-medium mt-0.5 max-w-3xl">
             Track and monitor shipment timeline states, documentation completeness, and operational workflow statuses.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full lg:w-auto items-center gap-2">
           <button
             onClick={handleExportExcel}
             disabled={exporting}
-            className="px-3 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-colors disabled:opacity-50"
+            className="flex-1 lg:flex-none max-sm:flex-none max-sm:w-8 max-sm:px-0 justify-center px-3 py-1.5 min-h-[32px] sm:min-h-[36px] border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-lg lg:rounded-xl flex items-center gap-1.5 text-[12px] sm:text-xs font-semibold cursor-pointer transition-colors disabled:opacity-50"
           >
             <FileSpreadsheet className="h-3.5 w-3.5" />
-            {exporting ? "Exporting..." : "Export Excel"}
+            <span className="hidden sm:inline">{exporting ? "Exporting..." : "Export Excel"}</span>
           </button>
           <button
             onClick={fetchShipments}
-            className="px-3 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-colors"
+            className="flex-1 lg:flex-none max-sm:flex-none max-sm:w-8 max-sm:px-0 justify-center px-3 py-1.5 min-h-[32px] sm:min-h-[36px] border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-lg lg:rounded-xl flex items-center gap-1.5 text-[12px] sm:text-xs font-semibold cursor-pointer transition-colors"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh Registry
+            <span className="hidden sm:inline">Refresh Registry</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 max-w-md print:grid-cols-2">
-        {statsConfig.map((card, idx) => (
-          <div
-            key={idx}
-            className="p-3 bg-white border border-gray-200 rounded-xl shadow-xs transition-all hover:translate-y-[-1px] flex flex-col justify-between"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{card.label}</p>
-              <span className={`h-1.5 w-1.5 rounded-full ${card.badgeColor}`} />
-            </div>
-            <p className="text-lg font-extrabold text-gray-900 mt-1">{card.value}</p>
-          </div>
-        ))}
-      </div>
-
-
       {/* Main Container Card: Unified Filter, Table and Pagination */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden print:border-none">
+      <div className="flex min-h-0 flex-1 flex-col bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden print:border-none">
         <div className="print:hidden">
           <ShipmentsFilter
             filters={filters}
             setFilters={setFilters}
+            statsConfig={statsConfig}
             onReset={handleResetFilters}
             total={total}
             selectedShipments={selectedShipments}

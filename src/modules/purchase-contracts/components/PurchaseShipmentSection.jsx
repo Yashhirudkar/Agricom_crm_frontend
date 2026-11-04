@@ -11,6 +11,7 @@ export default function PurchaseShipmentSection({
   currencyCode = "INR",
   allocationSummary = {},
   isView = false,
+  isPreview = false,
 }) {
   const [selectedShipment, setSelectedShipment] = React.useState(null);
 
@@ -50,19 +51,29 @@ export default function PurchaseShipmentSection({
             <Ship className="h-3.5 w-3.5 text-[#007aff]" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-gray-900">Shipment Schedule</h2>
-            <p className="text-[10px] text-gray-400">Auto-populated from selected shipments.</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-gray-900">Shipment Schedule</h2>
+              {isPreview && (
+                <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Live Preview
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-gray-400">
+              {isPreview ? "Previewing recalculated allocation for updated quantity (unsaved)." : "Auto-populated from selected shipments."}
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {isOverAllocated ? (
             <span className="text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg font-mono">
-              Stock Shortfall: -{Number.isInteger(Number(overAllocatedQty)) ? Number(overAllocatedQty).toLocaleString("en-IN") : Number(overAllocatedQty).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT 🔴
+              Allocation Shortfall: {Number.isInteger(Number(overAllocatedQty)) ? Number(overAllocatedQty).toLocaleString("en-IN") : Number(overAllocatedQty).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT 🔴
             </span>
           ) : (
             <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg font-mono">
-              Stock Available: +{Number.isInteger(Number(remainingBalance)) ? Number(remainingBalance).toLocaleString("en-IN") : Number(remainingBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT 🟢
+              Incoming Stock: +{Number.isInteger(Number(totalQty)) ? Number(totalQty).toLocaleString("en-IN") : Number(totalQty).toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT 🟢
             </span>
           )}
           <span className="text-xs font-bold text-[#007aff] bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 font-mono">
@@ -81,14 +92,16 @@ export default function PurchaseShipmentSection({
               <th className="px-3 py-2.5">Date</th>
               <th className="px-3 py-2.5 text-center">Containers</th>
               <th className="px-3 py-2.5 text-right min-w-[90px]">Qty (MT)</th>
-              <th className="px-3 py-2.5 text-right min-w-[110px]">Stock Balance</th>
+              <th className="px-3 py-2.5 text-right min-w-[110px]">Incoming Stock</th>
               <th className="px-3 py-2.5 min-w-[130px]">Remarks</th>
               <th className="px-3 py-2.5 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {shipments.map((s, idx) => {
-              const rowData = shipmentScheduleData[s.id] || {};
+              const shipmentId = s.id ?? s.shipmentId ?? s.linkId;
+              const rowKey = shipmentId != null ? String(shipmentId) : `shipment-${idx}`;
+              const rowData = shipmentScheduleData[shipmentId] || {};
               const refNo = s.shipmentReference || `SC-${s.salesContract?.contractNumber || ""}/${s.shipmentNo}`;
               const dateStr = s.shipmentDate
                 ? new Date(s.shipmentDate).toLocaleDateString("en-GB", {
@@ -98,12 +111,10 @@ export default function PurchaseShipmentSection({
                   })
                 : "—";
 
-              const availStock = Number(s.availableStock ?? s.currentStock ?? s.stockBalance ?? 0);
               const shpQty = Number(s.quantity || 0);
-              const rowStockBalance = availStock - shpQty;
 
               return (
-                <tr key={s.id} className="hover:bg-blue-50/20 transition-colors">
+                <tr key={rowKey} className="hover:bg-blue-50/20 transition-colors">
                   {/* Index */}
                   <td className="px-3 py-2 text-center text-gray-400 font-semibold">{idx + 1}</td>
 
@@ -129,23 +140,11 @@ export default function PurchaseShipmentSection({
                     {Number.isInteger(shpQty) ? shpQty.toLocaleString("en-IN") : shpQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </td>
 
-                  {/* Stock Balance (Individual Row Calculation: Available Stock - Shipment Qty) */}
+                  {/* Purchase quantities are incoming stock and are never consumed here. */}
                   <td className="px-3 py-2 text-right whitespace-nowrap font-mono font-bold">
-                    {rowStockBalance < 0 ? (
-                      <span
-                        className="text-red-600 inline-flex items-center gap-1"
-                        title="Shortfall"
-                      >
-                        -{Math.abs(rowStockBalance).toLocaleString("en-IN", { minimumFractionDigits: rowStockBalance % 1 !== 0 ? 2 : 0 })} MT
-                      </span>
-                    ) : (
-                      <span
-                        className="text-emerald-600 inline-flex items-center gap-1"
-                        title="Stock Available"
-                      >
-                        +{rowStockBalance.toLocaleString("en-IN", { minimumFractionDigits: rowStockBalance % 1 !== 0 ? 2 : 0 })} MT
-                      </span>
-                    )}
+                    <span className="text-emerald-600 inline-flex items-center gap-1" title="Incoming Stock">
+                      +{shpQty.toLocaleString("en-IN", { minimumFractionDigits: shpQty % 1 !== 0 ? 2 : 0 })} MT
+                    </span>
                   </td>
 
                   {/* Remarks */}
@@ -156,7 +155,7 @@ export default function PurchaseShipmentSection({
                       <input
                         type="text"
                         value={rowData.remarks ?? s.remarks ?? ""}
-                        onChange={(e) => handleChange(s.id, "remarks", e.target.value)}
+                        onChange={(e) => handleChange(shipmentId, "remarks", e.target.value)}
                         placeholder="Remarks"
                         className={inpCls}
                       />
@@ -191,11 +190,10 @@ export default function PurchaseShipmentSection({
             )}
           </tbody>
           {shipments.length > 0 && (() => {
-            const totalStockBalance = shipments.reduce((sum, s) => {
-              const avail = Number(s.availableStock ?? s.currentStock ?? s.stockBalance ?? 0);
-              const qty = Number(s.quantity || 0);
-              return sum + (avail - qty);
-            }, 0);
+            const totalIncomingStock = shipments.reduce(
+              (sum, s) => sum + (Number(s.quantity) || 0),
+              0,
+            );
 
             return (
               <tfoot>
@@ -204,15 +202,9 @@ export default function PurchaseShipmentSection({
                   <td className="px-3 py-2.5 text-center font-mono text-gray-900">{totalContainers}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-gray-900">{Number.isInteger(totalQty) ? totalQty.toLocaleString("en-IN") : totalQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT</td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap font-mono font-bold">
-                    {totalStockBalance < 0 ? (
-                      <span className="text-red-600" title="Total Shortfall">
-                        -{Math.abs(totalStockBalance).toLocaleString("en-IN", { minimumFractionDigits: totalStockBalance % 1 !== 0 ? 2 : 0 })} MT
-                      </span>
-                    ) : (
-                      <span className="text-emerald-600" title="Total Stock Available">
-                        +{totalStockBalance.toLocaleString("en-IN", { minimumFractionDigits: totalStockBalance % 1 !== 0 ? 2 : 0 })} MT
-                      </span>
-                    )}
+                    <span className="text-emerald-600" title="Incoming Stock">
+                      +{totalIncomingStock.toLocaleString("en-IN", { minimumFractionDigits: totalIncomingStock % 1 !== 0 ? 2 : 0 })} MT
+                    </span>
                   </td>
                   <td colSpan={2}></td>
                 </tr>

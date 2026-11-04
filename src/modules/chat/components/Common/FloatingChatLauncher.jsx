@@ -90,7 +90,7 @@ export default function FloatingChatLauncher() {
       {/* Floating launcher trigger button */}
       <button
         onClick={handleToggle}
-        className="fixed bottom-6 right-6 z-45 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-2xl flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 group focus:outline-none focus:ring-4 focus:ring-blue-500/30"
+        className="fixed bottom-[80px] right-4 sm:bottom-6 sm:right-6 z-[90] h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-2xl flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 group focus:outline-none focus:ring-4 focus:ring-blue-500/30"
         title="Toggle Chat Workspace (Ctrl + Shift + C)"
       >
         <MessageCircleMore className="h-6 w-6 stroke-[2] group-hover:rotate-12 transition-transform duration-300" />

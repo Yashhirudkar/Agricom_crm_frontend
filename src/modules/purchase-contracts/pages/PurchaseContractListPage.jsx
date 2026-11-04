@@ -12,8 +12,10 @@ import {
   Truck,
   Pencil,
   Trash2,
+  Copy,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   usePurchaseContractsList,
   usePurchaseContractDashboard,
@@ -103,6 +105,19 @@ export default function PurchaseContractListPage() {
   const totalPages = normalizedSearch
     ? Math.max(1, Math.ceil(total / 10))
     : (listData?.totalPages || 1);
+
+  const handleCopyBusinessReference = async (event, reference) => {
+    event.stopPropagation();
+    if (!reference || reference === "—") return;
+
+    try {
+      await navigator.clipboard.writeText(reference);
+      toast.success("Business reference copied");
+    } catch (error) {
+      console.error("Failed to copy business reference", error);
+      toast.error("Unable to copy business reference");
+    }
+  };
 
   const stats = dashboard?.contracts || {};
   const shipments = dashboard?.shipments || {};
@@ -277,15 +292,28 @@ export default function PurchaseContractListPage() {
                       className="hover:bg-purple-50/40 cursor-pointer transition-colors group"
                     >
                       <td className="px-3.5 py-2.5 font-mono whitespace-nowrap">
-                        <span
-                          className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/sales/purchase-contracts/${pc.id}`);
-                          }}
-                        >
-                          {refNo}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/sales/purchase-contracts/${pc.id}`);
+                            }}
+                          >
+                            {refNo}
+                          </span>
+                          {refNo !== "—" && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopyBusinessReference(e, refNo)}
+                              className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                              title="Copy business reference"
+                              aria-label="Copy business reference"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
 
                       <td className="px-3.5 py-2.5 whitespace-nowrap">

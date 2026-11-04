@@ -1,12 +1,26 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { currencies } from "@/constants/currenciesData";
-import { Eye, Pencil, Trash2, Rocket, FolderOpen, Ship } from "lucide-react";
+import { Eye, Pencil, Trash2, Rocket, FolderOpen, Ship, Copy } from "lucide-react";
+import { toast } from "sonner";
 import ContractStatusBadge from "./ContractStatusBadge";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 
 export default function ContractsTable({ contracts, loading, onView, onEdit, onDelete, onDocuments, onExecutePurchase, onSortBusinessReference }) {
   const router = useRouter();
+
+  const handleCopyReference = async (event, reference) => {
+    event.stopPropagation();
+    if (!reference || reference === "—") return;
+
+    try {
+      await navigator.clipboard.writeText(reference);
+      toast.success("Business reference copied");
+    } catch (error) {
+      console.error("Failed to copy business reference", error);
+      toast.error("Unable to copy business reference");
+    }
+  };
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -46,7 +60,20 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
           {contracts.map((c) => (
             <tr key={c.id} className="hover:bg-gray-50/70 transition-colors group">
               <td className="px-4 py-3 font-mono font-semibold text-indigo-700 whitespace-nowrap">
-                {c.businessReference || "—"}
+                <div className="flex items-center gap-2">
+                  <span>{c.businessReference || "—"}</span>
+                  {c.businessReference && (
+                    <button
+                      type="button"
+                      onClick={(event) => handleCopyReference(event, c.businessReference)}
+                      className="text-gray-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                      title="Copy business reference"
+                      aria-label="Copy business reference"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               </td>
               <td className="px-4 py-3 font-mono font-bold text-[#007aff] whitespace-nowrap">
                 {c.contractNumber}
@@ -76,10 +103,18 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                 )}
               </td>
               <td className="px-4 py-3">
-                {c.hasPurchaseContract ? (
+                {c.purchaseContractStatus === 'FULL' || (Number(c.allocatedQty || 0) >= Number(c.totalQuantity || 0) && Number(c.allocatedQty || 0) > 0) ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                     <svg className="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 00-1.414 0L8 12.586 4.707 9.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l8-8a1 1 0 000-1.414z" clipRule="evenodd" /></svg>
                     Yes
+                  </span>
+                ) : c.purchaseContractStatus === 'PARTIAL' || (Number(c.allocatedQty || 0) > 0 && Number(c.allocatedQty || 0) < Number(c.totalQuantity || 0)) ? (
+                  <span
+                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200 cursor-help"
+                    title={`Allocated : ${c.allocatedQty} MT\nPending : ${c.remainingQty} MT`}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                    {c.allocatedQty} / {c.totalQuantity} MT
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200">
@@ -132,8 +167,10 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                   </button>
                   <button
                     type="button"
+                    disabled={c.purchaseContractStatus === 'FULL'}
                     onClick={async (e) => {
                       e.stopPropagation();
+                      if (c.purchaseContractStatus === 'FULL') return;
                       if (onExecutePurchase) {
                         onExecutePurchase(c);
                       } else {
@@ -148,10 +185,18 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                         }
                       }
                     }}
-                    className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
-                    title="Execute + Workspace"
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      c.purchaseContractStatus === 'FULL'
+                        ? 'text-gray-300 cursor-not-allowed opacity-50'
+                        : 'text-gray-400 hover:text-purple-600 hover:bg-purple-50 cursor-pointer'
+                    }`}
+                    title={
+                      c.purchaseContractStatus === 'FULL'
+                        ? 'Fully allocated (0 MT remaining)'
+                        : 'Execute + Workspace'
+                    }
                   >
-                    <Rocket className="h-3.5 w-3.5 text-purple-600" />
+                    <Rocket className={`h-3.5 w-3.5 ${c.purchaseContractStatus === 'FULL' ? 'text-gray-300' : 'text-purple-600'}`} />
                   </button>
                   {(c.status === "Draft" || c.status === "Cancelled") && (
                     <button

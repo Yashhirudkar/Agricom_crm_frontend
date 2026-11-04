@@ -45,6 +45,7 @@ export default function ShipmentsFilter({
   setFilters,
   onReset,
   total,
+  statsConfig = [],
   selectedShipments = [],
   onExecuteBulk,
   onDeselect,
@@ -96,24 +97,24 @@ export default function ShipmentsFilter({
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
   };
 
-  const selectCls = "appearance-none pr-8 pl-3 py-2 text-xs border border-gray-200 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] text-gray-700 w-full";
-  const inpCls = "px-3 py-2 text-xs border border-gray-200 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] text-gray-700 w-full";
+  const selectCls = "appearance-none pr-8 pl-3 h-[34px] md:h-9 lg:h-10 text-xs border border-gray-200 bg-gray-50 rounded-lg lg:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] text-gray-700 w-full";
+  const inpCls = "px-3 h-[34px] md:h-9 lg:h-10 text-xs border border-gray-200 bg-gray-50 rounded-lg lg:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] text-gray-700 w-full";
   const lblCls = "block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1";
 
   return (
     <div>
       {/* Top Filter Bar */}
-      <div className="px-5 py-3.5 border-b border-gray-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="px-2.5 sm:px-4 py-1.5 lg:py-2 border-b border-gray-100 flex flex-wrap items-center justify-between gap-1.5 lg:gap-2">
         
         {/* Search */}
-        <div className="flex-1 relative min-w-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+        <div className="w-full basis-full flex-none md:w-full md:basis-full lg:w-[55%] lg:basis-auto 2xl:w-1/2 relative min-w-0">
+          <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-400 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search by shipment ref, contract no, buyer, product..."
+            placeholder="Search by Shipment Ref, Business Ref, Buyer, Supplier..."
             value={filters.search || ""}
             onChange={(e) => handleChange("search", e.target.value)}
-            className="w-full pl-9 pr-8 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
+            className="w-full pl-8 pr-7 h-[34px] md:h-9 lg:h-10 text-[13px] lg:text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] transition-all"
           />
           {filters.search && (
             <button
@@ -125,54 +126,15 @@ export default function ShipmentsFilter({
           )}
         </div>
 
-        <input
-          type="text"
-          aria-label="Business Ref No."
-          placeholder="Business Ref No."
-          value={filters.businessReference || ""}
-          onChange={(e) => handleChange("businessReference", e.target.value)}
-          className="w-full md:w-40 px-3 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] font-mono"
-        />
-
         {/* Action Controls */}
-        <div className="flex items-center gap-2 self-end md:self-auto flex-wrap">
-          {/* Timeline filter shortcut */}
-          <div className="relative min-w-[130px]">
-            <select
-              value={filters.timeline || ""}
-              onChange={(e) => handleChange("timeline", e.target.value)}
-              className={selectCls}
-            >
-              <option value="">All Timelines</option>
-              {TIMELINE_STATES.map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-          </div>
-
-          {/* Status filter shortcut */}
-          <div className="relative min-w-[140px]">
-            <select
-              value={filters.status || ""}
-              onChange={(e) => handleChange("status", e.target.value)}
-              className={selectCls}
-            >
-              <option value="">All Statuses</option>
-              {WORKFLOW_STATUSES.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-          </div>
-
+        <div className="flex items-center gap-1.5 order-3 shrink-0">
           {/* Bulk Execute Workspace Action */}
           {selectedShipments.length > 0 && (
             <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
               <button
                 type="button"
                 onClick={onExecuteBulk}
-                className="px-3.5 py-2 bg-[#007aff] hover:bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-blue-500/20 whitespace-nowrap"
+                className="px-2.5 md:px-3 h-8 md:h-9 lg:h-10 bg-[#007aff] hover:bg-blue-600 text-white rounded-lg lg:rounded-xl text-[11px] lg:text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-blue-500/20 whitespace-nowrap"
                 title="Execute workspace for selected shipments"
               >
                 <Rocket className="h-3.5 w-3.5 text-purple-200 animate-pulse" />
@@ -189,23 +151,38 @@ export default function ShipmentsFilter({
             </div>
           )}
 
-          {/* Toggle Advanced */}
+          {/* Filter drawer/panel toggle */}
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className={`px-3.5 py-2 rounded-xl flex items-center gap-1.5 text-xs font-semibold border transition-all cursor-pointer ${
+            className={`w-[58px] md:w-[64px] lg:w-[72px] px-1 h-8 md:h-9 lg:h-10 rounded-lg lg:rounded-xl flex items-center justify-center gap-0.5 md:gap-1 text-[10px] lg:text-[11px] font-semibold border transition-all cursor-pointer ${
               showAdvanced
                 ? "bg-blue-50 border-blue-200 text-[#007aff]"
                 : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
             }`}
           >
             <Filter className="h-3.5 w-3.5" />
-            Advanced
+            <span className="hidden sm:inline">Filter</span>
           </button>
+
+          <div className="flex items-center gap-1.5">
+            {statsConfig.map((card) => (
+              <div
+                key={card.label}
+                className="h-8 w-[72px] min-w-[72px] md:h-9 md:w-auto md:min-w-[86px] lg:h-10 lg:min-w-[92px] px-1 md:px-2 lg:px-2.5 bg-white border border-gray-200 rounded-lg shadow-xs flex items-center justify-between gap-1 md:gap-1.5"
+              >
+                <div className="min-w-0">
+                  <p className="text-[6px] md:text-[8px] font-bold text-gray-400 uppercase tracking-wide truncate">{card.label}</p>
+                  <p className="text-xs md:text-sm leading-none font-extrabold text-gray-900 mt-0.5">{card.value}</p>
+                </div>
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${card.badgeColor}`} />
+              </div>
+            ))}
+          </div>
 
           {/* Reset Filters */}
           <button
             onClick={onReset}
-            className="p-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 rounded-xl transition-all cursor-pointer"
+            className="h-8 w-8 md:h-9 md:w-9 lg:h-10 lg:w-10 flex items-center justify-center border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 rounded-lg lg:rounded-xl transition-all cursor-pointer"
             title="Reset Filters"
           >
             <RotateCcw className="h-3.5 w-3.5" />
@@ -217,7 +194,42 @@ export default function ShipmentsFilter({
 
       {/* Advanced Filters Panel */}
       {showAdvanced && (
-        <div className="bg-gray-50/60 border-b border-gray-100 p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-3 duration-250">
+        <div className="bg-gray-50/60 border-b border-gray-100 p-2.5 sm:p-4 lg:p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3 lg:gap-4 animate-in fade-in slide-in-from-top-3 duration-250">
+          {/* Timeline */}
+          <div>
+            <label className={lblCls}>Timeline</label>
+            <div className="relative">
+              <select
+                value={filters.timeline || ""}
+                onChange={(e) => handleChange("timeline", e.target.value)}
+                className={selectCls}
+              >
+                <option value="">All Timelines</option>
+                {TIMELINE_STATES.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+            </div>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className={lblCls}>Status</label>
+            <div className="relative">
+              <select
+                value={filters.status || ""}
+                onChange={(e) => handleChange("status", e.target.value)}
+                className={selectCls}
+              >
+                <option value="">All Statuses</option>
+                {WORKFLOW_STATUSES.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+            </div>
+          </div>
           
           {/* Shipment Ref */}
           <div>
@@ -227,6 +239,18 @@ export default function ShipmentsFilter({
               placeholder="e.g. 00125/1/C2"
               value={filters.shipmentReference || ""}
               onChange={(e) => handleChange("shipmentReference", e.target.value)}
+              className={inpCls}
+            />
+          </div>
+
+          {/* Business Reference */}
+          <div>
+            <label className={lblCls}>Business Ref No.</label>
+            <input
+              type="text"
+              placeholder="Business Ref No."
+              value={filters.businessReference || ""}
+              onChange={(e) => handleChange("businessReference", e.target.value)}
               className={inpCls}
             />
           </div>

@@ -9,6 +9,7 @@ import {
   // Keep these Redux actions — approve/reject/cancel still go through Redux
   approveLeave,
   rejectLeave,
+  cancelApprovedLeave,
 } from "@/store/entities/leaveRequestsSlice";
 import {
   useInfiniteLeaveApprovals,
@@ -17,7 +18,7 @@ import {
 } from "@/hooks/useInfiniteLeaveApprovals";
 import { subscribeToSocketEvent, unsubscribeFromSocketEvent } from "@/lib/socket";
 import Modal from "@/components/modals/Modal";
-import HasPermission from "@/components/rbac/HasPermission";
+
 import VirtualizedLeaveGrid from "@/components/hrms/VirtualizedLeaveGrid";
 import {
   Check,
@@ -137,6 +138,40 @@ function LeaveApprovalsContent() {
     }
   }, [dispatch, invalidateLeaveQueries, rejectRemarks, rejectTarget, showToast]);
 
+  // ---- Cancel Approved modal ----
+  const [cancelApprovedTarget, setCancelApprovedTarget] = useState(null);
+  const [cancelApprovedReason, setCancelApprovedReason] = useState("");
+  const [isCancellingApproved, setIsCancellingApproved] = useState(false);
+
+  const handleCancelApprovedClick = useCallback((leave) => {
+    setCancelApprovedTarget(leave);
+    setCancelApprovedReason("");
+  }, []);
+
+  const handleCancelApproved = useCallback(async () => {
+    if (!cancelApprovedReason.trim()) {
+      showToast("Cancellation reason is mandatory", "error");
+      return;
+    }
+    setIsCancellingApproved(true);
+    try {
+      await dispatch(
+        cancelApprovedLeave({
+          id: cancelApprovedTarget.id,
+          reason: cancelApprovedReason.trim(),
+        })
+      ).unwrap();
+      showToast("Approved leave cancelled successfully");
+      setCancelApprovedTarget(null);
+      setCancelApprovedReason("");
+      invalidateLeaveQueries();
+    } catch (err) {
+      showToast(getFriendlyError(err), "error");
+    } finally {
+      setIsCancellingApproved(false);
+    }
+  }, [dispatch, invalidateLeaveQueries, cancelApprovedReason, cancelApprovedTarget, showToast]);
+
   // ---- Deep-link: ?requestId=123 ----
   // With virtualization the card may not be in DOM.
   // Instead fetch the individual request and highlight it.
@@ -151,7 +186,7 @@ function LeaveApprovalsContent() {
     const existing = items.find((l) => l.id === id);
     if (existing) {
       const isPending = existing.status === "PENDING";
-      setActiveTab(isPending ? "PENDING" : "HISTORY");
+      setTimeout(() => setActiveTab(isPending ? "PENDING" : "HISTORY"), 0);
       setTimeout(() => {
         const el = cardRefs.current[id];
         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -168,7 +203,7 @@ function LeaveApprovalsContent() {
         const leave = res.data;
         if (!leave) return;
         const isPending = leave.status === "PENDING";
-        setActiveTab(isPending ? "PENDING" : "HISTORY");
+        setTimeout(() => setActiveTab(isPending ? "PENDING" : "HISTORY"), 0);
         setHighlightedId(id);
         setTimeout(() => setHighlightedId(null), 2500);
       })
@@ -301,9 +336,71 @@ function LeaveApprovalsContent() {
         cardRefs={cardRefs}
         onApprove={handleApprove}
         onRejectClick={handleRejectClick}
+        onCancelApprovedClick={handleCancelApprovedClick}
       />
 
-      {/* ---- Reject modal (unchanged) ---- */}
+      {/* ---- Cancel Approved Leave Modal ---- */}
+      {cancelApprovedTarget && (
+        <Modal
+          isOpen={true}
+          onClose={() => setCancelApprovedTarget(null)}
+          title="Cancel Approved Leave"
+          size="sm"
+        >
+          <div className="space-y-4">
+            <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 flex gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <div>
+                <p className="text-xs text-amber-900 font-medium">
+                  You are about to cancel the approved leave for{" "}
+                  <span className="font-bold">
+                    {cancelApprovedTarget.employee?.firstName}{" "}
+                    {cancelApprovedTarget.employee?.lastName}
+                  </span>
+                  .
+                </p>
+                <p className="text-[11px] text-amber-700 mt-1">
+                  This will change the leave status to Cancelled After Approval and restore their leave balance.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                Reason <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                required
+                value={cancelApprovedReason}
+                onChange={(e) => setCancelApprovedReason(e.target.value)}
+                placeholder="Please provide a mandatory reason for cancelling this approved leave..."
+                rows={3}
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 text-gray-700 resize-none"
+              />
+              <p className="text-[10px] text-gray-400">
+                Reason is mandatory and will be visible in the approval history.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setCancelApprovedTarget(null)}
+                className="px-4 py-2 text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleCancelApproved}
+                disabled={isCancellingApproved || !cancelApprovedReason.trim()}
+                className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-red-500/20 flex items-center gap-2 cursor-pointer"
+              >
+                {isCancellingApproved ? "Cancelling..." : "Cancel Leave"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
       {rejectTarget && (
         <Modal
           isOpen={true}
