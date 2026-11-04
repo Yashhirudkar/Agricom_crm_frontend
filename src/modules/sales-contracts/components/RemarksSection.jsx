@@ -2,6 +2,9 @@
 import React from "react";
 import { MessageSquare } from "lucide-react";
 
+export const DEFAULT_CONTRACT_NOTE =
+  "IF BUYER CANCEL THE CONTRACT, THE MARKET PRICE DIFFERENCE WILL BE PAID BY BUYER TO SELLER ACCOUNT WITHIN 2 DAYS OF CANCELLATION OF THE CONTRACT";
+
 export default function RemarksSection({ form, setForm, isView }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">

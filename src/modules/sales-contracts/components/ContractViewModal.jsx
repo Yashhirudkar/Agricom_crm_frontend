@@ -42,9 +42,14 @@ const partnerAddress = (p) => {
   return parts.join(", ").toUpperCase() || "—";
 };
 
+const destinationLabel = (contract) =>
+  contract.destinationSelectionMode === "enquiry"
+    ? contract.enquiryDestination || contract.destinationLocationName || contract.portOfDischarge || ""
+    : contract.destinationLocationName || contract.portOfDischarge || "";
+
 const incotermLabel = (contract) => {
   const mode = contract.destinationTransportMode || "sea";
-  const loc = contract.destinationLocationName || contract.portOfDischarge || "";
+  const loc = destinationLabel(contract);
   if (mode === "sea" || mode === "air") return loc ? `CIF ${loc}` : "CIF";
   return loc ? `DAP ${loc}` : "DAP";
 };
@@ -600,7 +605,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                         {renderValue(
                           "destPort",
                           [
-                            (contract.destinationLocationName || contract.portOfDischarge || "").trim().toUpperCase(),
+                            destinationLabel(contract).trim().toUpperCase(),
                             (typeof contract.destinationCountry === "object" ? contract.destinationCountry?.name : contract.destinationCountry)?.trim().toUpperCase(),
                           ]
                             .filter(Boolean)
@@ -679,7 +684,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                         <Row label="Price">
                           {(() => {
                             const baseIncoterm = contract.destinationTransportMode === "road" || contract.destinationTransportMode === "rail" ? "DAP" : "CIF";
-                            const loc = contract.destinationLocationName || contract.portOfDischarge || "";
+                            const loc = destinationLabel(contract);
 
                             const defaultPart1 = `${contract.currencyCode} ${Number(item.unitPrice).toLocaleString("en-IN", { minimumFractionDigits: 2 })} PER MT ${baseIncoterm}`.toUpperCase();
                             const defaultPart2 = loc.toUpperCase();

@@ -89,5 +89,3 @@ export const getShipmentTypeShortForm = (item) => {
   }
   return code || name || "";
 };
-
-

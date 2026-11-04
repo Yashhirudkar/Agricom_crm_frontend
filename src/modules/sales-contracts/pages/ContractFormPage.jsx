@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useSalesMasters } from "../hooks/useSalesContracts";
 import { salesContractApi } from "../services/salesContractApi";
 import { enquiryApi } from "@/modules/enquiries/services/enquiryApi";
+import { enquiriesApi } from "@/modules/enquiries/services/enquiriesApi";
 import { getCurrentFinancialYear, getFinancialYearForDate } from "../utils/dateUtils";
 import { cleanNumberValue, formatNumberDisplay } from "../utils/formatUtils";
 import { isDivisible } from "../utils/scheduleUtils";
@@ -15,7 +16,7 @@ import CommercialSection from "../components/CommercialSection";
 import ItemsTable from "../components/ItemsTable";
 import ShipmentTable from "../components/ShipmentTable";
 import DocumentSection from "../components/DocumentSection";
-import RemarksSection from "../components/RemarksSection";
+import RemarksSection, { DEFAULT_CONTRACT_NOTE } from "../components/RemarksSection";
 import TermsSection from "../components/TermsSection";
 import OtherConditionsSection, { DEFAULT_OTHER_CONDITIONS } from "../components/OtherConditionsSection";
 import DisputeResolutionSection from "../components/DisputeResolutionSection";
@@ -38,6 +39,8 @@ const defaultForm = () => ({
   paymentTermId: "",
   originCountry: "",
   destinationCountry: "",
+  destinationSelectionMode: "enquiry",
+  enquiryDestination: "",
   // Multi-Modal Transport Routing
   originTransportMode: "sea",
   destinationTransportMode: "sea",
@@ -46,7 +49,7 @@ const defaultForm = () => ({
   // Legacy fields kept for backward compat (not used in new contracts)
   portOfLoading: "",
   portOfDischarge: "",
-  remarks: "",
+  remarks: DEFAULT_CONTRACT_NOTE,
   terms: [],
   otherConditions: [...DEFAULT_OTHER_CONDITIONS],
   disputeResolution: null,
@@ -65,6 +68,28 @@ const defaultForm = () => ({
   documents: [],
   printOverrides: {},
 });
+
+function getEnquiryDestination(enquiry, savedDestinations = []) {
+  const savedDestination = (Array.isArray(savedDestinations) ? savedDestinations : []).find(
+    (destination) => typeof destination === "string" && destination.trim()
+  );
+  if (savedDestination) return savedDestination;
+  if (!enquiry) return "";
+  if (enquiry.shipmentMode === "SHIP") {
+    return enquiry.destinationPort || enquiry.podPort || "";
+  }
+  const city = [enquiry.destinationCity, enquiry.destinationZipCode]
+    .filter(Boolean)
+    .join(" ");
+  return (
+    [city, enquiry.destinationState, enquiry.destinationCountry]
+      .filter(Boolean)
+      .join(", ") ||
+    enquiry.destinationPort ||
+    enquiry.podPort ||
+    ""
+  );
+}
 
 function validate(form, isAutoNumber) {
   const e = {};
@@ -180,6 +205,20 @@ export default function ContractFormPage({ editId, viewId }) {
       try {
         const res = await salesContractApi.getOne(contractId);
         const c = res.data;
+        const [linkedEnquiry, savedEnquiryDestinations] = c.enquiryId
+          ? await Promise.all([
+              enquiryApi.getOne(c.enquiryId),
+              enquiriesApi.getDestinations(c.enquiryId),
+            ])
+          : [null, []];
+        const legacyEnquiryDestination =
+          Boolean(c.enquiryId) &&
+          c.destinationSelectionMode === "select" &&
+          !c.enquiryDestination;
+        const destinationSelectionMode =
+          legacyEnquiryDestination
+            ? "enquiry"
+            : c.destinationSelectionMode || (c.enquiryId ? "enquiry" : "select");
         setForm({
           enquiryId: c.enquiryId || null,
           // financialYear is now a plain string from the server
@@ -196,6 +235,18 @@ export default function ContractFormPage({ editId, viewId }) {
           paymentTermId: c.paymentTermId || "",
           originCountry: c.originCountry || "",
           destinationCountry: c.destinationCountry || "",
+          destinationSelectionMode,
+          enquiryDestination:
+            c.enquiryDestination ||
+            (destinationSelectionMode === "enquiry"
+              ? getEnquiryDestination(
+                  linkedEnquiry?.data || linkedEnquiry,
+                  savedEnquiryDestinations
+                ) ||
+                c.destinationLocationName ||
+                c.portOfDischarge ||
+                ""
+              : ""),
           // Multi-Modal Transport Routing
           originTransportMode: c.originTransportMode || c.transportMode || "sea",
           destinationTransportMode: c.destinationTransportMode || c.transportMode || "sea",
@@ -328,7 +379,10 @@ export default function ContractFormPage({ editId, viewId }) {
     const loadEnquiry = async () => {
       setLoadingContract(true);
       try {
-        const res = await enquiryApi.getOne(enquiryId);
+        const [res, savedEnquiryDestinations] = await Promise.all([
+          enquiryApi.getOne(enquiryId),
+          enquiriesApi.getDestinations(enquiryId),
+        ]);
         const eq = res.data;
         if (!eq) return;
 
@@ -341,6 +395,10 @@ export default function ContractFormPage({ editId, viewId }) {
         const derivedFY = eq.shipmentDate
           ? getFinancialYearForDate(new Date(eq.shipmentDate))
           : getCurrentFinancialYear();
+        const enquiryDestination = getEnquiryDestination(
+          eq,
+          savedEnquiryDestinations
+        );
 
         setForm({
           enquiryId: enquiryId,
@@ -356,14 +414,16 @@ export default function ContractFormPage({ editId, viewId }) {
           paymentTermId: "",
           originCountry: eq.originCountry || "",
           destinationCountry: eq.destinationCountry || "",
+          destinationSelectionMode: "enquiry",
+          enquiryDestination,
           // Multi-Modal Transport defaults for new contracts from enquiry
           originTransportMode: "sea",
           destinationTransportMode: "sea",
           originLocationName: "",
-          destinationLocationName: eq.podPort || "",
+          destinationLocationName: eq.podPort || eq.destinationPort || "",
           portOfLoading: "",
-          portOfDischarge: eq.podPort || "",
-          remarks: `Created from Enquiry ${eq.enquiryNo || ""}`,
+          portOfDischarge: eq.podPort || eq.destinationPort || "",
+          remarks: DEFAULT_CONTRACT_NOTE,
           otherConditions: [...DEFAULT_OTHER_CONDITIONS],
           disputeResolution: null,
           forceMajeure: null,
@@ -448,6 +508,8 @@ export default function ContractFormPage({ editId, viewId }) {
       paymentTermId: Number(form.paymentTermId),
       originCountry: form.originCountry,
       destinationCountry: form.destinationCountry,
+      destinationSelectionMode: form.destinationSelectionMode || "enquiry",
+      enquiryDestination: form.enquiryDestination || null,
       // Multi-Modal Transport fields
       originTransportMode: form.originTransportMode || "sea",
       destinationTransportMode: form.destinationTransportMode || "sea",

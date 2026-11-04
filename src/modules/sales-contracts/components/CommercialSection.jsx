@@ -205,6 +205,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
   // Current transport modes
   const originTransportMode = form.originTransportMode || "sea";
   const destTransportMode = form.destinationTransportMode || "sea";
+  const destinationSelectionMode = form.destinationSelectionMode || "enquiry";
 
   const originConfig = TRANSPORT_MODE_CONFIG[originTransportMode] || TRANSPORT_MODE_CONFIG.sea;
   const destConfig = TRANSPORT_MODE_CONFIG[destTransportMode] || TRANSPORT_MODE_CONFIG.sea;
@@ -422,7 +423,29 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
               Destination
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1.4fr] gap-3">
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className={lbl}>Destination Option</label>
+                <div className="relative">
+                  <select
+                    id="destinationSelectionMode"
+                    value={destinationSelectionMode}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        destinationSelectionMode: e.target.value,
+                      }))
+                    }
+                    disabled={isView}
+                    className={`${inp} appearance-none pr-8`}
+                  >
+                    <option value="enquiry">Enquiry Destination</option>
+                    <option value="select">Select Destination</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                </div>
+              </div>
+
               <div>
                 <label className={lbl}>Transport Mode</label>
                 <div className="relative">
@@ -442,7 +465,27 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
                 </div>
               </div>
+            </div>
 
+            {destinationSelectionMode === "enquiry" ? (
+              <div>
+                <label className={lbl}>Enquiry Destination</label>
+                <input
+                  type="text"
+                  value={form.enquiryDestination || ""}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      enquiryDestination: e.target.value,
+                    }))
+                  }
+                  readOnly={isView}
+                  placeholder="Enter destination"
+                  className={`${inp}${isView ? " text-gray-700 bg-gray-50/50" : ""}`}
+                />
+              </div>
+            ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* Destination Country */}
               <div>
                 <label className={lbl}>
@@ -502,6 +545,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
                 )}
               </div>
             </div>
+            )}
           </div>
 
         </div>
