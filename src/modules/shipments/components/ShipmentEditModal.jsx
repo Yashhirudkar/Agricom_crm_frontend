@@ -55,6 +55,12 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
 
   if (!isOpen || !shipment) return null;
 
+  const isFreightNotApplicable =
+    shipment?.isFreightNotApplicable ||
+    shipment?.freightAllocationStatus === "Not Applicable" ||
+    shipment?.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false ||
+    shipment?.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
+
   const handleInputChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
@@ -84,7 +90,8 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
         ratePerMt: form.ratePerMt ? parseFloat(form.ratePerMt) : null,
         purchaseRate: form.purchaseRate ? parseFloat(form.purchaseRate) : null,
         forex: form.forex ? parseFloat(form.forex) : null,
-        freight: form.freight ? parseFloat(form.freight) : null,
+        freight: isFreightNotApplicable ? null : (form.freight ? parseFloat(form.freight) : null),
+        freightAllocationStatus: isFreightNotApplicable ? "Yes" : (shipment.freightAllocationStatus === "Not Applicable" ? null : shipment.freightAllocationStatus),
         status: form.status,
         remarks: form.remarks || null,
         shipmentNo: form.shipmentNo ? parseInt(form.shipmentNo, 10) : null
@@ -257,14 +264,24 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
             {/* Freight */}
             <div>
               <label className={labelCls}>Freight Charge</label>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={form.freight}
-                onChange={(e) => handleInputChange("freight", e.target.value)}
-                className={inpCls}
-              />
+              {isFreightNotApplicable ? (
+                <input
+                  type="text"
+                  disabled
+                  value="Not Applicable"
+                  className={`${inpCls} bg-gray-100 text-gray-500 cursor-not-allowed`}
+                  title="Freight Allocation is Not Applicable for this Shipment Type (configured in Shipment Type Master)"
+                />
+              ) : (
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.freight}
+                  onChange={(e) => handleInputChange("freight", e.target.value)}
+                  className={inpCls}
+                />
+              )}
             </div>
 
             {/* Forex */}

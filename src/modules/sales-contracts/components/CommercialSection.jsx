@@ -304,18 +304,14 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
   const selectedShipmentTypeObj = (masters?.shipmentTypes || []).find(
     (s) => String(s.id) === String(form.shipmentTypeId)
   );
-  const shipmentTypeName = selectedShipmentTypeObj?.name || "";
-  const shipmentTypeCode = selectedShipmentTypeObj?.code || "";
-  const shipmentTypeShort = getShipmentTypeShortForm(selectedShipmentTypeObj) || "";
-  const rawShipmentType = String(form.shipmentType || form.shipmentTypeId || "").toUpperCase();
+  const currentShipmentType =
+    selectedShipmentTypeObj ||
+    (typeof form.shipmentType === "object" ? form.shipmentType : null) ||
+    (typeof contract?.shipmentType === "object" ? contract.shipmentType : null);
 
-  const isFAS =
-    rawShipmentType === "FAS" ||
-    rawShipmentType === "FREE CARRIER ALONGSIDE" ||
-    shipmentTypeShort === "FAS" ||
-    shipmentTypeCode.toUpperCase() === "FAS" ||
-    shipmentTypeName.toUpperCase() === "FREE CARRIER ALONGSIDE" ||
-    shipmentTypeName.toUpperCase() === "FREE ALONGSIDE SHIP";
+  const isDeliveryPlaceRequired = currentShipmentType
+    ? currentShipmentType.salesContractDeliveryPlaceRequired !== false
+    : true;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
@@ -513,32 +509,34 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
                 </label>
                 {isView ? (
                   <div className={`${inp} text-gray-700`}>
-                    {form.destinationLocationName || "—"}
+                    {!isDeliveryPlaceRequired
+                      ? "Not applicable for this Shipment Type"
+                      : (form.destinationLocationName || "—")}
                   </div>
                 ) : (
                   <LocationSelect
-                    key={`dest-${destCode}-${destTransportMode}-${isFAS ? "fas" : "editable"}`}
-                    value={form.destinationLocationName || ""}
+                    key={`dest-${destCode}-${destTransportMode}-${isDeliveryPlaceRequired ? "editable" : "disabled"}`}
+                    value={!isDeliveryPlaceRequired ? "" : (form.destinationLocationName || "")}
                     onChange={(val) => setForm((f) => ({ ...f, destinationLocationName: val, deliveryPlace: val }))}
                     options={destOptions}
                     loadOptions={loadDestOptions}
                     placeholder={
-                      isFAS
-                        ? "Not applicable for FAS"
+                      !isDeliveryPlaceRequired
+                        ? "Not applicable for this Shipment Type"
                         : destCode
                           ? destConfig.destPlaceholder
                           : destConfig.noDestCountryHint
                     }
-                    isDisabled={!destCode || isFAS}
+                    isDisabled={!destCode || !isDeliveryPlaceRequired}
                     isSearchable={destConfig.isSearchable}
-                    hasError={!isFAS && !!errors.destinationLocationName}
+                    hasError={isDeliveryPlaceRequired && !!errors.destinationLocationName}
                     onCreateCustom={(val) => saveCustomLocation(destCode, form.destinationCountry, destTransportMode, val)}
                   />
                 )}
-                {errors.destinationLocationName && !isFAS && (
+                {errors.destinationLocationName && isDeliveryPlaceRequired && (
                   <p className={err}>{errors.destinationLocationName}</p>
                 )}
-                {!destCode && !isView && !isFAS && (
+                {!destCode && !isView && isDeliveryPlaceRequired && (
                   <p className="text-[10px] text-gray-400 mt-1">
                     {destConfig.noDestCountryHint}
                   </p>
@@ -562,12 +560,23 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
               <select
                 id="shipmentTypeId"
                 value={form.shipmentTypeId || ""}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const nextId = e.target.value ? Number(e.target.value) : "";
+                  const nextType = (masters?.shipmentTypes || []).find(
+                    (s) => String(s.id) === String(nextId)
+                  );
+                  const requiresDelivery = nextType
+                    ? nextType.salesContractDeliveryPlaceRequired !== false
+                    : true;
+
                   setForm((f) => ({
                     ...f,
-                    shipmentTypeId: e.target.value ? Number(e.target.value) : "",
-                  }))
-                }
+                    shipmentTypeId: nextId,
+                    ...(requiresDelivery
+                      ? {}
+                      : { destinationLocationName: "", deliveryPlace: "" }),
+                  }));
+                }}
                 disabled={isView}
                 className={`${inp} appearance-none pr-8 ${errors.shipmentTypeId ? "border-red-300" : ""}`}
               >

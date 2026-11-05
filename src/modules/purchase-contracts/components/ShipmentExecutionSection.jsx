@@ -149,7 +149,15 @@ export default function ShipmentExecutionSection({
 
                     {/* Freight */}
                     <td className="px-4 py-3 text-right font-mono text-gray-600">
-                      {s.freight ? Number(s.freight).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "—"}
+                      {s.isFreightNotApplicable || s.freightAllocationStatus === "Not Applicable" || s.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false || s.shipmentType?.purchaseContractDeliveryPlaceRequired === false ? (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                          Yes
+                        </span>
+                      ) : s.freight ? (
+                        Number(s.freight).toLocaleString("en-US", { minimumFractionDigits: 2 })
+                      ) : (
+                        "—"
+                      )}
                     </td>
 
                     {/* Forex */}

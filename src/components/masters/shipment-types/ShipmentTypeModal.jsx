@@ -53,8 +53,61 @@ export default function ShipmentTypeModal({
           </div>
         </div>
 
+        {/* Configuration Checkboxes */}
+        <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-200/60 space-y-3">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+            Delivery Place Configuration
+          </p>
+
+          <label className="flex items-start gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              id="purchaseContractDeliveryPlaceRequired"
+              checked={form.purchaseContractDeliveryPlaceRequired !== false}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  purchaseContractDeliveryPlaceRequired: e.target.checked,
+                })
+              }
+              className="mt-0.5 w-4 h-4 text-[#007aff] bg-white border-gray-300 rounded focus:ring-[#007aff] focus:ring-2"
+            />
+            <div className="text-xs">
+              <span className="font-semibold text-gray-800">
+                Purchase Contract - Requires Delivery Place
+              </span>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                When checked, Delivery Place field is enabled in Purchase Contracts.
+              </p>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              id="salesContractDeliveryPlaceRequired"
+              checked={form.salesContractDeliveryPlaceRequired !== false}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  salesContractDeliveryPlaceRequired: e.target.checked,
+                })
+              }
+              className="mt-0.5 w-4 h-4 text-[#007aff] bg-white border-gray-300 rounded focus:ring-[#007aff] focus:ring-2"
+            />
+            <div className="text-xs">
+              <span className="font-semibold text-gray-800">
+                Sales Contract - Requires Delivery Place
+              </span>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                When checked, Delivery Place field is enabled in Sales Contracts.
+              </p>
+            </div>
+          </label>
+        </div>
+
         {isEditMode && (
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-2 pt-1">
             <input
               type="checkbox"
               id="isActive"

@@ -28,11 +28,20 @@ import ManualReadinessModal from "./ManualReadinessModal";
 
 // Dynamic Tooltip Reason Helper for Shipment Readiness
 const getExecuteDisabledTooltip = (shipment) => {
+  if (!shipment?.cargoReady || !shipment?.freightReady) {
+    return "Complete Cargo & Freight Allocation first";
+  }
   if (shipment?.readyForShipment) {
     return "Execute Shipment Stuffing";
   }
+  const isFreightNotApplicable =
+    shipment?.isFreightNotApplicable ||
+    shipment?.freightAllocationStatus === "Not Applicable" ||
+    shipment?.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false ||
+    shipment?.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
+
   const cargoPending = !shipment?.cargoReady;
-  const freightPending = !shipment?.freightReady;
+  const freightPending = !isFreightNotApplicable && !shipment?.freightReady;
 
   if (cargoPending && freightPending) {
     return "Cargo and Freight allocations are pending.";
@@ -63,6 +72,8 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
   const isExecuted =
     shipment.stuffingCompleted === true ||
     ['Dispatched', 'Completed'].includes(shipment.status);
+  const allocationsReady = Boolean(shipment.cargoReady && shipment.freightReady);
+  const canExecute = allocationsReady && shipment.readyForShipment;
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
@@ -148,11 +159,11 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
             <div className="relative group/drawer-exec inline-flex">
               <button
                 type="button"
-                disabled={!shipment.readyForShipment && !isExecuted}
+                disabled={!canExecute && !isExecuted}
                 onClick={handleExecuteWorkspace}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${isExecuted
                     ? "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
-                    : shipment.readyForShipment
+                    : canExecute
                       ? "bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
                       : "bg-gray-100 text-gray-400 border border-gray-200 opacity-50 cursor-not-allowed pointer-events-auto"
                   }`}
@@ -161,7 +172,7 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                 {isExecuted ? <Check className="h-3.5 w-3.5" /> : <Rocket className="h-3.5 w-3.5" />}
                 <span>{isExecuted ? "View Stuffing" : "Execute Stuffing"}</span>
               </button>
-              {!shipment.readyForShipment && !isExecuted && (
+              {!canExecute && !isExecuted && (
                 <div className="pointer-events-none absolute top-full right-0 mt-1.5 hidden group-hover/drawer-exec:flex flex-col items-end z-50">
                   <div className="bg-gray-900 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-gray-700">
                     {getExecuteDisabledTooltip(shipment)}
@@ -296,6 +307,25 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
             <div className="pr-2">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Freight Allocation</span>
               <div className="mt-1">
+                {(() => {
+                  const isFreightNotApplicable =
+                    shipment.isFreightNotApplicable ||
+                    shipment.freightAllocationStatus === "Not Applicable" ||
+                    shipment.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false ||
+                    shipment.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
+
+                  if (isFreightNotApplicable) {
+                    return (
+                      <span
+                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed shadow-2xs"
+                        title="Freight Allocation is automatically Yes for this Shipment Type (configured in Shipment Type Master)"
+                      >
+                        Yes
+                      </span>
+                    );
+                  }
+
+                  return (
                 <button
                   type="button"
                   onClick={() => {
@@ -365,6 +395,8 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                   )}
                   <span>{shipment.freightReady ? "Yes" : "No"}</span>
                 </button>
+                  );
+                })()}
               </div>
             </div>
 

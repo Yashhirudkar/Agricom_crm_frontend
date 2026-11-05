@@ -18,6 +18,11 @@ export default function PurchaseOverview({ contract, summary }) {
   const paymentTerm = summary?.commercialInfo?.paymentTerm?.name || salesContract.paymentTerm?.name || "—";
   const shipmentType =
     getShipmentTypeShortForm(contract?.shipmentType || salesContract.shipmentType) || "—";
+  const shipmentTypeObj = contract?.shipmentType || salesContract.shipmentType;
+  const isFreightNotApplicable =
+    contract?.isFreightNotApplicable ||
+    contract?.freightAllocationStatus === "Not Applicable" ||
+    shipmentTypeObj?.purchaseContractDeliveryPlaceRequired === false;
   const currencyCode = salesContract.currencyCode || "USD";
   const origin = contract?.loadingCountry || salesContract.originCountry || "—";
   const destination = salesContract.destinationCountry || "—";
@@ -77,9 +82,15 @@ export default function PurchaseOverview({ contract, summary }) {
             </div>
             <div className="flex items-start justify-between py-1.5 border-b border-dashed border-gray-100">
               <span className="font-semibold text-gray-500">Freight Required</span>
-              <span className={`font-bold text-right ${contract?.freightRequired ? 'text-blue-600' : 'text-gray-500'}`}>
-                {contract?.freightRequired ? 'Yes (☑)' : 'No (☐)'}
-              </span>
+              {isFreightNotApplicable ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                  Yes
+                </span>
+              ) : (
+                <span className={`font-bold text-right ${contract?.freightRequired ? 'text-blue-600' : 'text-gray-500'}`}>
+                  {contract?.freightRequired ? 'Yes (☑)' : 'No (☐)'}
+                </span>
+              )}
             </div>
             <div className="flex items-start justify-between py-1.5 border-b border-dashed border-gray-100">
               <span className="font-semibold text-gray-500">Origin → Destination</span>

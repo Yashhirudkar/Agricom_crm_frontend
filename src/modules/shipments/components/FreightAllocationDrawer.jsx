@@ -73,6 +73,12 @@ export default function FreightAllocationDrawer({
     "â€”";
 
   const currency = contract.currencyCode || "USD";
+  const isFreightNotApplicable =
+    shipment.isFreightNotApplicable ||
+    shipment.freightAllocationStatus === "Not Applicable" ||
+    shipment.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false ||
+    shipment.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
+
   const directFreight = shipment.freight ? Number(shipment.freight) : null;
 
   // Linked logistics information
@@ -145,10 +151,16 @@ export default function FreightAllocationDrawer({
                 <h2 className="text-sm font-bold text-slate-900">
                   Freight Allocation Details
                 </h2>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Allocated
-                </span>
+                {isFreightNotApplicable ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    Yes
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Allocated
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-slate-400 font-mono tracking-tight mt-0.5">
                 Shipment Ref:{" "}
@@ -184,6 +196,17 @@ export default function FreightAllocationDrawer({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {isFreightNotApplicable && (
+            <div className="p-4 rounded-xl bg-slate-100/90 border border-slate-200 flex items-start gap-3 text-xs text-slate-700">
+              <AlertCircle className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-slate-900">Freight Allocation is Yes</p>
+                <p className="mt-0.5 text-slate-600">
+                  This shipment is associated with a Shipment Type where Delivery Place is Not Applicable. Freight Allocation is automatically set to Yes and satisfies the readiness gate.
+                </p>
+              </div>
+            </div>
+          )}
           {/* Top Key Metrics Banner */}
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] grid grid-cols-2 md:grid-cols-4 gap-4 items-center">
             <div className="border-r border-slate-100 last:border-r-0 pr-4">

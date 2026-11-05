@@ -49,7 +49,14 @@ export default function ShipmentTypeTab() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const initialFormState = { id: null, code: "", name: "", isActive: true };
+  const initialFormState = {
+    id: null,
+    code: "",
+    name: "",
+    purchaseContractDeliveryPlaceRequired: true,
+    salesContractDeliveryPlaceRequired: true,
+    isActive: true,
+  };
   const [form, setForm] = useState(initialFormState);
 
   const [search, setSearch] = useState("");
@@ -73,6 +80,10 @@ export default function ShipmentTypeTab() {
       id: item.id,
       code: item.code,
       name: item.name,
+      purchaseContractDeliveryPlaceRequired:
+        item.purchaseContractDeliveryPlaceRequired !== false,
+      salesContractDeliveryPlaceRequired:
+        item.salesContractDeliveryPlaceRequired !== false,
       isActive: item.status === "Active",
     });
     setIsEditMode(true);
@@ -91,11 +102,31 @@ export default function ShipmentTypeTab() {
     e.preventDefault();
     setIsSaving(true);
     try {
+      const payload = {
+        code: form.code,
+        name: form.name,
+        purchaseContractDeliveryPlaceRequired:
+          form.purchaseContractDeliveryPlaceRequired !== false,
+        salesContractDeliveryPlaceRequired:
+          form.salesContractDeliveryPlaceRequired !== false,
+      };
+
       if (isEditMode) {
-        await dispatch(updateShipmentType({ id: form.id, code: form.code, name: form.name, status: form.isActive ? "Active" : "Inactive" })).unwrap();
+        await dispatch(
+          updateShipmentType({
+            id: form.id,
+            ...payload,
+            status: form.isActive ? "Active" : "Inactive",
+          })
+        ).unwrap();
         showToast("Shipment Type updated successfully");
       } else {
-        await dispatch(createShipmentType({ code: form.code, name: form.name, status: "Active" })).unwrap();
+        await dispatch(
+          createShipmentType({
+            ...payload,
+            status: "Active",
+          })
+        ).unwrap();
         showToast("Shipment Type created successfully");
         const status = isActiveFilter === "all" ? undefined : (isActiveFilter === "true" ? "Active" : "Inactive");
         if (currentPage !== 1) setCurrentPage(1);
@@ -195,7 +226,7 @@ export default function ShipmentTypeTab() {
             Shipment Types
           </h2>
           <p className="text-xs text-gray-400 font-medium mt-1">
-            Manage contract shipment types (e.g. FOB, CIF).
+            Manage contract shipment types (e.g. FOB, CIF, FCA, FAS) and delivery place requirements.
           </p>
         </div>
         

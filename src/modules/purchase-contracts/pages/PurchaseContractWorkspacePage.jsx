@@ -568,6 +568,11 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         || !expectedBrokerRoleId
         || String(selectedBrokerRoleId) === String(expectedBrokerRoleId);
 
+      const selectedShipmentType = (masters?.shipmentTypes || []).find(
+        (s) => String(s.id) === String(form.shipmentTypeId)
+      );
+      const isFreightNotApplicable = selectedShipmentType?.purchaseContractDeliveryPlaceRequired === false;
+
       const payload = {
         purchaseType: form.purchaseType || (isManual ? "MTT" : "SC"),
         contractNumber: form.contractNumber || null,
@@ -580,7 +585,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         specificationDate: form.specificationDate || null,
         paymentTermId: form.paymentTermId || null,
         shipmentTypeId: form.shipmentTypeId || null,
-        freightRequired: Boolean(form.freightRequired),
+        freightRequired: isFreightNotApplicable ? true : Boolean(form.freightRequired),
         paymentTermsText: form.paymentTermsText || null,
         advancePercent: form.advancePercent !== "" && form.advancePercent != null ? parseFloat(form.advancePercent) : null,
         balancePercent: form.balancePercent !== "" && form.balancePercent != null ? parseFloat(form.balancePercent) : null,

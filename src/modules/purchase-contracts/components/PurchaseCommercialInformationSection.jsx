@@ -171,18 +171,14 @@ export default function PurchaseCommercialInformationSection({
   const selectedShipmentTypeObj = (masters?.shipmentTypes || []).find(
     (s) => String(s.id) === String(form.shipmentTypeId)
   );
-  const shipmentTypeName = selectedShipmentTypeObj?.name || "";
-  const shipmentTypeCode = selectedShipmentTypeObj?.code || "";
-  const shipmentTypeShort = getShipmentTypeShortForm(selectedShipmentTypeObj) || "";
-  const rawShipmentType = String(form.shipmentType || form.shipmentTypeId || "").toUpperCase();
 
-  const isFAS =
-    rawShipmentType === "FAS" ||
-    rawShipmentType === "FREE CARRIER ALONGSIDE" ||
-    shipmentTypeShort === "FAS" ||
-    shipmentTypeCode.toUpperCase() === "FAS" ||
-    shipmentTypeName.toUpperCase() === "FREE CARRIER ALONGSIDE" ||
-    shipmentTypeName.toUpperCase() === "FREE ALONGSIDE SHIP";
+  const isDeliveryPlaceRequired = (
+    selectedShipmentTypeObj ||
+    (typeof form.shipmentType === "object" ? form.shipmentType : null) ||
+    (typeof contract?.shipmentType === "object" ? contract.shipmentType : null) ||
+    (typeof contract?.salesContract?.shipmentType === "object" ? contract.salesContract.shipmentType : null)
+  )?.purchaseContractDeliveryPlaceRequired !== false;
+
 
 
   return (
@@ -523,14 +519,21 @@ export default function PurchaseCommercialInformationSection({
               <div className="relative">
                 <select
                   value={form.shipmentTypeId || ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const nextId = e.target.value ? Number(e.target.value) : "";
+                    const nextType = (masters?.shipmentTypes || []).find(
+                      (s) => String(s.id) === String(nextId)
+                    );
+                    const requiresDelivery = nextType
+                      ? nextType.purchaseContractDeliveryPlaceRequired !== false
+                      : true;
+
                     setForm((f) => ({
                       ...f,
-                      shipmentTypeId: e.target.value
-                        ? Number(e.target.value)
-                        : "",
-                    }))
-                  }
+                      shipmentTypeId: nextId,
+                      ...(requiresDelivery ? {} : { deliveryPlace: "", freightRequired: true }),
+                    }));
+                  }}
                   className={`${inp} appearance-none pr-8`}
                 >
                   <option value="">Select Shipment Type</option>
@@ -576,16 +579,18 @@ export default function PurchaseCommercialInformationSection({
           <div>
             <label className={lbl}>Delivery Place</label>
             {isView ? (
-              <div className="text-sm font-semibold text-gray-900 py-1.5">{form.deliveryPlace || "—"}</div>
+              <div className="text-sm font-semibold text-gray-900 py-1.5">
+                {!isDeliveryPlaceRequired ? "Not applicable for this Shipment Type" : (form.deliveryPlace || "—")}
+              </div>
             ) : (
               <input
                 type="text"
-                disabled={isFAS}
-                readOnly={isFAS}
-                value={form.deliveryPlace || ""}
+                disabled={!isDeliveryPlaceRequired}
+                readOnly={!isDeliveryPlaceRequired}
+                value={!isDeliveryPlaceRequired ? "" : (form.deliveryPlace || "")}
                 onChange={(e) => setForm((f) => ({ ...f, deliveryPlace: e.target.value }))}
-                className={`${inp} ${isFAS ? "!bg-gray-100 !cursor-not-allowed !text-gray-500 opacity-75 select-none" : ""}`}
-                placeholder={isFAS ? "Not applicable for FAS" : "e.g. Port of Discharge / Location"}
+                className={`${inp} ${!isDeliveryPlaceRequired ? "!bg-gray-100 !cursor-not-allowed !text-gray-500 opacity-75 select-none" : ""}`}
+                placeholder={!isDeliveryPlaceRequired ? "Not applicable for this Shipment Type" : "e.g. Port of Discharge / Location"}
               />
             )}
           </div>

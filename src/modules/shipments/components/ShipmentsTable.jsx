@@ -151,33 +151,19 @@ export default function ShipmentsTable({
     }
   };
 
-  const handleExecuteShipmentWorkspace = (e, s) => {
+  const handleExecuteShipment = (e, s) => {
     e.stopPropagation();
-    const searchVal =
-      s.businessReference ||
-      s.businessTransaction?.businessReference ||
-      s.shipmentReference ||
-      "";
-    const params = new URLSearchParams();
-    if (searchVal) {
-      params.set("search", searchVal);
-      params.set("businessRef", searchVal);
-    }
-    if (s.logisticsId) {
-      params.set("logisticsId", String(s.logisticsId));
-    }
-    if (s.salesContract?.enquiryId) {
-      params.set("enquiryId", String(s.salesContract.enquiryId));
-    }
-    params.set("shipmentId", String(s.id));
-    if (s.shipmentReference) params.set("shipmentRef", s.shipmentReference);
-    params.set("from", "shipments");
-    params.set("openDrawer", "true");
-    router.push(`/logistics/transport-management?${params.toString()}`);
+    if (!s.cargoReady || !s.freightReady || !s.readyForShipment) return;
+    setStuffingShipment(s);
   };
 
   const handleFreightClick = (e, s) => {
     e.stopPropagation();
+    const isFreightNotApplicable =
+      s.isFreightNotApplicable ||
+      s.freightAllocationStatus === "Not Applicable" ||
+      s.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
+    if (isFreightNotApplicable) return;
     if (s.freightReady) {
       // IF status == YES -> Open Freight Allocation details directly on the Shipment page
       if (onOpenFreightDrawer) {
@@ -326,6 +312,8 @@ export default function ShipmentsTable({
               const isExecuted =
                 s.stuffingCompleted === true ||
                 executedShipmentIds.has(s.id);
+              const allocationsReady = Boolean(s.cargoReady && s.freightReady);
+              const canExecute = allocationsReady && s.readyForShipment;
 
               return (
                 <tr
@@ -482,26 +470,46 @@ export default function ShipmentsTable({
 
                   {/* Freight Allocation Column */}
                   <td className="px-3 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      onClick={(e) => handleFreightClick(e, s)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all cursor-pointer shadow-2xs hover:shadow-xs hover:scale-105 active:scale-95 ${s.freightReady
-                        ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300"
-                        : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300"
-                        }`}
-                      title={
-                        s.freightReady
-                          ? "Freight Allocated. Click to view Freight Allocation details."
-                          : "Freight Not Allocated. Click to complete freight allocation."
+                    {(() => {
+                      const isFreightNotApplicable =
+                        s.isFreightNotApplicable ||
+                        s.freightAllocationStatus === "Not Applicable" ||
+                        s.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
+
+                      if (isFreightNotApplicable) {
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed shadow-2xs"
+                            title="Freight Allocation is automatically Yes for this Shipment Type (configured in Shipment Type Master)"
+                          >
+                            Yes
+                          </span>
+                        );
                       }
-                    >
-                      {s.freightReady ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                      ) : (
-                        <XCircle className="h-3.5 w-3.5 text-red-600" />
-                      )}
-                      <span>{s.freightReady ? "Yes" : "No"}</span>
-                    </button>
+
+                      return (
+                        <button
+                          type="button"
+                          onClick={(e) => handleFreightClick(e, s)}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all cursor-pointer shadow-2xs hover:shadow-xs hover:scale-105 active:scale-95 ${s.freightReady
+                            ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300"
+                            : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300"
+                            }`}
+                          title={
+                            s.freightReady
+                              ? "Freight Allocated. Click to view Freight Allocation details."
+                              : "Freight Not Allocated. Click to complete freight allocation."
+                          }
+                        >
+                          {s.freightReady ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                          ) : (
+                            <XCircle className="h-3.5 w-3.5 text-red-600" />
+                          )}
+                          <span>{s.freightReady ? "Yes" : "No"}</span>
+                        </button>
+                      );
+                    })()}
                   </td>
 
                   {/* Actions - Execute Stuffing Form & Readiness Control */}
@@ -524,9 +532,18 @@ export default function ShipmentsTable({
                       ) : (
                         <button
                           type="button"
-                          title="Execute shipment freight & transport workflow"
-                          onClick={(e) => handleExecuteShipmentWorkspace(e, s)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer"
+                          disabled={!canExecute}
+                          title={
+                            !allocationsReady
+                              ? "Complete Cargo & Freight Allocation first"
+                              : getExecuteDisabledTooltip(s)
+                          }
+                          onClick={(e) => handleExecuteShipment(e, s)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-xs ${
+                            canExecute
+                              ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer"
+                              : "bg-gray-100 text-gray-400 border border-gray-200 opacity-60 cursor-not-allowed"
+                          }`}
                         >
                           <Rocket className="h-3.5 w-3.5" />
                           <span>Execute</span>

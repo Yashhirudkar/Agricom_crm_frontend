@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect } from "react";
 import {
@@ -188,38 +189,68 @@ export default function ManualReadinessModal({
             </div>
 
             {/* Breakdown */}
-            <div className="grid grid-cols-2 gap-2.5 pt-1 text-xs">
-              <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200">
-                <span className="text-gray-600">Cargo Allocation:</span>
-                <span
-                  className={`font-semibold ${shipment.cargoReady ? "text-emerald-600" : "text-amber-600"
-                    }`}
-                >
-                  {shipment.cargoReady ? "Allocated" : "Pending"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200">
-                <span className="text-gray-600">Freight Allocation:</span>
-                <span
-                  className={`font-semibold ${shipment.freightReady ? "text-emerald-600" : "text-amber-600"
-                    }`}
-                >
-                  {shipment.freightReady ? "Allocated" : "Pending"}
-                </span>
-              </div>
-            </div>
+            {(() => {
+              const isFreightNotApplicable =
+                shipment.isFreightNotApplicable ||
+                shipment.freightAllocationStatus === "Not Applicable" ||
+                shipment.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false ||
+                shipment.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
 
-            {/* Reasons if system not ready */}
-            {!isSystemReady && (
-              <div className="text-[11px] text-gray-500 bg-white/70 p-2 rounded-lg border border-gray-100">
-                <span className="font-semibold text-gray-700">System Ready Logic:</span>{" "}
-                {!shipment.cargoReady && !shipment.freightReady
-                  ? "Both Cargo Allocation and Freight Allocation are pending."
-                  : !shipment.cargoReady
-                  ? "Cargo Allocation is pending."
-                  : "Freight Allocation is pending."}
-              </div>
-            )}
+              return (
+                <>
+                  <div className="grid grid-cols-2 gap-2.5 pt-1 text-xs">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200">
+                      <span className="text-gray-600">Cargo Allocation:</span>
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium shadow-2xs ${
+                          shipment.cargoReady
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : "bg-red-50 text-red-700 border-red-200"
+                        }`}
+                      >
+                        {shipment.cargoReady ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                        ) : (
+                          <XCircle className="w-3.5 h-3.5 text-red-600" />
+                        )}
+                        <span>{shipment.cargoReady ? "Yes" : "No"}</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200">
+                      <span className="text-gray-600">Freight Allocation:</span>
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium shadow-2xs ${
+                          isFreightNotApplicable || shipment.freightReady
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : "bg-red-50 text-red-700 border-red-200"
+                        }`}
+                      >
+                        {isFreightNotApplicable || shipment.freightReady ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                        ) : (
+                          <XCircle className="w-3.5 h-3.5 text-red-600" />
+                        )}
+                        <span>{isFreightNotApplicable || shipment.freightReady ? "Yes" : "No"}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Reasons if system not ready */}
+                  {!isSystemReady && (
+                    <div className="text-[11px] text-gray-500 bg-white/70 p-2 rounded-lg border border-gray-100">
+                      <span className="font-semibold text-gray-700">System Ready Logic:</span>{" "}
+                      {isFreightNotApplicable
+                        ? "Cargo Allocation is pending. (Freight Allocation is automatically Yes for this Shipment Type)."
+                        : !shipment.cargoReady && !shipment.freightReady
+                        ? "Both Cargo Allocation and Freight Allocation are pending."
+                        : !shipment.cargoReady
+                        ? "Cargo Allocation is pending."
+                        : "Freight Allocation is pending."}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* SECTION 2: Manual Override */}
