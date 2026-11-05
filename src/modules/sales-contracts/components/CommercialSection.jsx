@@ -306,8 +306,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
   );
   const currentShipmentType =
     selectedShipmentTypeObj ||
-    (typeof form.shipmentType === "object" ? form.shipmentType : null) ||
-    (typeof contract?.shipmentType === "object" ? contract.shipmentType : null);
+    (typeof form.shipmentType === "object" ? form.shipmentType : null);
 
   const isDeliveryPlaceRequired = currentShipmentType
     ? currentShipmentType.salesContractDeliveryPlaceRequired !== false
