@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, MapPin, Loader2, Check, AlertCircle, Navigation } from "lucide-react";
+import { X, Plus, Trash2, MapPin, Loader2, Check, AlertCircle } from "lucide-react";
 import { enquiriesApi } from "../services/enquiriesApi";
 
 /** Reusable repeatable list section */
@@ -70,7 +70,7 @@ function getEnquiryDestination(e) {
 }
 
 export default function LoadingPointsDrawer({ isOpen, onClose, enquiry, onSaveSuccess }) {
-  const [destinations, setDestinations] = useState([""]);
+  const [enquiryDestination, setEnquiryDestination] = useState("");
   const [points, setPoints] = useState([""]);
   const [freightRequired, setFreightRequired] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -87,22 +87,15 @@ export default function LoadingPointsDrawer({ isOpen, onClose, enquiry, onSaveSu
     setLoading(true);
     setFreightRequired(enquiry.freightRequired || false);
     try {
-      const [dests, pts] = await Promise.all([
-        enquiriesApi.getDestinations(enquiry.id),
+      const [freshEnquiry, pts] = await Promise.all([
+        enquiriesApi.getOne(enquiry.id),
         enquiriesApi.getLoadingPoints(enquiry.id),
       ]);
 
-      // If no destinations saved yet → fall back to the existing enquiry destination field
-      if (Array.isArray(dests) && dests.length > 0) {
-        setDestinations(dests);
-      } else {
-        const fallback = getEnquiryDestination(enquiry);
-        setDestinations(fallback ? [fallback] : [""]);
-      }
-
+      setEnquiryDestination(getEnquiryDestination(freshEnquiry || enquiry));
       setPoints(Array.isArray(pts) && pts.length > 0 ? pts : [""]);
     } catch {
-      setDestinations([""]);
+      setEnquiryDestination(getEnquiryDestination(enquiry));
       setPoints([""]);
     } finally {
       setLoading(false);
@@ -113,21 +106,12 @@ export default function LoadingPointsDrawer({ isOpen, onClose, enquiry, onSaveSu
     if (isOpen) {
       fetchAll();
     } else {
-      setDestinations([""]);
+      setEnquiryDestination("");
       setPoints([""]);
       setFreightRequired(false);
       setToast(null);
     }
   }, [isOpen, fetchAll]);
-
-  // ── Destination handlers ──────────────────────────────────────────────────
-  const addDest = () => setDestinations((p) => [...p, ""]);
-  const changeDest = (idx, val) => setDestinations((p) => p.map((d, i) => (i === idx ? val : d)));
-  const deleteDest = (idx) =>
-    setDestinations((p) => {
-      const n = p.filter((_, i) => i !== idx);
-      return n.length === 0 ? [""] : n;
-    });
 
   // ── Loading point handlers ────────────────────────────────────────────────
   const addPoint = () => setPoints((p) => [...p, ""]);
@@ -142,10 +126,7 @@ export default function LoadingPointsDrawer({ isOpen, onClose, enquiry, onSaveSu
     if (!enquiry?.id) return;
     setSaving(true);
     try {
-      await Promise.all([
-        enquiriesApi.updateDestinations(enquiry.id, destinations),
-        enquiriesApi.updateLoadingPoints(enquiry.id, { loadingPoints: points, freightRequired }),
-      ]);
+      await enquiriesApi.updateLoadingPoints(enquiry.id, { loadingPoints: points, freightRequired });
       showToast("Saved successfully");
       await fetchAll();
       onSaveSuccess?.();
@@ -229,17 +210,22 @@ export default function LoadingPointsDrawer({ isOpen, onClose, enquiry, onSaveSu
 
           <div className="border-t border-gray-100" />
 
-          {/* Destinations */}
-          <RepeatableList
-            label="Destinations"
-            items={destinations}
-            onAdd={addDest}
-            onChange={changeDest}
-            onDelete={deleteDest}
-            placeholder="e.g. Warsaw, Poland"
-            addLabel="Add Destination"
-            loading={loading}
-          />
+          {/* Enquiry destination is owned by the enquiry form and is display-only here. */}
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+              Enquiry Destination
+            </label>
+            {loading ? (
+              <div className="flex items-center justify-center py-3 gap-2 text-gray-400">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-xs font-medium">Loading...</span>
+              </div>
+            ) : (
+              <div className="px-3 py-2.5 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-xl">
+                {enquiryDestination || "Not specified"}
+              </div>
+            )}
+          </div>
 
           <div className="border-t border-gray-100" />
 
