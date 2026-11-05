@@ -6,7 +6,7 @@ import { Layers, PackageSearch, AlertCircle } from "lucide-react";
 import { stockApi } from "../services/stockApi";
 import StockDashboardCards from "../components/StockDashboardCards";
 import StockFilters from "../components/StockFilters";
-import CountryStockCard from "../components/CountryStockCard";
+import MasterStockTable from "../components/MasterStockTable";
 import StockProductDrawer from "../components/StockProductDrawer";
 
 export default function StockManagementPage() {
@@ -155,78 +155,66 @@ export default function StockManagementPage() {
         {/* Dashboard Summary Cards */}
         <StockDashboardCards summary={summary} isLoading={isDashboardLoading} />
 
-        {/* Filter Toolbar */}
-        <StockFilters
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onRefresh={handleRefresh}
-          isLoading={isLoading}
-        />
+        {/* Unified Filter + Table Container */}
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          {/* Filter Toolbar */}
+          <StockFilters
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onRefresh={handleRefresh}
+            isLoading={isLoading}
+          />
 
-        {/* Error Alert */}
-        {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3 text-red-800 text-sm">
-            <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
-            <div>
-              <span className="font-semibold">Unable to load stock data:</span> {error}
-            </div>
-          </div>
-        )}
-
-        {/* Loading Skeletons */}
-        {isLoading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((idx) => (
-              <div
-                key={idx}
-                className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 animate-pulse h-64 flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                  <div className="h-5 bg-gray-200 rounded w-32"></div>
-                  <div className="h-4 bg-gray-200 rounded w-20"></div>
-                </div>
-                <div className="space-y-3 py-4 flex-1">
-                  <div className="h-4 bg-gray-100 rounded w-full"></div>
-                  <div className="h-4 bg-gray-100 rounded w-5/6"></div>
-                  <div className="h-4 bg-gray-100 rounded w-4/6"></div>
-                </div>
-                <div className="h-6 bg-gray-200 rounded w-full"></div>
+          {/* Error Alert */}
+          {error && (
+            <div className="m-4 p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3 text-red-800 text-sm">
+              <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
+              <div>
+                <span className="font-semibold">Unable to load stock data:</span> {error}
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && !error && countryGroups.length === 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm max-w-xl mx-auto my-8">
-            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <PackageSearch className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-1">No Stock Data Available</h3>
-            <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-              There are no active purchase contracts with place of loading matching your filter criteria.
-            </p>
-            <button
-              onClick={() => handleFilterChange({ search: "", country: "", product: "", supplier: "", buyer: "" })}
-              className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
-            >
-              Reset Filters
-            </button>
-          </div>
-        )}
+          )}
 
-        {/* Excel Dashboard Grid: 1 col on mobile, 2 cols on desktop, 3 cols on large screen */}
-        {!isLoading && countryGroups.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
-            {countryGroups.map((group) => (
-              <CountryStockCard
-                key={group.country}
-                countryGroup={group}
-                onSelectProduct={handleSelectProduct}
-              />
-            ))}
-          </div>
-        )}
+          {/* Loading Skeletons */}
+          {isLoading && (
+            <div className="p-6 animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((idx) => (
+                  <div key={idx} className="h-10 bg-gray-100 rounded w-full"></div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!isLoading && !error && countryGroups.length === 0 && (
+            <div className="p-12 text-center max-w-xl mx-auto my-4">
+              <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <PackageSearch className="w-8 h-8" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">No Stock Data Available</h3>
+              <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
+                There are no active purchase contracts with place of loading matching your filter criteria.
+              </p>
+              <button
+                onClick={() => handleFilterChange({ search: "", country: "", product: "", supplier: "", buyer: "" })}
+                className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
+              >
+                Reset Filters
+              </button>
+            </div>
+          )}
+
+          {/* Master Excel-Style Stock Table */}
+          {!isLoading && countryGroups.length > 0 && (
+            <MasterStockTable
+              countryGroups={countryGroups}
+              onSelectProduct={handleSelectProduct}
+              summary={summary}
+            />
+          )}
+        </div>
       </div>
 
       {/* Product Detail Drawer with Purchase Contracts */}

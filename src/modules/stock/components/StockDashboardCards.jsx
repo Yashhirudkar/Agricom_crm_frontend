@@ -43,14 +43,14 @@ export default function StockDashboardCards({ summary, isLoading }) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5 mb-6">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
+        {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
-            className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm animate-pulse flex flex-col justify-between h-24"
+            className="bg-white px-3 py-2.5 rounded-lg border border-gray-200 shadow-sm animate-pulse flex flex-col justify-between h-[76px]"
           >
-            <div className="h-3 bg-gray-200 rounded w-24 mb-2"></div>
-            <div className="h-6 bg-gray-200 rounded w-16"></div>
+            <div className="h-2.5 bg-gray-200 rounded w-20 mb-1.5"></div>
+            <div className="h-4 bg-gray-200 rounded w-14"></div>
           </div>
         ))}
       </div>
@@ -58,7 +58,7 @@ export default function StockDashboardCards({ summary, isLoading }) {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
       {cards.map((c, idx) => {
         const Icon = c.icon;
         const formattedValue = c.isTonnage
@@ -70,18 +70,18 @@ export default function StockDashboardCards({ summary, isLoading }) {
         return (
           <div
             key={idx}
-            className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between"
+            className="bg-white px-3 py-2.5 rounded-lg border border-gray-200 shadow-sm hover:shadow transition-shadow duration-200 flex flex-col justify-between h-[76px]"
           >
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider truncate">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider truncate">
                 {c.title}
               </span>
-              <div className={`p-1.5 rounded-lg border ${c.color} shrink-0`}>
-                <Icon className="w-4 h-4" />
+              <div className={`p-1 rounded-md border ${c.color} shrink-0`}>
+                <Icon className="w-3.5 h-3.5" />
               </div>
             </div>
             <div>
-              <div className={`text-xl font-bold tracking-tight ${c.textClass || "text-gray-900"}`}>
+              <div className={`text-base font-bold tracking-tight truncate ${c.textClass || "text-gray-900"}`} title={formattedValue}>
                 {formattedValue}
               </div>
             </div>
