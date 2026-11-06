@@ -99,11 +99,7 @@ export function Sidebar() {
   const hasStockPermission =
     userType === "super_admin" ||
     userType === "client_admin" ||
-    hasPermission("stock:view") ||
-    hasPermission("stock:read") ||
-    hasPermission("purchase-contracts:view") ||
-    hasPermission("sales_contract:read") ||
-    hasPermission("sales-contracts:view");
+    hasPermission("stock_management:view");
 
   const formattedMenu = menuConfig
     .map(section => {
@@ -125,7 +121,7 @@ export function Sidebar() {
                 name: "Stock Management",
                 icon: "Layers",
                 href: "/sales/stock",
-                permission: "stock:view",
+                permission: "stock_management:view",
               });
             }
             return filtered;

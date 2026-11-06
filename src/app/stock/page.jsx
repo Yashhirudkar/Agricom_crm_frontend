@@ -1,5 +1,4 @@
-import React from "react";
-import StockManagementPage from "@/modules/stock/pages/StockManagementPage";
+import StockManagementAccess from "@/modules/stock/pages/StockManagementAccess";
 
 export const metadata = {
   title: "Stock Management | Agricom CRM",
@@ -7,6 +6,5 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <StockManagementPage />;
+  return <StockManagementAccess />;
 }
-
