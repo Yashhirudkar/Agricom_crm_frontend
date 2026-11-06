@@ -38,6 +38,9 @@ export default function SalesContractListPage() {
     setIsDeleting(true);
     try {
       await salesContractApi.remove(deleteTarget.id);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("sales-contract-changed"));
+      }
       showToast("Contract cancelled successfully");
       setDeleteTarget(null);
       fetchContracts();

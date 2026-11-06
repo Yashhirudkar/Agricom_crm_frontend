@@ -579,11 +579,17 @@ export default function ContractFormPage({ editId, viewId }) {
     try {
       if (isEdit) {
         await salesContractApi.update(contractId, payload);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("sales-contract-changed"));
+        }
         if (!asDraft) {
           router.push("/sales-contracts");
         }
       } else {
         const res = await salesContractApi.create(payload);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("sales-contract-changed"));
+        }
         if (asDraft) {
           router.replace(`/sales-contracts/${res.data.id}/edit`);
         } else {

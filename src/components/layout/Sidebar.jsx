@@ -213,7 +213,14 @@ export function Sidebar() {
         }`}
     >
       <button
-        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onClick={() => {
+          const next = !isSidebarCollapsed;
+          setIsSidebarCollapsed(next);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("isSidebarCollapsed", next ? "true" : "false");
+            window.dispatchEvent(new CustomEvent("sidebar-collapsed", { detail: { collapsed: next } }));
+          }
+        }}
         className={`absolute top-5 bg-white border border-gray-200 text-[#007aff] rounded-full p-1 shadow-md hover:bg-gray-50 z-50 transition-all duration-300 ${isSidebarCollapsed
           ? "left-full translate-x-2 md:translate-x-[-50%]"
           : "left-full translate-x-[-50%]"

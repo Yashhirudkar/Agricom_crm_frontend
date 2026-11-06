@@ -28,6 +28,7 @@ import { resolveNotificationUrl } from "@/lib/notificationRouter";
 import { toast } from "sonner";
 import ChatSocketProvider from "@/modules/chat/components/ChatSocketProvider";
 import FloatingChatLauncher from "@/modules/chat/components/Common/FloatingChatLauncher";
+import SalesMonthlyTargetWidget from "@/components/monthly-target/SalesMonthlyTargetWidget";
 
 const PUBLIC_ROUTES = ["/login", "/accept-invitation", "/select-company"];
 
@@ -364,6 +365,7 @@ export default function AppShellClient({ children }) {
       <CommandPalette />
       <FollowUpHeaderDrawer isOpen={isFollowUpsOpen} onClose={() => setIsFollowUpsOpen(false)} />
       <FloatingChatLauncher />
+      <SalesMonthlyTargetWidget />
     </ChatSocketProvider>
   );
 }
