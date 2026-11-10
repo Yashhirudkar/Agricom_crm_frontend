@@ -271,27 +271,40 @@ export default function ContractFormPage({ editId, viewId }) {
           buyerSignature: c.buyerSignature || "",
           buyerCompanySeal: c.buyerCompanySeal || "",
           numShipments: c.shipments?.length || 1,
-          items: (c.items || []).map(item => ({
-            id: item.id,
-            productId: item.productId || "",
-            origin: item.origin || item.originCountry || "",
-            quality: item.quality || [
-              item.product?.qualitySubType,
-              item.product?.specification,
-              item.productQuality,
-              c.quality,
-            ].filter(Boolean).join(" - "),
-            marking: item.marking || "",
-            bagTypeId: item.bagTypeId || "",
-            packingTypeId: item.packingTypeId || "",
-            bagSpecificationId: item.bagSpecificationId || null,
-            qtyPerCount: cleanNumberValue(item.qtyPerCount),
-            quantity: cleanNumberValue(item.quantity),
-            unitPrice: cleanNumberValue(item.unitPrice),
-            amount: cleanNumberValue(item.amount) || 0,
-            marking: item.marking || "",
-            remarks: item.remarks || "",
-          })),
+          items: (c.items || []).map((item, idx) => {
+            const overrideQuality =
+              (c.printOverrides?.[`quality_${idx}`] !== undefined && c.printOverrides?.[`quality_${idx}`] !== null && String(c.printOverrides?.[`quality_${idx}`]).trim() !== "")
+                ? String(c.printOverrides[`quality_${idx}`]).trim()
+                : (idx === 0 && c.printOverrides?.quality_0 !== undefined && c.printOverrides?.quality_0 !== null && String(c.printOverrides?.quality_0).trim() !== "")
+                  ? String(c.printOverrides.quality_0).trim()
+                  : null;
+
+            const resolvedQuality =
+              (item.quality && String(item.quality).trim() !== "")
+                ? String(item.quality).trim()
+                : (overrideQuality ||
+                   [item.product?.qualitySubType, item.product?.specification, item.productQuality, c.quality]
+                     .filter(Boolean)
+                     .join(" - ") ||
+                   c.enquiry?.purity ||
+                   "");
+
+            return {
+              id: item.id,
+              productId: item.productId || "",
+              origin: item.origin || item.originCountry || "",
+              quality: resolvedQuality,
+              marking: item.marking || (idx === 0 ? c.printOverrides?.marking_0 : c.printOverrides?.[`marking_${idx}`]) || "",
+              bagTypeId: item.bagTypeId || "",
+              packingTypeId: item.packingTypeId || "",
+              bagSpecificationId: item.bagSpecificationId || null,
+              qtyPerCount: cleanNumberValue(item.qtyPerCount),
+              quantity: cleanNumberValue(item.quantity),
+              unitPrice: cleanNumberValue(item.unitPrice),
+              amount: cleanNumberValue(item.amount) || 0,
+              remarks: item.remarks || "",
+            };
+          }),
           shipments: (c.shipments || []).map((s, i) => ({
             id: s.id,
             shipmentNo: s.shipmentNo || i + 1,
@@ -442,7 +455,7 @@ export default function ContractFormPage({ editId, viewId }) {
             packingTypeId: eq.packingTypeId || "",
             bagSpecificationId: null,
             origin: "",
-            quality: "",
+            quality: eq.purity || "",
             qtyPerCount: "",
             quantity: cleanNumberValue(eq.quantity),
             unitPrice: cleanNumberValue(eq.buyingInterest),
@@ -491,6 +504,17 @@ export default function ContractFormPage({ editId, viewId }) {
     const validShipments = normalizedShipments.filter(s => s.shipmentDate && s.quantity);
     const totalQuantity = validItems.reduce((s, i) => s + (parseFloat(i.quantity) || 0), 0);
     const totalAmount = validItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+
+    const updatedPrintOverrides = { ...(form.printOverrides || {}) };
+    validItems.forEach((i, idx) => {
+      if (i.quality && String(i.quality).trim()) {
+        const val = String(i.quality).trim();
+        updatedPrintOverrides[`quality_${idx}`] = val;
+        if (idx === 0) {
+          updatedPrintOverrides['quality_0'] = val;
+        }
+      }
+    });
 
     const payload = {
       enquiryId: form.enquiryId || null,
@@ -543,7 +567,7 @@ export default function ContractFormPage({ editId, viewId }) {
         ...(i.id ? { id: Number(i.id) } : {}),
         productId: Number(i.productId),
         origin: i.origin || i.originCountry || null,
-        quality: i.quality || null,
+        quality: i.quality && String(i.quality).trim() ? String(i.quality).trim() : null,
         marking: i.marking || null,
         bagTypeId: Number(i.bagTypeId),
         packingTypeId: Number(i.packingTypeId),
@@ -572,7 +596,7 @@ export default function ContractFormPage({ editId, viewId }) {
         isMandatory: !!d.isMandatory,
         remarks: d.remarks || null,
       })),
-      printOverrides: form.printOverrides || {},
+      printOverrides: updatedPrintOverrides,
     };
 
 

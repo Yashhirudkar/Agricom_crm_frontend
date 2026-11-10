@@ -151,6 +151,7 @@ export default function StandardContract({ contract, renderValue, isCustomizing 
             <Row label="Quality">
               {renderValue(`quality_${idx}`, (
                 item.quality ||
+                (idx === 0 ? contract.printOverrides?.quality_0 : null) ||
                 [item.product?.qualitySubType, item.product?.specification]
                   .filter(Boolean)
                   .join(" - ")

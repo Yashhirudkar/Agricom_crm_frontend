@@ -99,7 +99,9 @@ export default function ContractViewModal({ contractId, onClose }) {
   };
 
   const renderValue = (key, defaultValue) => {
-    const value = printOverrides[key] !== undefined ? printOverrides[key] : defaultValue;
+    const override = printOverrides[key];
+    const hasOverride = override !== undefined && override !== null && String(override).trim() !== "";
+    const value = hasOverride ? override : defaultValue;
 
     if (isCustomizing) {
       return (
@@ -633,6 +635,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                         <Row label="Quality">
                           {renderValue(`quality_${idx}`, (
                             item.quality ||
+                            (idx === 0 ? printOverrides['quality_0'] : null) ||
                             [item.product?.qualitySubType, item.product?.specification]
                               .filter(Boolean)
                               .join(" - ")
