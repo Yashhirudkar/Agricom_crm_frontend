@@ -213,6 +213,11 @@ export default function TransportDrawer({
       await logisticsApi.executeShipment(shipmentId);
       toast.success(`Shipment ${shipmentRef || ""} executed successfully!`);
       loadDetails();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("shipment-executed", { detail: { shipmentId } }),
+        );
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to execute shipment.");
     } finally {

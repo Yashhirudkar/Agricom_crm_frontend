@@ -510,6 +510,11 @@ export default function ShipmentStuffingExecutionModal({
       if (action === "complete") {
         setStuffingStatus("Completed");
         setExecutionStatus("Stuffed");
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("shipment-executed", { detail: { shipmentId: shipment.id } }),
+          );
+        }
       }
 
       setTimeout(() => {

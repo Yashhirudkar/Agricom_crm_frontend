@@ -366,12 +366,16 @@ export default function StockProductDrawer({ isOpen, onClose, selectedProduct, c
               <span className="font-semibold text-slate-900">{formatMT(selectedProduct.purchased)}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-slate-500 text-[11px]">Total Purchase Value:</span>
-              <span className="font-semibold text-slate-900">{totalAmount}</span>
+              <span className="text-slate-500 text-[11px]">Total Executed:</span>
+              <span className="font-semibold text-orange-700">{formatMT(selectedProduct.executed ?? totals.totalOut)}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-slate-500 text-[11px]">Closing Balance:</span>
-              <span className="font-bold text-slate-950">{formatMT(totals.closingBalance)}</span>
+              <span className="text-slate-500 text-[11px]">Available Stock:</span>
+              <span className="font-bold text-emerald-700">{formatMT(selectedProduct.available ?? totals.closingBalance)}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-slate-500 text-[11px]">Total Purchase Value:</span>
+              <span className="font-semibold text-slate-900">{totalAmount}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-slate-500 text-[11px]">Total Records:</span>

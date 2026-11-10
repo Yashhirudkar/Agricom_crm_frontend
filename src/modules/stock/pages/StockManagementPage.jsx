@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { Layers, PackageSearch, AlertCircle } from "lucide-react";
 import { stockApi } from "../services/stockApi";
@@ -30,7 +30,49 @@ export default function StockManagementPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedCountryName, setSelectedCountryName] = useState("");
 
-  // Initial load
+  // Fetch Stock List Hierarchical Data on Filter Change
+  const fetchStockList = useCallback(async (activeFilters) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Clean empty string params
+      const params = {};
+      const targetFilters = activeFilters || filters;
+      for (const [key, val] of Object.entries(targetFilters)) {
+        if (val && String(val).trim() !== "") {
+          params[key] = String(val).trim();
+        }
+      }
+
+      const res = await stockApi.getStockList(params);
+      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setCountryGroups(data);
+    } catch (err) {
+      console.error("Failed to fetch stock list:", err);
+      const msg = err.response?.data?.message || "Failed to load stock data";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filters]);
+
+  // Fetch Dashboard Summary Metrics
+  const fetchDashboard = useCallback(async () => {
+    try {
+      setIsDashboardLoading(true);
+      const res = await stockApi.getDashboard();
+      setSummary(res.data || null);
+    } catch (err) {
+      console.error("Failed to fetch stock dashboard metrics:", err);
+      toast.error("Failed to load dashboard metrics");
+    } finally {
+      setIsDashboardLoading(false);
+    }
+  }, []);
+
+  // Initial load & automatic refresh on shipment execution
   useEffect(() => {
     let isMounted = true;
 
@@ -61,52 +103,18 @@ export default function StockManagementPage() {
 
     loadInitialData();
 
+    // Automatically refresh Stock Management when any shipment is executed anywhere in the app
+    const handleShipmentExecuted = () => {
+      fetchDashboard();
+      fetchStockList(filters);
+    };
+    window.addEventListener("shipment-executed", handleShipmentExecuted);
+
     return () => {
       isMounted = false;
+      window.removeEventListener("shipment-executed", handleShipmentExecuted);
     };
-  }, []);
-
-  // Fetch Stock List Hierarchical Data on Filter Change
-  const fetchStockList = async (activeFilters) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Clean empty string params
-      const params = {};
-      const targetFilters = activeFilters || filters;
-      for (const [key, val] of Object.entries(targetFilters)) {
-        if (val && String(val).trim() !== "") {
-          params[key] = String(val).trim();
-        }
-      }
-
-      const res = await stockApi.getStockList(params);
-      const data = Array.isArray(res.data) ? res.data : res.data?.data || [];
-      setCountryGroups(data);
-    } catch (err) {
-      console.error("Failed to fetch stock list:", err);
-      const msg = err.response?.data?.message || "Failed to load stock data";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch Dashboard Summary Metrics
-  const fetchDashboard = async () => {
-    try {
-      setIsDashboardLoading(true);
-      const res = await stockApi.getDashboard();
-      setSummary(res.data || null);
-    } catch (err) {
-      console.error("Failed to fetch stock dashboard metrics:", err);
-      toast.error("Failed to load dashboard metrics");
-    } finally {
-      setIsDashboardLoading(false);
-    }
-  };
+  }, [fetchDashboard, fetchStockList, filters]);
 
   // Handle filter submission
   const handleFilterChange = (newFilters) => {
@@ -131,6 +139,20 @@ export default function StockManagementPage() {
     setIsDrawerOpen(false);
     setSelectedProduct(null);
   };
+
+  // Keep active product in sync with fresh data when countryGroups updates
+  const activeProduct = useMemo(() => {
+    if (!selectedProduct || !selectedCountryName) return null;
+    const countryGroup = countryGroups.find(
+      (cg) => cg.country.toLowerCase() === selectedCountryName.toLowerCase(),
+    );
+    return (
+      countryGroup?.products.find(
+        (p) =>
+          p.product.toLowerCase() === selectedProduct.product?.toLowerCase(),
+      ) || selectedProduct
+    );
+  }, [countryGroups, selectedProduct, selectedCountryName]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-16">
@@ -217,12 +239,12 @@ export default function StockManagementPage() {
         </div>
       </div>
 
-      {/* Product Detail Drawer with Purchase Contracts */}
+      {/* Product Detail Drawer with Purchase Contracts & Executed Movements */}
       <StockProductDrawer
-        key={`${selectedCountryName}-${selectedProduct?.product || ""}`}
+        key={`${selectedCountryName}-${activeProduct?.product || ""}`}
         isOpen={isDrawerOpen}
         onClose={handleCloseDrawer}
-        selectedProduct={selectedProduct}
+        selectedProduct={activeProduct}
         countryName={selectedCountryName}
       />
     </div>

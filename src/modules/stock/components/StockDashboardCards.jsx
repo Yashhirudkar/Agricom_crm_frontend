@@ -1,5 +1,12 @@
 import React from "react";
-import { Globe, Package, FileText, ShoppingCart } from "lucide-react";
+import {
+  Globe,
+  Package,
+  FileText,
+  ShoppingCart,
+  CheckCircle2,
+  Boxes,
+} from "lucide-react";
 
 export default function StockDashboardCards({ summary, isLoading }) {
   const cards = [
@@ -33,6 +40,27 @@ export default function StockDashboardCards({ summary, isLoading }) {
       textClass: "text-slate-900",
     },
     {
+      title: "Total Executed",
+      value: summary?.totalExecutedMT ?? 0,
+      icon: CheckCircle2,
+      color: "text-orange-600 bg-orange-50 border-orange-200",
+      isTonnage: true,
+      textClass: "text-orange-700",
+    },
+    {
+      title: "Available Stock",
+      value:
+        summary?.totalAvailableMT ??
+        Math.max(
+          0,
+          (summary?.totalPurchasedMT ?? 0) - (summary?.totalExecutedMT ?? 0),
+        ),
+      icon: Boxes,
+      color: "text-emerald-700 bg-emerald-50 border-emerald-200",
+      isTonnage: true,
+      textClass: "text-emerald-700",
+    },
+    {
       title: "Total Amount",
       value: summary?.totalAmountByCurrency ?? {},
       icon: ShoppingCart,
@@ -43,8 +71,8 @@ export default function StockDashboardCards({ summary, isLoading }) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
-        {[1, 2, 3, 4, 5].map((i) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-3 mb-6">
+        {[1, 2, 3, 4, 5, 6, 7].map((i) => (
           <div
             key={i}
             className="bg-white px-3 py-2.5 rounded-lg border border-gray-200 shadow-sm animate-pulse flex flex-col justify-between h-[76px]"
@@ -58,7 +86,7 @@ export default function StockDashboardCards({ summary, isLoading }) {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-3 mb-6">
       {cards.map((c, idx) => {
         const Icon = c.icon;
         const formattedValue = c.isTonnage

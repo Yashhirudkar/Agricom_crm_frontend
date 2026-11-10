@@ -112,11 +112,16 @@ export default function MasterStockTable({
     );
   };
 
-  const Bar = ({ value, total, className = "bg-emerald-600" }) => {
+  const Bar = ({ value, total, className = "bg-orange-500" }) => {
     const pct = total > 0 ? Math.min(100, ((Number(value) || 0) / total) * 100) : 0;
     return (
-      <div className="mt-1 h-1 w-[72px] overflow-hidden rounded-full bg-slate-200">
-        <div className={`h-full rounded-full ${className}`} style={{ width: `${pct}%` }} />
+      <div className="mt-1 flex items-center gap-1.5">
+        <div className="h-1.5 w-[72px] overflow-hidden rounded-full bg-slate-200">
+          <div className={`h-full rounded-full ${className}`} style={{ width: `${pct}%` }} />
+        </div>
+        <span className="text-[10px] text-slate-400 font-medium tabular-nums">
+          {Math.round(pct)}%
+        </span>
       </div>
     );
   };
@@ -124,6 +129,13 @@ export default function MasterStockTable({
   const grandTotal = countryGroups.reduce(
     (total, countryGroup) => {
       total.purchased += Number(countryGroup.totalPurchased) || 0;
+      total.executed += Number(countryGroup.totalExecuted) || 0;
+      total.available +=
+        Number(
+          countryGroup.totalAvailable !== undefined
+            ? countryGroup.totalAvailable
+            : countryGroup.totalPurchased,
+        ) || 0;
 
       for (const [currency, amount] of Object.entries(
         countryGroup.amountByCurrency || {},
@@ -139,31 +151,39 @@ export default function MasterStockTable({
 
       return total;
     },
-    { purchased: 0, amounts: {}, contracts: 0 },
+    { purchased: 0, executed: 0, available: 0, amounts: {}, contracts: 0 },
   );
 
   return (
     <div className="overflow-hidden bg-white">
       <div className="max-h-[70vh] overflow-auto">
-        <table className="min-w-[760px] w-full table-fixed border-collapse text-sm">
+        <table className="min-w-[960px] w-full table-fixed border-collapse text-sm">
           <colgroup>
-            <col className="w-[38%]" />
-            <col className="w-[20%]" />
-            <col className="w-[22%]" />
+            <col className="w-[28%]" />
             <col className="w-[14%]" />
-            <col className="w-[6%]" />
+            <col className="w-[14%]" />
+            <col className="w-[15%]" />
+            <col className="w-[16%]" />
+            <col className="w-[8%]" />
+            <col className="w-[5%]" />
           </colgroup>
 
           <thead className="sticky top-0 z-10 bg-white">
             <tr className="h-11 border-b border-slate-200 text-xs font-medium text-slate-500">
               <th className="px-5 text-left">Country / Product</th>
-              <th className="border-l border-slate-200 px-5 text-left">
+              <th className="border-l border-slate-200 px-4 text-left">
                 Purchased (MT)
               </th>
-              <th className="border-l border-slate-200 px-5 text-left">
+              <th className="border-l border-slate-200 px-4 text-left">
+                Executed (MT)
+              </th>
+              <th className="border-l border-slate-200 px-4 text-left">
+                Available (MT)
+              </th>
+              <th className="border-l border-slate-200 px-4 text-left">
                 Total Value
               </th>
-              <th className="border-l border-slate-200 px-5 text-left">
+              <th className="border-l border-slate-200 px-4 text-left">
                 Contracts
               </th>
               <th className="border-l border-slate-200 px-3" />
@@ -174,7 +194,7 @@ export default function MasterStockTable({
             {countryGroups.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={7}
                   className="h-32 px-5 text-center text-sm italic text-slate-400"
                 >
                   No stock records found matching criteria
@@ -192,6 +212,13 @@ export default function MasterStockTable({
                     (product.contractCount ?? product.contracts?.length ?? 0),
                   0,
                 );
+
+                const cPurchased = Number(countryGroup.totalPurchased) || 0;
+                const cExecuted = Number(countryGroup.totalExecuted) || 0;
+                const cAvailable =
+                  countryGroup.totalAvailable !== undefined
+                    ? Number(countryGroup.totalAvailable)
+                    : Math.max(0, cPurchased - cExecuted);
 
                 return (
                   <React.Fragment key={country}>
@@ -216,20 +243,30 @@ export default function MasterStockTable({
                           </span>
                         </div>
                       </td>
-                      <td className="border-l border-slate-100 px-5">
+                      <td className="border-l border-slate-100 px-4">
                         <div className="text-[13px] font-semibold text-slate-900">
-                          {formatMT(countryGroup.totalPurchased)}
+                          {formatMT(cPurchased)}
+                        </div>
+                      </td>
+                      <td className="border-l border-slate-100 px-4">
+                        <div className="text-[13px] font-semibold text-orange-700">
+                          {formatMT(cExecuted)}
                         </div>
                         <Bar
-                          value={countryGroup.totalPurchased}
-                          total={grandTotal.purchased}
-                          className="bg-emerald-600"
+                          value={cExecuted}
+                          total={cPurchased}
+                          className="bg-orange-500"
                         />
                       </td>
-                      <td className="border-l border-slate-100 px-5 text-[13px] text-slate-900">
+                      <td className="border-l border-slate-100 px-4">
+                        <div className="text-[13px] font-bold text-emerald-700">
+                          {formatMT(cAvailable)}
+                        </div>
+                      </td>
+                      <td className="border-l border-slate-100 px-4 text-[13px] text-slate-900">
                         {formatAmounts(countryGroup.amountByCurrency)}
                       </td>
-                      <td className="border-l border-slate-100 px-5 text-[13px] font-semibold text-slate-900">
+                      <td className="border-l border-slate-100 px-4 text-[13px] font-semibold text-slate-900">
                         {countryContracts}
                       </td>
                       <td className="border-l border-slate-100 px-3" />
@@ -244,6 +281,13 @@ export default function MasterStockTable({
                           product.contractCount ??
                           product.contracts?.length ??
                           0;
+
+                        const pPurchased = Number(product.purchased) || 0;
+                        const pExecuted = Number(product.executed) || 0;
+                        const pAvailable =
+                          product.available !== undefined
+                            ? Number(product.available)
+                            : Math.max(0, pPurchased - pExecuted);
 
                         return (
                           <tr
@@ -267,20 +311,30 @@ export default function MasterStockTable({
                                 </span>
                               </div>
                             </td>
-                            <td className="border-l border-slate-100 px-5">
+                            <td className="border-l border-slate-100 px-4">
                               <div className="text-[13px] font-semibold text-slate-800">
-                                {formatMT(product.purchased)}
+                                {formatMT(pPurchased)}
+                              </div>
+                            </td>
+                            <td className="border-l border-slate-100 px-4">
+                              <div className="text-[13px] font-semibold text-orange-700">
+                                {formatMT(pExecuted)}
                               </div>
                               <Bar
-                                value={product.purchased}
-                                total={countryGroup.totalPurchased}
-                                className="bg-lime-500"
+                                value={pExecuted}
+                                total={pPurchased}
+                                className="bg-orange-500"
                               />
                             </td>
-                            <td className="border-l border-slate-100 px-5 text-[13px] text-slate-800">
+                            <td className="border-l border-slate-100 px-4">
+                              <div className="text-[13px] font-bold text-emerald-700">
+                                {formatMT(pAvailable)}
+                              </div>
+                            </td>
+                            <td className="border-l border-slate-100 px-4 text-[13px] text-slate-800">
                               {formatAmounts(product.amountByCurrency)}
                             </td>
-                            <td className="border-l border-slate-100 px-5">
+                            <td className="border-l border-slate-100 px-4">
                               <button
                                 type="button"
                                 onClick={(event) => {
@@ -313,13 +367,19 @@ export default function MasterStockTable({
                   Grand Total ({countryGroups.length}{" "}
                   {countryGroups.length === 1 ? "Country" : "Countries"})
                 </td>
-                <td className="border-l border-slate-200 px-5 text-[13px] font-bold">
+                <td className="border-l border-slate-200 px-4 text-[13px] font-bold">
                   {formatMT(grandTotal.purchased)}
                 </td>
-                <td className="border-l border-slate-200 px-5 text-[13px] font-bold">
+                <td className="border-l border-slate-200 px-4 text-[13px] font-bold text-orange-700">
+                  {formatMT(grandTotal.executed)}
+                </td>
+                <td className="border-l border-slate-200 px-4 text-[13px] font-bold text-emerald-700">
+                  {formatMT(grandTotal.available)}
+                </td>
+                <td className="border-l border-slate-200 px-4 text-[13px] font-bold">
                   {formatAmounts(grandTotal.amounts)}
                 </td>
-                <td className="border-l border-slate-200 px-5 text-[13px] font-bold">
+                <td className="border-l border-slate-200 px-4 text-[13px] font-bold">
                   {grandTotal.contracts}
                 </td>
                 <td className="border-l border-slate-200 px-3" />
