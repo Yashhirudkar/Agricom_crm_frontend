@@ -8,6 +8,20 @@ import {
   Boxes,
 } from "lucide-react";
 
+function formatFxDetails(details = []) {
+  return details
+    .map((detail) =>
+      [
+        `Original Currency: ${detail.originalCurrency || "—"}`,
+        `Original Amount: ${Number(detail.originalAmount || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })}`,
+        `Exchange Rate: ${detail.exchangeRate == null ? "Unavailable" : Number(detail.exchangeRate).toLocaleString("en-US", { maximumFractionDigits: 10 })}`,
+        `Converted INR Value: ${detail.convertedAmount == null ? "Unavailable" : `INR ${Number(detail.convertedAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}`,
+        `FX Date: ${detail.exchangeRateDate || "Not applicable"}`,
+      ].join("\n"),
+    )
+    .join("\n\n");
+}
+
 export default function StockDashboardCards({ summary, isLoading }) {
   const cards = [
     {
@@ -61,11 +75,15 @@ export default function StockDashboardCards({ summary, isLoading }) {
       textClass: "text-emerald-700",
     },
     {
-      title: "Total Amount",
-      value: summary?.totalAmountByCurrency ?? {},
+      title: "TOTAL AMOUNT",
+      value:
+        summary?.totalAmountINR ??
+        summary?.totalAmountByCurrency?.INR ??
+        0,
       icon: ShoppingCart,
       color: "text-violet-600 bg-violet-50 border-violet-100",
       isAmount: true,
+      tooltip: formatFxDetails(summary?.amountDetails),
     },
   ];
 
@@ -92,7 +110,7 @@ export default function StockDashboardCards({ summary, isLoading }) {
         const formattedValue = c.isTonnage
           ? `${Number(c.value || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} MT`
           : c.isAmount
-            ? Object.entries(c.value).map(([currency, amount]) => `${currency} ${Number(amount || 0).toLocaleString("en-US")}`).join(" / ") || "—"
+            ? `INR ${Number(c.value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           : Number(c.value || 0).toLocaleString();
 
         return (
@@ -109,7 +127,7 @@ export default function StockDashboardCards({ summary, isLoading }) {
               </div>
             </div>
             <div>
-              <div className={`text-base font-bold tracking-tight truncate ${c.textClass || "text-gray-900"}`} title={formattedValue}>
+              <div className={`text-base font-bold tracking-tight truncate ${c.textClass || "text-gray-900"}`} title={c.tooltip || formattedValue}>
                 {formattedValue}
               </div>
             </div>

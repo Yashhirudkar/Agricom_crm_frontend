@@ -8,9 +8,19 @@ import StockDashboardCards from "../components/StockDashboardCards";
 import StockFilters from "../components/StockFilters";
 import MasterStockTable from "../components/MasterStockTable";
 import StockProductDrawer from "../components/StockProductDrawer";
+import StockFxTicker from "../components/StockFxTicker";
 
 export default function StockManagementPage() {
   const [summary, setSummary] = useState(null);
+  const [fxTicker, setFxTicker] = useState({
+    rates: [],
+    usingPreviousRates: false,
+    hasStoredRates: false,
+    missingCurrencies: [],
+    previousRatesDate: null,
+    loading: true,
+    loadError: false,
+  });
   const [countryGroups, setCountryGroups] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDashboardLoading, setIsDashboardLoading] = useState(true);
@@ -72,11 +82,31 @@ export default function StockManagementPage() {
     }
   }, []);
 
+  const fetchFxRates = useCallback(async () => {
+    try {
+      const res = await stockApi.getExchangeRates();
+      setFxTicker({
+        rates: [],
+        usingPreviousRates: false,
+        hasStoredRates: false,
+        missingCurrencies: [],
+        previousRatesDate: null,
+        ...res.data,
+        loading: false,
+        loadError: false,
+      });
+    } catch (err) {
+      console.error("Failed to fetch stored exchange rates:", err);
+      setFxTicker((current) => ({ ...current, loading: false, loadError: true }));
+    }
+  }, []);
+
   // Initial load & automatic refresh on shipment execution
   useEffect(() => {
     let isMounted = true;
 
     const loadInitialData = async () => {
+      fetchFxRates();
       try {
         const [dashRes, listRes] = await Promise.all([
           stockApi.getDashboard(),
@@ -100,13 +130,13 @@ export default function StockManagementPage() {
         }
       }
     };
-
     loadInitialData();
 
     // Automatically refresh Stock Management when any shipment is executed anywhere in the app
     const handleShipmentExecuted = () => {
       fetchDashboard();
       fetchStockList(filters);
+      fetchFxRates();
     };
     window.addEventListener("shipment-executed", handleShipmentExecuted);
 
@@ -114,7 +144,7 @@ export default function StockManagementPage() {
       isMounted = false;
       window.removeEventListener("shipment-executed", handleShipmentExecuted);
     };
-  }, [fetchDashboard, fetchStockList, filters]);
+  }, [fetchDashboard, fetchFxRates, fetchStockList, filters]);
 
   // Handle filter submission
   const handleFilterChange = (newFilters) => {
@@ -126,6 +156,7 @@ export default function StockManagementPage() {
   const handleRefresh = () => {
     fetchDashboard();
     fetchStockList(filters);
+    fetchFxRates();
   };
 
   // Open product drawer
@@ -171,6 +202,14 @@ export default function StockManagementPage() {
             <p className="text-sm text-gray-500 mt-1 pl-11">
               Automatic Country-wise Product Stock dynamically generated from Purchase Contracts
             </p>
+            <StockFxTicker
+              rates={fxTicker.rates}
+              usingPreviousRates={fxTicker.usingPreviousRates}
+              hasStoredRates={fxTicker.hasStoredRates}
+              previousRatesDate={fxTicker.previousRatesDate}
+              loading={fxTicker.loading}
+              loadError={fxTicker.loadError}
+            />
           </div>
         </div>
 

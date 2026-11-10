@@ -310,6 +310,20 @@ export default function StockProductDrawer({ isOpen, onClose, selectedProduct, c
     [selectedProduct]
   );
   const totalAmount = totalsByCurrency.length > 0 ? totalsByCurrency.join(" / ") : "—";
+  const fxTooltip = useMemo(
+    () =>
+      (selectedProduct?.contracts || [])
+        .map((contract) =>
+          [
+            `Original Currency: ${contract.originalCurrency || contract.currency || "—"}`,
+            `Original Amount: ${formatNumber(contract.originalAmount ?? contract.amount)}`,
+            `Exchange Rate: ${contract.exchangeRate == null ? "Unavailable" : Number(contract.exchangeRate).toLocaleString("en-US", { maximumFractionDigits: 10 })}`,
+            `FX Date: ${contract.exchangeRateDate || "Not applicable"}`,
+          ].join("\n"),
+        )
+        .join("\n\n"),
+    [selectedProduct],
+  );
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -375,7 +389,9 @@ export default function StockProductDrawer({ isOpen, onClose, selectedProduct, c
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-slate-500 text-[11px]">Total Purchase Value:</span>
-              <span className="font-semibold text-slate-900">{totalAmount}</span>
+              <span className="font-semibold text-slate-900" title={fxTooltip}>
+                {totalAmount}
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-slate-500 text-[11px]">Total Records:</span>
