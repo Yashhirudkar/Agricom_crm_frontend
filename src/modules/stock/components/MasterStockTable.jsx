@@ -1,46 +1,12 @@
 import React, { useState } from "react";
 import { ChevronRight, FileText, Globe, Package } from "lucide-react";
+import ReactCountryFlag from "react-country-flag";
+import { getAlpha2Code } from "@/lib/countryUtils";
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
 });
-
-const COUNTRY_CODES = {
-  albania: "al",
-  ghana: "gh",
-  russia: "ru",
-  "united states": "us",
-  usa: "us",
-  india: "in",
-  china: "cn",
-  vietnam: "vn",
-  turkey: "tr",
-  egypt: "eg",
-  indonesia: "id",
-  bangladesh: "bd",
-  pakistan: "pk",
-  "united arab emirates": "ae",
-  uae: "ae",
-  "united kingdom": "gb",
-  uk: "gb",
-  germany: "de",
-  france: "fr",
-  italy: "it",
-  spain: "es",
-  netherlands: "nl",
-  canada: "ca",
-  australia: "au",
-  brazil: "br",
-  ukraine: "ua",
-  kazakhstan: "kz",
-  tanzania: "tz",
-  nigeria: "ng",
-  "south africa": "za",
-  myanmar: "mm",
-  "sri lanka": "lk",
-  nepal: "np",
-};
 
 const CURRENCY_STYLES = {
   USD: "bg-emerald-50 text-emerald-700 border-emerald-100",
@@ -50,19 +16,24 @@ const CURRENCY_STYLES = {
 };
 
 function Flag({ country }) {
-  const [failed, setFailed] = useState(false);
-  const code = COUNTRY_CODES[String(country).toLowerCase()];
+  const code = getAlpha2Code(country);
 
-  if (!code || failed) {
+  if (!code) {
     return <Globe className="h-[18px] w-[18px] shrink-0 text-slate-500" />;
   }
 
   return (
-    <img
-      src={`https://flagcdn.com/w40/${code}.png`}
-      alt=""
-      className="h-[18px] w-[18px] shrink-0 rounded-full object-cover"
-      onError={() => setFailed(true)}
+    <ReactCountryFlag
+      countryCode={code}
+      svg
+      aria-hidden="true"
+      style={{
+        width: "18px",
+        height: "18px",
+        borderRadius: "50%",
+        verticalAlign: "middle",
+        flexShrink: 0,
+      }}
     />
   );
 }
