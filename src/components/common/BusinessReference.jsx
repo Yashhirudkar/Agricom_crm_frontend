@@ -1,15 +1,17 @@
+
 "use client";
 
 import React from "react";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/utils/clipboard";
 
 export default function BusinessReference({ reference, className = "" }) {
   if (!reference) return null;
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(reference);
+      await copyToClipboard(reference);
       toast.success("Reference No. copied");
     } catch (error) {
       console.error("Failed to copy reference number", error);

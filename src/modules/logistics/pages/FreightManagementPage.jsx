@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import AddFreightQuoteModal from "../components/AddFreightQuoteModal";
 import DirectFreightQuoteDrawer from "../components/DirectFreightQuoteDrawer";
 import Pagination from "@/components/common/Pagination";
+import { copyToClipboard } from "@/utils/clipboard";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -501,7 +502,7 @@ export default function FreightManagementPage() {
     if (!reference || reference === "—") return;
 
     try {
-      await navigator.clipboard.writeText(reference);
+      await copyToClipboard(reference);
       toast.success("Business reference copied");
     } catch (error) {
       console.error("Failed to copy business reference", error);

@@ -12,6 +12,7 @@ import usePermissions from "@/hooks/usePermissions";
 import axiosClient, { getAvatarUrl } from "@/lib/axios";
 import Avatar from "../Timeline/Avatar";
 import { POSTING_POLICY } from "@/modules/chat/utils/channelPosting";
+import { copyToClipboard } from "@/utils/clipboard";
 
 export default function GroupSettingsPanel({
   conversation,
@@ -164,9 +165,13 @@ export default function GroupSettingsPanel({
   const [inviteUrl, setInviteUrl] = useState("");
   const [copying, setCopying] = useState(false);
 
-  const handleCopyInvite = () => {
+  const handleCopyInvite = async () => {
     const dummyUrl = `${window.location.origin}/chat/invite/${conversation?.id}`;
-    navigator.clipboard.writeText(dummyUrl);
+    try {
+      await copyToClipboard(dummyUrl);
+    } catch (error) {
+      console.error("Failed to copy invite link", error);
+    }
     setCopying(true);
     toast.success("Invite link copied to clipboard!");
     setTimeout(() => setCopying(false), 2000);

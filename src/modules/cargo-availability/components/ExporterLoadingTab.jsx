@@ -3,6 +3,7 @@ import React from "react";
 import Link from "next/link";
 import { Search, RotateCcw, Truck, Plus, ChevronRight, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/utils/clipboard";
 
 export default function ExporterLoadingTab({
   loadingEntries = [],
@@ -19,7 +20,7 @@ export default function ExporterLoadingTab({
     if (!reference || reference === "—") return;
 
     try {
-      await navigator.clipboard.writeText(reference);
+      await copyToClipboard(reference);
       toast.success("Business reference copied");
     } catch (error) {
       console.error("Failed to copy business reference", error);

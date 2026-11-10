@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/utils/clipboard";
 import {
   usePurchaseContractsList,
   usePurchaseContractDashboard,
@@ -111,7 +112,7 @@ export default function PurchaseContractListPage() {
     if (!reference || reference === "—") return;
 
     try {
-      await navigator.clipboard.writeText(reference);
+      await copyToClipboard(reference);
       toast.success("Business reference copied");
     } catch (error) {
       console.error("Failed to copy business reference", error);

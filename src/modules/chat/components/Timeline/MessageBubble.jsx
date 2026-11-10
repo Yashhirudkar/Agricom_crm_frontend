@@ -5,6 +5,7 @@ import MessageActionsMenu from "./MessageActionsMenu";
 import ReactionBadges from "./ReactionBadges";
 import MessageRenderer from "./MessageRenderer";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/utils/clipboard";
 
 function formatTime(dateStr) {
   if (!dateStr) return "";
@@ -58,8 +59,12 @@ const MessageBubble = React.memo(({
     }
   }, []);
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(msg.content);
+  const handleCopy = useCallback(async () => {
+    try {
+      await copyToClipboard(msg.content);
+    } catch (error) {
+      console.error("Failed to copy message", error);
+    }
     toast.success("Copied to clipboard!");
   }, [msg.content]);
 

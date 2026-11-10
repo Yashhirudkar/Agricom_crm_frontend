@@ -14,6 +14,7 @@ import {
   Copy,
 } from "lucide-react";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/utils/clipboard";
 
 export default function CargoMainGrid({
   data = [],
@@ -28,7 +29,7 @@ export default function CargoMainGrid({
     if (!reference || reference === "—") return;
 
     try {
-      await navigator.clipboard.writeText(reference);
+      await copyToClipboard(reference);
       toast.success("Business reference copied");
     } catch (error) {
       console.error("Failed to copy business reference", error);

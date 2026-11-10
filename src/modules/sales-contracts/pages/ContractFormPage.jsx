@@ -651,8 +651,9 @@ export default function ContractFormPage({ editId, viewId }) {
   const numberOfShipments = Math.max(1, parseInt(form.numShipments, 10) || 1);
 
   return (
-    <div className="p-6 md:p-8 max-w-[1400px] mx-auto space-y-5">
-      {/* Page Header */}
+    <div className="max-w-[1400px] mx-auto space-y-5 pb-8">
+      {/* Page Header — sticky so Business Reference stays visible while scrolling */}
+      <div className="px-6 md:px-8 pt-6 md:pt-8 sticky top-0 z-30 bg-gray-50/95 backdrop-blur-sm">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
@@ -701,7 +702,9 @@ export default function ContractFormPage({ editId, viewId }) {
           </div>
         )}
       </div>
+      </div>{/* end sticky header wrapper */}
 
+      <div className="px-6 md:px-8 space-y-5">
       {/* Validation Summary */}
       {hasErrors && (
         <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -781,6 +784,7 @@ export default function ContractFormPage({ editId, viewId }) {
           </div>
         </div>
       )}
+      </div>{/* end content wrapper */}
     </div>
   );
 }

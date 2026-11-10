@@ -1,6 +1,7 @@
 import React from "react";
 import { Truck, Ship, Train, ArrowRight, Eye, EyeOff, FileText, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/utils/clipboard";
 
 const LOGISTICS_STATUS_CLASSES = {
   "Pending": "bg-gray-50 text-gray-600 border-gray-100",
@@ -29,7 +30,7 @@ export default function LogisticsQueueTable({
     if (!reference || reference === "—") return;
 
     try {
-      await navigator.clipboard.writeText(reference);
+      await copyToClipboard(reference);
       toast.success("Business reference copied");
     } catch (error) {
       console.error("Failed to copy business reference", error);

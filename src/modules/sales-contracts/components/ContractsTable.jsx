@@ -5,6 +5,7 @@ import { Eye, Pencil, Trash2, Rocket, FolderOpen, Ship, Copy } from "lucide-reac
 import { toast } from "sonner";
 import ContractStatusBadge from "./ContractStatusBadge";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
+import { copyToClipboard } from "@/utils/clipboard";
 
 export default function ContractsTable({ contracts, loading, onView, onEdit, onDelete, onDocuments, onExecutePurchase, onSortBusinessReference }) {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
     if (!reference || reference === "—") return;
 
     try {
-      await navigator.clipboard.writeText(reference);
+      await copyToClipboard(reference);
       toast.success("Business reference copied");
     } catch (error) {
       console.error("Failed to copy business reference", error);

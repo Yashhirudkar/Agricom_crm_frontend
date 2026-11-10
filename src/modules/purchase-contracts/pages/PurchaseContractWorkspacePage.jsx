@@ -447,43 +447,43 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     try {
       const formattedItems = (form.items && form.items.length > 0)
         ? form.items.map((it, idx) => {
-            const isFirst = idx === 0;
-            return {
-              productId: isFirst ? (form.productId || it.productId || null) : (it.productId || form.productId || null),
-              productName: isFirst ? (form.productName || it.productName || null) : (it.productName || form.productName || null),
-              quantity: isFirst ? (Number(form.quantity) || Number(it.quantity) || 0) : (Number(it.quantity) || Number(form.quantity) || 0),
-              productQuality: isFirst ? (form.productQuality || null) : (it.productQuality || form.productQuality || null),
-              packing: isFirst ? (form.packing || null) : (it.packing || form.packing || null),
-              bagType: isFirst ? (form.bagType || null) : (it.bagType || form.bagType || null),
-              bagSpec: isFirst ? (form.bagSpec || null) : (it.bagSpec || form.bagSpec || null),
-              stitching: isFirst ? (form.stitching || null) : (it.stitching || form.stitching || null),
-              marking: isFirst ? (form.marking || null) : (it.marking || form.marking || null),
-              ratePerMt: isFirst ? (form.ratePerMt || null) : (it.ratePerMt || form.ratePerMt || null),
-            };
-          })
+          const isFirst = idx === 0;
+          return {
+            productId: isFirst ? (form.productId || it.productId || null) : (it.productId || form.productId || null),
+            productName: isFirst ? (form.productName || it.productName || null) : (it.productName || form.productName || null),
+            quantity: isFirst ? (Number(form.quantity) || Number(it.quantity) || 0) : (Number(it.quantity) || Number(form.quantity) || 0),
+            productQuality: isFirst ? (form.productQuality || null) : (it.productQuality || form.productQuality || null),
+            packing: isFirst ? (form.packing || null) : (it.packing || form.packing || null),
+            bagType: isFirst ? (form.bagType || null) : (it.bagType || form.bagType || null),
+            bagSpec: isFirst ? (form.bagSpec || null) : (it.bagSpec || form.bagSpec || null),
+            stitching: isFirst ? (form.stitching || null) : (it.stitching || form.stitching || null),
+            marking: isFirst ? (form.marking || null) : (it.marking || form.marking || null),
+            ratePerMt: isFirst ? (form.ratePerMt || null) : (it.ratePerMt || form.ratePerMt || null),
+          };
+        })
         : (form.productId || form.quantity ? [{
-            productId: form.productId || null,
-            productName: form.productName || null,
-            quantity: Number(form.quantity) || 0,
-            productQuality: form.productQuality || null,
-            packing: form.packing || null,
-            bagType: form.bagType || null,
-            bagSpec: form.bagSpec || null,
-            stitching: form.stitching || null,
-            marking: form.marking || null,
-            ratePerMt: form.ratePerMt || null,
-          }] : []);
+          productId: form.productId || null,
+          productName: form.productName || null,
+          quantity: Number(form.quantity) || 0,
+          productQuality: form.productQuality || null,
+          packing: form.packing || null,
+          bagType: form.bagType || null,
+          bagSpec: form.bagSpec || null,
+          stitching: form.stitching || null,
+          marking: form.marking || null,
+          ratePerMt: form.ratePerMt || null,
+        }] : []);
 
       const formattedAllocations = shipmentAllocations.length > 0
         ? shipmentAllocations.map((a) => ({
-            shipmentId: Number(a.shipmentId),
-            purchaseContractItemId: a.purchaseContractItemId || null,
-            allocatedQuantity: Number(a.allocatedQuantity || 0),
-          }))
+          shipmentId: Number(a.shipmentId),
+          purchaseContractItemId: a.purchaseContractItemId || null,
+          allocatedQuantity: Number(a.allocatedQuantity || 0),
+        }))
         : selectedShipmentIds.map((sId) => ({
-            shipmentId: Number(sId),
-            allocatedQuantity: 0,
-          }));
+          shipmentId: Number(sId),
+          allocatedQuantity: 0,
+        }));
 
       if (!contract?.salesContractId && Number(form.quantity) > 0) {
         const scheduledQuantity = formattedAllocations.reduce(
@@ -517,8 +517,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         const otherAllocated =
           (contract?.activePurchaseContracts && contract.activePurchaseContracts.length > 0)
             ? contract.activePurchaseContracts
-                .filter((p) => Number(p.id) !== Number(contract?.id))
-                .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0)
+              .filter((p) => Number(p.id) !== Number(contract?.id))
+              .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0)
             : Number(summary?.allocationSummary?.alreadyAllocatedQty ?? contract?.allocationSummary?.alreadyAllocatedQty ?? 0);
 
         const maxAllowedForThisPc = Math.max(
@@ -613,10 +613,10 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         ...(contract?.salesContractId
           ? {}
           : {
-              shipmentAllocations: formattedAllocations,
-              shipmentIds: (selectedShipmentIds || []).map(Number).filter((n) => !isNaN(n)),
-              shipmentScheduleData: shipmentScheduleData || {},
-            }),
+            shipmentAllocations: formattedAllocations,
+            shipmentIds: (selectedShipmentIds || []).map(Number).filter((n) => !isNaN(n)),
+            shipmentScheduleData: shipmentScheduleData || {},
+          }),
       };
 
       if (isNew) {
@@ -753,7 +753,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     <div className="min-h-screen bg-gray-50/50 space-y-6 pb-28">
 
       {/* Main Page Header */}
-      <div className="px-6 py-4 sticky top-0 z-30">
+      <div className="px-6 py-4 sticky top-0 z-30 bg-gray-50/95 backdrop-blur-sm">
         <div className="flex items-center justify-between max-w-7xl mx-auto bg-white border border-gray-100 rounded-xl p-2 shadow-xs">
           <div className="flex items-center gap-3">
             <button

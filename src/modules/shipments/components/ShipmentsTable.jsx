@@ -18,6 +18,7 @@ import { shipmentsApi } from "../services/shipmentsApi";
 import ManualReadinessModal from "./ManualReadinessModal";
 import ShipmentStuffingExecutionModal from "./ShipmentStuffingExecutionModal";
 import ShipmentRefTooltip from "./ShipmentRefTooltip";
+import { copyToClipboard } from "@/utils/clipboard";
 
 const getTimelineDisplay = (timeline = {}) => {
   const parsedDays = Number(timeline.days);
@@ -130,7 +131,7 @@ export default function ShipmentsTable({
     if (!reference || reference === "—") return;
 
     try {
-      await navigator.clipboard.writeText(reference);
+      await copyToClipboard(reference);
       toast.success("Business reference copied");
     } catch (error) {
       console.error("Failed to copy business reference", error);
