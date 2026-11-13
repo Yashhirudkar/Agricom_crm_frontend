@@ -100,8 +100,41 @@ export function Sidebar() {
     userType === "super_admin" ||
     userType === "client_admin" ||
     hasPermission("stock_management:view");
+  const hasDocumentsPermission =
+    userType === "super_admin" ||
+    userType === "client_admin" ||
+    hasPermission("shipment_stuffing_execution:view");
 
-  const formattedMenu = menuConfig
+  const hasDocumentsFolder = menuConfig.some(
+    (section) =>
+      (section.title && section.title.toLowerCase() === "documents") ||
+      (section.name && section.name.toLowerCase() === "documents") ||
+      section.items?.some(
+        (it) => it.href === "/documents/shipment-stuffing-execution"
+      )
+  );
+
+  let rawSections = [...menuConfig];
+  if (!hasDocumentsFolder && hasDocumentsPermission) {
+    rawSections.push({
+      id: "documents-folder",
+      title: "Documents",
+      type: "parent",
+      isCollapsible: true,
+      icon: "Folder",
+      items: [
+        {
+          id: "shipment-stuffing-execution",
+          name: "Shipment Stuffing Execution",
+          icon: "FileText",
+          href: "/documents/shipment-stuffing-execution",
+          permission: "shipment_stuffing_execution:view",
+        },
+      ],
+    });
+  }
+
+  const formattedMenu = rawSections
     .map(section => {
       if (section.items) {
         return {

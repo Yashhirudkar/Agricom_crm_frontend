@@ -73,7 +73,7 @@ export default function HeroSummary({
             <button
               onClick={() => router.push("/sales-contracts")}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition-colors border border-slate-800"
-              title="Return to Sales Registry"
+              title="RETURN TO SALES REGISTRY"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
@@ -91,14 +91,14 @@ export default function HeroSummary({
             <button
               onClick={onRefresh}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-slate-800 rounded-xl transition-colors"
-              title="Live Refresh Matrix"
+              title="LIVE REFRESH MATRIX"
             >
               <RefreshCw className="h-4 w-4" />
             </button>
             <button
               onClick={() => window.print()}
               className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 border border-slate-800 rounded-xl transition-colors"
-              title="Print Command Sheet"
+              title="PRINT COMMAND SHEET"
             >
               <Printer className="h-4 w-4" />
             </button>

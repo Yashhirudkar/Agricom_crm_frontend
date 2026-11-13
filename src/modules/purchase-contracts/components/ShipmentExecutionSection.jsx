@@ -199,7 +199,7 @@ export default function ShipmentExecutionSection({
                         <button
                           onClick={() => handleOpenDrawer(s)}
                           className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                          title="Open Details Drawer"
+                          title="OPEN DETAILS DRAWER"
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </button>
@@ -207,7 +207,7 @@ export default function ShipmentExecutionSection({
                           <button
                             onClick={() => onRemoveShipment(s.shipmentId)}
                             className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Unlink Shipment"
+                            title="UNLINK SHIPMENT"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

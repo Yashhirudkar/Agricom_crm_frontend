@@ -198,7 +198,7 @@ export default function PurchaseCommercialInformationSection({
         {/* Row 1: Product, Quantity, Price, Currency, Quality, Packing */}
         <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
           <div>
-            <label className={lbl}>Product *</label>
+            <label className={lbl}>Product <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-bold text-gray-900 py-1.5">{form.productName || defaultProductName || "\u00A0"}</div>
             ) : isManual && productsMaster.length > 0 ? (
@@ -264,7 +264,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Qty (MT) *</label>
+            <label className={lbl}>Qty (MT) <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-bold text-gray-900 py-1.5">{form.quantity || "\u00A0"}</div>
             ) : (
@@ -306,7 +306,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Price *</label>
+            <label className={lbl}>Price <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-bold text-gray-900 py-1.5">
                 {form.ratePerMt != null && form.ratePerMt !== ""
@@ -335,7 +335,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Currency *</label>
+            <label className={lbl}>Currency <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-bold text-gray-900 py-1.5">{form.currencyCode || "\u00A0"}</div>
             ) : (
@@ -367,7 +367,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Product Quality</label>
+            <label className={lbl}>Product Quality <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{form.productQuality || "\u00A0"}</div>
             ) : (
@@ -382,7 +382,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Packing</label>
+            <label className={lbl}>Packing <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{form.packing || "\u00A0"}</div>
             ) : (
@@ -408,7 +408,7 @@ export default function PurchaseCommercialInformationSection({
         {/* Row 2: Bag Type, Bag Spec, Stitching, Marking */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div>
-            <label className={lbl}>Bag Type</label>
+            <label className={lbl}>Bag Type <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{form.bagType || "—"}</div>
             ) : (
@@ -431,7 +431,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Bag Dimension</label>
+            <label className={lbl}>Bag Dimension <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{form.bagSpec || "—"}</div>
             ) : (
@@ -503,7 +503,7 @@ export default function PurchaseCommercialInformationSection({
         {/* Row 3: Place of Loading, Delivery Place & Date */}
         <div className="grid grid-cols-1 sm:grid-cols-6 gap-4 pt-2 border-t border-gray-100">
           <div>
-            <label className={lbl}>Shipment Type / Incoterms</label>
+            <label className={lbl}>Incoterms <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">
                 {getShipmentTypeShortForm(
@@ -550,7 +550,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Place of Loading</label>
+            <label className={lbl}>Place of Loading <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{form.placeOfLoading || "—"}</div>
             ) : (
@@ -565,7 +565,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Country</label>
+            <label className={lbl}>Country <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{form.loadingCountry || "—"}</div>
             ) : (
@@ -577,7 +577,10 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Delivery Place</label>
+            <label className={lbl}>
+              Delivery Place
+              {isDeliveryPlaceRequired && <span className="text-red-500"> *</span>}
+            </label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">
                 {!isDeliveryPlaceRequired ? "Not applicable for this Shipment Type" : (form.deliveryPlace || "—")}
@@ -596,7 +599,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Shipment (From)</label>
+            <label className={lbl}>Shipment (From) <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{form.deliveryDate || "—"}</div>
             ) : (
@@ -610,7 +613,7 @@ export default function PurchaseCommercialInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>To</label>
+            <label className={lbl}>To <span className="text-red-500">*</span></label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{form.deliveryToDate || "—"}</div>
             ) : (

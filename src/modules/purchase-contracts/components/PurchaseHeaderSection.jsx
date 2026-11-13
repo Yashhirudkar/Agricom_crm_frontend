@@ -67,7 +67,7 @@ export default function PurchaseHeaderSection({
           <button
             onClick={() => router.push("/sales-contracts")}
             className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors mt-0.5"
-            title="Back to Sales Contracts"
+            title="BACK TO SALES CONTRACTS"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>

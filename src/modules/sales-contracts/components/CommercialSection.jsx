@@ -361,7 +361,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
               {/* Origin Country */}
               <div>
                 <label className={lbl}>
-                  Country
+                  Country <span className="text-red-500">*</span>
                 </label>
                 {isView ? (
                   <div className={`${inp} text-gray-700 bg-gray-50/50`}>
@@ -553,7 +553,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
           {/* Shipment Type */}
           <div>
             <label className={lbl}>
-              Shipment Type / Incoterms
+              Shipment Type / Incoterms <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <select
@@ -594,7 +594,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
           {/* Payment Terms */}
           <div>
             <label className={lbl}>
-              Payment Terms
+              Payment Terms <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <select
@@ -624,7 +624,7 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
           {/* Currency */}
           <div>
             <label className={lbl}>
-              Currency
+              Currency <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <select

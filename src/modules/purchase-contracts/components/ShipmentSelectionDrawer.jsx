@@ -269,7 +269,7 @@ export default function ShipmentSelectionDrawer({
                 setSortField(sortField === "date" ? "available" : "date");
               }}
               className="px-2.5 py-1.5 text-xs font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-              title="Toggle Sort Field"
+              title="TOGGLE SORT FIELD"
             >
               <ArrowUpDown className="h-3 w-3 text-gray-500" />
               <span>{sortField === "date" ? "Sort: Date" : "Sort: Available"}</span>

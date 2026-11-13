@@ -221,7 +221,7 @@ export default function DocumentComplianceSection({
                               type="button"
                               onClick={() => handleDownload(attachment.id, attachment.originalName, true)}
                               className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 font-semibold text-[11px]"
-                              title="View Document"
+                              title="VIEW DOCUMENT"
                             >
                               <Eye className="h-3.5 w-3.5" />
                               <span>View</span>
@@ -230,7 +230,7 @@ export default function DocumentComplianceSection({
                               type="button"
                               onClick={() => handleDownload(attachment.id, attachment.originalName, false)}
                               className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-1 font-semibold text-[11px]"
-                              title="Download File"
+                              title="DOWNLOAD FILE"
                             >
                               <Download className="h-3.5 w-3.5" />
                               <span>Download</span>
@@ -238,7 +238,7 @@ export default function DocumentComplianceSection({
                             <button
                               onClick={() => onDeleteDocument(doc.tradeDocument.id)}
                               className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Remove File"
+                              title="REMOVE FILE"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>

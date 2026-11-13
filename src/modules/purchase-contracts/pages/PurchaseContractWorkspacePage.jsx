@@ -435,6 +435,43 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
 
   // Perform Save Draft or Save & Activate
   const handleSaveContract = async (targetStatus = null) => {
+    if (targetStatus) {
+      const requiredFields = [
+        ...(!form.contractDate ? ["Contract Date"] : []),
+        ...(!(isManual || contract?.salesContract?.contractType) ? ["Contract Type"] : []),
+        ...(isManual && !form.buyerId ? ["Buyer Entity"] : []),
+        ...(!form.sellerId ? ["Seller / Supplier"] : []),
+        ...(!(form.productId || form.productName?.trim()) ? ["Product"] : []),
+        ...(!(Number(form.quantity) > 0) ? ["Qty (MT)"] : []),
+        ...(!(Number(form.ratePerMt) > 0) ? ["Price"] : []),
+        ...(!form.currencyCode ? ["Currency"] : []),
+        ...(!form.productQuality?.trim() ? ["Product Quality"] : []),
+        ...(!form.packing ? ["Packing"] : []),
+        ...(!form.bagType ? ["Bag Type"] : []),
+        ...(!form.bagSpec ? ["Bag Dimension"] : []),
+        ...(!form.shipmentTypeId ? ["Incoterms"] : []),
+        ...(!form.placeOfLoading?.trim() ? ["Place of Loading"] : []),
+        ...(!form.loadingCountry ? ["Country"] : []),
+        ...(!form.deliveryDate ? ["Shipment (From)"] : []),
+        ...(!form.deliveryToDate ? ["To"] : []),
+      ];
+
+      const shipmentType = (masters?.shipmentTypes || []).find(
+        (item) => String(item.id) === String(form.shipmentTypeId)
+      );
+      if (
+        shipmentType?.purchaseContractDeliveryPlaceRequired !== false
+        && !form.deliveryPlace?.trim()
+      ) {
+        requiredFields.push("Delivery Place");
+      }
+
+      if (requiredFields.length > 0) {
+        toast.error(`Please complete required fields: ${requiredFields.join(", ")}`);
+        return;
+      }
+    }
+
     if (
       form.purchaseDateInput
       && parsePurchaseDate(form.purchaseDateInput) !== form.purchaseDate
@@ -698,7 +735,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
 
   if (!isNew && (loadingDetail || loadingSummary)) {
     return (
-      <div className="min-h-screen bg-gray-50/50 p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="purchase-contract-workspace min-h-screen bg-gray-50/50 p-6 space-y-6 max-w-7xl mx-auto">
         <div className="bg-white rounded-2xl p-6 shadow-xs border border-gray-100 animate-pulse h-20" />
         <div className="bg-white rounded-2xl p-6 shadow-xs border border-gray-100 animate-pulse h-64" />
         <div className="bg-white rounded-2xl p-6 shadow-xs border border-gray-100 animate-pulse h-64" />
@@ -708,7 +745,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
 
   if (!isNew && (errorDetail || !contract)) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="purchase-contract-workspace min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <div className="bg-white border border-gray-200 rounded-3xl p-8 max-w-md w-full text-center space-y-4 shadow-xl">
           <div className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto">
             <AlertCircle className="h-7 w-7" />
@@ -750,7 +787,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
 
 
   return (
-    <div className="min-h-screen bg-gray-50/50 space-y-6 pb-28">
+    <div className="purchase-contract-workspace min-h-screen bg-gray-50/50 space-y-6 pb-28">
 
       {/* Main Page Header */}
       <div className="px-6 py-4 sticky top-0 z-30 bg-gray-50/95 backdrop-blur-sm">

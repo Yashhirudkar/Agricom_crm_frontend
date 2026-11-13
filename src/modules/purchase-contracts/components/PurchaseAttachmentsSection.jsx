@@ -216,7 +216,7 @@ export default function PurchaseAttachmentsSection({
                       type="button"
                       onClick={() => handleDownload(att.id, att.originalName || att.name, true)}
                       className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 font-semibold text-[11px]"
-                      title="View document"
+                      title="VIEW DOCUMENT"
                     >
                       <Eye className="h-3.5 w-3.5" />
                       <span>View</span>
@@ -225,7 +225,7 @@ export default function PurchaseAttachmentsSection({
                       type="button"
                       onClick={() => handleDownload(att.id, att.originalName || att.name, false)}
                       className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex items-center gap-1 font-semibold text-[11px]"
-                      title="Download file"
+                      title="DOWNLOAD FILE"
                     >
                       <Download className="h-3.5 w-3.5" />
                       <span>Download</span>
@@ -237,7 +237,7 @@ export default function PurchaseAttachmentsSection({
                     type="button"
                     onClick={() => onDeleteAttachment(att.id)}
                     className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Delete attachment"
+                    title="DELETE ATTACHMENT"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

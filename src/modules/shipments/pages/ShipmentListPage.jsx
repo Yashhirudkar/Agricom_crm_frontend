@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Ship, AlertCircle, RefreshCw, Rocket, ChevronRight, Boxes, FileSpreadsheet } from "lucide-react";
 import Link from "next/link";
@@ -20,10 +20,27 @@ import FreightAllocationDrawer from "../components/FreightAllocationDrawer";
 
 export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, preOpenFreight, contextContractNo }) {
   const router = useRouter();
-  // Filters State
-  const [filters, setFilters] = useState({
-    page: 1,
-    limit: 10,
+  // Active Tab: "pending" | "executed"
+  const [activeTab, setActiveTab] = useState("pending");
+
+  // Per-tab pagination and sorting state
+  const [tabParams, setTabParams] = useState({
+    pending: {
+      page: 1,
+      limit: 10,
+      sortBy: "shipmentDate",
+      sortOrder: "ASC",
+    },
+    executed: {
+      page: 1,
+      limit: 10,
+      sortBy: "shipmentDate",
+      sortOrder: "DESC",
+    },
+  });
+
+  // Common filters shared across tabs
+  const [commonFilters, setCommonFilters] = useState({
     search: contextContractNo || "",
     businessReference: "",
     status: "",
@@ -40,9 +57,32 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
     shipmentYear: "",
     shipmentDateFrom: "",
     shipmentDateTo: "",
-    sortBy: "shipmentDate",
-    sortOrder: "ASC"
   });
+
+  // Tab counts from backend
+  const [tabCounts, setTabCounts] = useState({
+    pending: 0,
+    executed: 0,
+  });
+
+  // Combined filters for subcomponents
+  const filters = useMemo(() => {
+    const currentTabParams = tabParams[activeTab] || {
+      page: 1,
+      limit: 10,
+      sortBy: "shipmentDate",
+      sortOrder: "ASC",
+    };
+    return {
+      ...commonFilters,
+      page: currentTabParams.page,
+      limit: currentTabParams.limit,
+      sortBy: currentTabParams.sortBy,
+      sortOrder: currentTabParams.sortOrder,
+      tab: activeTab,
+      status: commonFilters.status || activeTab,
+    };
+  }, [commonFilters, tabParams, activeTab]);
 
   // Toast state (matches existing project pattern)
   const [toastMsg, setToastMsg] = useState(null);
@@ -200,32 +240,128 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
   const [loadingAllocation, setLoadingAllocation] = useState(false);
 
 
+  // Tab change handler
+  const handleTabChange = (newTab) => {
+    if (newTab === activeTab) return;
+    setActiveTab(newTab);
+    setSelectedShipments([]);
+  };
+
+  // Filter update handler preserving tab pagination & shared filters
+  const handleSetFilters = useCallback((updater) => {
+    const currentTabParams = tabParams[activeTab] || {
+      page: 1,
+      limit: 10,
+      sortBy: "shipmentDate",
+      sortOrder: "ASC",
+    };
+    const currentCombined = {
+      ...commonFilters,
+      page: currentTabParams.page,
+      limit: currentTabParams.limit,
+      sortBy: currentTabParams.sortBy,
+      sortOrder: currentTabParams.sortOrder,
+      tab: activeTab,
+    };
+    const next = typeof updater === "function" ? updater(currentCombined) : updater;
+
+    const nextCommon = { ...commonFilters };
+    const nextTabParams = { ...tabParams };
+    let tabParamChanged = false;
+
+    ["page", "limit", "sortBy", "sortOrder"].forEach((field) => {
+      if (next[field] !== undefined && next[field] !== currentTabParams[field]) {
+        nextTabParams[activeTab] = {
+          ...nextTabParams[activeTab],
+          [field]: next[field],
+        };
+        tabParamChanged = true;
+      }
+    });
+
+    let commonChanged = false;
+    Object.keys(next).forEach((key) => {
+      if (!["page", "limit", "sortBy", "sortOrder", "tab"].includes(key)) {
+        if (next[key] !== nextCommon[key]) {
+          nextCommon[key] = next[key];
+          commonChanged = true;
+        }
+      }
+    });
+
+    if (commonChanged) {
+      nextTabParams[activeTab] = {
+        ...nextTabParams[activeTab],
+        page: 1,
+      };
+      setCommonFilters(nextCommon);
+      setTabParams(nextTabParams);
+    } else if (tabParamChanged) {
+      setTabParams(nextTabParams);
+    }
+  }, [activeTab, commonFilters, tabParams]);
+
   // API Fetches
-  const fetchShipments = useCallback(async () => {
-    setLoading(true);
+  const fetchShipments = useCallback(async (opts = {}) => {
+    if (!opts?.silent) {
+      setLoading(true);
+    }
     try {
-      const res = await shipmentsApi.getShipments(filters);
+      const currentTabParams = tabParams[activeTab] || {
+        page: 1,
+        limit: 10,
+        sortBy: "shipmentDate",
+        sortOrder: "ASC",
+      };
+      const queryParams = {
+        ...commonFilters,
+        page: currentTabParams.page,
+        limit: currentTabParams.limit,
+        sortBy: currentTabParams.sortBy,
+        sortOrder: currentTabParams.sortOrder,
+        tab: activeTab,
+        status: commonFilters.status || activeTab,
+      };
+      const res = await shipmentsApi.getShipments(queryParams);
       if (res?.data) {
         setShipments(res.data.data || []);
         setTotal(res.data.total || 0);
         setTotalPages(res.data.totalPages || 0);
+        if (res.data.pendingCount !== undefined && res.data.executedCount !== undefined) {
+          setTabCounts({
+            pending: res.data.pendingCount,
+            executed: res.data.executedCount,
+          });
+        }
       }
     } catch (err) {
       console.error(err);
       showToast("Failed to load shipments registry", "error");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) {
+        setLoading(false);
+      }
     }
-  }, [filters]);
+  }, [activeTab, tabParams, commonFilters]);
 
   const handleExportExcel = async () => {
     setExporting(true);
     try {
-      const response = await shipmentsApi.exportExcel(filters);
+      const currentTabConfig = tabParams[activeTab] || {
+        sortBy: "shipmentDate",
+        sortOrder: "ASC",
+      };
+      const response = await shipmentsApi.exportExcel({
+        ...commonFilters,
+        tab: activeTab,
+        status: commonFilters.status || activeTab,
+        sortBy: currentTabConfig.sortBy,
+        sortOrder: currentTabConfig.sortOrder,
+      });
       const url = URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "shipments.xlsx";
+      link.download = `${activeTab}-shipments.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -238,33 +374,82 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
     }
   };
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = async () => {
     try {
-      const res = await shipmentsApi.getStats(filters);
+      const res = await shipmentsApi.getStats(commonFilters);
       if (res?.data) {
         setStats(res.data);
+        if (res.data.pendingCount !== undefined && res.data.executedCount !== undefined) {
+          setTabCounts((prev) => ({
+            pending: res.data.pendingCount ?? prev.pending,
+            executed: res.data.executedCount ?? prev.executed,
+          }));
+        }
       }
     } catch (err) {
       console.error(err);
     }
-  }, [filters]);
+  };
+
+  // Handle successful execution with automatic movement between tabs
+  const handleShipmentExecuted = (executedShipment) => {
+    if (activeTab === "pending") {
+      setShipments((prev) => prev.filter((s) => s.id !== executedShipment.id));
+      setTotal((prev) => Math.max(0, prev - 1));
+    }
+    setTabCounts((prev) => ({
+      pending: Math.max(0, prev.pending - 1),
+      executed: prev.executed + 1,
+    }));
+    setStats((prev) => ({
+      ...prev,
+      pendingCount: Math.max(0, (prev.pendingCount || 1) - 1),
+      executedCount: (prev.executedCount || 0) + 1,
+    }));
+    fetchShipments({ silent: true });
+    fetchStats();
+  };
+
+  // Listen for custom shipment-executed event
+  useEffect(() => {
+    const handleCustomExecuted = (e) => {
+      const executedId = e.detail?.shipmentId;
+      if (executedId) {
+        if (activeTab === "pending") {
+          setShipments((prev) => prev.filter((s) => s.id !== executedId));
+          setTotal((prev) => Math.max(0, prev - 1));
+        }
+        setTabCounts((prev) => ({
+          pending: Math.max(0, prev.pending - 1),
+          executed: prev.executed + 1,
+        }));
+        fetchShipments({ silent: true });
+        fetchStats();
+      }
+    };
+
+    window.addEventListener("shipment-executed", handleCustomExecuted);
+    return () => {
+      window.removeEventListener("shipment-executed", handleCustomExecuted);
+    };
+  }, [activeTab, fetchShipments]);
 
   // Trigger loading list and stats
   useEffect(() => {
     fetchShipments();
     fetchStats();
-  }, [fetchShipments, fetchStats]);
+  }, [fetchShipments]);
 
   // Deep Link Selection Handler (supports ?shipmentId=X&openCargo=true)
   useEffect(() => {
     if (preSelectedShipmentId) {
       const loadPreselected = async () => {
         try {
-          const res = await shipmentsApi.getShipments({ limit: 100, page: 1 });
+          const res = await shipmentsApi.getShipments({ limit: 100, page: 1, tab: "all" });
           if (res?.data?.data) {
             const match = res.data.data.find(s => String(s.id) === String(preSelectedShipmentId));
             if (match) {
-              const timelineRes = await shipmentsApi.getShipments({ search: match.shipmentReference });
+              const timelineRes = await shipmentsApi.getShipments({ search: match.shipmentReference, tab: "all" });
               const resolved = timelineRes?.data?.data?.[0] || match;
               if (preOpenCargo) {
                 // Delegate to handleOpenCargoAllocation to ensure MTT opens modal, not workspace
@@ -288,9 +473,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
 
   // Reset Filters Handler
   const handleResetFilters = () => {
-    setFilters({
-      page: 1,
-      limit: 10,
+    setCommonFilters({
       search: "",
       status: "",
       timeline: "",
@@ -306,8 +489,11 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
       shipmentYear: "",
       shipmentDateFrom: "",
       shipmentDateTo: "",
-      sortBy: "shipmentDate",
-      sortOrder: "ASC"
+      businessReference: "",
+    });
+    setTabParams({
+      pending: { page: 1, limit: 10, sortBy: "shipmentDate", sortOrder: "ASC" },
+      executed: { page: 1, limit: 10, sortBy: "shipmentDate", sortOrder: "DESC" },
     });
     setSelectedShipments([]);
     showToast("Filters cleared successfully");
@@ -420,7 +606,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
             <span className="hidden sm:inline">{exporting ? "Exporting..." : "Export Excel"}</span>
           </button>
           <button
-            onClick={fetchShipments}
+            onClick={() => fetchShipments()}
             className="flex-1 lg:flex-none max-sm:flex-none max-sm:w-8 max-sm:px-0 justify-center px-3 py-1.5 min-h-[32px] sm:min-h-[36px] border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-lg lg:rounded-xl flex items-center gap-1.5 text-[12px] sm:text-xs font-semibold cursor-pointer transition-colors"
           >
             <RefreshCw className="h-3.5 w-3.5" />
@@ -431,10 +617,64 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
 
       {/* Main Container Card: Unified Filter, Table and Pagination */}
       <div className="flex min-h-0 flex-1 flex-col bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden print:border-none">
+        {/* Navigation Tabs */}
+        <div className="border-b border-gray-200 px-3 sm:px-5 bg-white flex items-center justify-between print:hidden">
+          <div className="flex items-center gap-1 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => handleTabChange("pending")}
+              className={`relative py-3.5 px-3 sm:px-4 text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all duration-200 cursor-pointer ${
+                activeTab === "pending"
+                  ? "text-[#007aff] font-bold"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              <span>Pending</span>
+              <span
+                className={`px-2 py-0.5 text-[11px] sm:text-xs rounded-full font-bold transition-all duration-200 ${
+                  activeTab === "pending"
+                    ? "bg-blue-50 text-[#007aff] ring-1 ring-blue-500/20"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {tabCounts.pending}
+              </span>
+              {activeTab === "pending" && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#007aff] rounded-t-full transition-all duration-200" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange("executed")}
+              className={`relative py-3.5 px-3 sm:px-4 text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all duration-200 cursor-pointer ${
+                activeTab === "executed"
+                  ? "text-[#007aff] font-bold"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              <span>Stuffed / Executed</span>
+              <span
+                className={`px-2 py-0.5 text-[11px] sm:text-xs rounded-full font-bold transition-all duration-200 ${
+                  activeTab === "executed"
+                    ? "bg-blue-50 text-[#007aff] ring-1 ring-blue-500/20"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {tabCounts.executed}
+              </span>
+              {activeTab === "executed" && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#007aff] rounded-t-full transition-all duration-200" />
+              )}
+            </button>
+          </div>
+        </div>
+
         <div className="print:hidden">
           <ShipmentsFilter
             filters={filters}
-            setFilters={setFilters}
+            setFilters={handleSetFilters}
+            activeTab={activeTab}
             statsConfig={statsConfig}
             onReset={handleResetFilters}
             total={total}
@@ -471,8 +711,17 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
                   targetIds.map((id) => shipmentsApi.updateShipment(id, { status: "Executed" }))
                 );
                 showToast("Shipments executed successfully", "success");
+
+                // Immediately remove executed rows from Pending view
+                setShipments((prev) => prev.filter((s) => !targetIds.includes(s.id)));
+                setTotal((prev) => Math.max(0, prev - targetIds.length));
+                setTabCounts((prev) => ({
+                  pending: Math.max(0, prev.pending - targetIds.length),
+                  executed: prev.executed + targetIds.length,
+                }));
                 setSelectedShipments([]);
-                fetchShipments();
+                fetchShipments({ silent: true });
+                fetchStats();
               } catch (err) {
                 console.error("Failed bulk purchase contract execution", err);
                 showToast("Failed to execute shipments", "error");
@@ -482,12 +731,17 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
         </div>
         <ShipmentsTable
           onRefresh={fetchShipments}
+          onShipmentExecuted={handleShipmentExecuted}
+          activeTab={activeTab}
           shipments={shipments}
-          onSortBusinessReference={() => setFilters((current) => ({
+          onSortBusinessReference={() => setTabParams((current) => ({
             ...current,
-            sortBy: "businessReference",
-            sortOrder: current.sortOrder === "ASC" ? "DESC" : "ASC",
-            page: 1,
+            [activeTab]: {
+              ...current[activeTab],
+              sortBy: "businessReference",
+              sortOrder: current[activeTab]?.sortOrder === "ASC" ? "DESC" : "ASC",
+              page: 1,
+            },
           }))}
           loading={loading}
           selectedShipments={selectedShipments}
@@ -498,16 +752,23 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
           onManageDocuments={(contractObj) => setDocContract(contractObj)}
           onPrintShipment={handlePrintSingleShipment}
           onOpenCargoDrawer={handleOpenCargoAllocation}
+          onOpenFreightDrawer={(s) => setFreightShipment(s)}
         />
 
         <div className="print:hidden">
           <Pagination
-            currentPage={filters.page}
+            currentPage={tabParams[activeTab]?.page || 1}
             totalPages={totalPages}
-            onPageChange={(p) => setFilters((prev) => ({ ...prev, page: p }))}
+            onPageChange={(p) => setTabParams((prev) => ({
+              ...prev,
+              [activeTab]: { ...prev[activeTab], page: p },
+            }))}
             totalItems={total}
-            itemsPerPage={filters.limit}
-            onLimitChange={(newLimit) => setFilters((prev) => ({ ...prev, limit: newLimit, page: 1 }))}
+            itemsPerPage={tabParams[activeTab]?.limit || 10}
+            onLimitChange={(newLimit) => setTabParams((prev) => ({
+              ...prev,
+              [activeTab]: { ...prev[activeTab], limit: newLimit, page: 1 },
+            }))}
             itemName="shipments"
           />
         </div>

@@ -1,6 +1,8 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import { parseTime } from "@internationalized/date";
+import { DateInput, DateSegment, Label, TimeField } from "react-aria-components";
 import {
   X,
   Check,
@@ -36,6 +38,10 @@ import {
   Minimize2,
 } from "lucide-react";
 import { shipmentsApi } from "../services/shipmentsApi";
+import {
+  formatMtWeightInput,
+  isValidMtWeightInput,
+} from "../utils/mtWeight";
 import axiosClient from "@/lib/axios";
 
 // Quick Preset Document Names
@@ -50,6 +56,58 @@ const PRESET_DOCUMENTS = [
   "Packing List",
   "Other Documents",
 ];
+
+function SimpleTimePicker({ label, value, onChange, required = false }) {
+  const parsedValue = /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value || "")
+    ? parseTime(value)
+    : null;
+
+  const setNow = () => {
+    const now = new Date();
+    onChange(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+  };
+
+  return (
+    <TimeField
+      value={parsedValue}
+      onChange={(time) =>
+        onChange(
+          time
+            ? `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(2, "0")}`
+            : ""
+        )
+      }
+      hourCycle={24}
+      granularity="minute"
+      isRequired={required}
+      className="min-w-0"
+    >
+      <div className="flex items-center justify-between mb-1">
+        <Label className="block text-slate-600 font-semibold text-xs">
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
+        <button
+          type="button"
+          onClick={setNow}
+          className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
+        >
+          Now
+        </button>
+      </div>
+      <div className="flex h-[34px] items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-slate-900 transition-all focus-within:border-indigo-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500/15">
+        <Clock className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+        <DateInput className="flex w-full items-center gap-1 text-xs font-medium">
+          {(segment) => (
+            <DateSegment
+              segment={segment}
+              className="rounded px-0.5 outline-none focus:bg-indigo-100 data-[type=literal]:text-slate-400 cursor-pointer"
+            />
+          )}
+        </DateInput>
+      </div>
+    </TimeField>
+  );
+}
 
 export default function ShipmentStuffingExecutionModal({
   isOpen,
@@ -149,6 +207,18 @@ export default function ShipmentStuffingExecutionModal({
     netWeight: "",
   });
 
+  const handleMtWeightChange = (field, value) => {
+    if (!isValidMtWeightInput(value)) return;
+    setLoadingInfo((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleMtWeightBlur = (field) => {
+    setLoadingInfo((prev) => ({
+      ...prev,
+      [field]: formatMtWeightInput(prev[field]),
+    }));
+  };
+
   // Freight Details (Editable if missing)
   const [freightData, setFreightData] = useState({
     shippingLine: "",
@@ -189,10 +259,10 @@ export default function ShipmentStuffingExecutionModal({
     },
   ]);
 
-  // Section 6: Dynamic Attachments
+  // Section 5: Dynamic Attachments
   const [attachments, setAttachments] = useState([]);
 
-  // Section 7: Execution Remarks
+  // Section 6: Execution Remarks
   const [remarks, setRemarks] = useState("");
 
   // Existing stuffing execution status
@@ -250,8 +320,8 @@ export default function ShipmentStuffingExecutionModal({
               loadingStartTime: existing.loadingStartTime || "",
               loadingEndTime: existing.loadingEndTime || "",
               actualLoadingWeight: Number(existing.actualLoadingWeight) > 0 ? existing.actualLoadingWeight : "",
-              grossWeight: existing.grossWeight || "",
-              netWeight: Number(existing.netWeight) > 0 ? existing.netWeight : "",
+              grossWeight: formatMtWeightInput(existing.grossWeight),
+              netWeight: formatMtWeightInput(existing.netWeight),
             });
             if (existing.freightOverrides) {
               setFreightData((prev) => ({ ...prev, ...existing.freightOverrides }));
@@ -448,6 +518,24 @@ export default function ShipmentStuffingExecutionModal({
 
     // Client-side validation when Completing Stuffing
     if (action === "complete") {
+      const requiredLoadingFields = [
+        ["loadingDate", "Date of Loading"],
+        ["actualLoadingWeight", "Actual Loading Weight (MT)"],
+        ["grossWeight", "Gross Weight (MT)"],
+        ["netWeight", "Net Weight (MT)"],
+        ["loadingStartTime", "Loading Start Time"],
+        ["loadingEndTime", "Loading End Time"],
+      ];
+      const missingFields = requiredLoadingFields
+        .filter(([field]) => !String(loadingInfo[field] ?? "").trim())
+        .map(([, label]) => label);
+      if (missingFields.length > 0) {
+        const msg = `Complete all required Loading & Weights fields: ${missingFields.join(", ")}.`;
+        setErrorMsg(msg);
+        toast.error(msg);
+        return;
+      }
+
       const weight = parseFloat(loadingInfo.actualLoadingWeight) || 0;
       if (weight <= 0) {
         const msg = "Actual Loading Weight (MT) is required before completing stuffing. Please enter a valid weight in Section 2.";
@@ -1023,21 +1111,22 @@ export default function ShipmentStuffingExecutionModal({
                     Weighbridge Slip Sync
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3 text-xs">
                   <div>
                     <label className="block text-slate-600 font-semibold mb-1">
-                      Date of Loading
+                      Date of Loading <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
                       value={loadingInfo.loadingDate}
                       onChange={(e) => setLoadingInfo((prev) => ({ ...prev, loadingDate: e.target.value }))}
+                      aria-required="true"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium hover:cursor-pointer"
                     />
                   </div>
                   <div>
                     <label className="block text-slate-600 font-semibold mb-1">
-                      Actual Loading Weight (MT)
+                      Actual Loading Weight (MT) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -1045,55 +1134,52 @@ export default function ShipmentStuffingExecutionModal({
                       placeholder="e.g. 26.50"
                       value={loadingInfo.actualLoadingWeight}
                       onChange={(e) => setLoadingInfo((prev) => ({ ...prev, actualLoadingWeight: e.target.value }))}
+                      aria-required="true"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-bold text-indigo-700"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Gross Weight (MT)</label>
+                    <label className="block text-slate-600 font-semibold mb-1">
+                      Gross Weight (MT) <span className="text-red-500">*</span>
+                    </label>
                     <input
-                      type="number"
-                      step="0.01"
-                      placeholder="e.g. 30.20"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.000"
                       value={loadingInfo.grossWeight}
-                      onChange={(e) => setLoadingInfo((prev) => ({ ...prev, grossWeight: e.target.value }))}
+                      onChange={(e) => handleMtWeightChange("grossWeight", e.target.value)}
+                      onBlur={() => handleMtWeightBlur("grossWeight")}
+                      aria-required="true"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Net Weight (MT)</label>
+                    <label className="block text-slate-600 font-semibold mb-1">
+                      Net Weight (MT) <span className="text-red-500">*</span>
+                    </label>
                     <input
-                      type="number"
-                      step="0.01"
-                      placeholder="e.g. 26.50"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.000"
                       value={loadingInfo.netWeight}
-                      onChange={(e) => setLoadingInfo((prev) => ({ ...prev, netWeight: e.target.value }))}
+                      onChange={(e) => handleMtWeightChange("netWeight", e.target.value)}
+                      onBlur={() => handleMtWeightBlur("netWeight")}
+                      aria-required="true"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-semibold text-emerald-700"
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 text-xs mt-3">
-                  <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Loading Start</label>
-                    <input type="time" value={loadingInfo.loadingStartTime} onChange={(e) => setLoadingInfo((prev) => ({ ...prev, loadingStartTime: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Loading End</label>
-                    <input type="time" value={loadingInfo.loadingEndTime} onChange={(e) => setLoadingInfo((prev) => ({ ...prev, loadingEndTime: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Supervisor</label>
-                    <input value={stuffingInfo.supervisor} onChange={(e) => setStuffingInfo((prev) => ({ ...prev, supervisor: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 font-semibold mb-1">Operator</label>
-                    <input value={stuffingInfo.operator} onChange={(e) => setStuffingInfo((prev) => ({ ...prev, operator: e.target.value }))} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center justify-between rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs">
-                  <span className="font-semibold text-indigo-900">Remaining after this loading</span>
-                  <span className="font-bold text-indigo-700">
-                    {Math.max(0, Number(autoData.remainingQuantity ?? autoData.quantityMt ?? 0) - Number(loadingInfo.actualLoadingWeight || 0)).toFixed(2)} MT
-                  </span>
+                  <SimpleTimePicker
+                    label="Loading Start Time"
+                    required
+                    value={loadingInfo.loadingStartTime}
+                    onChange={(val) => setLoadingInfo((prev) => ({ ...prev, loadingStartTime: val }))}
+                  />
+                  <SimpleTimePicker
+                    label="Loading End Time"
+                    required
+                    value={loadingInfo.loadingEndTime}
+                    onChange={(val) => setLoadingInfo((prev) => ({ ...prev, loadingEndTime: val }))}
+                  />
                 </div>
               </div>
 
@@ -1322,12 +1408,27 @@ export default function ShipmentStuffingExecutionModal({
                 </div>
               </div>
 
-              {/* 5. DYNAMIC ATTACHMENTS (UNLIMITED) */}
+              {/* 5. EXECUTION REMARKS */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-xs">
+                <div className="flex items-center gap-2 pb-2.5 mb-2.5 border-b border-slate-100 text-indigo-700 font-bold text-sm">
+                  <FileText className="h-4 w-4 text-indigo-600" />
+                  <span>5. Execution Remarks</span>
+                </div>
+                <textarea
+                  rows={4}
+                  placeholder="Enter overall stuffing / loading remarks, inspection notes, seal verification comments..."
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
+                />
+              </div>
+
+              {/* 6. DYNAMIC ATTACHMENTS (UNLIMITED) */}
               <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-xs">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-indigo-600" />
-                    <span className="font-bold text-sm text-indigo-700">5. Dynamic Attachments (Unlimited)</span>
+                    <span className="font-bold text-sm text-indigo-700">6. Dynamic Attachments (Unlimited)</span>
                     <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                       {attachments.length} {attachments.length === 1 ? "Document" : "Documents"}
                     </span>
@@ -1454,21 +1555,6 @@ export default function ShipmentStuffingExecutionModal({
                     ))}
                   </div>
                 )}
-              </div>
-
-              {/* 6. EXECUTION REMARKS */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-xs">
-                <div className="flex items-center gap-2 pb-2.5 mb-2.5 border-b border-slate-100 text-indigo-700 font-bold text-sm">
-                  <FileText className="h-4 w-4 text-indigo-600" />
-                  <span>6. Execution Remarks</span>
-                </div>
-                <textarea
-                  rows={4}
-                  placeholder="Enter overall stuffing / loading remarks, inspection notes, seal verification comments..."
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
-                />
               </div>
 
             </div>

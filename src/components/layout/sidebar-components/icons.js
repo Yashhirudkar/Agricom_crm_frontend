@@ -30,6 +30,7 @@ import {
   Layout,
   Grid,
   Settings,
+  Folder,
 } from "lucide-react";
 
 export const iconMap = {
@@ -46,6 +47,7 @@ export const iconMap = {
   Layout,
   Grid,
   Settings,
+  Folder,
   UserCircle,
   MapPin,
   Network,
@@ -67,6 +69,7 @@ export const getSidebarCategory = (name = "", route = "") => {
   if (r.includes("/attendance") || r.includes("/shifts") || r.includes("/corrections") || n.includes("attendance") || n.includes("shift") || n.includes("regularization")) return "attendance";
   if (r.includes("/payroll") || r.includes("/finance") || n.includes("salary") || n.includes("finance") || n.includes("payroll")) return "finance";
   if (r.includes("/analytics") || r.includes("/reports") || n.includes("report") || n.includes("analytic")) return "reports";
+  if (r.includes("/documents") || n.includes("document")) return "documents";
 
   return "default";
 };
@@ -83,6 +86,7 @@ export const getDynamicIconColor = (name, route) => {
     case "attendance": return "text-teal-500";
     case "finance": return "text-green-500";
     case "reports": return "text-purple-500";
+    case "documents": return "text-blue-600";
     default: return "text-gray-500";
   }
 };

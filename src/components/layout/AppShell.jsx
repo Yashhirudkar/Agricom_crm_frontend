@@ -38,6 +38,7 @@ export default function AppShellClient({ children }) {
   const user = useSelector(selectUser);
   const dispatch = useDispatch();
   const isPublic = PUBLIC_ROUTES.includes(pathname);
+  const isMastersPage = pathname === "/masters" || pathname.startsWith("/masters/");
 
   const activeCompany = useSelector(selectActiveCompany);
   const activeCompanyId = useSelector(selectActiveCompanyId);
@@ -360,7 +361,7 @@ export default function AppShellClient({ children }) {
       <Header />
       <div className="flex-1 min-w-0 flex overflow-hidden h-full">
         <Sidebar />
-        <main className="flex-1 min-w-0 max-w-full overflow-x-hidden overflow-y-auto h-full">{children}</main>
+        <main className={`flex-1 min-w-0 max-w-full overflow-x-hidden overflow-y-auto h-full ${isMastersPage ? "" : "app-uppercase-ui"}`}>{children}</main>
       </div>
       <CommandPalette />
       <FollowUpHeaderDrawer isOpen={isFollowUpsOpen} onClose={() => setIsFollowUpsOpen(false)} />

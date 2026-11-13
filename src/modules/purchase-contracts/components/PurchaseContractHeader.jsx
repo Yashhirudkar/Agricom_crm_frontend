@@ -72,7 +72,7 @@ export default function PurchaseContractHeader({
           <button
             onClick={() => router.push("/sales-contracts")}
             className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors mt-0.5"
-            title="Back to Sales Contracts"
+            title="BACK TO SALES CONTRACTS"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -167,14 +167,14 @@ export default function PurchaseContractHeader({
           <button
             onClick={onRefresh}
             className="p-2 text-gray-500 hover:text-[#007aff] hover:bg-blue-50 border border-gray-200 rounded-xl transition-colors"
-            title="Refresh Data"
+            title="REFRESH DATA"
           >
             <RefreshCw className="h-4 w-4" />
           </button>
           <button
             onClick={handlePrint}
             className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 border border-gray-200 rounded-xl transition-colors"
-            title="Print Workspace"
+            title="PRINT WORKSPACE"
           >
             <Printer className="h-4 w-4" />
           </button>

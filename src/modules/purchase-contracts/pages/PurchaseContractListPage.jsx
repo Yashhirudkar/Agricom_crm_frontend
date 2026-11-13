@@ -38,7 +38,6 @@ export default function PurchaseContractListPage() {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [businessReference, setBusinessReference] = useState("");
   const [businessReferenceSortOrder, setBusinessReferenceSortOrder] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
@@ -46,7 +45,6 @@ export default function PurchaseContractListPage() {
     page,
     limit: 10,
     ...(search && { search }),
-    ...(businessReference && { businessReference }),
     ...(businessReferenceSortOrder && {
       sortBy: "businessReference",
       sortOrder: businessReferenceSortOrder,
@@ -69,6 +67,7 @@ export default function PurchaseContractListPage() {
         contract.buyer?.entityName ||
         contract.buyer?.name ||
         "";
+      const sellerName = contract.seller?.entityName || contract.seller?.name || "";
       const productNames = contract.productNames?.length
         ? contract.productNames
         : contract.salesContract?.items?.map((item) => item.product?.name).filter(Boolean) || [];
@@ -77,6 +76,7 @@ export default function PurchaseContractListPage() {
         contract.businessTransaction?.businessReference,
         contract.contractNumber,
         buyerName,
+        sellerName,
         ...productNames,
       ];
       return searchableValues.some((value) =>
@@ -91,6 +91,7 @@ export default function PurchaseContractListPage() {
         contract.buyer?.entityName ||
         contract.buyer?.name ||
         "";
+      const sellerName = contract.seller?.entityName || contract.seller?.name || "";
       const productNames = contract.productNames?.length
         ? contract.productNames
         : contract.salesContract?.items?.map((item) => item.product?.name).filter(Boolean) || [];
@@ -99,6 +100,7 @@ export default function PurchaseContractListPage() {
         contract.businessTransaction?.businessReference,
         contract.contractNumber,
         buyerName,
+        sellerName,
         ...productNames,
       ].some((value) => String(value || "").toLowerCase().includes(normalizedSearch));
     }).length
@@ -125,7 +127,7 @@ export default function PurchaseContractListPage() {
   const financials = dashboard?.financials || {};
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-4 space-y-3.5 max-w-7xl mx-auto">
+    <div className="purchase-contract-workspace min-h-screen bg-gray-50/50 p-4 space-y-3.5 max-w-7xl mx-auto">
       {/* Top Banner & Header (Compact) */}
       <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-xs">
         <div className="flex items-center gap-3">
@@ -161,7 +163,7 @@ export default function PurchaseContractListPage() {
           <button
             onClick={() => refetchList()}
             className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 border border-gray-200 rounded-lg transition-colors cursor-pointer"
-            title="Refresh List"
+            title="REFRESH LIST"
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
@@ -201,25 +203,16 @@ export default function PurchaseContractListPage() {
       {/* Filter Toolbar (Slim) */}
       <div className="bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-xs flex items-center justify-between gap-3">
         {/* Search */}
-        <div className="relative w-full max-w-xs">
+        <div className="relative w-full flex-1">
           <Search className="h-3.5 w-3.5 text-gray-400 absolute left-2.5 top-2.5" />
           <input
             type="text"
-            placeholder="Search contract, buyer, product..."
+            placeholder="Search contract, reference (e.g. REF-000001), buyer, product..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full text-xs pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 focus:outline-hidden"
           />
         </div>
-
-        <input
-          type="text"
-          aria-label="Reference"
-          placeholder="Reference (e.g. REF-000001)"
-          value={businessReference}
-          onChange={(e) => { setBusinessReference(e.target.value); setPage(1); }}
-          className="w-full max-w-[13rem] text-xs px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg font-mono focus:ring-2 focus:ring-purple-400 focus:outline-hidden"
-        />
 
         {/* Status Filter */}
         <div className="flex items-center gap-2">
@@ -267,6 +260,7 @@ export default function PurchaseContractListPage() {
                   </th>
                   <th className="px-3.5 py-2.5">Status</th>
                   <th className="px-3.5 py-2.5">Buyer</th>
+                  <th className="px-3.5 py-2.5">Seller / Supplier</th>
                   <th className="px-3.5 py-2.5">Product</th>
                   <th className="px-3.5 py-2.5">Packing</th>
                   <th className="px-3.5 py-2.5 text-right">Qty</th>
@@ -278,6 +272,7 @@ export default function PurchaseContractListPage() {
                 {contracts.map((pc) => {
                   const refNo = pc.businessReference || pc.businessTransaction?.businessReference || "—";
                   const buyerName = pc.salesContract?.buyer?.entityName || pc.buyer?.entityName || "—";
+                  const sellerName = pc.seller?.entityName || pc.seller?.name || "—";
                   const productNames = (pc.productNames && pc.productNames.length > 0)
                     ? pc.productNames.join(", ")
                     : (pc.salesContract?.items?.map((i) => i.product?.name).filter(Boolean).join(", ") || "—");
@@ -308,8 +303,8 @@ export default function PurchaseContractListPage() {
                               type="button"
                               onClick={(e) => handleCopyBusinessReference(e, refNo)}
                               className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-                              title="Copy business reference"
-                              aria-label="Copy business reference"
+                              title="COPY BUSINESS REFERENCE"
+                              aria-label="COPY BUSINESS REFERENCE"
                             >
                               <Copy className="h-3.5 w-3.5" />
                             </button>
@@ -328,6 +323,10 @@ export default function PurchaseContractListPage() {
 
                       <td className="px-3.5 py-2.5 font-semibold text-gray-800 max-w-[140px] truncate">
                         {buyerName}
+                      </td>
+
+                      <td className="px-3.5 py-2.5 font-semibold text-gray-800 max-w-[140px] truncate">
+                        {sellerName}
                       </td>
 
                       <td className="px-3.5 py-2.5 text-gray-700 max-w-[120px] truncate" title={productNames}>
@@ -351,7 +350,7 @@ export default function PurchaseContractListPage() {
                           <button
                             onClick={() => router.push(`/sales/cargo-availability?purchaseContractId=${pc.id}`)}
                             className="px-2 py-1 text-[10px] font-bold text-cyan-700 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-colors inline-flex items-center gap-1 border border-cyan-200/60"
-                            title="Open Cargo Availability"
+                            title="OPEN CARGO AVAILABILITY"
                           >
                             <Truck className="h-3 w-3" />
                             <span>Cargo</span>
@@ -359,14 +358,14 @@ export default function PurchaseContractListPage() {
                           <button
                             onClick={() => router.push(`/sales/purchase-contracts/${pc.id}?mode=view`)}
                             className="p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors inline-flex items-center border border-purple-200/50"
-                            title="View"
+                            title="VIEW"
                           >
                             <Eye className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => router.push(`/sales/purchase-contracts/${pc.id}`)}
                             className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors inline-flex items-center border border-gray-200/50"
-                            title="Edit"
+                            title="EDIT"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
@@ -423,7 +422,7 @@ export default function PurchaseContractListPage() {
           setShowClearDraftsModal(false);
           clearDrafts();
         }}
-        title="Clear Drafts"
+        title="CLEAR DRAFTS"
         message="Are you sure you want to clear all draft purchase contracts?"
         confirmText="Clear Drafts"
         confirmButtonClass="bg-red-500 hover:bg-red-600"

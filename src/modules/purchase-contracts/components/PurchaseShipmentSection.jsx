@@ -142,7 +142,7 @@ export default function PurchaseShipmentSection({
 
                   {/* Purchase quantities are incoming stock and are never consumed here. */}
                   <td className="px-3 py-2 text-right whitespace-nowrap font-mono font-bold">
-                    <span className="text-emerald-600 inline-flex items-center gap-1" title="Incoming Stock">
+                    <span className="text-emerald-600 inline-flex items-center gap-1" title="INCOMING STOCK">
                       +{shpQty.toLocaleString("en-IN", { minimumFractionDigits: shpQty % 1 !== 0 ? 2 : 0 })} MT
                     </span>
                   </td>
@@ -168,7 +168,7 @@ export default function PurchaseShipmentSection({
                       type="button"
                       onClick={() => setSelectedShipment(s)}
                       className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors"
-                      title="View Details"
+                      title="VIEW DETAILS"
                     >
                       <Eye className="h-3.5 w-3.5" />
                     </button>
@@ -202,7 +202,7 @@ export default function PurchaseShipmentSection({
                   <td className="px-3 py-2.5 text-center font-mono text-gray-900">{totalContainers}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-gray-900">{Number.isInteger(totalQty) ? totalQty.toLocaleString("en-IN") : totalQty.toLocaleString("en-IN", { minimumFractionDigits: 2 })} MT</td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap font-mono font-bold">
-                    <span className="text-emerald-600" title="Incoming Stock">
+                    <span className="text-emerald-600" title="INCOMING STOCK">
                       +{totalIncomingStock.toLocaleString("en-IN", { minimumFractionDigits: totalIncomingStock % 1 !== 0 ? 2 : 0 })} MT
                     </span>
                   </td>

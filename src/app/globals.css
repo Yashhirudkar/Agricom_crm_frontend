@@ -67,6 +67,23 @@ body > * {
   }
 }
 
+.app-uppercase-ui input,
+.app-uppercase-ui textarea,
+.app-uppercase-ui select,
+.app-uppercase-ui option,
+.app-uppercase-ui [contenteditable="true"] {
+  text-transform: uppercase !important;
+}
+
+.app-uppercase-ui input::placeholder,
+.app-uppercase-ui textarea::placeholder {
+  text-transform: none !important;
+}
+
+.app-uppercase-ui select:has(> option:checked[value=""]) {
+  text-transform: none !important;
+}
+
 
 
 /* Consistent enterprise scrollbar theme */

@@ -63,7 +63,9 @@ export default function PurchaseContractInformationSection({
         {/* Fields Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
-            <label className={lbl}>Contract Date</label>
+            <label className={lbl}>
+              Contract Date <span className="text-red-500">*</span>
+            </label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{formatPurchaseDate(form.contractDate) || form.contractDate || "\u00A0"}</div>
             ) : (
@@ -85,7 +87,9 @@ export default function PurchaseContractInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Contract Type</label>
+            <label className={lbl}>
+              Contract Type <span className="text-red-500">*</span>
+            </label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{contractTypeDisplay || "\u00A0"}</div>
             ) : (
@@ -100,7 +104,9 @@ export default function PurchaseContractInformationSection({
 
           {/* Buyer Entity */}
           <div>
-            <label className={lbl}>Buyer Entity {isManual && !isView ? "*" : ""}</label>
+            <label className={lbl}>
+              Buyer Entity {isManual && !isView && <span className="text-red-500">*</span>}
+            </label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{form.buyerName || defaultBuyer || "\u00A0"}</div>
             ) : isManual && buyersOptions.length > 0 ? (
@@ -141,7 +147,9 @@ export default function PurchaseContractInformationSection({
 
           {/* Seller / Supplier Entity */}
           <div>
-            <label className={lbl}>Seller / Supplier {!isView && "*"}</label>
+            <label className={lbl}>
+              Seller / Supplier {!isView && <span className="text-red-500">*</span>}
+            </label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{form.supplierName || "\u00A0"}</div>
             ) : (
@@ -219,7 +227,7 @@ export default function PurchaseContractInformationSection({
                   maxLength={11}
                   placeholder="DD-MMM-YYYY"
                   className={`${inp} font-medium pr-9`}
-                  aria-label="Purchase Date (DD-MMM-YYYY)"
+                  aria-label="PURCHASE DATE (DD-MMM-YYYY)"
                 />
                 <button
                   type="button"
@@ -231,7 +239,7 @@ export default function PurchaseContractInformationSection({
                     }
                   }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#007aff]"
-                  aria-label="Choose Purchase Date"
+                  aria-label="CHOOSE PURCHASE DATE"
                 >
                   <CalendarDays className="h-4 w-4" />
                 </button>

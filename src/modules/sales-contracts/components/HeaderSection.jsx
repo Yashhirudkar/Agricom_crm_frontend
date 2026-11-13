@@ -124,7 +124,9 @@ export default function HeaderSection({ form, setForm, errors, isView, contractN
 
         {/* Contract Type */}
         <div>
-          <label className={lbl}>Contract Type</label>
+          <label className={lbl}>
+            Contract Type <span className="text-red-500">*</span>
+          </label>
           <div className="relative">
             <select
               value={form.contractType || "Export"}

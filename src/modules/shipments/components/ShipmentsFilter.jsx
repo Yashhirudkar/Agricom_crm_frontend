@@ -49,6 +49,7 @@ export default function ShipmentsFilter({
   selectedShipments = [],
   onExecuteBulk,
   onDeselect,
+  activeTab = "pending",
 }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [buyers, setBuyers] = useState([]);
@@ -129,7 +130,7 @@ export default function ShipmentsFilter({
         {/* Action Controls */}
         <div className="flex items-center gap-1.5 order-3 shrink-0">
           {/* Bulk Execute Workspace Action */}
-          {selectedShipments.length > 0 && (
+          {selectedShipments.length > 0 && activeTab !== "executed" && (
             <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
               <button
                 type="button"

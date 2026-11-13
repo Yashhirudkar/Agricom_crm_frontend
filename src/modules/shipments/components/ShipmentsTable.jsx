@@ -88,6 +88,8 @@ const getExecuteDisabledTooltip = (shipment) => {
 
 export default function ShipmentsTable({
   onRefresh,
+  onShipmentExecuted,
+  activeTab = "pending",
   shipments,
   loading,
   onRowClick,
@@ -231,9 +233,15 @@ export default function ShipmentsTable({
     return (
       <div className="flex flex-col items-center justify-center py-20 text-gray-500 gap-3 bg-white">
         <Ship className="h-12 w-12 text-gray-300 stroke-[1.5]" />
-        <span className="text-sm font-medium text-gray-700">No shipments found</span>
+        <span className="text-sm font-medium text-gray-700">
+          {activeTab === "executed"
+            ? "No stuffed / executed shipments found"
+            : "No pending shipments found"}
+        </span>
         <span className="text-sm text-gray-500 max-w-sm text-center">
-          No records match the current filters. Modify your search criteria or add shipments to Sales Contracts.
+          {activeTab === "executed"
+            ? "No shipments have completed stuffing/execution yet."
+            : "No records match the current filters. Modify your search criteria or add shipments to Sales Contracts."}
         </span>
       </div>
     );
@@ -307,11 +315,12 @@ export default function ShipmentsTable({
                   : primaryProduct;
 
               const isSelected = selectedShipments.includes(s.id);
-              // Show "Stuffed / Executed" button ONLY when stuffing is actually Completed
-              // stuffingCompleted = backend sets this true only when stuffingStatus === 'Completed'
-              // If shipment is Executed but stuffing is Pending/Draft → show "Execute" button instead
               const isExecuted =
+                activeTab === "executed" ||
                 s.stuffingCompleted === true ||
+                s.isExecuted === true ||
+                ["Executed", "Dispatched", "Completed"].includes(s.status) ||
+                ["Executed", "Loading Completed", "Dispatched", "Completed"].includes(s.executionStatus) ||
                 executedShipmentIds.has(s.id);
               const allocationsReady = Boolean(s.cargoReady && s.freightReady);
               const canExecute = allocationsReady && s.readyForShipment;
@@ -576,8 +585,19 @@ export default function ShipmentsTable({
           isOpen={!!stuffingShipment}
           shipment={stuffingShipment}
           onClose={() => setStuffingShipment(null)}
-          onSaveSuccess={() => {
+          onSaveSuccess={(data) => {
+            const executedShipment = {
+              ...stuffingShipment,
+              status: "Executed",
+              executionStatus: "Loading Completed",
+              stuffingCompleted: true,
+              isExecuted: true,
+              ...(data?.shipment || {}),
+              stuffingExecution: data?.record || stuffingShipment.stuffingExecution,
+            };
+            setExecutedShipmentIds((prev) => new Set([...prev, stuffingShipment.id]));
             setStuffingShipment(null);
+            if (onShipmentExecuted) onShipmentExecuted(executedShipment);
             if (onRefresh) onRefresh();
           }}
         />
