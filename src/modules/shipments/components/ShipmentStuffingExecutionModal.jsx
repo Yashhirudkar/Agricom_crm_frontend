@@ -57,6 +57,18 @@ const PRESET_DOCUMENTS = [
   "Other Documents",
 ];
 
+const TRANSPORTER_ROLES = [
+  "CHA",
+  "FREIGHT FORWARDER",
+  "TRANSPORT-DOMESTIC",
+  "TRANSPORT-INTERNATIONAL",
+];
+
+const normalizeMobileNumber = (value) => {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits ? `+${digits}` : "";
+};
+
 function SimpleTimePicker({ label, value, onChange, required = false }) {
   const parsedValue = /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value || "")
     ? parseTime(value)
@@ -258,6 +270,7 @@ export default function ShipmentStuffingExecutionModal({
       transporter: "",
     },
   ]);
+  const [transporterOptions, setTransporterOptions] = useState([]);
 
   // Section 5: Dynamic Attachments
   const [attachments, setAttachments] = useState([]);
@@ -268,6 +281,58 @@ export default function ShipmentStuffingExecutionModal({
   // Existing stuffing execution status
   const [stuffingStatus, setStuffingStatus] = useState("Draft");
   const [executionStatus, setExecutionStatus] = useState("Draft");
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+    const fetchTransporters = async () => {
+      try {
+        const params = {
+          roleName: TRANSPORTER_ROLES.join(","),
+          limit: 50,
+          page: 1,
+        };
+        const firstResponse = await axiosClient.get("/masters/partners/options", { params });
+        const firstPage = firstResponse.data?.data || firstResponse.data || [];
+        const totalPages = firstResponse.data?.totalPages || 1;
+        const remainingPages = await Promise.all(
+          Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
+            axiosClient.get("/masters/partners/options", {
+              params: { ...params, page: index + 2 },
+            }),
+          ),
+        );
+        const partners = [
+          ...(Array.isArray(firstPage) ? firstPage : []),
+          ...remainingPages.flatMap((response) => {
+            const page = response.data?.data || response.data || [];
+            return Array.isArray(page) ? page : [];
+          }),
+        ];
+
+        if (isMounted) {
+          setTransporterOptions(
+            [...new Set(
+              partners
+                .filter((partner) => partner.entityName)
+                .map((partner) => partner.entityName),
+            )],
+          );
+        }
+      } catch (error) {
+        console.error("Failed to load transporter partners", error);
+        if (isMounted) {
+          toast.error("Could not load transporter partners");
+        }
+      }
+    };
+
+    fetchTransporters();
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   // Fetch Auto-Populated Data and Trade Documents Master
   useEffect(() => {
@@ -334,7 +399,7 @@ export default function ShipmentStuffingExecutionModal({
                 existing.trucks.map((t) => ({
                   truckNo: t.truckNo || "",
                   driver: t.driver || "",
-                  mobile: t.mobile || t.driverPhone || "",
+                  mobile: normalizeMobileNumber(t.mobile || t.driverPhone),
                   transporter: t.transporter || "",
                 }))
               );
@@ -1371,22 +1436,37 @@ export default function ShipmentStuffingExecutionModal({
                             />
                           </td>
                           <td className="py-2 px-3">
-                            <input
-                              type="text"
-                              placeholder="e.g. +91 9876543210"
-                              value={t.mobile}
-                              onChange={(e) => handleTruckChange(idx, "mobile", e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden"
-                            />
+                            <div className="flex items-center w-full bg-white border border-slate-200 rounded-md focus-within:border-indigo-500">
+                              <span className="pl-2.5 text-xs text-slate-500">+</span>
+                              <input
+                                type="tel"
+                                placeholder="91 9876543210"
+                                value={String(t.mobile || "").replace(/^\+/, "")}
+                                onChange={(e) =>
+                                  handleTruckChange(
+                                    idx,
+                                    "mobile",
+                                    normalizeMobileNumber(e.target.value.replace(/^\+/, "")),
+                                  )
+                                }
+                                className="w-full min-w-0 px-1.5 py-1.5 bg-transparent text-xs outline-hidden"
+                              />
+                            </div>
                           </td>
                           <td className="py-2 px-3">
-                            <input
-                              type="text"
-                              placeholder="e.g. VRL Logistics"
+                            <select
                               value={t.transporter}
                               onChange={(e) => handleTruckChange(idx, "transporter", e.target.value)}
                               className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden"
-                            />
+                            >
+                              <option value="">Select transporter</option>
+                              {!transporterOptions.includes(t.transporter) && t.transporter && (
+                                <option value={t.transporter}>{t.transporter}</option>
+                              )}
+                              {transporterOptions.map((name, optionIndex) => (
+                                <option key={`${name}-${optionIndex}`} value={name}>{name}</option>
+                              ))}
+                            </select>
                           </td>
                           <td className="py-2 px-3 text-center">
                             <button
