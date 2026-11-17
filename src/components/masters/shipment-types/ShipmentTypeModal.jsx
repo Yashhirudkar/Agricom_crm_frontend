@@ -53,6 +53,82 @@ export default function ShipmentTypeModal({
           </div>
         </div>
 
+        {/* Dynamic Freight Engine Configuration */}
+        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-4">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-blue-900 flex items-center justify-between">
+            <span>Freight Rule Engine Metadata</span>
+            <span className="text-[10px] font-normal text-blue-600">Dynamic Rule Driven</span>
+          </p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={lbl}>
+                Stage Order (Integer) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                required
+                min="1"
+                step="1"
+                value={form.stageOrder ?? 1}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    stageOrder: e.target.value ? parseInt(e.target.value, 10) : 1,
+                  })
+                }
+                className={inp}
+                placeholder="1"
+              />
+              <p className="text-[10px] text-gray-500 mt-1">
+                Sequence order (e.g., 1 for FCA, 2 for FOB, 3 for CIF, 4 for DAP, 5 for DDP)
+              </p>
+            </div>
+
+            <div>
+              <label className={lbl}>
+                Location Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={form.locationType || "Port of Loading (POL)"}
+                onChange={(e) => setForm({ ...form, locationType: e.target.value })}
+                className={inp}
+              >
+                <option value="Pickup Location">Pickup Location</option>
+                <option value="Port of Loading (POL)">Port of Loading (POL)</option>
+                <option value="Port of Destination (POD)">Port of Destination (POD)</option>
+                <option value="Final Destination">Final Destination</option>
+              </select>
+              <p className="text-[10px] text-gray-500 mt-1">
+                Contractual handoff point
+              </p>
+            </div>
+          </div>
+
+          <label className="flex items-start gap-2.5 cursor-pointer select-none pt-1">
+            <input
+              type="checkbox"
+              id="freightRequiredAfterStage"
+              checked={Boolean(form.freightRequiredAfterStage)}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  freightRequiredAfterStage: e.target.checked,
+                })
+              }
+              className="mt-0.5 w-4 h-4 text-[#007aff] bg-white border-gray-300 rounded focus:ring-[#007aff] focus:ring-2"
+            />
+            <div className="text-xs">
+              <span className="font-semibold text-gray-800">
+                Freight Required After This Stage (Yes/No)
+              </span>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                When checked, shipments where Sales Stage &gt; Purchase Stage require freight booking &amp; allocation.
+              </p>
+            </div>
+          </label>
+        </div>
+
         {/* Configuration Checkboxes */}
         <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-200/60 space-y-3">
           <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">

@@ -29,17 +29,36 @@ export default function LogisticsQueuePage() {
   const urlShipmentId = searchParams?.get("shipmentId") || "";
   const urlShipmentRef = searchParams?.get("shipmentRef") || "";
   const urlFrom = searchParams?.get("from") || "";
+  const urlTab = searchParams?.get("tab") || searchParams?.get("type") || "";
+
+  // Helper to parse tab name from URL
+  const getTabFromUrl = (raw) => {
+    const t = (raw || "").toLowerCase().trim();
+    if (
+      t === "purchase-contracts" ||
+      t === "purchase_contracts" ||
+      t === "purchase-contract" ||
+      t === "purchase contracts"
+    ) {
+      return "Purchase Contracts";
+    }
+    if (t === "closed") return "Closed";
+    if (t === "hidden") return "Hidden";
+    if (t === "active" || t === "active-queue") return "Active";
+    return null;
+  };
 
   // Initial values based on deep-link query parameters
   const initialSearch = urlSearch || urlBusinessRef || "";
   const initialBusinessRef = urlBusinessRef || "";
+  const initialStatusFilter = getTabFromUrl(urlTab) || "Active";
 
   const [search, setSearch] = useState(initialSearch);
   const [businessReference, setBusinessReference] = useState(initialBusinessRef);
   const [businessReferenceSortOrder, setBusinessReferenceSortOrder] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [mode, setMode] = useState("All"); // All, Domestic, Export, Merchant Export
-  const [statusFilter, setStatusFilter] = useState("Active"); // Active, Closed, Hidden
+  const [statusFilter, setStatusFilter] = useState(initialStatusFilter); // Active, Closed, Hidden, Purchase Contracts
   const [page, setPage] = useState(1);
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
@@ -68,12 +87,17 @@ export default function LogisticsQueuePage() {
     const qSearch = searchParams.get("search") || "";
     const qBRef = searchParams.get("businessRef") || searchParams.get("businessReference") || "";
     const qOpen = searchParams.get("openDrawer") === "true";
+    const qTab = searchParams.get("tab") || searchParams.get("type") || "";
 
     if (qSearch || qBRef) {
       const targetQuery = qSearch || qBRef;
       setSearch(targetQuery);
       setDebouncedSearch(targetQuery);
       if (qBRef) setBusinessReference(qBRef);
+    }
+    if (qTab) {
+      const parsed = getTabFromUrl(qTab);
+      if (parsed) setStatusFilter(parsed);
     }
     if (qOpen) {
       autoOpenHandled.current = false;
@@ -153,9 +177,19 @@ export default function LogisticsQueuePage() {
     const fetchQueue = async () => {
       setLoading(true);
       try {
+        const tabParam =
+          statusFilter === "Purchase Contracts"
+            ? "purchase-contracts"
+            : statusFilter === "Hidden"
+            ? "hidden"
+            : statusFilter === "Closed"
+            ? "closed"
+            : "active";
+
         const params = {
           page,
           limit: 10,
+          tab: tabParam,
           ...(debouncedSearch && { search: debouncedSearch }),
           ...(businessReference && { businessReference }),
           ...(businessReferenceSortOrder && {
@@ -163,7 +197,8 @@ export default function LogisticsQueuePage() {
             sortOrder: businessReferenceSortOrder,
           }),
           ...(mode !== "All" && { mode }),
-          ...(statusFilter !== "Hidden" && { status: statusFilter }),
+          ...(statusFilter !== "Purchase Contracts" &&
+            statusFilter !== "Hidden" && { status: statusFilter }),
           ...(statusFilter === "Hidden" && { hiddenOnly: true }),
         };
         const res = await logisticsApi.getAll(params);
@@ -338,12 +373,13 @@ export default function LogisticsQueuePage() {
 
     try {
       await logisticsApi.unhideEnquiry(enquiry.id);
-      toast.success(`Enquiry ${enquiry.enquiryNo} restored to your Transport queue.`);
+      const targetLabel = enquiry.purchaseContract?.contractNumber || enquiry.enquiryNo || "Record";
+      toast.success(`${targetLabel} restored to your Transport queue.`);
       setRefreshKey((key) => key + 1);
     } catch (error) {
       toast.error(
         error?.response?.data?.message ||
-          "Failed to restore enquiry."
+          "Failed to restore record."
       );
       console.error("Failed to update personal Transport visibility", error);
     }
@@ -354,14 +390,18 @@ export default function LogisticsQueuePage() {
     setHideLoading(true);
     try {
       await logisticsApi.hideEnquiry(hideTargetEnquiry.id);
+      const targetLabel =
+        hideTargetEnquiry.purchaseContract?.contractNumber ||
+        hideTargetEnquiry.enquiryNo ||
+        "Record";
       toast.success(
-        `Enquiry ${hideTargetEnquiry.enquiryNo} hidden from your Transport queue.`
+        `${targetLabel} hidden from your Transport queue.`
       );
       setHideTargetEnquiry(null);
       setRefreshKey((key) => key + 1);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to hide enquiry.");
-      console.error("Failed to hide enquiry from personal Transport queue", error);
+      toast.error(error?.response?.data?.message || "Failed to hide record.");
+      console.error("Failed to hide record from personal Transport queue", error);
     } finally {
       setHideLoading(false);
     }
@@ -408,16 +448,19 @@ export default function LogisticsQueuePage() {
               { id: "Active", label: "Active Queue" },
               { id: "Closed", label: "Closed" },
               { id: "Hidden", label: "Hidden" },
+              { id: "Purchase Contracts", label: "Purchase Contracts" },
             ].map((st) => (
               <button
                 key={st.id}
                 onClick={() => setStatusFilter(st.id)}
                 className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   statusFilter === st.id
-                    ? "bg-slate-800 text-white shadow-xs"
-                    : statusFilter === "Hidden" && st.id === "Hidden"
-                    ? "bg-amber-600 text-white shadow-xs"
-                    : "bg-white text-gray-900 shadow-xs border border-gray-200/50"
+                    ? st.id === "Purchase Contracts"
+                      ? "bg-blue-600 text-white shadow-xs"
+                      : st.id === "Hidden"
+                      ? "bg-amber-600 text-white shadow-xs"
+                      : "bg-slate-800 text-white shadow-xs"
+                    : "bg-white text-gray-900 shadow-xs border border-gray-200/50 hover:text-gray-600"
                 }`}
               >
                 {st.label}
@@ -459,6 +502,7 @@ export default function LogisticsQueuePage() {
           onManage={handleOpenDrawer}
           onToggleHidden={handleToggleHidden}
           hiddenOnly={statusFilter === "Hidden"}
+          isPurchaseContractsTab={statusFilter === "Purchase Contracts"}
           highlightedRowId={highlightedRowId}
           onSortBusinessReference={() =>
             setBusinessReferenceSortOrder((order) => (order === "ASC" ? "DESC" : "ASC"))
@@ -488,7 +532,11 @@ export default function LogisticsQueuePage() {
         onConfirm={confirmHideEnquiry}
         isLoading={hideLoading}
         title="Hide from Transport?"
-        message={`Hide enquiry "${hideTargetEnquiry?.enquiryNo}" from your Transport queue? It will remain available in Enquiries and can be restored from the Hidden tab.`}
+        message={`Hide ${
+          hideTargetEnquiry?.purchaseContract?.contractNumber
+            ? `contract "${hideTargetEnquiry.purchaseContract.contractNumber}"`
+            : `enquiry "${hideTargetEnquiry?.enquiryNo}"`
+        } from your Transport queue? It will remain available and can be restored from the Hidden tab.`}
         confirmLabel="Hide from Transport"
         confirmVariant="primary"
       />

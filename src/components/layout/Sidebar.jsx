@@ -100,47 +100,8 @@ export function Sidebar() {
     userType === "super_admin" ||
     userType === "client_admin" ||
     hasPermission("stock_management:view");
-  const hasDocumentsPermission =
-    userType === "super_admin" ||
-    userType === "client_admin" ||
-    hasPermission("shipment_stuffing_execution:view") ||
-    hasPermission("export_invoice:view");
-
-  const hasDocumentsFolder = menuConfig.some(
-    (section) =>
-      (section.title && section.title.toLowerCase() === "documents") ||
-      (section.name && section.name.toLowerCase() === "documents") ||
-      section.items?.some(
-        (it) => it.href === "/documents/shipment-stuffing-execution" || it.href === "/documents/export-invoices"
-      )
-  );
 
   let rawSections = [...menuConfig];
-  if (!hasDocumentsFolder && hasDocumentsPermission) {
-    rawSections.push({
-      id: "documents-folder",
-      title: "Documents",
-      type: "parent",
-      isCollapsible: true,
-      icon: "Folder",
-      items: [
-        {
-          id: "shipment-stuffing-execution",
-          name: "Shipment Stuffing Execution",
-          icon: "FileText",
-          href: "/documents/shipment-stuffing-execution",
-          permission: "shipment_stuffing_execution:view",
-        },
-        {
-          id: "export-invoices",
-          name: "Export Invoice",
-          icon: "Receipt",
-          href: "/documents/export-invoices",
-          permission: "export_invoice:view",
-        },
-      ],
-    });
-  }
 
   const formattedMenu = rawSections
     .map(section => {
@@ -163,22 +124,6 @@ export function Sidebar() {
                 icon: "Layers",
                 href: "/sales/stock",
                 permission: "stock_management:view",
-              });
-            }
-            const isDocSection =
-              (section.title && section.title.toLowerCase().includes("document")) ||
-              (section.name && section.name.toLowerCase().includes("document")) ||
-              section.id === "documents-folder";
-            const hasInvoiceItem = filtered.some(
-              it => it.href === "/documents/export-invoices"
-            );
-            if (isDocSection && !hasInvoiceItem && hasDocumentsPermission) {
-              filtered.push({
-                id: "export-invoices",
-                name: "Export Invoice",
-                icon: "Receipt",
-                href: "/documents/export-invoices",
-                permission: "export_invoice:view",
               });
             }
             return filtered;

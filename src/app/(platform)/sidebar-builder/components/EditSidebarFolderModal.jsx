@@ -8,6 +8,7 @@ export default function EditSidebarFolderModal({ isOpen, onClose, onSave, folder
   const [name, setName] = useState("");
   const [iconName, setIconName] = useState("");
   const [iconColor, setIconColor] = useState("#000000");
+  const [isActive, setIsActive] = useState(true);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
 
   useEffect(() => {
@@ -15,10 +16,12 @@ export default function EditSidebarFolderModal({ isOpen, onClose, onSave, folder
       setName(folder.name || "");
       setIconName(folder.icon_name || "");
       setIconColor(folder.icon_color || "#000000");
+      setIsActive(folder.is_active !== false);
     } else {
       setName("");
       setIconName("");
       setIconColor("#000000");
+      setIsActive(true);
     }
   }, [folder, isOpen]);
 
@@ -28,6 +31,7 @@ export default function EditSidebarFolderModal({ isOpen, onClose, onSave, folder
       name,
       icon_name: iconName,
       icon_color: iconColor,
+      is_active: isActive,
     });
   };
 
@@ -111,6 +115,29 @@ export default function EditSidebarFolderModal({ isOpen, onClose, onSave, folder
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Visibility Toggle */}
+            <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-lg border border-gray-200">
+              <div>
+                <span className="text-[13px] font-semibold text-gray-800 block">
+                  Folder Visibility
+                </span>
+                <span className="text-[11px] text-gray-500 block">
+                  When turned OFF, this folder and its items are hidden from everyone (including admin).
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsActive(!isActive)}
+                className={`px-3 py-1 rounded-md text-[11px] font-bold tracking-wider uppercase transition-colors ${
+                  isActive
+                    ? "bg-emerald-600 text-white"
+                    : "bg-gray-200 text-gray-600"
+                }`}
+              >
+                {isActive ? "Visible (ON)" : "Hidden (OFF)"}
+              </button>
             </div>
 
             {/* Preview Section */}

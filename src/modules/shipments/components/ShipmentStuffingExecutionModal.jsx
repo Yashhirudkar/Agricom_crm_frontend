@@ -1307,7 +1307,7 @@ export default function ShipmentStuffingExecutionModal({
             <div className="h-7 w-px bg-slate-200 hidden sm:block" />
             <div>
               <span className="text-slate-500 font-medium">Incoterm & Route:</span>
-              <p className="font-bold text-slate-800">{autoData.incoterm || "FOB"} • {autoData.originPort || "POL"} ➔ {autoData.destinationPort || "POD"}</p>
+              <p className="font-bold text-slate-800">{autoData.incoterm || autoData.shipmentType || "—"} • {autoData.originPort || "POL"} ➔ {autoData.destinationPort || "POD"}</p>
             </div>
           </div>
 
@@ -1461,7 +1461,7 @@ export default function ShipmentStuffingExecutionModal({
                         </div>
                         <div>
                           <span className="text-slate-400 font-medium">Incoterm</span>
-                          <p className="font-semibold text-slate-900">{autoData.incoterm || "FOB"}</p>
+                          <p className="font-semibold text-slate-900">{autoData.incoterm || autoData.shipmentType || "—"}</p>
                         </div>
                         <div>
                           <span className="text-slate-400 font-medium">Payment Terms</span>

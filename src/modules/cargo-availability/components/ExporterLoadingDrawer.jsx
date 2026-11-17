@@ -344,7 +344,7 @@ export default function ExporterLoadingDrawer({
                     <div className={itemCls}>
                       <span className={lblCls}>Port / Incoterms</span>
                       <span className={valCls}>
-                        {salesContract.portOfDischarge || "—"} ({salesContract.incoterms || "FOB"})
+                        {salesContract.portOfDischarge || "—"} ({salesContract.shipmentType?.code || salesContract.incoterms || "—"})
                       </span>
                     </div>
                     <div className="mt-2 p-2.5 bg-indigo-50/70 border border-indigo-100 rounded-lg flex items-center justify-between text-xs">

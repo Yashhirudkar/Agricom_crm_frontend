@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { logisticsApi } from "@/modules/logistics/services/logisticsApi";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { isFreightRequiredForShipment } from "../utils/freightRuleEngine";
 
 export default function FreightAllocationDrawer({
   shipment,
@@ -31,7 +32,6 @@ export default function FreightAllocationDrawer({
   useEscapeKey(onClose, Boolean(shipment));
 
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
   const [logisticsDetails, setLogisticsDetails] = useState(null);
 
   useEffect(() => {
@@ -41,7 +41,6 @@ export default function FreightAllocationDrawer({
     const targetEnquiryId =
       shipment.logisticsId || shipment.logistics?.enquiryId;
     if (targetEnquiryId) {
-      setLoading(true);
       logisticsApi
         .getDetails(targetEnquiryId)
         .then((res) => {
@@ -49,9 +48,6 @@ export default function FreightAllocationDrawer({
         })
         .catch((err) => {
           console.warn("Could not load full logistics details:", err);
-        })
-        .finally(() => {
-          setLoading(false);
         });
     }
   }, [shipment]);
@@ -76,11 +72,8 @@ export default function FreightAllocationDrawer({
     "â€”";
 
   const currency = contract.currencyCode || "USD";
-  const isFreightNotApplicable =
-    shipment.isFreightNotApplicable ||
-    shipment.freightAllocationStatus === "Not Applicable" ||
-    shipment.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false ||
-    shipment.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
+  const isFreightRequired = isFreightRequiredForShipment(shipment);
+  const isFreightNotApplicable = !isFreightRequired;
 
   const directFreight = shipment.freight ? Number(shipment.freight) : null;
 
@@ -203,9 +196,9 @@ export default function FreightAllocationDrawer({
             <div className="p-4 rounded-xl bg-slate-100/90 border border-slate-200 flex items-start gap-3 text-xs text-slate-700">
               <AlertCircle className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-slate-900">Freight Allocation is Yes</p>
+                <p className="font-semibold text-slate-900">Freight Allocation is Not Required</p>
                 <p className="mt-0.5 text-slate-600">
-                  This shipment is associated with a Shipment Type where Delivery Place is Not Applicable. Freight Allocation is automatically set to Yes and satisfies the readiness gate.
+                  Based on the Shipment Type Master rule engine, freight allocation is not required for this shipment stage and automatically satisfies the readiness gate.
                 </p>
               </div>
             </div>

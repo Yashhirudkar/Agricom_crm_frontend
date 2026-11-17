@@ -5,7 +5,7 @@ import axiosInstance from "@/lib/axios";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import Modal from "@/components/modals/Modal";
 import ConfirmModal from "@/components/modals/ConfirmModal";
-import { Plus, Edit2, Trash2, Folder, Layout, Check, AlertCircle, GripVertical, Palette } from "lucide-react";
+import { Plus, Edit2, Trash2, Folder, Layout, Check, AlertCircle, GripVertical, Palette, Eye, EyeOff, ChevronDown } from "lucide-react";
 import { getDynamicIcon } from "@/components/layout/sidebar-components/icons";
 import EditSidebarFolderModal from "./components/EditSidebarFolderModal";
 import EditSidebarItemModal from "./components/EditSidebarItemModal";
@@ -41,7 +41,7 @@ export default function SidebarBuilderPage() {
       setRefreshing(true);
     }
     try {
-      const res = await axiosInstance.get(`/system/sidebar/tree?t=${Date.now()}`);
+      const res = await axiosInstance.get(`/system/sidebar/tree?include_inactive=true&t=${Date.now()}`);
       setTree(res.data);
     } catch (err) {
       showToast("Failed to load sidebar tree", "error");
@@ -181,11 +181,39 @@ export default function SidebarBuilderPage() {
       await axiosInstance.patch(`/system/sidebar/folder/${folder.id}`, {
         is_collapsible: newValue,
       });
-      showToast(`Folder is now ${newValue ? "collapsible" : "standard"}`);
+      showToast(`Folder is now ${newValue ? "collapsible (accordion)" : "standard (static)"}`);
       fetchTree();
       window.dispatchEvent(new Event("sidebar-updated"));
     } catch (err) {
       showToast("Failed to update folder mode", "error");
+    }
+  };
+
+  const handleToggleActive = async (folder) => {
+    const newValue = folder.is_active === false ? true : false;
+    try {
+      await axiosInstance.patch(`/system/sidebar/folder/${folder.id}`, {
+        is_active: newValue,
+      });
+      showToast(`Folder is now ${newValue ? "visible in sidebar (ON)" : "hidden from sidebar (OFF)"}`);
+      fetchTree();
+      window.dispatchEvent(new Event("sidebar-updated"));
+    } catch (err) {
+      showToast("Failed to update folder visibility", "error");
+    }
+  };
+
+  const handleToggleItemActive = async (item) => {
+    const newValue = item.is_active === false ? true : false;
+    try {
+      await axiosInstance.patch(`/system/sidebar/item/${item.id}`, {
+        is_active: newValue,
+      });
+      showToast(`Item "${item.name}" is now ${newValue ? "visible" : "hidden"}`);
+      fetchTree();
+      window.dispatchEvent(new Event("sidebar-updated"));
+    } catch (err) {
+      showToast("Failed to update item visibility", "error");
     }
   };
 
@@ -238,14 +266,19 @@ export default function SidebarBuilderPage() {
                 {tree.map((folder, folderIndex) => (
                   <Draggable key={`folder-${folder.id}`} draggableId={`folder-${folder.id}`} index={folderIndex}>
                     {(prov) => (
-                      <div ref={prov.innerRef} {...prov.draggableProps} className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
-                        <div className="flex items-center justify-between p-3 bg-gray-100/50 border-b border-gray-200">
+                      <div ref={prov.innerRef} {...prov.draggableProps} className={`rounded-xl border overflow-hidden transition-all ${folder.is_active === false ? "bg-gray-100/70 border-dashed border-gray-300 opacity-80" : "bg-gray-50 border-gray-200"}`}>
+                        <div className={`flex items-center justify-between p-3 border-b transition-colors ${folder.is_active === false ? "bg-gray-200/50 border-gray-200" : "bg-gray-100/50 border-gray-200"}`}>
                           <div className="flex items-center gap-3">
                             <div {...prov.dragHandleProps} className="p-1 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600">
                               <GripVertical className="h-4 w-4" />
                             </div>
                             <Folder className="h-4 w-4" style={folder.icon_color ? { color: folder.icon_color } : { color: "#007aff" }} />
-                            <span className="text-sm font-bold text-gray-700 uppercase tracking-wider">{folder.name}</span>
+                            <span className={`text-sm font-bold uppercase tracking-wider ${folder.is_active === false ? "text-gray-500 line-through" : "text-gray-700"}`}>{folder.name}</span>
+                            {folder.is_active === false && (
+                              <span className="text-[10px] bg-rose-50 text-rose-600 border border-rose-200 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                Hidden (OFF)
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             {folder.id !== 0 && (
@@ -257,12 +290,12 @@ export default function SidebarBuilderPage() {
                                   <Palette className="h-4 w-4" />
                                 </button>
 
-                                {/* Collapsible Toggle — segmented mechanical switch */}
+                                {/* Visibility Toggle — ON / OFF (Hides completely from everyone including admin) */}
                                 <button
-                                  onClick={() => handleToggleCollapsible(folder)}
-                                  title={folder.is_collapsible ? "Collapsible ON — click to disable" : "Collapsible OFF — click to enable"}
+                                  onClick={() => handleToggleActive(folder)}
+                                  title={folder.is_active !== false ? "Visible in sidebar — click to turn OFF (hide completely from everyone including admin)" : "Hidden from sidebar — click to turn ON (make visible in sidebar)"}
                                   className={`
-                                    inline-flex items-center justify-center
+                                    inline-flex items-center justify-center gap-1.5
                                     px-2.5 py-0.5
                                     rounded-md
                                     border
@@ -271,13 +304,45 @@ export default function SidebarBuilderPage() {
                                     transition-all duration-150
                                     active:scale-95
                                     focus:outline-none
-                                    ${folder.is_collapsible
-                                      ? "bg-[#007aff] border-[#0062cc] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_2px_4px_rgba(0,122,255,0.35)]"
-                                      : "bg-gray-100 border-gray-300 text-gray-400 shadow-[inset_0_2px_3px_rgba(0,0,0,0.08)] hover:bg-gray-200 hover:text-gray-500"
+                                    ${folder.is_active !== false
+                                      ? "bg-emerald-600 border-emerald-700 text-white shadow-sm hover:bg-emerald-700"
+                                      : "bg-gray-100 border-gray-300 text-gray-400 shadow-[inset_0_2px_3px_rgba(0,0,0,0.08)] hover:bg-gray-200 hover:text-gray-600"
                                     }
                                   `}
                                 >
-                                  {folder.is_collapsible ? "ON" : "OFF"}
+                                  {folder.is_active !== false ? (
+                                    <>
+                                      <Eye className="h-3 w-3" />
+                                      <span>ON</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <EyeOff className="h-3 w-3" />
+                                      <span>OFF</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                {/* Collapsible Toggle */}
+                                <button
+                                  onClick={() => handleToggleCollapsible(folder)}
+                                  title={folder.is_collapsible ? "Collapsible ON (Accordion) — click to make static" : "Collapsible OFF (Static) — click to make accordion"}
+                                  className={`
+                                    inline-flex items-center gap-1
+                                    px-2 py-0.5
+                                    rounded-md
+                                    border
+                                    text-[10px] font-semibold
+                                    select-none cursor-pointer
+                                    transition-all
+                                    ${folder.is_collapsible
+                                      ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                                      : "bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100"
+                                    }
+                                  `}
+                                >
+                                  <ChevronDown className={`h-3 w-3 transition-transform ${folder.is_collapsible ? "rotate-180" : ""}`} />
+                                  <span>{folder.is_collapsible ? "Accordion" : "Static"}</span>
                                 </button>
 
                                 <button
@@ -309,14 +374,19 @@ export default function SidebarBuilderPage() {
                                 return (
                                   <Draggable key={`item-${item.id}`} draggableId={`item-${item.id}`} index={itemIndex}>
                                     {(dragProv) => (
-                                      <div ref={dragProv.innerRef} {...dragProv.draggableProps} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 shadow-sm hover:border-blue-200 transition-colors">
+                                      <div ref={dragProv.innerRef} {...dragProv.draggableProps} className={`flex items-center justify-between p-3 rounded-lg border shadow-sm transition-all ${item.is_active === false ? "bg-gray-50/80 border-gray-200 opacity-60" : "bg-white border-gray-100 hover:border-blue-200"}`}>
                                         <div className="flex items-center gap-3">
                                           <div {...dragProv.dragHandleProps} className="p-1 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600">
                                             <GripVertical className="h-4 w-4" />
                                           </div>
                                           <ItemIcon className="h-4 w-4" style={{ color: activeColor }} />
                                           <div className="flex items-center gap-2">
-                                            <span className="text-sm font-semibold text-gray-700">{item.name}</span>
+                                            <span className={`text-sm font-semibold ${item.is_active === false ? "text-gray-400 line-through" : "text-gray-700"}`}>{item.name}</span>
+                                            {item.is_active === false && (
+                                              <span className="text-[10px] bg-rose-50 text-rose-600 border border-rose-200 font-semibold px-1.5 py-0.5 rounded">
+                                                Hidden
+                                              </span>
+                                            )}
                                             {!isInheriting && (
                                               <span className="text-[10px] bg-gray-100 text-gray-500 border border-gray-200 px-1.5 py-0.5 rounded font-medium">Custom</span>
                                             )}
@@ -329,6 +399,24 @@ export default function SidebarBuilderPage() {
                                           )}
                                         </div>
                                         <div className="flex items-center gap-1">
+                                          {/* Item Visibility Toggle */}
+                                          <button
+                                            onClick={() => handleToggleItemActive(item)}
+                                            title={item.is_active !== false ? "Visible in sidebar — click to hide" : "Hidden from sidebar — click to show"}
+                                            className={`
+                                              p-1.5 rounded-md border text-xs font-bold transition-all cursor-pointer
+                                              ${item.is_active !== false
+                                                ? "text-emerald-600 hover:bg-emerald-50 border-transparent hover:border-emerald-200"
+                                                : "text-rose-500 bg-rose-50 border-rose-200 hover:bg-rose-100"
+                                              }
+                                            `}
+                                          >
+                                            {item.is_active !== false ? (
+                                              <Eye className="h-3.5 w-3.5" />
+                                            ) : (
+                                              <EyeOff className="h-3.5 w-3.5" />
+                                            )}
+                                          </button>
                                           <button
                                             onClick={() => openEditItem(item)}
                                             className="p-1 text-gray-400 hover:text-[#007aff] transition-colors"

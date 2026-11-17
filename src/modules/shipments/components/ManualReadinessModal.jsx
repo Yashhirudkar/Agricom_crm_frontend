@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   X,
   Check,
@@ -16,6 +16,7 @@ import { shipmentsApi } from "../services/shipmentsApi";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { isFreightRequiredForShipment } from "../utils/freightRuleEngine";
 
 export default function ManualReadinessModal({
   shipment,
@@ -32,29 +33,34 @@ export default function ManualReadinessModal({
     hasPermission("shipments:edit");
 
   // Options: "default" | "yes" | "no"
-  const [selectedOption, setSelectedOption] = useState("default");
-  const [reason, setReason] = useState("");
+  const [prevShipmentId, setPrevShipmentId] = useState(shipment?.id);
+  const [selectedOption, setSelectedOption] = useState(() => {
+    if (shipment?.manualReadyOverride === true) return "yes";
+    if (shipment?.manualReadyOverride === false) return "no";
+    return "default";
+  });
+  const [reason, setReason] = useState(() => shipment?.manualReadyReason || "");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (shipment) {
-      if (shipment.manualReadyOverride === true) {
-        setSelectedOption("yes");
-      } else if (shipment.manualReadyOverride === false) {
-        setSelectedOption("no");
-      } else {
-        setSelectedOption("default");
-      }
-      setReason(shipment.manualReadyReason || "");
-      setError("");
+  if (shipment && shipment.id !== prevShipmentId) {
+    setPrevShipmentId(shipment.id);
+    if (shipment.manualReadyOverride === true) {
+      setSelectedOption("yes");
+    } else if (shipment.manualReadyOverride === false) {
+      setSelectedOption("no");
+    } else {
+      setSelectedOption("default");
     }
-  }, [shipment, isOpen]);
+    setReason(shipment.manualReadyReason || "");
+    setError("");
+  }
 
   if (!isOpen || !shipment) return null;
 
-  // System Ready = YES strictly when Cargo Allocation = Allocated AND Freight Allocation = Allocated
-  const isSystemReady = Boolean(shipment.cargoReady && shipment.freightReady);
+  // System Ready = YES strictly when Cargo Allocation = Allocated AND (Freight Allocation = Allocated OR Freight Not Required)
+  const isFreightRequired = isFreightRequiredForShipment(shipment);
+  const isSystemReady = Boolean(shipment.cargoReady && (!isFreightRequired || shipment.freightReady));
 
   const handleSave = async (e) => {
     e?.preventDefault();
@@ -192,68 +198,63 @@ export default function ManualReadinessModal({
             </div>
 
             {/* Breakdown */}
-            {(() => {
-              const isFreightNotApplicable =
-                shipment.isFreightNotApplicable ||
-                shipment.freightAllocationStatus === "Not Applicable" ||
-                shipment.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false ||
-                shipment.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
-
-              return (
-                <>
-                  <div className="grid grid-cols-2 gap-2.5 pt-1 text-xs">
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200">
-                      <span className="text-gray-600">Cargo Allocation:</span>
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium shadow-2xs ${
-                          shipment.cargoReady
-                            ? "bg-green-50 text-green-700 border-green-200"
-                            : "bg-red-50 text-red-700 border-red-200"
-                        }`}
-                      >
-                        {shipment.cargoReady ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                        ) : (
-                          <XCircle className="w-3.5 h-3.5 text-red-600" />
-                        )}
-                        <span>{shipment.cargoReady ? "Yes" : "No"}</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200">
-                      <span className="text-gray-600">Freight Allocation:</span>
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium shadow-2xs ${
-                          isFreightNotApplicable || shipment.freightReady
-                            ? "bg-green-50 text-green-700 border-green-200"
-                            : "bg-red-50 text-red-700 border-red-200"
-                        }`}
-                      >
-                        {isFreightNotApplicable || shipment.freightReady ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                        ) : (
-                          <XCircle className="w-3.5 h-3.5 text-red-600" />
-                        )}
-                        <span>{isFreightNotApplicable || shipment.freightReady ? "Yes" : "No"}</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Reasons if system not ready */}
-                  {!isSystemReady && (
-                    <div className="text-[11px] text-gray-500 bg-white/70 p-2 rounded-lg border border-gray-100">
-                      <span className="font-semibold text-gray-700">System Ready Logic:</span>{" "}
-                      {isFreightNotApplicable
-                        ? "Cargo Allocation is pending. (Freight Allocation is automatically Yes for this Shipment Type)."
-                        : !shipment.cargoReady && !shipment.freightReady
-                        ? "Both Cargo Allocation and Freight Allocation are pending."
-                        : !shipment.cargoReady
-                        ? "Cargo Allocation is pending."
-                        : "Freight Allocation is pending."}
-                    </div>
+            <div className="grid grid-cols-2 gap-2.5 pt-1 text-xs">
+              <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200">
+                <span className="text-gray-600">Cargo Allocation:</span>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium shadow-2xs ${
+                    shipment.cargoReady
+                      ? "bg-green-50 text-green-700 border-green-200"
+                      : "bg-red-50 text-red-700 border-red-200"
+                  }`}
+                >
+                  {shipment.cargoReady ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                  ) : (
+                    <XCircle className="w-3.5 h-3.5 text-red-600" />
                   )}
-                </>
-              );
-            })()}
+                  <span>{shipment.cargoReady ? "Yes" : "No"}</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200">
+                <span className="text-gray-600">Freight Allocation:</span>
+                {!isFreightRequired ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium shadow-2xs bg-slate-100 text-slate-600 border-slate-200">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Not Required</span>
+                  </span>
+                ) : (
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium shadow-2xs ${
+                      shipment.freightReady
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : "bg-red-50 text-red-700 border-red-200"
+                    }`}
+                  >
+                    {shipment.freightReady ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                    ) : (
+                      <XCircle className="w-3.5 h-3.5 text-red-600" />
+                    )}
+                    <span>{shipment.freightReady ? "Yes" : "No"}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Reasons if system not ready */}
+            {!isSystemReady && (
+              <div className="text-[11px] text-gray-500 bg-white/70 p-2 rounded-lg border border-gray-100">
+                <span className="font-semibold text-gray-700">System Ready Logic:</span>{" "}
+                {!isFreightRequired
+                  ? "Cargo Allocation is pending. (Freight Allocation is not required based on Shipment Type Master)."
+                  : !shipment.cargoReady && !shipment.freightReady
+                  ? "Both Cargo Allocation and Freight Allocation are pending."
+                  : !shipment.cargoReady
+                  ? "Cargo Allocation is pending."
+                  : "Freight Allocation is pending."}
+              </div>
+            )}
           </div>
 
           {/* SECTION 2: Manual Override */}
@@ -407,7 +408,7 @@ export default function ManualReadinessModal({
                 <div className="text-gray-600 text-[11px]">
                   Reason:{" "}
                   <span className="italic text-gray-800">
-                    "{shipment.manualReadyReason}"
+                    &quot;{shipment.manualReadyReason}&quot;
                   </span>
                 </div>
               )}

@@ -117,7 +117,7 @@ export default function DirectFreightQuoteDrawer({
         } else {
           // Legacy mapping
           setRoutes([{
-            origin: quote.loadingPoint || "",
+            origin: quote.origin || quote.loadingPoint || "",
             destination: quote.destination || "",
             rates: [{
               partnerId: quote.sellerId || "",

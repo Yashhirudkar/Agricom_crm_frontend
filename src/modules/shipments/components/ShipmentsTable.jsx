@@ -19,6 +19,7 @@ import ManualReadinessModal from "./ManualReadinessModal";
 import ShipmentStuffingExecutionModal from "./ShipmentStuffingExecutionModal";
 import ShipmentRefTooltip from "./ShipmentRefTooltip";
 import { copyToClipboard } from "@/utils/clipboard";
+import { isFreightRequiredForShipment } from "../utils/freightRuleEngine";
 
 const getTimelineDisplay = (timeline = {}) => {
   const parsedDays = Number(timeline.days);
@@ -481,18 +482,15 @@ export default function ShipmentsTable({
                   {/* Freight Allocation Column */}
                   <td className="px-3 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                     {(() => {
-                      const isFreightNotApplicable =
-                        s.isFreightNotApplicable ||
-                        s.freightAllocationStatus === "Not Applicable" ||
-                        s.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
+                      const isFreightRequired = isFreightRequiredForShipment(s);
 
-                      if (isFreightNotApplicable) {
+                      if (!isFreightRequired) {
                         return (
                           <span
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed shadow-2xs"
-                            title="Freight Allocation is automatically Yes for this Shipment Type (configured in Shipment Type Master)"
+                            className="text-gray-400 font-medium select-none"
+                            title="Freight Allocation is not required for this shipment"
                           >
-                            Yes
+                            —
                           </span>
                         );
                       }

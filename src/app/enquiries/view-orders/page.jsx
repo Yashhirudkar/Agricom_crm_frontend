@@ -11,7 +11,6 @@ import Pagination from "@/components/common/Pagination";
 import PartnerFollowUpDrawer from "@/components/masters/partners/PartnerFollowUpDrawer";
 import EnquiryDrawer from "@/modules/enquiries/components/EnquiryDrawer";
 import TransportDrawer from "@/modules/logistics/components/TransportDrawer";
-import LoadingPointsDrawer from "@/modules/enquiries/components/LoadingPointsDrawer";
 
 export default function CompletedEnquiriesListPage() {
   const router = useRouter();
@@ -31,9 +30,6 @@ export default function CompletedEnquiriesListPage() {
 
   // Transport Drawer state (View Only)
   const [transportEnquiry, setTransportEnquiry] = useState(null);
-
-  // Loading Points Drawer state
-  const [loadingPointsEnquiry, setLoadingPointsEnquiry] = useState(null);
 
   const completedQuery = useEnquiries(
     activeCompanyId,
@@ -152,7 +148,6 @@ export default function CompletedEnquiriesListPage() {
             setIsFormOpen(true);
           }}
           onOpenTransport={(e) => setTransportEnquiry(e)}
-          onOpenLoadingPoints={(e) => setLoadingPointsEnquiry(e)}
         />
 
         <Pagination
@@ -196,13 +191,6 @@ export default function CompletedEnquiriesListPage() {
         onClose={() => setTransportEnquiry(null)}
         enquiry={transportEnquiry}
         isReadOnly={true}
-      />
-
-      {/* Loading Points Drawer */}
-      <LoadingPointsDrawer
-        isOpen={loadingPointsEnquiry !== null}
-        onClose={() => setLoadingPointsEnquiry(null)}
-        enquiry={loadingPointsEnquiry}
       />
     </div>
   );

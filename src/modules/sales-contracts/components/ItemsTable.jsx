@@ -3,6 +3,7 @@ import React from "react";
 import { Package, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { cleanNumberValue, formatInputVal, formatNumberDisplay } from "../utils/formatUtils";
 import { isDivisible } from "../utils/scheduleUtils";
+import { getContractTransportMode } from "../utils/quantityUtils";
 
 function getCurrencySymbol(code) {
   if (!code) return "";
@@ -19,7 +20,7 @@ function getCurrencySymbol(code) {
 }
 
 const emptyItem = () => ({
-  productId: "", origin: "", quality: "", qtyPerCount: "", quantity: "", unitPrice: "", amount: 0,
+  productId: "", origin: "", quality: "", qtyPerCount: "", containerType: "40 FT", quantity: "", unitPrice: "", amount: 0,
   bagTypeId: "", packingTypeId: "", bagSpecificationId: "", marking: "", remarks: "",
 });
 
@@ -40,6 +41,15 @@ export default function ItemsTable({ form, setForm, errors, masters, isView }) {
   const currencySymbol = getCurrencySymbol(currency);
   const selectClass = "w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#007aff]/30 focus:border-[#007aff] bg-white";
   const inputClass = `${selectClass} disabled:bg-gray-50`;
+
+  const modeStr = String(form.originTransportMode || form.destinationTransportMode || form.transportMode || "").toLowerCase();
+  const isSeaFreight =
+    modeStr !== "road" &&
+    modeStr !== "truck" &&
+    modeStr !== "rail" &&
+    modeStr !== "air" &&
+    modeStr !== "bulk" &&
+    (modeStr === "sea" || modeStr === "ocean" || modeStr === "" || getContractTransportMode(form) === "SEA");
 
   const addItem = () => setForm(f => ({ ...f, items: [...(f.items || []), emptyItem()] }));
   const removeItem = (idx) => setForm(f => ({ ...f, items: (f.items || []).filter((_, i) => i !== idx) }));
@@ -103,8 +113,21 @@ export default function ItemsTable({ form, setForm, errors, masters, isView }) {
                   <ItemField label="Bag Type" required isView={isView}><select value={item.bagTypeId || ""} onChange={e => updateItem(idx, "bagTypeId", e.target.value ? Number(e.target.value) : "")} disabled={isView} className={selectClass}><option value="">Bag Type</option>{masters.bagTypes.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></ItemField>
                   <ItemField label="Quality" required isView={isView}><input type="text" value={item.quality || ""} onChange={e => updateItem(idx, "quality", e.target.value)} disabled={isView} className={inputClass} placeholder="Quality" /></ItemField>
                 </div>
-                <div className="grid grid-cols-1 gap-3 mt-3 sm:grid-cols-2 lg:grid-cols-5">
+                <div className={`grid grid-cols-1 gap-3 mt-3 sm:grid-cols-2 ${isSeaFreight ? "lg:grid-cols-6" : "lg:grid-cols-5"}`}>
                   <ItemField label="Bag Specification" required isView={isView}><select value={item.bagSpecificationId || ""} onChange={e => updateItem(idx, "bagSpecificationId", e.target.value ? Number(e.target.value) : null)} disabled={isView} className={selectClass}><option value="">Bag Spec.</option>{masters.bagSpecifications.map(b => <option key={b.id} value={b.id}>{[(b.width && b.length) ? `${b.width}x${b.length}` : "", b.emptyBagWeight ? `${b.emptyBagWeight}g` : ""].filter(Boolean).join(" - ") || `Spec #${b.id}`}</option>)}</select></ItemField>
+                  {isSeaFreight && (
+                    <ItemField label="Container Type" required isView={isView}>
+                      <select
+                        value={item.containerType || "40 FT"}
+                        onChange={e => updateItem(idx, "containerType", e.target.value)}
+                        disabled={isView}
+                        className={selectClass}
+                      >
+                        <option value="40 FT">40 FT</option>
+                        <option value="20 FT">20 FT</option>
+                      </select>
+                    </ItemField>
+                  )}
                   <ItemField label="Qty Per Count" required isView={isView}>{numberField(item, idx, "qtyPerCount", "0")}</ItemField>
                   <ItemField label="Qty (MT)" required isView={isView}>{numberField(item, idx, "quantity", "0", "1")}</ItemField>
                   <ItemField label="Unit Price" required isView={isView}>{numberField(item, idx, "unitPrice", "0", "0.01")}</ItemField>

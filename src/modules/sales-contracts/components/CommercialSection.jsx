@@ -15,6 +15,7 @@ import {
 import CountrySelect from "@/components/common/CountrySelect";
 import { getAlpha2Code } from "@/lib/countryUtils";
 import { getShipmentTypeShortForm } from "../utils/formatUtils";
+import TransportDetailsGrid from "@/modules/common/components/TransportDetailsGrid";
 
 
 // ---------------------------------------------------------------------------
@@ -129,23 +130,18 @@ function LocationSelect({ value, onChange, options, loadOptions, placeholder, is
     return options;
   }, [options, value]);
 
-  const selectedOption = combinedOptions.find((o) => o.value === value) || null;
+  const selectedOption = React.useMemo(() => {
+    if (!value) return null;
+    return combinedOptions.find((o) => o.value === value) || { value, label: value };
+  }, [combinedOptions, value]);
 
   const selectProps = {
     value: selectedOption,
-    onChange: (opt, actionMeta) => {
-      const val = opt ? opt.value : "";
-      onChange(val);
-      if (actionMeta && actionMeta.action === 'create-option' && onCreateCustom) {
-        onCreateCustom(val);
-      }
-    },
+    onChange: (opt) => onChange(opt ? opt.value : ""),
     placeholder,
     isDisabled,
-    isSearchable,
     isClearable: true,
-    menuPortalTarget: typeof document !== 'undefined' ? document.body : null,
-    menuPosition: "fixed",
+    isSearchable,
     styles: {
       ...selectStyles,
       menuPortal: (base) => ({ ...base, zIndex: 9999 }),
@@ -464,9 +460,12 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
 
             {destinationSelectionMode === "enquiry" ? (
               <div>
-                <label className={lbl}>Enquiry Destination</label>
+                <label className={lbl}>
+                  Enquiry Destination <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
+                  id="enquiryDestination"
                   value={form.enquiryDestination || ""}
                   onChange={(e) =>
                     setForm((f) => ({
@@ -474,17 +473,20 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
                       enquiryDestination: e.target.value,
                     }))
                   }
-                  readOnly={isView}
-                  placeholder="Enter destination"
-                  className={`${inp}${isView ? " text-gray-700 bg-gray-50/50" : ""}`}
+                  disabled={isView}
+                  className={`${inp} ${errors.enquiryDestination ? "border-red-300" : ""}`}
+                  placeholder="Enter or confirm delivery destination"
                 />
+                {errors.enquiryDestination && (
+                  <p className={err}>{errors.enquiryDestination}</p>
+                )}
               </div>
             ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* Destination Country */}
               <div>
                 <label className={lbl}>
-                  Country
+                  Country <span className="text-red-500">*</span>
                 </label>
                 {isView ? (
                   <div className={`${inp} text-gray-700 bg-gray-50/50`}>
@@ -567,14 +569,34 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
                   const requiresDelivery = nextType
                     ? nextType.salesContractDeliveryPlaceRequired !== false
                     : true;
+                  const nextIncoterm = nextType
+                    ? (getShipmentTypeShortForm(nextType) || nextType.code || nextType.name)
+                    : "";
 
-                  setForm((f) => ({
-                    ...f,
-                    shipmentTypeId: nextId,
-                    ...(requiresDelivery
-                      ? {}
-                      : { destinationLocationName: "", deliveryPlace: "" }),
-                  }));
+                  setForm((f) => {
+                    const currentRoutes = Array.isArray(f.transportDetails) ? [...f.transportDetails] : [];
+                    let updatedRoutes = currentRoutes;
+                    if (nextIncoterm) {
+                      if (currentRoutes.length === 0) {
+                        updatedRoutes = [{
+                          sequence: 1,
+                          origin: f.originLocationName || "",
+                          incoterm: nextIncoterm,
+                          destination: f.destinationLocationName || f.enquiryDestination || "",
+                        }];
+                      } else {
+                        updatedRoutes = currentRoutes.map((r, i) => (i === 0 ? { ...r, incoterm: nextIncoterm } : r));
+                      }
+                    }
+                    return {
+                      ...f,
+                      shipmentTypeId: nextId,
+                      transportDetails: updatedRoutes,
+                      ...(requiresDelivery
+                        ? {}
+                        : { destinationLocationName: "", deliveryPlace: "" }),
+                    };
+                  });
                 }}
                 disabled={isView}
                 className={`${inp} appearance-none pr-8 ${errors.shipmentTypeId ? "border-red-300" : ""}`}
@@ -657,6 +679,42 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
             {errors.currencyCode && <p className={err}>{errors.currencyCode}</p>}
           </div>
 
+        </div>
+
+        {/* ── Transport Details (Origin → Incoterm → Destination) ───────── */}
+        <div className="pt-2 border-t border-gray-100 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-xs font-bold text-gray-900">Transport Details</h4>
+              <p className="text-[11px] text-gray-400">
+                Define shipment routes (Origin → Incoterm → Destination). Freight requirement is auto-calculated.
+              </p>
+            </div>
+          </div>
+          <TransportDetailsGrid
+            routes={form.transportDetails || []}
+            onChange={(updated) => {
+              const firstIncoterm = updated?.[0]?.incoterm;
+              let matchingShipmentTypeId = form.shipmentTypeId;
+              if (firstIncoterm && masters?.shipmentTypes) {
+                const match = masters.shipmentTypes.find(
+                  (st) =>
+                    (st.code && st.code.toLowerCase() === firstIncoterm.toLowerCase()) ||
+                    (st.name && st.name.toLowerCase() === firstIncoterm.toLowerCase()) ||
+                    (firstIncoterm.toLowerCase().includes((st.code || "").toLowerCase()))
+                );
+                if (match) matchingShipmentTypeId = match.id;
+              }
+              setForm((f) => ({
+                ...f,
+                transportDetails: updated,
+                shipmentTypeId: matchingShipmentTypeId || f.shipmentTypeId,
+              }));
+            }}
+            shipmentTypes={masters?.shipmentTypes || []}
+            isView={isView}
+            error={errors?.transportDetails}
+          />
         </div>
 
       </div>

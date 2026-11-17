@@ -23,13 +23,25 @@ import { City } from 'country-state-city';
 
 export const TRANSPORT_MODES = [
   { value: 'sea', label: 'Sea Freight' },
-  { value: 'air', label: 'Air Freight' },
   { value: 'road', label: 'Road Transport' },
+  { value: 'bulk', label: 'Bulk Vessel' },
   { value: 'rail', label: 'Rail Freight / Wagon' },
+  { value: 'air', label: 'Air Freight' },
 ];
 
 export const TRANSPORT_MODE_CONFIG = {
   sea: {
+    originLabel: 'Port of Loading',
+    destLabel: 'Port of Discharge',
+    originPlaceholder: 'Select port of loading',
+    destPlaceholder: 'Select port of discharge',
+    originError: 'Port of Loading is required',
+    destError: 'Port of Discharge is required',
+    noCountryHint: 'Select origin country first',
+    noDestCountryHint: 'Select destination country first',
+    isSearchable: true,
+  },
+  bulk: {
     originLabel: 'Port of Loading',
     destLabel: 'Port of Discharge',
     originPlaceholder: 'Select port of loading',

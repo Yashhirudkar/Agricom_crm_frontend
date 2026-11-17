@@ -39,6 +39,57 @@ import PortSelector from "@/components/common/PortSelector";
 import axiosClient from "@/lib/axios";
 import { getAllCountryOptions } from "@/lib/countryUtils";
 import usePermissions from "@/hooks/usePermissions";
+import TransportDetailsGrid from "@/modules/common/components/TransportDetailsGrid";
+
+function resolveIncotermFromData(data, mastersShipmentTypes = []) {
+  if (!data) return "";
+
+  // 1. From linked sales contract
+  const sc = data.salesContract;
+  if (sc) {
+    const scIncoterm =
+      sc.incoterm ||
+      sc.shipmentType?.code ||
+      sc.shipmentType?.name ||
+      sc.transportDetails?.[0]?.incoterm;
+    if (scIncoterm) {
+      const match = mastersShipmentTypes.find(
+        (st) =>
+          (st.code && st.code.toLowerCase() === scIncoterm.toLowerCase()) ||
+          (st.name && st.name.toLowerCase() === scIncoterm.toLowerCase())
+      );
+      if (match) return match.code || match.name;
+      return scIncoterm;
+    }
+  }
+
+  // 2. From transportDetails
+  if (data.transportDetails && data.transportDetails.length > 0) {
+    const tdIncoterm = data.transportDetails[0].incoterm;
+    if (tdIncoterm) {
+      const match = mastersShipmentTypes.find(
+        (st) =>
+          (st.code && st.code.toLowerCase() === tdIncoterm.toLowerCase()) ||
+          (st.name && st.name.toLowerCase() === tdIncoterm.toLowerCase())
+      );
+      if (match) return match.code || match.name;
+      return tdIncoterm;
+    }
+  }
+
+  // 3. Match against shipmentTerms or shipmentType if it represents an Incoterm
+  const cand = data.incoterm || data.shipmentTerms || data.shipmentType;
+  if (cand && mastersShipmentTypes.length > 0) {
+    const match = mastersShipmentTypes.find(
+      (st) =>
+        (st.code && st.code.toLowerCase() === cand.toLowerCase()) ||
+        (st.name && st.name.toLowerCase() === cand.toLowerCase())
+    );
+    if (match) return match.code || match.name;
+  }
+
+  return "";
+}
 
 export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, onSaveSuccess }) {
   const { masters, loading: mastersLoading } = useEnquiriesMasters();
@@ -91,18 +142,19 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     potentialEnquiry: false,
     bidType: "TARGET",
     note: "",
-          status: "",
-          closureReason: "",
-          closureRemark: "",
-          closedBy: "",
-          closedByName: "",
-          closedAt: "",
     status: "",
     closureReason: "",
     closureRemark: "",
     closedBy: "",
     closedByName: "",
     closedAt: "",
+    status: "",
+    closureReason: "",
+    closureRemark: "",
+    closedBy: "",
+    closedByName: "",
+    closedAt: "",
+    transportDetails: [],
   });
 
   const [initialFormState, setInitialFormState] = useState({});
@@ -143,6 +195,33 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     if (isOpen) {
       if (editData) {
         setCreatedByName(editData.createdByName || editData.creator?.name || "");
+        const existingDest = editData.destinationCountry || editData.destinationPort || editData.destinationCity || "";
+        const existingIncoterm = resolveIncotermFromData(editData, shipmentTypes);
+        let resolvedTransportDetails = (editData.transportDetails && editData.transportDetails.length > 0)
+          ? editData.transportDetails.map((r, i) => ({
+              sequence: r.sequence || i + 1,
+              origin: r.origin || editData.originPort || editData.originCity || editData.originCountryId || "",
+              incoterm: r.incoterm || existingIncoterm || "",
+              destination: r.destination || existingDest,
+            }))
+          : [];
+
+        if (resolvedTransportDetails.length === 0 && (existingDest || existingIncoterm)) {
+          resolvedTransportDetails = [{
+            sequence: 1,
+            origin: editData.originPort || editData.originCity || editData.originCountryId || "",
+            incoterm: existingIncoterm || "",
+            destination: existingDest,
+          }];
+        } else if (resolvedTransportDetails.length > 0) {
+          if (!resolvedTransportDetails[0].destination && existingDest) {
+            resolvedTransportDetails[0].destination = existingDest;
+          }
+          if (!resolvedTransportDetails[0].incoterm && existingIncoterm) {
+            resolvedTransportDetails[0].incoterm = existingIncoterm;
+          }
+        }
+
         const initialForm = {
           enquiryNo: editData.enquiryNo || "",
           enquiryDate: editData.enquiryDate ? editData.enquiryDate.split("T")[0] : "",
@@ -183,6 +262,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           closedBy: editData.closedBy || editData.closedByUser?.id || "",
           closedByName: editData.closedByName || editData.closedByUser?.name || "",
           closedAt: editData.closedAt || "",
+          transportDetails: resolvedTransportDetails,
         };
         setForm(initialForm);
         setInitialFormState(initialForm);
@@ -194,6 +274,34 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           .then((fresh) => {
             if (fresh) {
               setCreatedByName(fresh.createdByName || fresh.creator?.name || fresh.creator?.email || "");
+
+              const freshDest = fresh.destinationCountry || fresh.destinationPort || fresh.destinationCity || existingDest;
+              const freshIncoterm = resolveIncotermFromData(fresh, shipmentTypes) || existingIncoterm;
+              let freshTransportDetails = (fresh.transportDetails && fresh.transportDetails.length > 0)
+                ? fresh.transportDetails.map((r, i) => ({
+                    sequence: r.sequence || i + 1,
+                    origin: r.origin || fresh.originPort || fresh.originCity || fresh.originCountryId || "",
+                    incoterm: r.incoterm || freshIncoterm || "",
+                    destination: r.destination || freshDest,
+                  }))
+                : [];
+
+              if (freshTransportDetails.length === 0 && (freshDest || freshIncoterm)) {
+                freshTransportDetails = [{
+                  sequence: 1,
+                  origin: fresh.originPort || fresh.originCity || fresh.originCountryId || "",
+                  incoterm: freshIncoterm || "",
+                  destination: freshDest,
+                }];
+              } else if (freshTransportDetails.length > 0) {
+                if (!freshTransportDetails[0].destination && freshDest) {
+                  freshTransportDetails[0].destination = freshDest;
+                }
+                if (!freshTransportDetails[0].incoterm && freshIncoterm) {
+                  freshTransportDetails[0].incoterm = freshIncoterm;
+                }
+              }
+
               const freshForm = {
                 enquiryNo: fresh.enquiryNo || "",
                 enquiryDate: fresh.enquiryDate ? fresh.enquiryDate.split("T")[0] : "",
@@ -234,6 +342,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                 closedBy: fresh.closedBy || fresh.closedByUser?.id || "",
                 closedByName: fresh.closedByName || fresh.closedByUser?.name || "",
                 closedAt: fresh.closedAt || "",
+                transportDetails: freshTransportDetails,
               };
               setForm(freshForm);
               setInitialFormState(freshForm);
@@ -279,6 +388,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           potentialEnquiry: false,
           bidType: "TARGET",
           note: "",
+          transportDetails: [],
         };
         setForm(emptyForm);
         setInitialFormState(emptyForm);
@@ -331,7 +441,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     return () => clearTimeout(timer);
   }, [partnerSearch, form.partnerRoleId, fetchPartnerOptions]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (form.partnerId) {
       const found = partnerOptions.find((p) => p.id === form.partnerId);
       if (found) {
@@ -585,6 +695,16 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       }
     }
 
+    if (form.transportDetails && Array.isArray(form.transportDetails) && form.transportDetails.length > 0) {
+      for (let i = 0; i < form.transportDetails.length; i++) {
+        const r = form.transportDetails[i];
+        if (!r.origin?.trim() || !r.incoterm?.trim() || !r.destination?.trim()) {
+          newErrors.transportDetails = `Route #${i + 1} is incomplete. Origin, Incoterm, and Destination are all required.`;
+          break;
+        }
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -678,6 +798,22 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
         }
       } else {
         delete payload.partnerAnnualTurnover;
+      }
+
+      if (form.transportDetails && Array.isArray(form.transportDetails)) {
+        payload.transportDetails = form.transportDetails
+          .filter((r) => (r.origin && r.origin.trim()) || (r.incoterm && r.incoterm.trim()) || (r.destination && r.destination.trim()))
+          .map((r, i) => ({
+            sequence: i + 1,
+            origin: (r.origin || "").trim(),
+            incoterm: (r.incoterm || "").trim(),
+            destination: (r.destination || "").trim(),
+          }));
+
+        const firstDest = payload.transportDetails.find((r) => r.destination)?.destination;
+        if (firstDest) {
+          payload.destinationCountry = firstDest;
+        }
       }
 
       if (notifyGroup) {
@@ -1113,7 +1249,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                         )}
                       </div>
                     )}
-                                        {errors.partnerId && <p className={err}>{errors.partnerId}</p>}
+                    {errors.partnerId && <p className={err}>{errors.partnerId}</p>}
                   </div>
 
                   {/* Annual Sales (Turnover) */}
@@ -1129,15 +1265,15 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                         tabIndex={editData || isViewMode || partnerTurnoverHasMasterValue ? -1 : undefined}
                         value={
                           (partnerTurnoverHasMasterValue || editData || isViewMode) &&
-                          form.partnerAnnualTurnover !== null &&
-                          form.partnerAnnualTurnover !== undefined &&
-                          form.partnerAnnualTurnover !== "" &&
-                          !isNaN(Number(form.partnerAnnualTurnover))
+                            form.partnerAnnualTurnover !== null &&
+                            form.partnerAnnualTurnover !== undefined &&
+                            form.partnerAnnualTurnover !== "" &&
+                            !isNaN(Number(form.partnerAnnualTurnover))
                             ? new Intl.NumberFormat("en-IN", {
-                                style: "currency",
-                                currency: "INR",
-                                maximumFractionDigits: 2,
-                              }).format(Number(form.partnerAnnualTurnover))
+                              style: "currency",
+                              currency: "INR",
+                              maximumFractionDigits: 2,
+                            }).format(Number(form.partnerAnnualTurnover))
                             : form.partnerAnnualTurnover ?? ""
                         }
                         onChange={(e) =>
@@ -1232,7 +1368,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                     </div>
                   </div>
 
-                  {/* Commercial Specifications: Quantity, Offer, Currency, Destination, Bid */}
+                  {/* Commercial Specifications: Quantity, Offer, Currency, Bid */}
                   <div className="col-span-full grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* Quantity */}
                     <div>
@@ -1256,21 +1392,6 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                         />
                       )}
                     </div>
-                    {/* Destination */}
-                    <div>
-                      <label className={lbl}>Destination</label>
-                      {isViewMode ? (
-                        <div className={inp}>{form.destinationCountry || "—"}</div>
-                      ) : (
-                        <input
-                          type="text"
-                          className={inp}
-                          placeholder="e.g. Rotterdam, Netherlands"
-                          value={form.destinationCountry}
-                          onChange={(e) => setForm((f) => ({ ...f, destinationCountry: e.target.value }))}
-                        />
-                      )}
-                    </div>
                     {/* Expected Shipment Date */}
                     <div>
                       <label className={lbl}>Expected Shipment Date</label>
@@ -1284,7 +1405,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                     </div>
 
 
-                    {/* Broker Details */}
+                    {/* Price Details */}
                     <div className="col-span-full pt-3 pb-0.5">
                       <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
                         <span>Price Details</span>
@@ -1410,6 +1531,27 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
 
                   </div>
 
+                  {/* Transport Details */}
+                  <div className="col-span-full pt-3 pb-0.5">
+                    <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-2.5">
+                      <span>Transport Details</span>
+                      <div className="h-px bg-gray-100 flex-1" />
+                    </div>
+                    <TransportDetailsGrid
+                      routes={form.transportDetails || []}
+                      onChange={(updated) => {
+                        const firstDest = updated.find((r) => r.destination && r.destination.trim())?.destination || "";
+                        setForm((f) => ({
+                          ...f,
+                          transportDetails: updated,
+                          destinationCountry: firstDest || f.destinationCountry,
+                        }));
+                      }}
+                      shipmentTypes={shipmentTypes}
+                      isView={isViewMode}
+                      error={errors.transportDetails}
+                    />
+                  </div>
 
                   {/* Broker Details */}
                   <div className="col-span-full pt-3 pb-0.5">

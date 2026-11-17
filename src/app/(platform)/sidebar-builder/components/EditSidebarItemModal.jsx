@@ -12,6 +12,7 @@ export default function EditSidebarItemModal({ isOpen, onClose, onSave, item, tr
   const [iconName, setIconName] = useState("");
   const [useFolderColor, setUseFolderColor] = useState(true);
   const [iconColor, setIconColor] = useState("#000000");
+  const [isActive, setIsActive] = useState(true);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export default function EditSidebarItemModal({ isOpen, onClose, onSave, item, tr
       setIconName(item.icon_name || "");
       setUseFolderColor(item.use_folder_color !== undefined ? item.use_folder_color : true);
       setIconColor(item.icon_color || "#000000");
+      setIsActive(item.is_active !== false);
     } else {
       setName("");
       setRoute("");
@@ -31,6 +33,7 @@ export default function EditSidebarItemModal({ isOpen, onClose, onSave, item, tr
       setIconName("");
       setUseFolderColor(true);
       setIconColor("#000000");
+      setIsActive(true);
     }
   }, [item, isOpen, tree]);
 
@@ -44,6 +47,7 @@ export default function EditSidebarItemModal({ isOpen, onClose, onSave, item, tr
       icon_name: iconName,
       use_folder_color: useFolderColor,
       icon_color: useFolderColor ? null : iconColor,
+      is_active: isActive,
     });
   };
 
@@ -224,6 +228,29 @@ export default function EditSidebarItemModal({ isOpen, onClose, onSave, item, tr
 
                 </div>
               </div>
+            </div>
+
+            {/* Visibility Toggle */}
+            <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-lg border border-gray-200">
+              <div>
+                <span className="text-[13px] font-semibold text-gray-800 block">
+                  Item Visibility
+                </span>
+                <span className="text-[11px] text-gray-500 block">
+                  When turned OFF, this item is hidden from everyone (including admin).
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsActive(!isActive)}
+                className={`px-3 py-1 rounded-md text-[11px] font-bold tracking-wider uppercase transition-colors ${
+                  isActive
+                    ? "bg-emerald-600 text-white"
+                    : "bg-gray-200 text-gray-600"
+                }`}
+              >
+                {isActive ? "Visible (ON)" : "Hidden (OFF)"}
+              </button>
             </div>
 
             {/* Actions */}

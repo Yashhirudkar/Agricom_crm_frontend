@@ -11,7 +11,6 @@ import EnquiriesFilter from "@/modules/enquiries/components/EnquiriesFilter";
 import Pagination from "@/components/common/Pagination";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import EnquiryDrawer from "@/modules/enquiries/components/EnquiryDrawer";
-import LoadingPointsDrawer from "@/modules/enquiries/components/LoadingPointsDrawer";
 import TransportDrawer from "@/modules/logistics/components/TransportDrawer";
 
 export default function TempOrdersPage() {
@@ -29,9 +28,8 @@ export default function TempOrdersPage() {
   const [editEnquiry, setEditEnquiry] = useState(null);
   const [isViewMode, setIsViewMode] = useState(false);
 
-  // Transport & Loading Points Drawer states
+  // Transport Drawer state
   const [transportEnquiry, setTransportEnquiry] = useState(null);
-  const [loadingPointsEnquiry, setLoadingPointsEnquiry] = useState(null);
 
   // Fetch enquiries based on the active tab status. 
   // We pass false for both withoutSalesContract and withoutPurchaseContract
@@ -190,13 +188,6 @@ export default function TempOrdersPage() {
         onClose={() => setTransportEnquiry(null)}
         enquiry={transportEnquiry}
         isReadOnly={true}
-      />
-
-      {/* Loading Points Drawer */}
-      <LoadingPointsDrawer
-        isOpen={loadingPointsEnquiry !== null}
-        onClose={() => setLoadingPointsEnquiry(null)}
-        enquiry={loadingPointsEnquiry}
       />
     </div>
   );

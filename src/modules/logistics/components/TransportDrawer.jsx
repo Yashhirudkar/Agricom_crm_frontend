@@ -276,31 +276,65 @@ export default function TransportDrawer({
     const pcOrigin = (hasPc && pc.placeOfLoading) ? pc.placeOfLoading : null;
     const scDest = (hasSc && (sc.destinationLocationName || sc.portOfDischarge || sc.deliveryPlace))
       ? (sc.destinationLocationName || sc.portOfDischarge || sc.deliveryPlace)
-      : (details?.destination !== "—" ? details?.destination : null);
+      : (details?.destination && details.destination !== "—" ? details.destination : null);
 
-    if (!details?.logistics?.routes || details.logistics.routes.length === 0) {
-      const o = pcOrigin || "—";
-      const d = scDest || "—";
-      return [{ id: "pc-sc", origin: o, destination: d, label: `${o} → ${d}` }];
+    const enquiryRoutes = details?.enquiry?.transportDetails || enquiry?.transportDetails || [];
+    const targetRoute = enquiry?.transportRoute;
+
+    if (details?.logistics?.routes && details.logistics.routes.length > 0) {
+      return details.logistics.routes.map((r, idx) => {
+        const matchingTd = enquiryRoutes[idx] || (idx === 0 ? targetRoute : null);
+        const origin = (r.origin && r.origin !== "Unknown Origin" && r.origin !== "—")
+          ? r.origin
+          : (pcOrigin || matchingTd?.origin || enquiry?.origin || details?.enquiry?.originPort || details?.enquiry?.originCity || "—");
+
+        const destination = (r.destination && r.destination !== "Unknown Destination" && r.destination !== "—")
+          ? r.destination
+          : (scDest || matchingTd?.destination || enquiry?.destination || details?.destination || details?.enquiry?.destinationCountry || "—");
+
+        const incoterm = matchingTd?.incoterm || enquiry?.incoterm || details?.purchaseContract?.shipmentTypeName || null;
+
+        return {
+          id: r.id,
+          origin,
+          destination,
+          incoterm,
+          label: `${origin} → ${destination}`
+        };
+      });
     }
-    
-    return details.logistics.routes.map(r => {
-      const origin = pcOrigin || r.origin;
-      const destination = scDest || r.destination;
-      return {
-        id: r.id,
-        origin,
-        destination,
-        label: `${origin} → ${destination}`
-      };
-    });
+
+    if (enquiryRoutes.length > 0) {
+      return enquiryRoutes.map((td, idx) => ({
+        id: td.id || `td_${idx + 1}`,
+        origin: td.origin || pcOrigin || "—",
+        destination: td.destination || scDest || "—",
+        incoterm: td.incoterm || null,
+        label: `${td.origin || pcOrigin || "—"} → ${td.destination || scDest || "—"}`
+      }));
+    }
+
+    const fallbackO = pcOrigin || enquiry?.origin || details?.enquiry?.originPort || details?.enquiry?.originCity || "—";
+    const fallbackD = scDest || enquiry?.destination || details?.destination || details?.enquiry?.destinationCountry || "—";
+    return [{ id: "pc-sc", origin: fallbackO, destination: fallbackD, incoterm: enquiry?.incoterm || null, label: `${fallbackO} → ${fallbackD}` }];
   }, [details, enquiry]);
 
   useEffect(() => {
-    if (availableRoutes.length > 0 && (!selectedRoute || !availableRoutes.find(r => r.id === selectedRoute.id))) {
-      setSelectedRoute(availableRoutes[0]);
+    if (availableRoutes.length > 0) {
+      const target = enquiry?.transportRoute || enquiry;
+      let matched = null;
+      if (target?.origin && target?.destination) {
+        matched = availableRoutes.find(
+          (r) =>
+            r.origin?.toLowerCase() === target.origin?.toLowerCase() &&
+            r.destination?.toLowerCase() === target.destination?.toLowerCase()
+        );
+      }
+      if (!selectedRoute || !availableRoutes.find((r) => r.id === selectedRoute.id)) {
+        setSelectedRoute(matched || availableRoutes[0]);
+      }
     }
-  }, [availableRoutes, selectedRoute]);
+  }, [availableRoutes, selectedRoute, enquiry]);
 
   // Timeline
   const [activities, setActivities] = useState([]);
@@ -401,12 +435,14 @@ export default function TransportDrawer({
   };
 
   const loadDetails = useCallback(async () => {
-    if (!enquiry?.id) return;
+    const rawEnquiryId = enquiry?.enquiryId || enquiry?.id;
+    const cleanEnquiryId = rawEnquiryId ? String(rawEnquiryId).split('_')[0] : rawEnquiryId;
+    if (!cleanEnquiryId) return;
     setLoading(true);
     setShipmentNotFoundError(false);
     try {
       const sId = effectiveTargetShipmentId ? Number(effectiveTargetShipmentId) : undefined;
-      const res = await logisticsApi.getDetails(enquiry.id, sId);
+      const res = await logisticsApi.getDetails(cleanEnquiryId, sId);
       setDetails(res.data);
 
       const log = res.data?.logistics;
@@ -765,22 +801,36 @@ export default function TransportDrawer({
                 {(details?.purchaseContract?.contractNumber || enquiry?.purchaseContract?.contractNumber) ? (
                   <>
                     <span>PC: <strong className="text-slate-700">{details?.purchaseContract?.contractNumber || enquiry?.purchaseContract?.contractNumber}</strong></span>
-                    <span>•</span>
-                    <span>Enquiry: <strong className="text-slate-500">{enquiry?.enquiryNo}</strong></span>
+                    {enquiry?.enquiryNo && (
+                      <>
+                        <span>•</span>
+                        <span>Enquiry: <strong className="text-slate-500">{enquiry.enquiryNo}</strong></span>
+                      </>
+                    )}
                   </>
                 ) : (
-                  <span>Enquiry: <strong className="text-slate-700">{enquiry?.enquiryNo}</strong></span>
+                  <span>Enquiry: <strong className="text-slate-700">{enquiry?.enquiryNo || "—"}</strong></span>
                 )}
                 <span>•</span>
                 <span>Buyer: <strong className="text-slate-700">{enquiry?.partner?.entityName || "Standard Buyer"}</strong></span>
-                {(details?.purchaseContract?.shipmentTypeName || enquiry?.purchaseContract?.shipmentTypeName) && (
-                  <>
-                    <span>•</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                      {details?.purchaseContract?.shipmentTypeName || enquiry?.purchaseContract?.shipmentTypeName}
-                    </span>
-                  </>
-                )}
+                {(() => {
+                  const incotermDisplay =
+                    selectedRoute?.incoterm ||
+                    enquiry?.incoterm ||
+                    enquiry?.transportRoute?.incoterm ||
+                    details?.enquiry?.transportDetails?.[0]?.incoterm ||
+                    enquiry?.transportDetails?.[0]?.incoterm ||
+                    details?.purchaseContract?.shipmentTypeName ||
+                    enquiry?.purchaseContract?.shipmentTypeName;
+                  return incotermDisplay ? (
+                    <>
+                      <span>•</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        {incotermDisplay}
+                      </span>
+                    </>
+                  ) : null;
+                })()}
               </p>
             </div>
           </div>

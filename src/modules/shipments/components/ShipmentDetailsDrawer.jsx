@@ -26,32 +26,25 @@ import {
 } from "lucide-react";
 import ShipmentStuffingExecutionModal from "./ShipmentStuffingExecutionModal";
 import ManualReadinessModal from "./ManualReadinessModal";
+import { isFreightRequiredForShipment } from "../utils/freightRuleEngine";
 
 // Dynamic Tooltip Reason Helper for Shipment Readiness
 const getExecuteDisabledTooltip = (shipment) => {
-  if (!shipment?.cargoReady || !shipment?.freightReady) {
-    return "Complete Cargo & Freight Allocation first";
-  }
+  const isFreightRequired = isFreightRequiredForShipment(shipment);
+  const cargoPending = !shipment?.cargoReady;
+  const freightPending = isFreightRequired && !shipment?.freightReady;
+
   if (shipment?.readyForShipment) {
     return "Execute Shipment Stuffing";
   }
-  const isFreightNotApplicable =
-    shipment?.isFreightNotApplicable ||
-    shipment?.freightAllocationStatus === "Not Applicable" ||
-    shipment?.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false ||
-    shipment?.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
-
-  const cargoPending = !shipment?.cargoReady;
-  const freightPending = !isFreightNotApplicable && !shipment?.freightReady;
-
   if (cargoPending && freightPending) {
-    return "Cargo and Freight allocations are pending.";
+    return "Complete Cargo & Freight Allocation first";
   }
   if (cargoPending) {
-    return "Cargo allocation is pending.";
+    return "Complete Cargo Allocation first";
   }
   if (freightPending) {
-    return "Freight allocation is pending.";
+    return "Complete Freight Allocation first";
   }
   return "Shipment is not ready for execution.";
 };
@@ -75,7 +68,8 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
   const isExecuted =
     shipment.stuffingCompleted === true ||
     ['Dispatched', 'Completed'].includes(shipment.status);
-  const allocationsReady = Boolean(shipment.cargoReady && shipment.freightReady);
+  const isFreightRequired = isFreightRequiredForShipment(shipment);
+  const allocationsReady = Boolean(shipment.cargoReady && (!isFreightRequired || shipment.freightReady));
   const canExecute = allocationsReady && shipment.readyForShipment;
 
   const formatDate = (dateStr) => {
@@ -205,7 +199,7 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                 {/* Origin */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Origin (Loading Point)</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Origin</span>
                     <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
                       Purchase Contract
                     </span>
@@ -240,7 +234,7 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
           </div>
 
           {/* Top Key Metrics Banner */}
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] grid grid-cols-2 md:grid-cols-5 gap-3 items-center">
+          <div className={`bg-white border border-slate-200 rounded-xl p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] grid grid-cols-2 ${isFreightRequired ? "md:grid-cols-5" : "md:grid-cols-4"} gap-3 items-center`}>
             <div className="border-r border-slate-100 last:border-r-0 pr-3">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Target Quantity</span>
               <div className="flex items-baseline gap-1 mt-0.5">
@@ -307,34 +301,39 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
               </div>
             </div>
 
-            <div className="pr-2">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Freight Allocation</span>
-              <div className="mt-1">
-                {(() => {
-                  const isFreightNotApplicable =
-                    shipment.isFreightNotApplicable ||
-                    shipment.freightAllocationStatus === "Not Applicable" ||
-                    shipment.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false ||
-                    shipment.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
-
-                  if (isFreightNotApplicable) {
-                    return (
-                      <span
-                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed shadow-2xs"
-                        title="Freight Allocation is automatically Yes for this Shipment Type (configured in Shipment Type Master)"
-                      >
-                        Yes
-                      </span>
-                    );
-                  }
-
-                  return (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (shipment.freightReady) {
-                      if (onOpenFreightDrawer) onOpenFreightDrawer(shipment);
-                      else {
+            {isFreightRequired && (
+              <div className="pr-2">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Freight Allocation</span>
+                <div className="mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (shipment.freightReady) {
+                        if (onOpenFreightDrawer) onOpenFreightDrawer(shipment);
+                        else {
+                          const searchVal =
+                            shipment.businessReference ||
+                            shipment.businessTransaction?.businessReference ||
+                            shipment.shipmentReference ||
+                            "";
+                          const params = new URLSearchParams();
+                          if (searchVal) {
+                            params.set("search", searchVal);
+                            params.set("businessRef", searchVal);
+                          }
+                          if (shipment.logisticsId) {
+                            params.set("logisticsId", String(shipment.logisticsId));
+                          }
+                          if (shipment.salesContract?.enquiryId) {
+                            params.set("enquiryId", String(shipment.salesContract.enquiryId));
+                          }
+                          params.set("shipmentId", String(shipment.id));
+                          if (shipment.shipmentReference) params.set("shipmentRef", shipment.shipmentReference);
+                          params.set("from", "shipments");
+                          params.set("openDrawer", "true");
+                          router.push(`/logistics/transport-management?${params.toString()}`);
+                        }
+                      } else {
                         const searchVal =
                           shipment.businessReference ||
                           shipment.businessTransaction?.businessReference ||
@@ -357,51 +356,27 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                         params.set("openDrawer", "true");
                         router.push(`/logistics/transport-management?${params.toString()}`);
                       }
-                    } else {
-                      const searchVal =
-                        shipment.businessReference ||
-                        shipment.businessTransaction?.businessReference ||
-                        shipment.shipmentReference ||
-                        "";
-                      const params = new URLSearchParams();
-                      if (searchVal) {
-                        params.set("search", searchVal);
-                        params.set("businessRef", searchVal);
-                      }
-                      if (shipment.logisticsId) {
-                        params.set("logisticsId", String(shipment.logisticsId));
-                      }
-                      if (shipment.salesContract?.enquiryId) {
-                        params.set("enquiryId", String(shipment.salesContract.enquiryId));
-                      }
-                      params.set("shipmentId", String(shipment.id));
-                      if (shipment.shipmentReference) params.set("shipmentRef", shipment.shipmentReference);
-                      params.set("from", "shipments");
-                      params.set("openDrawer", "true");
-                      router.push(`/logistics/transport-management?${params.toString()}`);
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium transition-all cursor-pointer hover:scale-105 ${shipment.freightReady
+                        ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                        : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                      }`}
+                    title={
+                      shipment.freightReady
+                        ? "Freight Allocated. Click to view Freight Allocation details."
+                        : "Freight Not Allocated. Click to complete freight allocation."
                     }
-                  }}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium transition-all cursor-pointer hover:scale-105 ${shipment.freightReady
-                      ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                      : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                    }`}
-                  title={
-                    shipment.freightReady
-                      ? "Freight Allocated. Click to view Freight Allocation details."
-                      : "Freight Not Allocated. Click to complete freight allocation."
-                  }
-                >
-                  {shipment.freightReady ? (
-                    <CheckCircle2 className="h-3 w-3 text-green-600" />
-                  ) : (
-                    <XCircle className="h-3 w-3 text-red-600" />
-                  )}
-                  <span>{shipment.freightReady ? "Yes" : "No"}</span>
-                </button>
-                  );
-                })()}
+                  >
+                    {shipment.freightReady ? (
+                      <CheckCircle2 className="h-3 w-3 text-green-600" />
+                    ) : (
+                      <XCircle className="h-3 w-3 text-red-600" />
+                    )}
+                    <span>{shipment.freightReady ? "Yes" : "No"}</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
 
@@ -446,12 +421,19 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                       {shipment.purchaseRate ? `${Number(shipment.purchaseRate).toFixed(2)} ${contract.currencyCode}` : "—"}
                     </span>
                   </div>
-                  <div className="p-2.5 bg-slate-50/70 border border-slate-100 rounded-lg">
-                    <span className="text-[10px] font-semibold text-slate-400 block uppercase">Freight Charge</span>
-                    <span className="text-xs font-bold text-slate-800 mt-0.5 block">
-                      {shipment.freight ? `${Number(shipment.freight).toFixed(2)}` : "—"}
-                    </span>
-                  </div>
+                  {isFreightRequired && (
+                    <div className="p-2.5 bg-slate-50/70 border border-slate-100 rounded-lg">
+                      <span className="text-[10px] font-semibold text-slate-400 block uppercase">Freight Charge</span>
+                      <span className="text-xs font-bold text-slate-800 mt-0.5 block">
+                        {shipment.freight ? `${Number(shipment.freight).toFixed(2)} ${shipment.freightCurrency || contract.currencyCode || ""}` : "—"}
+                      </span>
+                      {shipment.freightDescription && (
+                        <span className="text-[10px] text-slate-500 block truncate" title={shipment.freightDescription}>
+                          {shipment.freightDescription}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="p-2.5 bg-slate-50/70 border border-slate-100 rounded-lg">
                     <span className="text-[10px] font-semibold text-slate-400 block uppercase">Forex Conversion</span>
                     <span className="text-xs font-bold text-slate-800 mt-0.5 block">

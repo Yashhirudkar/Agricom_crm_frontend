@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchShipmentTypes,
@@ -53,6 +53,9 @@ export default function ShipmentTypeTab() {
     id: null,
     code: "",
     name: "",
+    stageOrder: 1,
+    locationType: "Port of Loading (POL)",
+    freightRequiredAfterStage: false,
     purchaseContractDeliveryPlaceRequired: true,
     salesContractDeliveryPlaceRequired: true,
     isActive: true,
@@ -80,6 +83,9 @@ export default function ShipmentTypeTab() {
       id: item.id,
       code: item.code,
       name: item.name,
+      stageOrder: item.stageOrder ?? 1,
+      locationType: item.locationType || "Port of Loading (POL)",
+      freightRequiredAfterStage: Boolean(item.freightRequiredAfterStage),
       purchaseContractDeliveryPlaceRequired:
         item.purchaseContractDeliveryPlaceRequired !== false,
       salesContractDeliveryPlaceRequired:
@@ -105,6 +111,9 @@ export default function ShipmentTypeTab() {
       const payload = {
         code: form.code,
         name: form.name,
+        stageOrder: Number(form.stageOrder) || 1,
+        locationType: form.locationType,
+        freightRequiredAfterStage: Boolean(form.freightRequiredAfterStage),
         purchaseContractDeliveryPlaceRequired:
           form.purchaseContractDeliveryPlaceRequired !== false,
         salesContractDeliveryPlaceRequired:

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import ShipmentDetailsDrawer from "@/modules/shipments/components/ShipmentDetailsDrawer";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { isFreightRequiredForShipment } from "@/modules/shipments/utils/freightRuleEngine";
 
 const STATUS_COLORS = {
   Scheduled: "bg-slate-50 text-slate-700 border-slate-200",
@@ -150,10 +151,8 @@ export default function PurchaseShipmentTable({
 
                     {/* Freight */}
                     <td className="px-4 py-3 text-right font-mono text-gray-600">
-                      {s.isFreightNotApplicable || s.freightAllocationStatus === "Not Applicable" || s.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false || s.shipmentType?.purchaseContractDeliveryPlaceRequired === false ? (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
-                          Yes
-                        </span>
+                      {!isFreightRequiredForShipment(s) ? (
+                        "—"
                       ) : s.freight ? (
                         Number(s.freight).toLocaleString("en-US", { minimumFractionDigits: 2 })
                       ) : (

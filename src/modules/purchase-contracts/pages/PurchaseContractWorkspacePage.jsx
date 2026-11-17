@@ -24,6 +24,7 @@ import TermsSection from "@/modules/sales-contracts/components/TermsSection";
 import PurchaseAttachmentsSection from "../components/PurchaseAttachmentsSection";
 import PurchaseFinancialSummary from "../components/PurchaseFinancialSummary";
 import BusinessReference from "@/components/common/BusinessReference";
+import { evaluateFreightRequired } from "@/modules/shipments/utils/freightRuleEngine";
 
 export default function PurchaseContractWorkspacePage({ contractId, isNew = false }) {
   const router = useRouter();
@@ -608,7 +609,8 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
       const selectedShipmentType = (masters?.shipmentTypes || []).find(
         (s) => String(s.id) === String(form.shipmentTypeId)
       );
-      const isFreightNotApplicable = selectedShipmentType?.purchaseContractDeliveryPlaceRequired === false;
+      const scShipmentType = contract?.salesContract?.shipmentType || null;
+      const isFreightReq = evaluateFreightRequired(selectedShipmentType, scShipmentType).freightRequired;
 
       const payload = {
         purchaseType: form.purchaseType || (isManual ? "MTT" : "SC"),
@@ -622,7 +624,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         specificationDate: form.specificationDate || null,
         paymentTermId: form.paymentTermId || null,
         shipmentTypeId: form.shipmentTypeId || null,
-        freightRequired: isFreightNotApplicable ? true : Boolean(form.freightRequired),
+        freightRequired: isFreightReq,
         paymentTermsText: form.paymentTermsText || null,
         advancePercent: form.advancePercent !== "" && form.advancePercent != null ? parseFloat(form.advancePercent) : null,
         balancePercent: form.balancePercent !== "" && form.balancePercent != null ? parseFloat(form.balancePercent) : null,

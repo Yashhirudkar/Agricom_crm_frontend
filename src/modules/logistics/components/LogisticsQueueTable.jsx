@@ -21,6 +21,7 @@ export default function LogisticsQueueTable({
   onManage,
   onToggleHidden,
   hiddenOnly = false,
+  isPurchaseContractsTab = false,
   mode = "All",
   highlightedRowId,
   onSortBusinessReference,
@@ -55,9 +56,11 @@ export default function LogisticsQueueTable({
           <Truck className="h-7 w-7 text-gray-400" />
         </div>
         <p className="text-sm font-bold text-gray-700">
-          {mode === "All" ? "No Enquiries in Logistics Queue" : `No ${scopeText}enquiries found.`}
+          {isPurchaseContractsTab
+            ? (mode === "All" ? "No Purchase Contracts in Logistics Queue" : `No ${scopeText}Purchase Contracts found.`)
+            : (mode === "All" ? "No Enquiries in Logistics Queue" : `No ${scopeText}enquiries found.`)}
         </p>
-        <p className="text-xs text-gray-400 mt-1">Pending enquiries will appear here for transport management.</p>
+        <p className="text-xs text-gray-400 mt-1">Pending shipments will appear here for transport management.</p>
       </div>
     );
   }
@@ -89,13 +92,21 @@ export default function LogisticsQueueTable({
   };
 
   const getOrigins = (e) => {
-    const origins = e.loadingPoints?.length 
-      ? e.loadingPoints.map(p => p.loadingPoint)
-      : [getOriginText(e)].filter(x => x && x !== "—");
-    return origins.length ? origins : ["—"];
+    if (e.origin) return [e.origin];
+    if (e.transportRoute?.origin) return [e.transportRoute.origin];
+    if (e.transportDetails?.length) {
+      return e.transportDetails.map(p => p.origin).filter(Boolean);
+    }
+    const defaultOrigin = getOriginText(e);
+    return defaultOrigin && defaultOrigin !== "—" ? [defaultOrigin] : ["—"];
   };
 
   const getDestinations = (e) => {
+    if (e.destination) return [e.destination];
+    if (e.transportRoute?.destination) return [e.transportRoute.destination];
+    if (e.transportDetails?.length) {
+      return e.transportDetails.map(d => d.destination).filter(Boolean);
+    }
     const destinations = e.destinations?.length
       ? e.destinations.map(d => d.destination)
       : [getDestinationText(e)].filter(x => x && x !== "—");
@@ -123,19 +134,21 @@ export default function LogisticsQueueTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">
-          {data.map((e) => {
+          {data.map((e, idx) => {
             const logisticsStatus = e.logistics?.status || "Pending";
             const badgeClass = LOGISTICS_STATUS_CLASSES[logisticsStatus] || "bg-gray-50 text-gray-600 border-gray-100";
             const isHighlighted = highlightedRowId === e.id;
 
             return (
-              <tr key={e.id} className={`transition-all duration-500 group hover:bg-gray-50/70 ${isHighlighted ? "bg-blue-50/50 shadow-inner" : ""}`}>
+              <tr key={e.queueRowId || (e.transportDetailId ? `${e.id}_${e.transportDetailId}` : `${e.id}_${idx}`)} className={`transition-all duration-500 group hover:bg-gray-50/70 ${isHighlighted ? "bg-blue-50/50 shadow-inner" : ""}`}>
                 <td className="px-4 py-4.5 font-mono font-bold text-[#007aff] whitespace-nowrap">
                   <div className="flex items-center gap-1.5">
                     {e.purchaseContract?.contractNumber ? (
                       <div className="flex flex-col items-start">
                         <span className="text-gray-900 font-bold">{e.purchaseContract.contractNumber}</span>
-                        <span className="text-[10px] text-gray-400 font-normal">Enq: {e.enquiryNo}</span>
+                        {e.enquiryNo && (
+                          <span className="text-[10px] text-gray-400 font-normal">Enq: {e.enquiryNo}</span>
+                        )}
                       </div>
                     ) : (
                       <span>{e.enquiryNo}</span>
@@ -167,8 +180,8 @@ export default function LogisticsQueueTable({
                   </div>
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
-                  {(e.purchaseContract?.purchaseDate || e.enquiryDate)
-                    ? new Date(e.purchaseContract?.purchaseDate || e.enquiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                  {(e.purchaseContract?.purchaseDate || e.purchaseDate || e.enquiryDate)
+                    ? new Date(e.purchaseContract?.purchaseDate || e.purchaseDate || e.enquiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                     : "—"}
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap max-w-[150px] truncate" title={e.purchaseContract?.productName || e.product?.name || ""}>
@@ -182,16 +195,18 @@ export default function LogisticsQueueTable({
                     const hasPurchaseContract = Boolean(e.purchaseContract);
                     const origins = getOrigins(e);
                     const defaultOrigin = origins[0] || "—";
-                    const originDisplay = hasPurchaseContract
-                      ? (e.purchaseContract.placeOfLoading || defaultOrigin)
-                      : defaultOrigin;
+                    const originDisplay = (e.origin && e.origin !== "—")
+                      ? e.origin
+                      : (hasPurchaseContract
+                          ? (e.purchaseContract.placeOfLoading || defaultOrigin)
+                          : defaultOrigin);
 
                     return (
                       <div className="flex flex-col items-start gap-1">
                         <span className="max-w-[170px] truncate font-medium text-gray-800" title={originDisplay}>
                           {originDisplay}
                         </span>
-                        {hasPurchaseContract ? (
+                        {hasPurchaseContract && !e.origin ? (
                           <span
                             className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help max-w-fit"
                             title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
@@ -216,16 +231,18 @@ export default function LogisticsQueueTable({
                     const hasSc = Boolean(sc && (sc.destinationLocationName || sc.deliveryPlace));
                     const dests = getDestinations(e);
                     const defaultDest = dests[0] || "—";
-                    const destDisplay = hasSc
-                      ? (sc.destinationLocationName || sc.deliveryPlace || defaultDest)
-                      : defaultDest;
+                    const destDisplay = (e.destination && e.destination !== "—")
+                      ? e.destination
+                      : (hasSc
+                          ? (sc.destinationLocationName || sc.deliveryPlace || defaultDest)
+                          : defaultDest);
 
                     return (
                       <div className="flex flex-col items-start gap-1">
                         <span className="max-w-[170px] truncate font-medium text-gray-800" title={destDisplay}>
                           {destDisplay}
                         </span>
-                        {hasSc ? (
+                        {hasSc && !e.destination ? (
                           <span
                             className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70 select-none cursor-help max-w-fit"
                             title={"Source: Linked Sales Contract → Delivery Place\n\nAlways auto-derived from linked Sales Contract."}
@@ -246,7 +263,7 @@ export default function LogisticsQueueTable({
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
                   <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium text-[10px]">
-                    {e.purchaseContract?.shipmentTypeName || "—"}
+                    {e.incoterm || e.transportRoute?.incoterm || e.purchaseContract?.shipmentTypeName || "—"}
                   </span>
                 </td>
                 <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
@@ -268,18 +285,20 @@ export default function LogisticsQueueTable({
                     >
                       Transport <ArrowRight className="h-3 w-3 text-gray-400" />
                     </button>
-                    <button
-                      onClick={() => onToggleHidden?.(e)}
-                      className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                      title={hiddenOnly ? "Show in Transport" : "Hide from Transport"}
-                      aria-label={hiddenOnly ? "Show in Transport" : "Hide from Transport"}
-                    >
-                      {hiddenOnly ? (
-                        <Eye className="h-3.5 w-3.5" />
-                      ) : (
-                        <EyeOff className="h-3.5 w-3.5" />
-                      )}
-                    </button>
+                    {!isPurchaseContractsTab && (
+                      <button
+                        onClick={() => onToggleHidden?.(e)}
+                        className="p-1.5 text-gray-400 hover:text-[#007aff] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                        title={hiddenOnly ? "Show in Transport" : "Hide from Transport"}
+                        aria-label={hiddenOnly ? "Show in Transport" : "Hide from Transport"}
+                      >
+                        {hiddenOnly ? (
+                          <Eye className="h-3.5 w-3.5" />
+                        ) : (
+                          <EyeOff className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

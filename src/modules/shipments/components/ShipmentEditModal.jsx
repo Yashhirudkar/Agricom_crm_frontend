@@ -1,10 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { X, Check, Loader2 } from "lucide-react";
 import { shipmentsApi } from "../services/shipmentsApi";
 import { toast } from "sonner";
 import BusinessReference from "@/components/common/BusinessReference";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { isFreightRequiredForShipment } from "../utils/freightRuleEngine";
 
 const WORKFLOW_STATUSES = [
   "Scheduled",
@@ -22,47 +23,49 @@ const WORKFLOW_STATUSES = [
 export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuccess }) {
   useEscapeKey(onClose, isOpen && Boolean(shipment));
 
-  const [form, setForm] = useState({
-    shipmentDate: "",
-    noOfContainers: "",
-    quantity: "",
-    ratePerMt: "",
-    purchaseRate: "",
-    forex: "",
-    freight: "",
-    status: "Scheduled",
-    remarks: "",
-    shipmentNo: ""
-  });
+  const [prevShipmentId, setPrevShipmentId] = useState(shipment?.id);
+  const [form, setForm] = useState(() => ({
+    shipmentDate: shipment?.shipmentDate || "",
+    noOfContainers: shipment?.noOfContainers || "",
+    quantity: shipment?.quantity || "",
+    ratePerMt: shipment?.ratePerMt || "",
+    purchaseRate: shipment?.purchaseRate || "",
+    forex: shipment?.forex || "",
+    freight: shipment?.freight ?? "",
+    freightAllocationStatus: shipment?.freightAllocationStatus || (shipment?.freightReady ? "Yes" : "No"),
+    freightCurrency: shipment?.freightCurrency || shipment?.salesContract?.currencyCode || "",
+    freightDescription: shipment?.freightDescription || "",
+    status: shipment?.status || "Scheduled",
+    remarks: shipment?.remarks || "",
+    shipmentNo: shipment?.shipmentNo || ""
+  }));
   
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    if (shipment) {
-      setForm({
-        shipmentDate: shipment.shipmentDate || "",
-        noOfContainers: shipment.noOfContainers || "",
-        quantity: shipment.quantity || "",
-        ratePerMt: shipment.ratePerMt || "",
-        purchaseRate: shipment.purchaseRate || "",
-        forex: shipment.forex || "",
-        freight: shipment.freight || "",
-        status: shipment.status || "Scheduled",
-        remarks: shipment.remarks || "",
-        shipmentNo: shipment.shipmentNo || ""
-      });
-      setErrors({});
-    }
-  }, [shipment]);
+  if (shipment && shipment.id !== prevShipmentId) {
+    setPrevShipmentId(shipment.id);
+    setForm({
+      shipmentDate: shipment.shipmentDate || "",
+      noOfContainers: shipment.noOfContainers || "",
+      quantity: shipment.quantity || "",
+      ratePerMt: shipment.ratePerMt || "",
+      purchaseRate: shipment.purchaseRate || "",
+      forex: shipment.forex || "",
+      freight: shipment.freight ?? "",
+      freightAllocationStatus: shipment.freightAllocationStatus || (shipment.freightReady ? "Yes" : "No"),
+      freightCurrency: shipment.freightCurrency || shipment.salesContract?.currencyCode || "",
+      freightDescription: shipment.freightDescription || "",
+      status: shipment.status || "Scheduled",
+      remarks: shipment.remarks || "",
+      shipmentNo: shipment.shipmentNo || ""
+    });
+    setErrors({});
+  }
 
   if (!isOpen || !shipment) return null;
 
-  const isFreightNotApplicable =
-    shipment?.isFreightNotApplicable ||
-    shipment?.freightAllocationStatus === "Not Applicable" ||
-    shipment?.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false ||
-    shipment?.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
+  const isFreightRequired = isFreightRequiredForShipment(shipment);
 
   const handleInputChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -79,6 +82,13 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
       errs.noOfContainers = "Containers count cannot be negative";
     }
 
+    // Freight validation only if Freight Required = YES
+    if (isFreightRequired) {
+      if (form.freight !== "" && form.freight !== null && parseFloat(form.freight) < 0) {
+        errs.freight = "Freight amount cannot be negative";
+      }
+    }
+
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
@@ -93,8 +103,12 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
         ratePerMt: form.ratePerMt ? parseFloat(form.ratePerMt) : null,
         purchaseRate: form.purchaseRate ? parseFloat(form.purchaseRate) : null,
         forex: form.forex ? parseFloat(form.forex) : null,
-        freight: isFreightNotApplicable ? null : (form.freight ? parseFloat(form.freight) : null),
-        freightAllocationStatus: isFreightNotApplicable ? "Yes" : (shipment.freightAllocationStatus === "Not Applicable" ? null : shipment.freightAllocationStatus),
+        // If Freight Required = NO: completely clear and do not save
+        freight: isFreightRequired ? (form.freight !== "" && form.freight !== null ? parseFloat(form.freight) : null) : null,
+        freightAllocationStatus: isFreightRequired ? (form.freightAllocationStatus || null) : null,
+        freightCurrency: isFreightRequired ? (form.freightCurrency || null) : null,
+        freightDescription: isFreightRequired ? (form.freightDescription || null) : null,
+        freightRequired: isFreightRequired,
         status: form.status,
         remarks: form.remarks || null,
         shipmentNo: form.shipmentNo ? parseInt(form.shipmentNo, 10) : null
@@ -148,7 +162,7 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div className="p-2.5 bg-white rounded-lg border border-slate-200/80">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Origin (Loading Point)</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Origin</span>
                     <span className="text-[9px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">Purchase Contract</span>
                   </div>
                   <p className="font-extrabold text-slate-900 truncate" title={shipment.origin || "—"}>
@@ -264,28 +278,68 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
               />
             </div>
 
-            {/* Freight */}
-            <div>
-              <label className={labelCls}>Freight Charge</label>
-              {isFreightNotApplicable ? (
-                <input
-                  type="text"
-                  disabled
-                  value="Not Applicable"
-                  className={`${inpCls} bg-gray-100 text-gray-500 cursor-not-allowed`}
-                  title="Freight Allocation is Not Applicable for this Shipment Type (configured in Shipment Type Master)"
-                />
-              ) : (
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={form.freight}
-                  onChange={(e) => handleInputChange("freight", e.target.value)}
-                  className={inpCls}
-                />
-              )}
-            </div>
+            {/* Freight Fields - Shown only if Freight Required = YES */}
+            {isFreightRequired && (
+              <>
+                {/* Freight Allocation */}
+                <div>
+                  <label className={labelCls}>Freight Allocation</label>
+                  <div className="relative">
+                    <select
+                      value={form.freightAllocationStatus}
+                      onChange={(e) => handleInputChange("freightAllocationStatus", e.target.value)}
+                      className={`${inpCls} appearance-none pr-8`}
+                    >
+                      <option value="No">No (Pending)</option>
+                      <option value="Yes">Yes (Allocated)</option>
+                    </select>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">▼</span>
+                  </div>
+                </div>
+
+                {/* Freight Amount */}
+                <div>
+                  <label className={labelCls}>
+                    Freight Amount {form.freightCurrency ? `(${form.freightCurrency})` : ""}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    placeholder="0.00"
+                    value={form.freight}
+                    onChange={(e) => handleInputChange("freight", e.target.value)}
+                    className={`${inpCls} ${errors.freight ? "border-red-300" : ""}`}
+                  />
+                  {errors.freight && <p className={errCls}>{errors.freight}</p>}
+                </div>
+
+                {/* Freight Currency */}
+                <div>
+                  <label className={labelCls}>Freight Currency</label>
+                  <input
+                    type="text"
+                    maxLength={10}
+                    placeholder="e.g. USD, EUR, INR"
+                    value={form.freightCurrency}
+                    onChange={(e) => handleInputChange("freightCurrency", e.target.value.toUpperCase())}
+                    className={inpCls}
+                  />
+                </div>
+
+                {/* Freight Description */}
+                <div>
+                  <label className={labelCls}>Freight Description</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Ocean Freight from POL to POD"
+                    value={form.freightDescription}
+                    onChange={(e) => handleInputChange("freightDescription", e.target.value)}
+                    className={inpCls}
+                  />
+                </div>
+              </>
+            )}
 
             {/* Forex */}
             <div>

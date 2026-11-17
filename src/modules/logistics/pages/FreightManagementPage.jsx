@@ -57,6 +57,9 @@ const SORT_OPTIONS = [
 
 function getOriginDisplay(enquiry) {
   if (!enquiry) return "N/A";
+  if (enquiry.origin && enquiry.origin !== "—") return enquiry.origin;
+  if (enquiry.transportRoute?.origin) return enquiry.transportRoute.origin;
+  if (enquiry.transportDetails?.[0]?.origin) return enquiry.transportDetails[0].origin;
   const mode = (enquiry.logistics?.transportMode || "").toLowerCase();
   if (mode === "sea") return enquiry.originPort || enquiry.originCity || enquiry.originCountryId || "N/A";
   if (mode === "rail") return enquiry.originCity || enquiry.originState || "N/A";
@@ -65,6 +68,9 @@ function getOriginDisplay(enquiry) {
 
 function getDestinationDisplay(enquiry) {
   if (!enquiry) return "N/A";
+  if (enquiry.destination && enquiry.destination !== "—") return enquiry.destination;
+  if (enquiry.transportRoute?.destination) return enquiry.transportRoute.destination;
+  if (enquiry.transportDetails?.[0]?.destination) return enquiry.transportDetails[0].destination;
   const mode = (enquiry.logistics?.transportMode || "").toLowerCase();
   if (mode === "sea") return enquiry.destinationPort || enquiry.destinationCity || enquiry.destinationCountry || "N/A";
   if (mode === "rail") return enquiry.destinationCity || enquiry.destinationState || "N/A";
@@ -243,8 +249,8 @@ export default function FreightManagementPage() {
       if (!routes || routes.length === 0) {
         routes = [{
           id: `legacy_route_${quote.id}`,
-          origin: hasPurchaseContract && pcOrigin ? pcOrigin : (quote.isDirect ? quote.loadingPoint : getOriginDisplay(enquiry)),
-          destination: hasPurchaseContract && pcDestination ? pcDestination : (quote.isDirect ? quote.destination : getDestinationDisplay(enquiry)),
+          origin: hasPurchaseContract && pcOrigin ? pcOrigin : (quote.isDirect ? (quote.origin || quote.loadingPoint) : (enquiry?.transportDetails?.[0]?.origin || getOriginDisplay(enquiry))),
+          destination: hasPurchaseContract && pcDestination ? pcDestination : (quote.isDirect ? quote.destination : (enquiry?.transportDetails?.[0]?.destination || getDestinationDisplay(enquiry))),
           hasPurchaseContract,
           rates: [{
             id: `legacy_rate_${quote.id}`,

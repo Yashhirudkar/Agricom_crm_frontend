@@ -16,6 +16,9 @@ export default function ShipmentTypesTable({
           <tr>
             <th className="px-6 py-4 rounded-tl-xl">Code</th>
             <th className="px-6 py-4">Name</th>
+            <th className="px-6 py-4 text-center">Stage Order</th>
+            <th className="px-6 py-4">Location Type</th>
+            <th className="px-6 py-4 text-center">Freight After Stage</th>
             <th className="px-6 py-4 text-center">
               <div>Purchase Contract</div>
               <div className="text-[10px] text-gray-400 font-normal">Requires Delivery Place</div>
@@ -31,7 +34,7 @@ export default function ShipmentTypesTable({
         <tbody className="divide-y divide-gray-50">
           {shipmentTypes?.length === 0 ? (
             <tr>
-              <td colSpan="6" className="px-6 py-12 text-center">
+              <td colSpan="9" className="px-6 py-12 text-center">
                 <div className="flex flex-col items-center justify-center text-gray-400">
                   <p className="text-sm font-medium text-gray-500">No shipment types found</p>
                   <p className="text-xs mt-1">Try adjusting your filters or create a new one.</p>
@@ -46,6 +49,27 @@ export default function ShipmentTypesTable({
                 </td>
                 <td className="px-6 py-4">
                   <p className="font-bold text-gray-900">{st.name}</p>
+                </td>
+                <td className="px-6 py-4 text-center font-semibold text-gray-700">
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
+                    {st.stageOrder ?? 1}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-gray-600 font-medium">
+                  {st.locationType || "Port of Loading (POL)"}
+                </td>
+                <td className="px-6 py-4 text-center">
+                  {st.freightRequiredAfterStage ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                      <Check className="w-3.5 h-3.5 text-blue-600 stroke-[2.5]" />
+                      <span>Yes</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-gray-100 text-gray-500 border border-gray-200">
+                      <X className="w-3.5 h-3.5 text-gray-400 stroke-[2.5]" />
+                      <span>No</span>
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-center">
                   {st.purchaseContractDeliveryPlaceRequired !== false ? (

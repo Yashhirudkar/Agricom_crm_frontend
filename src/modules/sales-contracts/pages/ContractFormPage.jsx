@@ -10,6 +10,7 @@ import { enquiriesApi } from "@/modules/enquiries/services/enquiriesApi";
 import { getCurrentFinancialYear, getFinancialYearForDate } from "../utils/dateUtils";
 import { cleanNumberValue, formatNumberDisplay } from "../utils/formatUtils";
 import { isDivisible } from "../utils/scheduleUtils";
+import { getContractTransportMode } from "../utils/quantityUtils";
 import HeaderSection from "../components/HeaderSection";
 import PartySection from "../components/PartySection";
 import CommercialSection from "../components/CommercialSection";
@@ -66,6 +67,7 @@ const defaultForm = () => ({
   items: [],
   shipments: [],
   documents: [],
+  transportDetails: [],
   printOverrides: {},
 });
 
@@ -93,6 +95,7 @@ function getEnquiryDestination(enquiry, savedDestinations = []) {
 
 function validate(form, isAutoNumber) {
   const e = {};
+  const isSeaFreight = getContractTransportMode(form) === "SEA";
   if (!form.financialYear) e.financialYear = "Financial Year is required";
   // For auto-generated sellers, contractNumber is not required from user
   if (!isAutoNumber && !form.contractNumber?.trim()) e.contractNumber = "Contract No. is required";
@@ -111,6 +114,7 @@ function validate(form, isAutoNumber) {
       if (!item.packingTypeId) rowErrors.push("Packing Type");
       if (!item.quality?.trim()) rowErrors.push("Quality");
       if (!item.qtyPerCount || parseFloat(item.qtyPerCount) <= 0) rowErrors.push("Qty Per Count");
+      if (isSeaFreight && !item.containerType) rowErrors.push("Container Type");
       if (!item.quantity || parseFloat(item.quantity) <= 0) rowErrors.push("Quantity");
       if (item.quantity && item.qtyPerCount && parseFloat(item.qtyPerCount) > 0 && !isDivisible(item.quantity, item.qtyPerCount)) {
         rowErrors.push(`Product Quantity (${item.quantity} MT) is not divisible by Qty Per Count (${item.qtyPerCount} MT). Product Quantity must be an exact multiple of Qty Per Count.`);
@@ -154,6 +158,17 @@ function validate(form, isAutoNumber) {
       }
     }
   }
+
+  if (form.transportDetails && Array.isArray(form.transportDetails) && form.transportDetails.length > 0) {
+    for (let i = 0; i < form.transportDetails.length; i++) {
+      const r = form.transportDetails[i];
+      if (!r.origin?.trim() || !r.incoterm?.trim() || !r.destination?.trim()) {
+        e.transportDetails = `Transport Route #${i + 1} is incomplete. Origin, Incoterm, and Destination are all required.`;
+        break;
+      }
+    }
+  }
+
   return e;
 }
 
@@ -299,6 +314,7 @@ export default function ContractFormPage({ editId, viewId }) {
               packingTypeId: item.packingTypeId || "",
               bagSpecificationId: item.bagSpecificationId || null,
               qtyPerCount: cleanNumberValue(item.qtyPerCount),
+              containerType: item.containerType || "40 FT",
               quantity: cleanNumberValue(item.quantity),
               unitPrice: cleanNumberValue(item.unitPrice),
               amount: cleanNumberValue(item.amount) || 0,
@@ -325,6 +341,7 @@ export default function ContractFormPage({ editId, viewId }) {
             isMandatory: d.isMandatory || false,
             remarks: d.remarks || "",
           })),
+          transportDetails: c.transportDetails || [],
           printOverrides: c.printOverrides || {},
         });
 
@@ -373,145 +390,222 @@ export default function ContractFormPage({ editId, viewId }) {
     }
   }, [isEdit, isView]);
 
-  // Trigger preview fetch whenever seller, buyer or financial year changes (create mode only)
+  // When seller, buyer, or financialYear changes in CREATE mode, fetch the next contract number
   useEffect(() => {
-    if (isEdit || isView) return;
-    if (form.sellerId && form.buyerId && form.financialYear) {
+    if (!isEdit && !isView) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchContractNumberPreview(form.sellerId, form.buyerId, form.financialYear);
-    } else {
-      // Reset auto number state when seller, buyer, or FY is cleared
-      setContractNumberPreview(undefined);
-      setIsAutoNumber(false);
     }
-  }, [form.sellerId, form.buyerId, form.financialYear, fetchContractNumberPreview, isEdit, isView]);
+  }, [form.sellerId, form.buyerId, form.financialYear, isEdit, isView, fetchContractNumberPreview]);
 
-  // Pre-fill from enquiry
+  // Auto-fill from Enquiry (Create mode only)
   useEffect(() => {
-    if (!enquiryId || isEdit || isView || mastersLoading) return;
-    const loadEnquiry = async () => {
-      setLoadingContract(true);
+    if (!enquiryId || isEdit || isView) return;
+
+    const fillFromEnquiry = async () => {
       try {
-        const [res, savedEnquiryDestinations] = await Promise.all([
-          enquiryApi.getOne(enquiryId),
-          enquiriesApi.getDestinations(enquiryId),
-        ]);
+        const res = await enquiryApi.getOne(enquiryId);
         const eq = res.data;
         if (!eq) return;
 
-        const matchedShipmentType = masters?.shipmentTypes?.find(
-          s => s.name?.toLowerCase() === eq.shipmentType?.toLowerCase()
-        );
-        const shipmentTypeId = matchedShipmentType ? matchedShipmentType.id : "";
+        // Auto-select seller partner if sellerCompany name matches a partner
+        let matchedSellerId = null;
+        if (eq.sellerCompany && masters.sellers) {
+          const sellerName = eq.sellerCompany.trim().toLowerCase();
+          const found = masters.sellers.find(
+            s => s.entityName && s.entityName.trim().toLowerCase() === sellerName
+          );
+          if (found) matchedSellerId = found.id;
+        }
 
-        // Derive financial year from enquiry shipment date or today
-        const derivedFY = eq.shipmentDate
-          ? getFinancialYearForDate(new Date(eq.shipmentDate))
-          : getCurrentFinancialYear();
-        const enquiryDestination = getEnquiryDestination(
-          eq,
-          savedEnquiryDestinations
-        );
+        // Auto-select broker partner if broker name matches
+        let matchedBrokerId = null;
+        if (eq.broker && masters.brokers) {
+          const brokerName = eq.broker.trim().toLowerCase();
+          const found = masters.brokers.find(
+            b => b.entityName && b.entityName.trim().toLowerCase() === brokerName
+          );
+          if (found) matchedBrokerId = found.id;
+        }
 
-        setForm({
-          enquiryId: enquiryId,
-          financialYear: derivedFY,
-          contractNumber: "",
-          contractDate: new Date().toISOString().split("T")[0],
-          contractType: "Export",
-          buyerId: eq.partnerId || "",
-          sellerId: null,
-          brokerId: eq.brokerId || null,
-          currencyCode: "USD",
-          shipmentTypeId: shipmentTypeId,
-          paymentTermId: "",
-          originCountry: eq.originCountry || "",
-          destinationCountry: eq.destinationCountry || "",
+        // Auto-match Shipment Type (Incoterms) by name or code from Enquiry's Transport Details or fields
+        let matchedShipmentTypeId = "";
+        const enquiryIncotermCandidate =
+          eq.transportDetails?.[0]?.incoterm ||
+          eq.incoterm ||
+          eq.shipmentTerms ||
+          eq.shipmentType ||
+          "";
+
+        if (enquiryIncotermCandidate && masters.shipmentTypes) {
+          const cand = enquiryIncotermCandidate.trim().toLowerCase();
+          const foundSt = masters.shipmentTypes.find(
+            (st) =>
+              (st.code && st.code.toLowerCase() === cand) ||
+              (st.name && st.name.toLowerCase() === cand) ||
+              (st.code && cand.includes(st.code.toLowerCase())) ||
+              (st.name && cand.includes(st.name.toLowerCase()))
+          );
+          if (foundSt) matchedShipmentTypeId = foundSt.id;
+        }
+
+        // Auto-match Payment Terms by name
+        let matchedPaymentTermId = "";
+        if (eq.paymentTerms && masters.paymentTerms) {
+          const ptLower = eq.paymentTerms.trim().toLowerCase();
+          const foundPt = masters.paymentTerms.find(
+            pt => pt.name && pt.name.toLowerCase() === ptLower
+          );
+          if (foundPt) matchedPaymentTermId = foundPt.id;
+        }
+
+        // Currency from Enquiry
+        const enquiryCurrency = eq.currency || "";
+
+        // Contract Date: default to today
+        const todayStr = new Date().toISOString().split("T")[0];
+
+        // Map product items from Enquiry
+        let mappedItems = [];
+        if (eq.items && eq.items.length > 0) {
+          mappedItems = eq.items.map(item => {
+            let matchedBagTypeId = "";
+            if (item.bagType && masters.bagTypes) {
+              const btLower = item.bagType.trim().toLowerCase();
+              const foundBt = masters.bagTypes.find(
+                b => b.name && b.name.toLowerCase() === btLower
+              );
+              if (foundBt) matchedBagTypeId = foundBt.id;
+            }
+
+            let matchedPackingTypeId = "";
+            if (item.packingType && masters.packingTypes) {
+              const ptLower = item.packingType.trim().toLowerCase();
+              const foundPt = masters.packingTypes.find(
+                p => p.name && p.name.toLowerCase() === ptLower
+              );
+              if (foundPt) matchedPackingTypeId = foundPt.id;
+            }
+
+            const itemQty = parseFloat(item.quantity) || 0;
+            const itemRate = parseFloat(item.targetPrice) || 0;
+            const itemAmount = parseFloat((itemQty * itemRate).toFixed(2));
+
+            // Default qtyPerCount to product-level container capacity or fallback to itemQty
+            const matchedProduct = masters.products?.find(p => p.id === (item.productId ? Number(item.productId) : null));
+            const defaultQtyPerCount = parseFloat(matchedProduct?.qty20ftContainer) || parseFloat(matchedProduct?.qty40ftContainer) || itemQty || "";
+
+            return {
+              productId: item.productId ? Number(item.productId) : "",
+              origin: item.countryOfOrigin || eq.originCountry || "",
+              quality: [item.qualitySubType, item.specification].filter(Boolean).join(" - ") || "",
+              marking: "",
+              bagTypeId: matchedBagTypeId,
+              packingTypeId: matchedPackingTypeId,
+              bagSpecificationId: null,
+              qtyPerCount: cleanNumberValue(defaultQtyPerCount),
+              containerType: item.containerType || "40 FT",
+              quantity: cleanNumberValue(itemQty),
+              unitPrice: cleanNumberValue(itemRate),
+              amount: cleanNumberValue(itemAmount) || 0,
+              remarks: item.remarks || "",
+            };
+          });
+        }
+
+        // Multi-Modal transport mode mapping from Enquiry
+        const mappedOriginMode = eq.shipmentMode === "ROAD" ? "road"
+          : eq.shipmentMode === "AIR" ? "air"
+          : eq.shipmentMode === "RAIL" ? "rail"
+          : "sea";
+        const mappedDestMode = eq.shipmentMode === "ROAD" ? "road"
+          : eq.shipmentMode === "AIR" ? "air"
+          : eq.shipmentMode === "RAIL" ? "rail"
+          : "sea";
+
+        const savedEnquiryDestinations = await enquiriesApi.getDestinations(enquiryId);
+        const resolvedEnquiryDestination = getEnquiryDestination(eq, savedEnquiryDestinations);
+
+        setForm(f => ({
+          ...f,
+          enquiryId: eq.id || enquiryId,
+          businessReference: eq.businessReference || f.businessReference,
+          contractDate: todayStr,
+          financialYear: getFinancialYearForDate(todayStr),
+          buyerId: eq.buyerId || f.buyerId,
+          sellerId: matchedSellerId || f.sellerId,
+          brokerId: matchedBrokerId || f.brokerId,
+          currencyCode: enquiryCurrency || f.currencyCode,
+          shipmentTypeId: matchedShipmentTypeId || f.shipmentTypeId,
+          paymentTermId: matchedPaymentTermId || f.paymentTermId,
+          originCountry: eq.originCountry || f.originCountry,
+          destinationCountry: eq.destinationCountry || f.destinationCountry,
           destinationSelectionMode: "enquiry",
-          enquiryDestination,
-          // Multi-Modal Transport defaults for new contracts from enquiry
-          originTransportMode: "sea",
-          destinationTransportMode: "sea",
-          originLocationName: "",
-          destinationLocationName: eq.podPort || eq.destinationPort || "",
-          portOfLoading: "",
-          portOfDischarge: eq.podPort || eq.destinationPort || "",
-          remarks: DEFAULT_CONTRACT_NOTE,
-          otherConditions: [...DEFAULT_OTHER_CONDITIONS],
-          disputeResolution: null,
-          forceMajeure: null,
-          sellerCompanyName: "",
-          sellerAuthorizedSignatory: "",
-          sellerSignature: "",
-          sellerCompanySeal: "",
-          buyerCompanyName: "",
-          buyerAuthorizedSignatory: "",
-          buyerSignature: "",
-          buyerCompanySeal: "",
-          numShipments: 1,
-          items: [{
-            productId: eq.productId || "",
-            bagTypeId: "",
-            packingTypeId: eq.packingTypeId || "",
-            bagSpecificationId: null,
-            origin: "",
-            quality: eq.purity || "",
-            qtyPerCount: "",
-            quantity: cleanNumberValue(eq.quantity),
-            unitPrice: cleanNumberValue(eq.buyingInterest),
-            amount: parseFloat(((eq.quantity || 0) * (eq.buyingInterest || 0)).toFixed(2)) || 0,
-            marking: "",
-            remarks: "",
-          }],
-          shipments: eq.shipmentDate ? [{
-            shipmentNo: 1,
-            shipmentDate: eq.shipmentDate ? eq.shipmentDate.split("T")[0] : "",
-            quantity: cleanNumberValue(eq.quantity),
-            noOfContainers: 1,
-            ratePerMt: "",
-            // Inherit the Contract Currency set above (USD default from enquiry)
-            currencyCode: "USD",
-            purchaseRate: "",
-            forex: "",
-            freight: "",
-            remarks: "",
-          }] : [],
-          documents: [],
-        });
-
+          enquiryDestination: resolvedEnquiryDestination,
+          // Multi-Modal Transport Routing
+          originTransportMode: mappedOriginMode,
+          destinationTransportMode: mappedDestMode,
+          originLocationName: eq.portOfLoading || eq.polPort || "",
+          destinationLocationName: "",
+          // Legacy port fields
+          portOfLoading: eq.portOfLoading || eq.polPort || "",
+          portOfDischarge: eq.destinationPort || eq.podPort || "",
+          transportDetails: eq.transportDetails && eq.transportDetails.length > 0
+            ? eq.transportDetails.map((r, i) => {
+                const matchedSt = masters.shipmentTypes?.find(st => st.id === (matchedShipmentTypeId || f.shipmentTypeId));
+                const defaultIncoterm = matchedSt ? (matchedSt.code || matchedSt.name) : "";
+                return {
+                  sequence: i + 1,
+                  origin: r.origin || "",
+                  incoterm: r.incoterm || defaultIncoterm || "",
+                  destination: r.destination || "",
+                };
+              })
+            : (matchedShipmentTypeId
+                ? [{
+                    sequence: 1,
+                    origin: eq.originPort || eq.originCity || eq.originCountryId || "",
+                    incoterm: masters.shipmentTypes?.find(st => st.id === matchedShipmentTypeId)?.code || "",
+                    destination: resolvedEnquiryDestination || eq.destinationCountry || "",
+                  }]
+                : f.transportDetails || []),
+          items: mappedItems.length > 0 ? mappedItems : f.items,
+        }));
       } catch (err) {
-        console.error("Failed to load enquiry details:", err);
-      } finally {
-        setLoadingContract(false);
+        console.error("Failed to prefill contract from Enquiry", err);
       }
     };
-    loadEnquiry();
-  }, [enquiryId, isEdit, isView, mastersLoading, masters]);
+
+    fillFromEnquiry();
+  }, [enquiryId, isEdit, isView, masters]);
 
   const handleSave = async (asDraft = false) => {
+    setPageError(null);
     const errs = validate(form, isAutoNumber);
+    setErrors(errs);
     if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      toast.error("Please resolve all validation errors before proceeding.");
       return;
     }
-    setErrors({});
-    setSaving(true);
 
-    const validItems = form.items.filter(i => i.productId);
-    // Enforce Contract Currency on every shipment before saving (single source of truth)
-    const normalizedShipments = (form.shipments || []).map(s => ({ ...s, currencyCode: form.currencyCode }));
-    const validShipments = normalizedShipments.filter(s => s.shipmentDate && s.quantity);
-    const totalQuantity = validItems.reduce((s, i) => s + (parseFloat(i.quantity) || 0), 0);
-    const totalAmount = validItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+    setSaving(true);
+    const validItems = (form.items || []).filter(i => i.productId);
+    const validShipments = (form.shipments || []).filter(s => s.shipmentDate && parseFloat(s.quantity) > 0);
+    const totalQuantity = validItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
+    const totalAmount = validItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
     const updatedPrintOverrides = { ...(form.printOverrides || {}) };
-    validItems.forEach((i, idx) => {
-      if (i.quality && String(i.quality).trim()) {
-        const val = String(i.quality).trim();
-        updatedPrintOverrides[`quality_${idx}`] = val;
+    validItems.forEach((item, idx) => {
+      if (item.quality && String(item.quality).trim() !== "") {
+        updatedPrintOverrides[`quality_${idx}`] = String(item.quality).trim();
         if (idx === 0) {
-          updatedPrintOverrides['quality_0'] = val;
+          updatedPrintOverrides.quality_0 = String(item.quality).trim();
+        }
+      }
+      if (item.marking && String(item.marking).trim() !== "") {
+        updatedPrintOverrides[`marking_${idx}`] = String(item.marking).trim();
+        if (idx === 0) {
+          updatedPrintOverrides.marking_0 = String(item.marking).trim();
         }
       }
     });
@@ -519,9 +613,9 @@ export default function ContractFormPage({ editId, viewId }) {
     const payload = {
       enquiryId: form.enquiryId || null,
       financialYear: form.financialYear,
-      // For auto-number sellers: omit contractNumber — backend will generate it atomically.
-      // For manual sellers: send the user-typed contractNumber.
-      ...(isAutoNumber ? {} : { contractNumber: form.contractNumber.trim() }),
+      ...(!isAutoNumber && form.contractNumber?.trim()
+        ? { contractNumber: form.contractNumber.trim() }
+        : {}),
       contractDate: form.contractDate,
       contractType: form.contractType || "Export",
       buyerId: Number(form.buyerId),
@@ -573,6 +667,7 @@ export default function ContractFormPage({ editId, viewId }) {
         packingTypeId: Number(i.packingTypeId),
         bagSpecificationId: i.bagSpecificationId ? Number(i.bagSpecificationId) : null,
         qtyPerCount: i.qtyPerCount !== "" && i.qtyPerCount !== null && i.qtyPerCount !== undefined ? parseFloat(i.qtyPerCount) : null,
+        containerType: i.containerType || "40 FT",
         quantity: parseFloat(i.quantity) || 0,
         unitPrice: parseFloat(i.unitPrice) || 0,
         amount: parseFloat(i.amount) || 0,
@@ -596,6 +691,14 @@ export default function ContractFormPage({ editId, viewId }) {
         isMandatory: !!d.isMandatory,
         remarks: d.remarks || null,
       })),
+      transportDetails: (form.transportDetails || [])
+        .filter(r => (r.origin && r.origin.trim()) || (r.incoterm && r.incoterm.trim()) || (r.destination && r.destination.trim()))
+        .map((r, i) => ({
+          sequence: i + 1,
+          origin: (r.origin || "").trim(),
+          incoterm: (r.incoterm || "").trim(),
+          destination: (r.destination || "").trim(),
+        })),
       printOverrides: updatedPrintOverrides,
     };
 
@@ -631,33 +734,15 @@ export default function ContractFormPage({ editId, viewId }) {
       } else if (err.message) {
         serverMsg = err.message;
       }
-
-      setErrors({ apiError: serverMsg });
-      toast.error(serverMsg);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      setErrors(prev => ({
+        ...prev,
+        apiError: serverMsg
+      }));
+      setPageError(serverMsg);
     } finally {
       setSaving(false);
     }
   };
-
-  if (mastersLoading || loadingContract) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-        <div className="h-8 w-8 rounded-full border-2 border-[#007aff] border-t-transparent animate-spin" />
-        <p className="text-xs text-gray-400 font-semibold">Loading...</p>
-      </div>
-    );
-  }
-
-  if (pageError) {
-    return (
-      <div className="p-8 flex flex-col items-center gap-4">
-        <AlertCircle className="h-10 w-10 text-red-400" />
-        <p className="text-sm font-semibold text-gray-700">{pageError}</p>
-        <button onClick={() => router.back()} className="text-xs text-[#007aff] underline">Go Back</button>
-      </div>
-    );
-  }
 
   const hasErrors = Object.keys(errors).length > 0;
   const productItems = form.items || [];
@@ -671,46 +756,51 @@ export default function ContractFormPage({ editId, viewId }) {
   );
   const isTotalMismatched =
     totalProductQty > 0 && Math.abs(totalShipmentQty - totalProductQty) > 0.001;
-  const isFormBlocked = saving || isTotalMismatched || hasDivisibilityError;
+  const isFormBlocked = loadingContract || mastersLoading || saving || isTotalMismatched || hasDivisibilityError;
   const numberOfShipments = Math.max(1, parseInt(form.numShipments, 10) || 1);
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-5 pb-8">
-      {/* Page Header — sticky so Business Reference stays visible while scrolling */}
-      <div className="px-6 md:px-8 pt-6 md:pt-8 sticky top-0 z-30 bg-gray-50/95 backdrop-blur-sm">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="min-h-screen bg-slate-50/60 pb-16">
+      {/* Sticky Top Header */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs mb-5">
+      <div className="px-6 md:px-8 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push("/sales-contracts")}
-            className="h-8 w-8 flex items-center bg-white justify-center rounded-xl shadow-lg shadow-slate-300 cursor-pointer border border-gray-200 text-gray-500 transition-colors"
+            className="h-8 w-8 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50 text-gray-500 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <div className="min-w-0">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
-              <h1 className="text-xl font-bold text-gray-900 whitespace-nowrap">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold text-gray-900">
                 {isView ? "View Contract" : isEdit ? "Edit Contract" : "New Sales Contract"}
               </h1>
-              {isEdit && <BusinessReference reference={form.businessReference} />}
+              {form.contractNumber && (
+                <span className="font-mono text-xs font-semibold text-[#007aff] bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+                  {form.contractNumber}
+                </span>
+              )}
             </div>
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              {isView ? form.contractNumber : isEdit ? `Editing ${form.contractNumber || "..."}` : "Create a new export/import contract"}
+            <p className="text-[11px] text-gray-400">
+              {isView ? "Review contract specifications and terms" : "Fill in contract specifications, terms, and shipment schedule"}
             </p>
           </div>
         </div>
 
+        {/* Action Buttons */}
         {!isView && (
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => router.push("/sales-contracts")}
-              className="px-4 py-2 text-xs font-semibold text-gray-700 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors shadow-sm bg-white cursor-pointer "
+              className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={() => handleSave(true)}
               disabled={isFormBlocked}
-              className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Save Draft

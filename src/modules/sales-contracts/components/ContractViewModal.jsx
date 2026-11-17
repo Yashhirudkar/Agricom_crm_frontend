@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { salesContractApi } from "../services/salesContractApi";
 import RichTextEditor from "@/components/editor/RichTextEditor";
 import { getShipmentTypeShortForm } from "../utils/formatUtils";
+import { getContractItemQuantityDescription } from "../utils/quantityUtils";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -49,10 +50,10 @@ const destinationLabel = (contract) =>
     : contract.destinationLocationName || contract.portOfDischarge || "";
 
 const incotermLabel = (contract) => {
-  const mode = contract.destinationTransportMode || "sea";
+  const incoterm = contract.shipmentType?.code || contract.incoterm || contract.incoterms || "";
   const loc = destinationLabel(contract);
-  if (mode === "sea" || mode === "air") return loc ? `CIF ${loc}` : "CIF";
-  return loc ? `DAP ${loc}` : "DAP";
+  if (incoterm) return loc ? `${incoterm} ${loc}` : incoterm;
+  return loc || "—";
 };
 
 // ─── Row component ───────────────────────────────────────────────────────────
@@ -78,6 +79,7 @@ export default function ContractViewModal({ contractId, onClose }) {
 
   useEffect(() => {
     if (contract) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPrintOverrides(contract.printOverrides || {});
     }
   }, [contract]);
@@ -107,18 +109,19 @@ export default function ContractViewModal({ contractId, onClose }) {
     const value = hasOverride ? override : defaultValue;
 
     if (isCustomizing) {
+      const isMultiLine = value && String(value).includes("\n");
       return (
         <textarea
           value={value || ""}
           onChange={(e) => setPrintOverrides(prev => ({ ...prev, [key]: e.target.value }))}
           className="w-full text-xs font-sans p-1.5 border border-blue-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-blue-50/20 resize-y uppercase font-medium print:bg-transparent print:border-none print:p-0"
-          rows={1}
+          rows={isMultiLine ? 2 : 1}
           placeholder="Type custom override text..."
         />
       );
     }
 
-    return <span>{value || "—"}</span>;
+    return <span className="whitespace-pre-line">{value || "—"}</span>;
   };
 
   useEffect(() => {
@@ -626,6 +629,34 @@ export default function ContractViewModal({ contractId, onClose }) {
                       </Row>
                     )} */}
 
+                    {/* TRANSPORT DETAILS */}
+                    {contract.transportDetails?.length > 0 && (
+                      <Row label="Transport Details" className="mb-4">
+                        <div className="w-full">
+                          <table className="w-full border-collapse border border-black text-[12px] my-1">
+                            <thead>
+                              <tr className="bg-gray-100">
+                                <th className="border border-black px-2 py-1 text-left font-bold">#</th>
+                                <th className="border border-black px-2 py-1 text-left font-bold">Origin</th>
+                                <th className="border border-black px-2 py-1 text-left font-bold">Incoterm</th>
+                                <th className="border border-black px-2 py-1 text-left font-bold">Destination</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {contract.transportDetails.map((t, idx) => (
+                                <tr key={t.id || idx}>
+                                  <td className="border border-black px-2 py-1">{t.sequence || idx + 1}</td>
+                                  <td className="border border-black px-2 py-1">{t.origin}</td>
+                                  <td className="border border-black px-2 py-1 font-bold">{t.incoterm}</td>
+                                  <td className="border border-black px-2 py-1">{t.destination}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </Row>
+                    )}
+
                     <div className="mb-4" />
 
                     {/* ── PRODUCT ITEMS ──────────────────────────────────────────────────────────────────────────────────── */}
@@ -646,33 +677,41 @@ export default function ContractViewModal({ contractId, onClose }) {
                         </Row>
 
                         <Row label="Quantity">
-                          {isCustomizing ? (
-                            <div className="flex items-center gap-2 w-full">
-                              <textarea
-                                value={printOverrides[`quantityPrefix_${idx}`] || ""}
-                                onChange={(e) => setPrintOverrides(prev => ({ ...prev, [`quantityPrefix_${idx}`]: e.target.value }))}
-                                className="w-full text-xs font-sans p-1.5 border border-blue-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-blue-50/20 resize-y uppercase font-medium"
-                                rows={1}
-                                placeholder="Prefix text (e.g. 1 TRUCKS OF...)"
-                              />
-                              <span className="whitespace-nowrap font-bold bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-slate-700 select-none">
-                                {Number(item.quantity).toLocaleString("en-IN")} MT
-                              </span>
-                              <textarea
-                                value={printOverrides[`quantitySuffix_${idx}`] !== undefined ? printOverrides[`quantitySuffix_${idx}`] : "+/- 5%"}
-                                onChange={(e) => setPrintOverrides(prev => ({ ...prev, [`quantitySuffix_${idx}`]: e.target.value }))}
-                                className="w-full text-xs font-sans p-1.5 border border-blue-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-blue-50/20 resize-y uppercase font-medium"
-                                rows={1}
-                                placeholder="Suffix text (e.g. +/- 5%)"
-                              />
-                            </div>
-                          ) : (
-                            <span>
-                              {printOverrides[`quantityPrefix_${idx}`] ? `${printOverrides[`quantityPrefix_${idx}`]} ` : ""}
-                              {Number(item.quantity).toLocaleString("en-IN")} MT
-                              {printOverrides[`quantitySuffix_${idx}`] !== undefined ? ` ${printOverrides[`quantitySuffix_${idx}`]}` : " +/- 5%"}
-                            </span>
-                          )}
+                          {(() => {
+                            const calculatedQty = getContractItemQuantityDescription(contract, item);
+
+                            // Backward-compatible check for legacy split prefix/suffix overrides
+                            const hasLegacyOverride = printOverrides[`quantityPrefix_${idx}`] !== undefined;
+                            const legacyDefault = hasLegacyOverride
+                              ? `${printOverrides[`quantityPrefix_${idx}`] ? `${printOverrides[`quantityPrefix_${idx}`]} ` : ""}${Number(item.quantity).toLocaleString("en-IN")} MT${printOverrides[`quantitySuffix_${idx}`] !== undefined ? ` ${printOverrides[`quantitySuffix_${idx}`]}` : " +/- 5%"}`
+                              : null;
+
+                            const override = printOverrides[`quantity_${idx}`];
+                            const isOldFormat =
+                              override &&
+                              (override.includes("OF APPROX.") ||
+                               override.includes("\n") ||
+                               override.includes("(40 FT)") ||
+                               override.includes("(20 FT)") ||
+                               override.includes(" . "));
+
+                            const currentOverride = isOldFormat ? undefined : override;
+                            const effectiveValue = legacyDefault || currentOverride || calculatedQty;
+
+                            if (isCustomizing) {
+                              return (
+                                <textarea
+                                  value={effectiveValue || ""}
+                                  onChange={(e) => setPrintOverrides(prev => ({ ...prev, [`quantity_${idx}`]: e.target.value }))}
+                                  className="w-full text-xs font-sans p-1.5 border border-blue-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-blue-50/20 resize-y uppercase font-medium print:bg-transparent print:border-none print:p-0"
+                                  rows={1}
+                                  placeholder="Type custom override text..."
+                                />
+                              );
+                            }
+
+                            return <span className="whitespace-pre-line">{effectiveValue || "—"}</span>;
+                          })()}
                         </Row>
 
                         <Row label="Packing">
@@ -689,10 +728,11 @@ export default function ContractViewModal({ contractId, onClose }) {
 
                         <Row label="Price">
                           {(() => {
-                            const baseIncoterm = contract.destinationTransportMode === "road" || contract.destinationTransportMode === "rail" ? "DAP" : "CIF";
+                            const baseIncoterm = contract.shipmentType?.code || contract.incoterm || contract.incoterms || "";
                             const loc = destinationLabel(contract);
 
-                            const defaultPart1 = `${contract.currencyCode} ${Number(item.unitPrice).toLocaleString("en-IN", { minimumFractionDigits: 2 })} PER MT ${baseIncoterm}`.toUpperCase();
+                            const incotermSuffix = baseIncoterm ? ` ${baseIncoterm}` : "";
+                            const defaultPart1 = `${contract.currencyCode} ${Number(item.unitPrice).toLocaleString("en-IN", { minimumFractionDigits: 2 })} PER MT${incotermSuffix}`.toUpperCase();
                             const defaultPart2 = loc.toUpperCase();
 
                             const p1 = printOverrides[`pricePart1_${idx}`] !== undefined ? printOverrides[`pricePart1_${idx}`] : defaultPart1;

@@ -11,7 +11,6 @@ import EnquiriesFilter from "@/modules/enquiries/components/EnquiriesFilter";
 import Pagination from "@/components/common/Pagination";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 import EnquiryDrawer from "@/modules/enquiries/components/EnquiryDrawer";
-import LoadingPointsDrawer from "@/modules/enquiries/components/LoadingPointsDrawer";
 import TransportDrawer from "@/modules/logistics/components/TransportDrawer";
 
 export default function ConfirmedOrdersPage() {
@@ -31,9 +30,8 @@ export default function ConfirmedOrdersPage() {
   const [editEnquiry, setEditEnquiry] = useState(null);
   const [isViewMode, setIsViewMode] = useState(false);
 
-  // Transport & Loading Points Drawer states
+  // Transport Drawer state
   const [transportEnquiry, setTransportEnquiry] = useState(null);
-  const [loadingPointsEnquiry, setLoadingPointsEnquiry] = useState(null);
 
   // The Purchase Contract tab requires an existing Sales Contract and no linked Purchase Contract.
   const isSalesTab = activeTab === "SALES";
@@ -228,13 +226,6 @@ export default function ConfirmedOrdersPage() {
         onClose={() => setTransportEnquiry(null)}
         enquiry={transportEnquiry}
         isReadOnly={true}
-      />
-
-      {/* Loading Points Drawer */}
-      <LoadingPointsDrawer
-        isOpen={loadingPointsEnquiry !== null}
-        onClose={() => setLoadingPointsEnquiry(null)}
-        enquiry={loadingPointsEnquiry}
       />
     </div>
   );

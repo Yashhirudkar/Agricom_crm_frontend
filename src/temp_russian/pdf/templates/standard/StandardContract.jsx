@@ -2,6 +2,10 @@ import React from "react";
 import ContractHeader from "../../shared/ContractHeader";
 import SignatureBlock from "../../shared/SignatureBlock";
 import { formatDate, partnerAddress, incotermLabel, getShipmentPeriodText } from "../../shared/helpers";
+import {
+  generateQuantityDescription,
+  getContractTransportMode,
+} from "@/modules/sales-contracts/utils/quantityUtils";
 import RichTextEditor from "@/components/editor/RichTextEditor";
 
 // ─── Row component ────────────────────────────────────────────────────────────
@@ -159,7 +163,30 @@ export default function StandardContract({ contract, renderValue, isCustomizing 
             </Row>
 
             <Row label="Quantity">
-              {renderValue(`quantity_${idx}`, `${Number(item.quantity).toLocaleString("en-IN")} MT +/- 5%`)}
+              {(() => {
+                const transportMode = getContractTransportMode(contract);
+                const generatedQty = generateQuantityDescription({
+                  transportMode,
+                  unitCount: item.unitCount || (parseFloat(item.quantity) > 0 && parseFloat(item.qtyPerCount) > 0 ? Math.round(parseFloat(item.quantity) / parseFloat(item.qtyPerCount)) : null),
+                  containerType: item.containerType || contract.containerType || "40 FT",
+                  qtyPerUnit: item.qtyPerCount,
+                  totalQuantity: item.quantity,
+                  tolerancePercentage: item.tolerancePercentage !== undefined && item.tolerancePercentage !== null
+                    ? item.tolerancePercentage
+                    : (contract.tolerancePercentage ?? 5),
+                });
+                const isStaleDesc =
+                  item.quantityDescription &&
+                  (item.quantityDescription.includes("OF APPROX.") ||
+                   item.quantityDescription.includes("\n") ||
+                   item.quantityDescription.includes("(40 FT)") ||
+                   item.quantityDescription.includes("(20 FT)") ||
+                   item.quantityDescription.includes(" . "));
+                const defaultQty = (transportMode === "ROAD" || isStaleDesc)
+                  ? generatedQty
+                  : (item.quantityDescription || generatedQty);
+                return renderValue(`quantity_${idx}`, defaultQty);
+              })()}
             </Row>
 
             <Row label="Packing">

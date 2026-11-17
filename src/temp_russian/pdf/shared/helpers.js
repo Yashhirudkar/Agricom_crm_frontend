@@ -26,10 +26,10 @@ export function partnerAddress(p) {
  * e.g., "CIF NOVOROSSIYSK" or "DAP MOSCOW"
  */
 export function incotermLabel(contract) {
-  const mode = contract.destinationTransportMode || "sea";
+  const incoterm = contract.shipmentType?.code || contract.incoterm || contract.incoterms || "";
   const loc = contract.destinationLocationName || contract.portOfDischarge || "";
-  if (mode === "sea" || mode === "air") return loc ? `CIF ${loc}` : "CIF";
-  return loc ? `DAP ${loc}` : "DAP";
+  if (incoterm) return loc ? `${incoterm} ${loc}` : incoterm;
+  return loc || "—";
 }
 
 /**

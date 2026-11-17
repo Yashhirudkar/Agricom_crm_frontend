@@ -6,10 +6,10 @@ export const enquiriesApi = {
   create: (data) => axiosClient.post("/enquiries", data),
   update: (id, data) => axiosClient.patch(`/enquiries/${id}`, data),
   remove: (id, reason) => axiosClient.delete(`/enquiries/${id}`, { params: { reason } }),
-  getLoadingPoints: (id) =>
-    axiosClient.get(`/enquiries/${id}/loading-points`).then((res) => res.data?.data ?? res.data ?? []),
-  updateLoadingPoints: (id, payload) =>
-    axiosClient.put(`/enquiries/${id}/loading-points`, payload),
+  getTransportDetails: (id) =>
+    axiosClient.get(`/enquiries/${id}/transport-details`).then((res) => res.data?.data ?? res.data ?? []),
+  updateTransportDetails: (id, transportDetails) =>
+    axiosClient.put(`/enquiries/${id}/transport-details`, { transportDetails }),
   getDestinations: (id) =>
     axiosClient.get(`/enquiries/${id}/destinations`).then((res) => res.data?.data ?? res.data ?? []),
   updateDestinations: (id, destinations) =>

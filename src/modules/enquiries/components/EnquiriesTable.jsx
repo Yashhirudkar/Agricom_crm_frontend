@@ -1,8 +1,8 @@
-﻿import React from "react";
+import React from "react";
 import { MessageCircle, Trash2, FileSignature, Edit2, Eye, Truck, MapPin } from "lucide-react";
 import PriceHistoryTooltip from "./PriceHistoryTooltip";
 
-export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelete, onExecute, onEdit, onView, onOpenTransport, onOpenLoadingPoints, onSortBusinessReference, isOrderMode }) {
+export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelete, onExecute, onEdit, onView, onOpenTransport, onSortBusinessReference, isOrderMode }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -195,13 +195,6 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
                       title="Edit"
                     >
                       <Edit2 className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => onOpenLoadingPoints?.(e)}
-                      className="p-1.5 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
-                      title="Loading Points"
-                    >
-                      <MapPin className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => onFollowUp(e)}
