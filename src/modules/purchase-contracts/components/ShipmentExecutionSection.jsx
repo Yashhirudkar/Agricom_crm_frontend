@@ -13,6 +13,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import ShipmentDetailsDrawer from "@/modules/shipments/components/ShipmentDetailsDrawer";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const STATUS_COLORS = {
   Scheduled: "bg-slate-50 text-slate-700 border-slate-200",
@@ -34,6 +35,7 @@ export default function ShipmentExecutionSection({
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedShipmentIdToAdd, setSelectedShipmentIdToAdd] = useState("");
+  useEscapeKey(() => setShowAddModal(false), showAddModal);
 
   if (loading) {
     return (

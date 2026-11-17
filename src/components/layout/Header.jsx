@@ -247,7 +247,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200/50 bg-white backdrop-blur-xl transition-all duration-300">
+    <header className="sticky top-0 z-50 w-full border-b border-gray-200/50 bg-white backdrop-blur-xl transition-all duration-300 print:hidden">
       <div className="w-full min-w-0 px-3 sm:px-4 h-16 flex items-center justify-between gap-2">
         {/* Left Side: Logo & Workspace Switcher */}
         <div className="min-w-0 flex items-center gap-2 md:gap-6">
@@ -620,7 +620,7 @@ export function Header() {
               <marquee className="flex-1">
                 {[1, 2, 3].map((item) => (
                   <span key={item} className="mr-[50vw]">
-                    🎉 Today is {otherBirthdayNames.join(" & ")}'s Birthday! Wish them a very Happy Birthday! 🎂
+                    🎉 Today is {otherBirthdayNames.join(" & ")}&apos;s Birthday! Wish them a very Happy Birthday! 🎂
                   </span>
                 ))}
               </marquee>

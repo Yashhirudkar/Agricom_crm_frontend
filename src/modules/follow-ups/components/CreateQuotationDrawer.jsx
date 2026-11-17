@@ -5,6 +5,7 @@ import CountrySelect from '@/components/common/CountrySelect';
 import InfiniteSearchSelect from './InfiniteSearchSelect';
 import QuotationPreview from './QuotationPreview';
 import { useCreateQuotationMutation } from '../mutations/quotations.mutation';
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 // ─── Style helpers ─────────────────────────────────────────────────────────────
 
@@ -38,6 +39,8 @@ const EMPTY_FORM = {
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export default function CreateQuotationDrawer({ isOpen, onClose, followUp, onQuotationCreated }) {
+  useEscapeKey(onClose, isOpen);
+
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [partnerRoles, setPartnerRoles] = useState([]);
@@ -242,14 +245,6 @@ export default function CreateQuotationDrawer({ isOpen, onClose, followUp, onQuo
       // Error handled by mutation onError (toast)
     }
   };
-
-  // ─── Escape key ───────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    if (isOpen) window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

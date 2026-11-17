@@ -106,7 +106,12 @@ function SubtaskQuickAddForm({ parentTaskId, statuses, onCancel }) {
         placeholder="Subtask title *"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Escape') onCancel(); }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
         className="w-full px-3 py-2 border border-indigo-200 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none"
       />
 

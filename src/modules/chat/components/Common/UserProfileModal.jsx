@@ -4,18 +4,16 @@ import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { getAvatarUrl } from "@/lib/axios";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function UserProfileModal({ user, isOpen, onClose }) {
+  useEscapeKey(onClose, isOpen && Boolean(user));
+
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") onClose();
-    };
     if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "hidden";
     }
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
   }, [isOpen, onClose]);

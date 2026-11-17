@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { X, Calendar, Info, Clock, Edit2, Trash2 } from "lucide-react";
 import HolidayForm from "./HolidayForm";
 import { format } from "date-fns";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const parseLocalDate = (dateStr) => {
   if (!dateStr) return null;
@@ -12,6 +13,8 @@ const parseLocalDate = (dateStr) => {
 };
 
 export default function HolidayDrawer({ isOpen, onClose, holiday, onSave, onDelete, canUpdate, canDelete }) {
+  useEscapeKey(onClose, isOpen);
+
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {

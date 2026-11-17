@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { monthlyStockSummaryApi } from "../services/monthlyStockSummaryApi";
 import MonthlyStockToolbar from "../components/MonthlyStockToolbar";
 import MonthlyStockSectionCard from "../components/MonthlyStockSectionCard";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function MonthlyStockReportBuilderPage({
   id,
@@ -225,6 +226,11 @@ export default function MonthlyStockReportBuilderPage({
 
   const [sectionToDelete, setSectionToDelete] = useState(null);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  useEscapeKey(() => {
+    if (showPublishModal) setShowPublishModal(false);
+    else if (leaveModalOpen) setLeaveModalOpen(false);
+    else onClose?.();
+  }, showPublishModal || leaveModalOpen || (isModal && Boolean(onClose)));
 
   const handleDeleteSection = (sectionId) => {
     if (isReadOnly) return;

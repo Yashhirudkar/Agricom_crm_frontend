@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function Drawer({
   isOpen,
@@ -11,6 +12,8 @@ export default function Drawer({
 }) {
   const [show, setShow] = useState(false);
   const [render, setRender] = useState(false);
+
+  useEscapeKey(onClose, isOpen);
 
   useEffect(() => {
     if (isOpen) {

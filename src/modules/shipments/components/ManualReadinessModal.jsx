@@ -15,6 +15,7 @@ import {
 import { shipmentsApi } from "../services/shipmentsApi";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function ManualReadinessModal({
   shipment,
@@ -22,6 +23,8 @@ export default function ManualReadinessModal({
   onClose,
   onSaveSuccess,
 }) {
+  useEscapeKey(onClose, isOpen && Boolean(shipment));
+
   const { hasPermission } = usePermissions();
   const canEdit =
     hasPermission("shipments:update") ||

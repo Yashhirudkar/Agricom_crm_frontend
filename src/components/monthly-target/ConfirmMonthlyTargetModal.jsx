@@ -2,6 +2,7 @@
 
 import React from "react";
 import { AlertTriangle, Lock, Loader2 } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function ConfirmMonthlyTargetModal({
   isOpen,
@@ -12,6 +13,8 @@ export default function ConfirmMonthlyTargetModal({
   year,
   isSubmitting,
 }) {
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   return (
@@ -91,4 +94,3 @@ export default function ConfirmMonthlyTargetModal({
     </div>
   );
 }
-

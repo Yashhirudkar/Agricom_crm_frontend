@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { X, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { cargoAvailabilityApi } from "../services/cargoAvailabilityApi";
 import { toast } from "sonner";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function MttReadinessFormModal({
   cargoRecord,
@@ -10,6 +11,8 @@ export default function MttReadinessFormModal({
   onClose,
   onSuccess,
 }) {
+  useEscapeKey(onClose, Boolean(cargoRecord));
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 

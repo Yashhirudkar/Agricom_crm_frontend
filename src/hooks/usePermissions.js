@@ -21,6 +21,50 @@ const normalizePermission = (permKey) => {
     resource = 'task';
   }
 
+  if (resource === 'categories') {
+    resource = 'category';
+  }
+
+  if (resource === 'products') {
+    resource = 'product';
+  }
+
+  if (['partner_roles', 'partnerroles', 'partner-role', 'partner_role'].includes(resource)) {
+    resource = 'partnerrole';
+  }
+
+  if (['bag_specifications', 'bag_specification', 'bagspecs', 'bagspec'].includes(resource)) {
+    resource = 'bagspec';
+  }
+
+  if (resource === 'partners') {
+    resource = 'partner';
+  }
+
+  if (resource === 'enquiries') {
+    resource = 'enquiry';
+  }
+
+  if (['financialyear', 'financial_year', 'financial-years', 'financial_years'].includes(resource)) {
+    resource = 'financial-year';
+  }
+
+  if (['shipping-lines', 'shippingline', 'shipping_line'].includes(resource)) {
+    resource = 'shipping_lines';
+  }
+
+  if (resource === 'port') {
+    resource = 'ports';
+  }
+
+  if (['confirmed_order', 'confirmed-order', 'confirmed-orders'].includes(resource)) {
+    resource = 'confirmed_orders';
+  }
+
+  if (resource === 'sales-report') {
+    resource = 'sales_report';
+  }
+
   if (action === 'view') {
     action = 'read';
   }

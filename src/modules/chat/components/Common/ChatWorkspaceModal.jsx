@@ -3,8 +3,11 @@
 import React, { useState } from "react";
 import { Maximize2, Minimize2, X, Minus } from "lucide-react";
 import ChatPage from "@/app/(crm)/chat/page";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function ChatWorkspaceModal({ isOpen, onClose }) {
+  useEscapeKey(onClose, isOpen);
+
   const [isMaximized, setIsMaximized] = useState(false);
 
   if (!isOpen) return null;

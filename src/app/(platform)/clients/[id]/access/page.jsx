@@ -373,7 +373,9 @@ export default function ClientAccessConfigPage() {
             </div>
             
             <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-              {matrixRegistry.map((mod) => {
+              {[...matrixRegistry]
+                .sort((a, b) => (a.module_name || "").localeCompare(b.module_name || ""))
+                .map((mod) => {
                 const isChecked = selectedModuleIds.has(mod.module_id);
                 return (
                   <label 

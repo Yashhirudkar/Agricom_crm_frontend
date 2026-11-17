@@ -1,5 +1,6 @@
 import React from "react";
 import { AlertCircle, X } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const parse24hTime = (timeStr, defaultPeriod = "AM") => {
   if (!timeStr) return { hour: "", minute: "", period: defaultPeriod };
@@ -110,6 +111,8 @@ export default function CorrectionModal({
   setCorrectionForm,
   isLoading,
 }) {
+  useEscapeKey(() => setShowCorrectionModal(false), showCorrectionModal);
+
   if (!showCorrectionModal) return null;
 
   return (

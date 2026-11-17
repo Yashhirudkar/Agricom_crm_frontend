@@ -2,8 +2,11 @@ import React, { useState, useCallback } from "react";
 import { X, Plus, Trash2, Vote } from "lucide-react";
 import { toast } from "sonner";
 import { useCreatePollMutation } from "../../mutations/chat.mutations";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const PollCreator = React.memo(({ conversationId, onClose }) => {
+  useEscapeKey(onClose);
+
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState(["", ""]);
   const [allowMultiple, setAllowMultiple] = useState(false);

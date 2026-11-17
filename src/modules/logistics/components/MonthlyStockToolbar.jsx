@@ -10,6 +10,7 @@ import {
   Sparkles,
   FileSpreadsheet,
 } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const TEMPLATE_OPTIONS = [
   {
@@ -56,6 +57,7 @@ export default function MonthlyStockToolbar({
   isReadOnly = false,
 }) {
   const [modalOpen, setModalOpen] = useState(false);
+  useEscapeKey(() => setModalOpen(false), modalOpen);
   const [sectionTitle, setSectionTitle] = useState("");
   const [selectedTemplateKey, setSelectedTemplateKey] = useState("indian");
 

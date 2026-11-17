@@ -16,6 +16,7 @@ import {
 import { salesContractApi } from "../services/salesContractApi";
 import axiosClient from "@/lib/axios";
 import { toast } from "sonner";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 // ─── Tooltip ─────────────────────────────────────────────────────────────────
 function Tip({ label, children }) {
@@ -47,6 +48,8 @@ function ActionBtn({ onClick, title, colorClass, icon, disabled = false }) {
 
 // ─── Confirm delete dialog ────────────────────────────────────────────────────
 function ConfirmDialog({ open, docName, onConfirm, onCancel }) {
+  useEscapeKey(onCancel, open);
+
   if (!open) return null;
   return (
     <div className="absolute inset-0 z-[300] flex items-center justify-center bg-black/30 backdrop-blur-sm rounded-2xl">
@@ -77,6 +80,8 @@ function ConfirmDialog({ open, docName, onConfirm, onCancel }) {
 
 // ─── Main Drawer ──────────────────────────────────────────────────────────────
 export default function DocumentUploadDrawer({ contract, onClose, onRefreshList }) {
+  useEscapeKey(onClose, Boolean(contract));
+
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState({});

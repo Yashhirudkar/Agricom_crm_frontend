@@ -19,6 +19,7 @@ import {
 import { format, parseISO } from "date-fns";
 import SearchableSelect from "@/components/common/SearchableSelect";
 import axiosClient from "@/lib/axios";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 function AdminLeavesContent() {
   const dispatch = useDispatch();
@@ -55,6 +56,7 @@ function AdminLeavesContent() {
 
   // Drawer modal state for employee leave details
   const [selectedEmployeeForDrawer, setSelectedEmployeeForDrawer] = useState(null);
+  useEscapeKey(() => setSelectedEmployeeForDrawer(null), Boolean(selectedEmployeeForDrawer));
   const [employeeLeaves, setEmployeeLeaves] = useState([]);
   const [isDrawerLoading, setIsDrawerLoading] = useState(false);
 

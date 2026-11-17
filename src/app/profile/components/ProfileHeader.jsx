@@ -2,22 +2,17 @@
 import { useState, useEffect } from "react";
 import { Shield, CheckCircle2, AlertCircle, X, ZoomIn } from "lucide-react";
 import api from "@/lib/axios";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function ProfileHeader({ user, employee, completion }) {
   const [isOpen, setIsOpen] = useState(false);
+  useEscapeKey(() => setIsOpen(false), isOpen);
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
     if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "hidden";
     }
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
   }, [isOpen]);

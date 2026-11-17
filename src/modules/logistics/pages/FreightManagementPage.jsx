@@ -41,6 +41,7 @@ import AddFreightQuoteModal from "../components/AddFreightQuoteModal";
 import DirectFreightQuoteDrawer from "../components/DirectFreightQuoteDrawer";
 import Pagination from "@/components/common/Pagination";
 import { copyToClipboard } from "@/utils/clipboard";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -198,6 +199,7 @@ export default function FreightManagementPage() {
 
   // Confirm delete state
   const [deleteTarget, setDeleteTarget] = useState(null);
+  useEscapeKey(() => setDeleteTarget(null), Boolean(deleteTarget));
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Debounce search

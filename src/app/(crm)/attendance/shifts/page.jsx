@@ -12,6 +12,7 @@ import {
 } from "@/store/entities/companyHrPoliciesSlice";
 import { Plus, Edit2, Trash2, Clock, Calendar } from "lucide-react";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function ShiftsPage() {
   const dispatch = useDispatch();
@@ -22,6 +23,7 @@ export default function ShiftsPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingShift, setEditingShift] = useState(null);
+  useEscapeKey(() => setIsModalOpen(false), isModalOpen);
   
   const defaultStartTime = hrPolicy?.defaultShiftStartTime || "";
   const defaultEndTime = hrPolicy?.defaultShiftEndTime || "";

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { X } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function Drawer({
   isOpen,
@@ -14,14 +15,7 @@ export default function Drawer({
   children,
   footer,
 }) {
-  // Close on Escape key
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    if (isOpen) window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [isOpen, onClose]);
+  useEscapeKey(onClose, isOpen);
 
   // Disable body scroll when drawer is open
   useEffect(() => {

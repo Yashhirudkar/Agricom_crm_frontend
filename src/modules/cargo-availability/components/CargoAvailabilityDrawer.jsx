@@ -5,6 +5,7 @@ import MttReadinessTab from "./MttReadinessTab";
 import MttReadinessFormModal from "./MttReadinessFormModal";
 import ExporterLoadingTab from "./ExporterLoadingTab";
 import ExporterLoadingDrawer from "./ExporterLoadingDrawer";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 import {
   X,
   Truck,
@@ -15,6 +16,8 @@ import {
 } from "lucide-react";
 
 export default function CargoAvailabilityDrawer({ shipment, onClose }) {
+  useEscapeKey(onClose, Boolean(shipment));
+
   const [activeTab, setActiveTab] = useState("loading");
 
   const [cargoData, setCargoData] = useState(null);

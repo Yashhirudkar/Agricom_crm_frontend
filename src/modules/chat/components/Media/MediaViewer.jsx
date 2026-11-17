@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { X, ZoomIn, ZoomOut, RotateCw, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const MediaViewer = ({ currentMedia, mediaList = [], onClose }) => {
+  useEscapeKey(onClose);
+
   const [activeMedia, setActiveMedia] = useState(currentMedia);
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -51,13 +54,12 @@ const MediaViewer = ({ currentMedia, mediaList = [], onClose }) => {
   // Keyboard navigation & close listeners
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "Escape") onClose();
       if (e.key === "ArrowLeft") handlePrev();
       if (e.key === "ArrowRight") handleNext();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, handlePrev, handleNext]);
+  }, [handlePrev, handleNext]);
 
   // Focus lock trap
   useEffect(() => {

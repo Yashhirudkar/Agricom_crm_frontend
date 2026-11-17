@@ -48,6 +48,7 @@ import axiosClient from "@/lib/axios";
 import { resolvePhone } from "@/lib/contactUtils";
 import { useSelector } from "react-redux";
 import { selectActiveCompany } from "@/store/slices/companyContextSlice";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const STATUS_STEPS = [
   "Pending",
@@ -81,6 +82,8 @@ export default function TransportDrawer({
   targetShipmentRef = null,
   fromSource = null,
 }) {
+  useEscapeKey(onClose, isOpen);
+
   const company = useSelector(selectActiveCompany);
   const companyCountry = company?.country;
 

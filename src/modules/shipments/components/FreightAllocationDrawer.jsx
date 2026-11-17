@@ -21,12 +21,15 @@ import {
   Plus,
 } from "lucide-react";
 import { logisticsApi } from "@/modules/logistics/services/logisticsApi";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function FreightAllocationDrawer({
   shipment,
   onClose,
   onEditShipment,
 }) {
+  useEscapeKey(onClose, Boolean(shipment));
+
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [logisticsDetails, setLogisticsDetails] = useState(null);

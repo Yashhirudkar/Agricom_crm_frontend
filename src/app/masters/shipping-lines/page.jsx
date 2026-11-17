@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { portsApi } from "@/api/ports.api";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function ShippingLinesMasterPage() {
   const [lines, setLines] = useState([]);
@@ -39,6 +40,7 @@ export default function ShippingLinesMasterPage() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  useEscapeKey(() => setIsModalOpen(false), isModalOpen);
   const [editingLine, setEditingLine] = useState(null);
   const [formName, setFormName] = useState("");
   const [formCode, setFormCode] = useState("");

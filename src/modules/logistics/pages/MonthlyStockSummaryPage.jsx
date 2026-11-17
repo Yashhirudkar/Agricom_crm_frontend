@@ -9,6 +9,7 @@ import MonthlyStockSummaryTable from "../components/MonthlyStockSummaryTable";
 import MonthlyStockSummaryDrawer from "../components/MonthlyStockSummaryDrawer";
 import MonthlyStockReportBuilderPage from "./MonthlyStockReportBuilderPage";
 import Pagination from "@/components/common/Pagination";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const MONTH_LIST = [
   { value: "All", label: "All Months" },
@@ -130,6 +131,13 @@ export default function MonthlyStockSummaryPage() {
   };
 
   const [deleteRecordTarget, setDeleteRecordTarget] = useState(null);
+  useEscapeKey(() => {
+    if (deleteRecordTarget) setDeleteRecordTarget(null);
+    else if (builderDrawer.isOpen) {
+      setBuilderDrawer({ isOpen: false, id: null, mode: "edit" });
+      setRefreshKey((key) => key + 1);
+    }
+  }, Boolean(deleteRecordTarget) || builderDrawer.isOpen);
   const [publishRecordTarget, setPublishRecordTarget] = useState(null);
 
   const handlePublish = (record) => {

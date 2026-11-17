@@ -154,6 +154,8 @@ function ProductsContent() {
     
     // Clean up payload to match Product DTO
     const payload = { ...form };
+    payload.categoryId = payload.categoryId || null;
+    payload.country = payload.country || null;
     if (!payload.hsCode) delete payload.hsCode;
     if (payload.qualitySubType === "") delete payload.qualitySubType;
     if (payload.specification === "") delete payload.specification;

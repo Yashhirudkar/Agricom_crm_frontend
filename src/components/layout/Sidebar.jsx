@@ -103,14 +103,15 @@ export function Sidebar() {
   const hasDocumentsPermission =
     userType === "super_admin" ||
     userType === "client_admin" ||
-    hasPermission("shipment_stuffing_execution:view");
+    hasPermission("shipment_stuffing_execution:view") ||
+    hasPermission("export_invoice:view");
 
   const hasDocumentsFolder = menuConfig.some(
     (section) =>
       (section.title && section.title.toLowerCase() === "documents") ||
       (section.name && section.name.toLowerCase() === "documents") ||
       section.items?.some(
-        (it) => it.href === "/documents/shipment-stuffing-execution"
+        (it) => it.href === "/documents/shipment-stuffing-execution" || it.href === "/documents/export-invoices"
       )
   );
 
@@ -129,6 +130,13 @@ export function Sidebar() {
           icon: "FileText",
           href: "/documents/shipment-stuffing-execution",
           permission: "shipment_stuffing_execution:view",
+        },
+        {
+          id: "export-invoices",
+          name: "Export Invoice",
+          icon: "Receipt",
+          href: "/documents/export-invoices",
+          permission: "export_invoice:view",
         },
       ],
     });
@@ -155,6 +163,22 @@ export function Sidebar() {
                 icon: "Layers",
                 href: "/sales/stock",
                 permission: "stock_management:view",
+              });
+            }
+            const isDocSection =
+              (section.title && section.title.toLowerCase().includes("document")) ||
+              (section.name && section.name.toLowerCase().includes("document")) ||
+              section.id === "documents-folder";
+            const hasInvoiceItem = filtered.some(
+              it => it.href === "/documents/export-invoices"
+            );
+            if (isDocSection && !hasInvoiceItem && hasDocumentsPermission) {
+              filtered.push({
+                id: "export-invoices",
+                name: "Export Invoice",
+                icon: "Receipt",
+                href: "/documents/export-invoices",
+                permission: "export_invoice:view",
               });
             }
             return filtered;
@@ -236,7 +260,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`fixed md:relative top-16 md:top-0 bottom-0 left-0 h-[calc(100vh-64px)] md:h-full flex flex-col bg-white text-gray-500 border-r border-gray-200 flex-shrink-0 font-sans transition-all duration-300 z-40 ${isSidebarCollapsed
+      className={`fixed md:relative top-16 md:top-0 bottom-0 left-0 h-[calc(100vh-64px)] md:h-full flex flex-col bg-white text-gray-500 border-r border-gray-200 flex-shrink-0 font-sans transition-all duration-300 z-40 print:hidden ${isSidebarCollapsed
           ? "w-0 md:w-[80px] border-r-0 md:border-r"
           : "w-[260px] shadow-2xl md:shadow-none"
         }`}

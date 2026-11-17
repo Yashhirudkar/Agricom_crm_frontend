@@ -4,6 +4,7 @@ import { X, Check, Loader2 } from "lucide-react";
 import { shipmentsApi } from "../services/shipmentsApi";
 import { toast } from "sonner";
 import BusinessReference from "@/components/common/BusinessReference";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const WORKFLOW_STATUSES = [
   "Scheduled",
@@ -19,6 +20,8 @@ const WORKFLOW_STATUSES = [
 ];
 
 export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuccess }) {
+  useEscapeKey(onClose, isOpen && Boolean(shipment));
+
   const [form, setForm] = useState({
     shipmentDate: "",
     noOfContainers: "",

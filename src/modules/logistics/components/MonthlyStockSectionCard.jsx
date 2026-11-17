@@ -446,7 +446,10 @@ export default function MonthlyStockSectionCard({
                 onChange={(e) => setTitleInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSaveTitle();
-                  if (e.key === "Escape") setIsEditingTitle(false);
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setIsEditingTitle(false);
+                  }
                 }}
                 autoFocus
                 className="px-2 py-0.5 text-xs font-bold border border-[#107c41] bg-white text-gray-900 focus:outline-none"

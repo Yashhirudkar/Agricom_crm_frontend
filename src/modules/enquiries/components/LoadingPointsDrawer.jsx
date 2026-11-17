@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { X, Plus, Trash2, MapPin, Loader2, Check, AlertCircle } from "lucide-react";
 import { enquiriesApi } from "../services/enquiriesApi";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 /** Reusable repeatable list section */
 function RepeatableList({ label, items, onAdd, onChange, onDelete, placeholder, addLabel, loading }) {
@@ -70,6 +71,8 @@ function getEnquiryDestination(e) {
 }
 
 export default function LoadingPointsDrawer({ isOpen, onClose, enquiry, onSaveSuccess }) {
+  useEscapeKey(onClose, isOpen);
+
   const [enquiryDestination, setEnquiryDestination] = useState("");
   const [points, setPoints] = useState([""]);
   const [freightRequired, setFreightRequired] = useState(false);

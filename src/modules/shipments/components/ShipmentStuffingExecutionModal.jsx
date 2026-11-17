@@ -1,5 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { toast } from "sonner";
 import { parseTime } from "@internationalized/date";
 import { DateInput, DateSegment, Label, TimeField } from "react-aria-components";
@@ -7,6 +9,7 @@ import {
   X,
   Check,
   Rocket,
+  Receipt,
   FileText,
   Layers,
   Truck,
@@ -36,6 +39,9 @@ import {
   ChevronUp,
   Maximize2,
   Minimize2,
+  Eye,
+  RefreshCw,
+  TrainTrack,
 } from "lucide-react";
 import { shipmentsApi } from "../services/shipmentsApi";
 import {
@@ -44,18 +50,336 @@ import {
 } from "../utils/mtWeight";
 import axiosClient from "@/lib/axios";
 
-// Quick Preset Document Names
-const PRESET_DOCUMENTS = [
+// Document Lists by Shipment Mode
+const TRUCK_DOCUMENTS = [
   "CMR",
-  "Weight Slip",
-  "Loading Photos",
-  "Phytosanitary Certificate",
-  "Shipping Bill",
-  "BL Draft",
-  "Commercial Invoice",
+  "COO",
+  "Phyto Certificate",
+  "Invoice",
   "Packing List",
-  "Other Documents",
+  "Custom Declaration",
+  "Loading Photos",
+  "Shipper's Contract & PO",
+  "Shipper's Invoice",
+  "Insurance Certificate",
+  "Quality Certificate",
 ];
+
+const SEA_DOCUMENTS = [
+  "Bill of Lading (BL)",
+  "Fumigation Certificate",
+  "Phyto Certificate",
+  "COO",
+  "Weight & Quality Certificate",
+  "Custom Declaration",
+  "Set of Loading Photos",
+  "Loading Photos",
+  "Supplier's Contract & Invoice",
+  "Invoice & Packing List",
+  "Insurance Certificate",
+  "COA Certificate",
+  "Quarantine Certificate",
+  "Import Permit",
+  "Test Report",
+  "Declaration of Conformity",
+  "Origin Letter",
+];
+
+const WAGON_DOCUMENTS = [
+  "SMGS",
+  "Photo Certificate",
+  "COO",
+  "Custom Declaration",
+  "Transporter's Contract & Invoice",
+  "Loading Photos & Video",
+  "Invoice",
+  "Packing List",
+  "Approved 4012",
+];
+
+const CAD_DOCUMENTS = [
+  "Bill of Exchange",
+  "Export Covering Schedule",
+  "Request Letter",
+];
+
+// Helper to detect CAD Payment terms from Sales Contract
+const isCadPayment = (terms) => {
+  if (!terms || typeof terms !== "string") return false;
+  const normalized = terms.trim().toUpperCase();
+  return (
+    normalized === "100% CASH AGAINST DOC (CAD)" ||
+    normalized === "100% CASH AGAINST DOCS (CAD)" ||
+    normalized === "100% CASH AGAINST DOCUMENTS (CAD)" ||
+    normalized.includes("CASH AGAINST DOC") ||
+    normalized.includes("CAD")
+  );
+};
+
+// Helper to detect initial shipment mode from text
+const detectMode = (modeStr) => {
+  const clean = String(modeStr || "").toUpperCase();
+  if (clean.includes("TRUCK") || clean.includes("ROAD")) return "Truck";
+  if (clean.includes("WAGON") || clean.includes("RAIL")) return "Wagon";
+  return "Sea";
+};
+
+// Helper to get predefined document names for mode & CAD terms
+const getPredefinedDocumentNames = (mode, isCadActive) => {
+  let list = [];
+  if (mode === "Truck") {
+    list = [...TRUCK_DOCUMENTS];
+  } else if (mode === "Wagon") {
+    list = [...WAGON_DOCUMENTS];
+  } else {
+    list = [...SEA_DOCUMENTS];
+  }
+  if (isCadActive) {
+    list = [...list, ...CAD_DOCUMENTS];
+  }
+  return list;
+};
+
+// Formats file size in readable format
+const formatFileSize = (bytes) => {
+  if (!bytes || isNaN(bytes)) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+// Builds attachments checklist syncing with existing uploaded files
+const buildAttachmentsForMode = (mode, isCadActive, currentAttachments = []) => {
+  const predefinedNames = getPredefinedDocumentNames(mode, isCadActive);
+  const existingByName = new Map();
+  const manualDocs = [];
+
+  (currentAttachments || []).forEach((att) => {
+    if (att && att.documentName && !existingByName.has(att.documentName)) {
+      existingByName.set(att.documentName, att);
+    }
+    // Retain manual documents or previously uploaded documents not in predefined list
+    if (
+      att &&
+      (att.isPredefined === false ||
+        (!predefinedNames.includes(att.documentName) && (att.fileName || !att.isPredefined)))
+    ) {
+      manualDocs.push(att);
+    }
+  });
+
+  const predefinedList = predefinedNames.map((name) => {
+    const existing = existingByName.get(name);
+    if (existing) {
+      return {
+        ...existing,
+        id: existing.id || `predef-${name}`,
+        documentName: name,
+        isPredefined: true,
+        isUploading: false,
+      };
+    }
+    return {
+      id: `predef-${name}`,
+      documentName: name,
+      isPredefined: true,
+      fileName: "",
+      fileUrl: "",
+      fileSize: 0,
+      remarks: "",
+      isUploading: false,
+    };
+  });
+
+  return [...predefinedList, ...manualDocs];
+};
+
+function DocumentCard({
+  att,
+  index,
+  availableDocs,
+  onUpload,
+  onDelete,
+  onView,
+  onDownload,
+  onChangeField,
+}) {
+  const fileInputRef = React.useRef(null);
+  const isUploaded = Boolean(att.fileName && String(att.fileName).trim() !== "");
+  const isUploading = Boolean(att.isUploading);
+
+  const handleCardClick = () => {
+    if (!isUploaded && !isUploading) {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onUpload(index, file);
+    }
+    e.target.value = "";
+  };
+
+  return (
+    <div
+      onClick={handleCardClick}
+      className={`group relative flex flex-col justify-between px-2.5 py-1.5 rounded-lg border transition-all duration-150 select-none ${
+        isUploaded
+          ? "border-emerald-300 bg-emerald-50/40 hover:bg-emerald-50/80 hover:border-emerald-400 cursor-default shadow-2xs"
+          : isUploading
+          ? "border-slate-300 bg-slate-50 opacity-80 cursor-wait shadow-2xs"
+          : "border-red-200 bg-red-50/40 hover:bg-red-50/80 hover:border-red-300 hover:shadow-xs cursor-pointer"
+      }`}
+      style={{ minHeight: "52px" }}
+    >
+      {/* Hidden File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {/* Row 1: Document Name + Status Badge */}
+      <div className="flex items-center justify-between gap-1.5 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          {isUploaded ? (
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+          ) : (
+            <FileText className="h-3.5 w-3.5 text-red-500 shrink-0" />
+          )}
+
+          {att.isPredefined ? (
+            <span
+              className="text-[11.5px] font-bold text-slate-800 truncate"
+              title={att.documentName}
+            >
+              {att.documentName}
+            </span>
+          ) : (
+            <input
+              type="text"
+              list={`manual-docs-${index}`}
+              value={att.documentName || ""}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => onChangeField(index, "documentName", e.target.value)}
+              placeholder="Document Name"
+              className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[11px] font-semibold text-slate-900 focus:border-indigo-500 outline-hidden"
+            />
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {isUploaded ? (
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 px-1.5 py-0.2 rounded">
+              <Check className="h-2.5 w-2.5 text-emerald-700" />
+              Uploaded
+            </span>
+          ) : (
+            <span className="text-[9px] font-bold text-red-600 bg-red-100/70 border border-red-200/60 px-1.5 py-0.2 rounded">
+              Pending
+            </span>
+          )}
+
+          {!att.isPredefined && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(index);
+              }}
+              className="p-0.5 text-slate-400 hover:text-red-600 rounded transition-colors cursor-pointer"
+              title="Remove Card"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Row 2: File Info / Action Row */}
+      {isUploaded ? (
+        <div className="flex items-center justify-between mt-1 pt-1 border-t border-emerald-100/80 gap-1 text-[11px]">
+          <div
+            className="flex items-center gap-1 min-w-0 flex-1 text-slate-700"
+            title={att.fileName}
+          >
+            <FileCheck className="h-3 w-3 text-emerald-600 shrink-0" />
+            <span className="truncate text-[10px] font-semibold text-slate-700 max-w-[110px]">
+              {att.fileName}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onView(att);
+              }}
+              className="p-1 rounded text-slate-500 hover:text-indigo-600 hover:bg-emerald-100/60 transition-colors cursor-pointer"
+              title="View File"
+            >
+              <Eye className="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDownload(att);
+              }}
+              className="p-1 rounded text-slate-500 hover:text-emerald-700 hover:bg-emerald-100/60 transition-colors cursor-pointer"
+              title="Download File"
+            >
+              <Download className="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+              className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-emerald-100/60 transition-colors cursor-pointer"
+              title="Replace File"
+            >
+              <RefreshCw className="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(index);
+              }}
+              className="p-1 rounded text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+              title="Delete File"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between mt-1 pt-1 border-t border-red-100/60 text-[10px]">
+          {isUploading ? (
+            <span className="flex items-center gap-1 text-slate-600 font-medium">
+              <Loader2 className="h-3 w-3 animate-spin text-red-500" />
+              Uploading...
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-red-600 font-semibold group-hover:text-red-700">
+              <Upload className="h-3 w-3" />
+              <span>Upload Required</span>
+            </span>
+          )}
+          <span className="text-[9.5px] text-slate-400 font-medium group-hover:text-red-500 transition-colors">
+            Browse ↗
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const TRANSPORTER_ROLES = [
   "CHA",
@@ -127,6 +451,9 @@ export default function ShipmentStuffingExecutionModal({
   onClose,
   onSaveSuccess,
 }) {
+  useEscapeKey(onClose, isOpen);
+
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -161,6 +488,8 @@ export default function ShipmentStuffingExecutionModal({
       bagSize: bagSizeKg ? `${bagSizeKg} Kg` : "—",
       totalBags: bagSizeKg ? Math.round((qtyMt * 1000) / bagSizeKg) : 0,
       incoterm: contract.paymentTerm?.name || contract.contractType || "—",
+      paymentTerms: contract.paymentTerm?.name || "",
+      paymentTerm: contract.paymentTerm?.name || "",
       shipmentDate: shipment.shipmentDate || "",
       freightType: contract.shipmentType?.name || "—",
       shipmentType: contract.contractType || "Export",
@@ -272,8 +601,30 @@ export default function ShipmentStuffingExecutionModal({
   ]);
   const [transporterOptions, setTransporterOptions] = useState([]);
 
-  // Section 5: Dynamic Attachments
+  // Section 5: Dynamic Attachments & Shipment Mode
+  const [shipmentMode, setShipmentMode] = useState("Sea");
   const [attachments, setAttachments] = useState([]);
+
+  // CAD Documents (Conditional): Show them ONLY when Sales Contract -> Payment Terms = 100% CASH AGAINST DOC (CAD)
+  const isCad = useMemo(() => {
+    const rawTerms =
+      shipment?.salesContract?.paymentTerm?.name ||
+      autoData?.paymentTerms ||
+      autoData?.paymentTerm ||
+      autoData?.incoterm ||
+      "";
+    return isCadPayment(rawTerms);
+  }, [
+    shipment?.salesContract?.paymentTerm?.name,
+    autoData?.paymentTerms,
+    autoData?.paymentTerm,
+    autoData?.incoterm,
+  ]);
+
+  const totalCount = attachments.length;
+  const uploadedCount = useMemo(() => {
+    return attachments.filter((a) => Boolean(a.fileName && String(a.fileName).trim() !== "")).length;
+  }, [attachments]);
 
   // Section 6: Execution Remarks
   const [remarks, setRemarks] = useState("");
@@ -343,6 +694,22 @@ export default function ShipmentStuffingExecutionModal({
     setLoading(true);
     setErrorMsg("");
 
+    const initialMode = detectMode(
+      fallbackAuto.freightType ||
+      fallbackAuto.shipmentType ||
+      shipment?.transportMode ||
+      shipment?.salesContract?.originTransportMode ||
+      "Sea"
+    );
+    const initialIsCad = isCadPayment(
+      shipment?.salesContract?.paymentTerm?.name ||
+      fallbackAuto.paymentTerms ||
+      fallbackAuto.incoterm ||
+      ""
+    );
+    setShipmentMode(initialMode);
+    setAttachments(buildAttachmentsForMode(initialMode, initialIsCad, []));
+
     const fetchData = async () => {
       try {
         const res = await shipmentsApi.getStuffingExecution(shipment.id);
@@ -369,6 +736,26 @@ export default function ShipmentStuffingExecutionModal({
 
           // If existing stuffing execution exists, load it
           const existing = data.existingStuffing;
+          const savedMode = existing?.freightOverrides?.shipmentMode;
+          const detectedMode =
+            savedMode ||
+            detectMode(
+              mergedAuto.freightType ||
+              mergedAuto.shipmentType ||
+              shipment?.transportMode ||
+              shipment?.salesContract?.originTransportMode ||
+              "Sea"
+            );
+          setShipmentMode(detectedMode);
+
+          const isCadActive = isCadPayment(
+            shipment?.salesContract?.paymentTerm?.name ||
+            mergedAuto.paymentTerms ||
+            mergedAuto.paymentTerm ||
+            mergedAuto.incoterm ||
+            ""
+          );
+
           if (existing) {
             setStuffingStatus(existing.stuffingStatus || "Draft");
             setExecutionStatus(existing.executionStatus || "Draft");
@@ -404,9 +791,8 @@ export default function ShipmentStuffingExecutionModal({
                 }))
               );
             }
-            if (Array.isArray(existing.attachments) && existing.attachments.length > 0) {
-              setAttachments(existing.attachments);
-            }
+            const savedAttachments = Array.isArray(existing.attachments) ? existing.attachments : [];
+            setAttachments(buildAttachmentsForMode(detectedMode, isCadActive, savedAttachments));
             if (existing.remarks) {
               setRemarks(existing.remarks);
             }
@@ -416,6 +802,7 @@ export default function ShipmentStuffingExecutionModal({
               ...prev,
               stuffingLocation: mergedAuto.warehouse || "",
             }));
+            setAttachments(buildAttachmentsForMode(detectedMode, isCadActive, []));
           }
         }
 
@@ -452,7 +839,15 @@ export default function ShipmentStuffingExecutionModal({
   // Combined Document Options (Trade Document Master + Presets)
   const availableDocumentNames = useMemo(() => {
     const fromMaster = tradeDocsList.map((d) => d.name).filter(Boolean);
-    const combined = Array.from(new Set([...PRESET_DOCUMENTS, ...fromMaster]));
+    const combined = Array.from(
+      new Set([
+        ...TRUCK_DOCUMENTS,
+        ...SEA_DOCUMENTS,
+        ...WAGON_DOCUMENTS,
+        ...CAD_DOCUMENTS,
+        ...fromMaster,
+      ])
+    );
     return combined;
   }, [tradeDocsList]);
 
@@ -510,12 +905,20 @@ export default function ShipmentStuffingExecutionModal({
   };
 
   // Attachment Handlers
-  const handleAddAttachment = (presetName = "") => {
+  const handleModeChange = (newMode) => {
+    if (newMode === shipmentMode) return;
+    setShipmentMode(newMode);
+    setAttachments((prev) => buildAttachmentsForMode(newMode, isCad, prev));
+    toast.info(`Switched to ${newMode} document checklist`);
+  };
+
+  const handleAddManualAttachment = () => {
     setAttachments((prev) => [
       ...prev,
       {
-        id: Date.now() + Math.random(),
-        documentName: presetName || PRESET_DOCUMENTS[0],
+        id: `manual-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        documentName: "",
+        isPredefined: false,
         fileName: "",
         fileUrl: "",
         fileSize: 0,
@@ -525,14 +928,113 @@ export default function ShipmentStuffingExecutionModal({
     ]);
   };
 
-  const handleRemoveAttachment = (index) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  const handleDeleteFile = (index) => {
+    setAttachments((prev) => {
+      const updated = [...prev];
+      const target = updated[index];
+      if (!target) return prev;
+
+      if (target.isPredefined) {
+        updated[index] = {
+          ...target,
+          fileName: "",
+          fileUrl: "",
+          fileSize: 0,
+          mimeType: "",
+        };
+        toast.info(`${target.documentName} file removed. Card reset to Pending.`);
+        return updated;
+      } else {
+        toast.info(`${target.documentName || "Custom attachment"} removed.`);
+        return updated.filter((_, i) => i !== index);
+      }
+    });
+  };
+
+  const resolveAttachmentUrl = (att) => {
+    if (att?.downloadUrl) return att.downloadUrl;
+    if (att?.attachmentId) return `/attachments/${att.attachmentId}/download`;
+    if (att?.id && typeof att.id === "number") return `/attachments/${att.id}/download`;
+    if (att?.fileUrl) {
+      if (att.fileUrl.startsWith("/attachments/")) return att.fileUrl;
+      return `/attachments/by-path/download?path=${encodeURIComponent(att.fileUrl)}`;
+    }
+    return "";
+  };
+
+  const handleView = async (att) => {
+    const url = resolveAttachmentUrl(att);
+    if (!url) {
+      toast.error("File URL is not available for preview.");
+      return;
+    }
+
+    const filename = att.fileName || `${att.documentName || "document"}`;
+    const ext = filename.toLowerCase().split(".").pop();
+    const isDirectBrowserPreview = ["pdf", "png", "jpg", "jpeg", "webp", "gif"].includes(ext);
+
+    try {
+      const response = await axiosClient.get(url, { responseType: "blob" });
+      const contentType = response.headers["content-type"] || att.mimeType || (ext === "pdf" ? "application/pdf" : "application/octet-stream");
+      const blobUrl = window.URL.createObjectURL(
+        new Blob([response.data], { type: contentType })
+      );
+
+      if (isDirectBrowserPreview) {
+        window.open(blobUrl, "_blank");
+      } else {
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
+        toast.info(`Downloaded ${filename} for viewing (${ext.toUpperCase()} format).`);
+      }
+
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 30000);
+    } catch (err) {
+      console.error("Failed to view attachment:", err);
+      toast.error("Could not retrieve file from server.");
+    }
+  };
+
+  const handleDownload = async (att) => {
+    const url = resolveAttachmentUrl(att);
+    if (!url) {
+      toast.error("File URL is not available for download.");
+      return;
+    }
+
+    const filename = att.fileName || `${att.documentName || "document"}.pdf`;
+
+    try {
+      const response = await axiosClient.get(url, { responseType: "blob" });
+      const contentType = response.headers["content-type"] || att.mimeType || "application/octet-stream";
+      const blobUrl = window.URL.createObjectURL(
+        new Blob([response.data], { type: contentType })
+      );
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 30000);
+    } catch (err) {
+      console.error("Failed to download attachment:", err);
+      toast.error("Could not download file from server.");
+    }
   };
 
   const handleAttachmentChange = (index, field, value) => {
     setAttachments((prev) => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      if (updated[index]) {
+        updated[index] = { ...updated[index], [field]: value };
+      }
       return updated;
     });
   };
@@ -542,7 +1044,9 @@ export default function ShipmentStuffingExecutionModal({
 
     setAttachments((prev) => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], isUploading: true };
+      if (updated[index]) {
+        updated[index] = { ...updated[index], isUploading: true };
+      }
       return updated;
     });
 
@@ -555,22 +1059,34 @@ export default function ShipmentStuffingExecutionModal({
 
       setAttachments((prev) => {
         const updated = [...prev];
-        updated[index] = {
-          ...updated[index],
-          fileName: data.originalName || file.name,
-          fileUrl: data.storagePath || `/api/uploads/${data.fileName}`,
-          fileSize: data.fileSize || file.size,
-          mimeType: data.mimeType || file.type,
-          isUploading: false,
-        };
+        if (updated[index]) {
+          const docName = updated[index].documentName || file.name;
+          const attachmentId = data.attachmentId || data.id;
+          const downloadUrl = data.downloadUrl || (attachmentId ? `/attachments/${attachmentId}/download` : "");
+          updated[index] = {
+            ...updated[index],
+            attachmentId: attachmentId,
+            id: updated[index].id || attachmentId,
+            fileName: data.originalName || file.name,
+            fileUrl: downloadUrl || data.storagePath || `/api/uploads/${data.fileName}`,
+            downloadUrl: downloadUrl,
+            fileSize: data.fileSize || file.size,
+            mimeType: data.mimeType || file.type,
+            isUploading: false,
+          };
+          toast.success(`${docName} uploaded successfully`);
+        }
         return updated;
       });
     } catch (err) {
       console.error("Failed to upload attachment:", err);
       setErrorMsg("Failed to upload file. Please try again.");
+      toast.error("Failed to upload file. Please try again.");
       setAttachments((prev) => {
         const updated = [...prev];
-        updated[index] = { ...updated[index], isUploading: false };
+        if (updated[index]) {
+          updated[index] = { ...updated[index], isUploading: false };
+        }
         return updated;
       });
     }
@@ -643,7 +1159,7 @@ export default function ShipmentStuffingExecutionModal({
         actualLoadingWeight: parseFloat(loadingInfo.actualLoadingWeight) || 0,
         grossWeight: parseFloat(loadingInfo.grossWeight) || 0,
         netWeight: parseFloat(loadingInfo.netWeight) || 0,
-        freightOverrides: freightData,
+        freightOverrides: { ...freightData, shipmentMode },
         containers: containers.filter((c) => c.containerNo?.trim()),
         trucks: trucks.filter((t) => t.truckNo?.trim() !== "" || t.driver?.trim() !== "" || t.mobile?.trim() !== "" || t.transporter?.trim() !== ""),
         attachments: attachments.filter((a) => a.documentName || a.fileName),
@@ -948,12 +1464,16 @@ export default function ShipmentStuffingExecutionModal({
                           <p className="font-semibold text-slate-900">{autoData.incoterm || "FOB"}</p>
                         </div>
                         <div>
+                          <span className="text-slate-400 font-medium">Payment Terms</span>
+                          <p className="font-semibold text-slate-900">{autoData.paymentTerms || shipment?.salesContract?.paymentTerm?.name || "—"}</p>
+                        </div>
+                        <div>
                           <span className="text-slate-400 font-medium">Shipment Date</span>
                           <p className="font-semibold text-slate-900">{autoData.shipmentDate || "—"}</p>
                         </div>
                         <div>
-                          <span className="text-slate-400 font-medium">Freight & Shipment Type</span>
-                          <p className="font-semibold text-slate-900">{autoData.freightType || "Sea"} • {autoData.shipmentType || "Export"}</p>
+                          <span className="text-slate-400 font-medium">Freight & Shipment Mode</span>
+                          <p className="font-semibold text-slate-900">{shipmentMode} • {autoData.shipmentType || "Export"}</p>
                         </div>
                         <div>
                           <span className="text-slate-400 font-medium">Route</span>
@@ -1503,138 +2023,86 @@ export default function ShipmentStuffingExecutionModal({
                 />
               </div>
 
-              {/* 6. DYNAMIC ATTACHMENTS (UNLIMITED) */}
+              {/* 6. DYNAMIC ATTACHMENTS */}
               <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
-                  <div className="flex items-center gap-2">
+                {/* Section Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between pb-3.5 mb-4 border-b border-slate-100 gap-3">
+                  {/* Left: Title & Live Count Badge */}
+                  <div className="flex items-center gap-2.5 flex-wrap">
                     <FileText className="h-4 w-4 text-indigo-600" />
-                    <span className="font-bold text-sm text-indigo-700">6. Dynamic Attachments (Unlimited)</span>
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      {attachments.length} {attachments.length === 1 ? "Document" : "Documents"}
+                    <span className="font-bold text-sm text-indigo-950">Dynamic Attachments</span>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold border transition-colors ${
+                        uploadedCount === totalCount && totalCount > 0
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                      }`}
+                    >
+                      {uploadedCount} / {totalCount} Uploaded
                     </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleAddAttachment()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Add Attachment</span>
-                  </button>
-                </div>
-
-                {/* Quick Presets Pills */}
-                <div className="mb-3.5">
-                  <p className="text-[11px] font-medium text-slate-500 mb-1.5">Quick Presets (Click to add document slot):</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PRESET_DOCUMENTS.map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => handleAddAttachment(preset)}
-                        className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 border border-slate-200 transition-all cursor-pointer"
+                    {isCad && (
+                      <span
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200"
+                        title="CAD (Cash Against Documents) payment term active from Sales Contract"
                       >
-                        + {preset}
-                      </button>
-                    ))}
+                        CAD Terms Active (+3 Docs)
+                      </span>
+                    )}
                   </div>
-                </div>
 
-                {/* Attachments List */}
-                {attachments.length === 0 ? (
-                  <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
-                    <Upload className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                    <p className="text-xs text-slate-600 font-medium">No attachments added yet.</p>
-                    <p className="text-[11px] text-slate-400">Click a quick preset above or "+ Add Attachment" to upload execution documents.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {attachments.map((att, idx) => (
-                      <div
-                        key={att.id || idx}
-                        className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs"
-                      >
-                        <div className="w-full sm:w-56 shrink-0">
-                          <label className="block text-[11px] font-medium text-slate-500 mb-0.5">Document Name</label>
-                          <input
-                            type="text"
-                            list={`preset-docs-${idx}`}
-                            value={att.documentName}
-                            onChange={(e) => handleAttachmentChange(idx, "documentName", e.target.value)}
-                            placeholder="e.g. Weight Slip"
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:border-indigo-500 outline-hidden"
-                          />
-                          <datalist id={`preset-docs-${idx}`}>
-                            {availableDocumentNames.map((d) => (
-                              <option key={d} value={d} />
-                            ))}
-                          </datalist>
-                        </div>
-
-                        {/* File Upload Box */}
-                        <div className="flex-1 w-full">
-                          <label className="block text-[11px] font-medium text-slate-500 mb-0.5">File Upload</label>
-                          <div className="flex items-center gap-2">
-                            <label className="px-3 py-1.5 bg-white border border-slate-200 hover:border-indigo-300 rounded-lg font-medium text-slate-700 hover:text-indigo-600 cursor-pointer flex items-center gap-1.5 transition-colors shadow-2xs">
-                              {att.isUploading ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600" />
-                              ) : (
-                                <Upload className="h-3.5 w-3.5" />
-                              )}
-                              <span>{att.fileName ? "Replace File" : "Choose File"}</span>
-                              <input
-                                type="file"
-                                className="hidden"
-                                onChange={(e) => handleFileUpload(idx, e.target.files[0])}
-                              />
-                            </label>
-
-                            {att.fileName ? (
-                              <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium truncate">
-                                <FileCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                                <span className="truncate max-w-[200px]" title={att.fileName}>{att.fileName}</span>
-                                {att.fileUrl && (
-                                  <a
-                                    href={att.fileUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-indigo-600 hover:underline p-1"
-                                    title="View / Download"
-                                  >
-                                    <Download className="h-3.5 w-3.5" />
-                                  </a>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-slate-400 italic">No file chosen</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Remarks */}
-                        <div className="w-full sm:w-64">
-                          <label className="block text-[11px] font-medium text-slate-500 mb-0.5">Remarks</label>
-                          <input
-                            type="text"
-                            placeholder="Optional notes..."
-                            value={att.remarks || ""}
-                            onChange={(e) => handleAttachmentChange(idx, "remarks", e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:border-indigo-500 outline-hidden"
-                          />
-                        </div>
-
-                        {/* Remove */}
+                  {/* Right: Shipment Mode Switcher & Add Attachment button */}
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {/* Mode Switcher */}
+                    <div className="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200 text-xs shadow-2xs">
+                      {[
+                        { mode: "Truck", label: "Truck", icon: Truck },
+                        { mode: "Sea", label: "Sea", icon: Ship },
+                        { mode: "Wagon", label: "Wagon", icon: TrainTrack },
+                      ].map(({ mode, label, icon: Icon }) => (
                         <button
+                          key={mode}
                           type="button"
-                          onClick={() => handleRemoveAttachment(idx)}
-                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors self-end sm:self-center mt-2 sm:mt-0 cursor-pointer"
+                          onClick={() => handleModeChange(mode)}
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold text-xs transition-all cursor-pointer ${
+                            shipmentMode === mode
+                              ? "bg-white text-indigo-700 shadow-xs"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Icon className="h-3.5 w-3.5" />
+                          <span>{label}</span>
                         </button>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+
+                    {/* Add Attachment Button */}
+                    <button
+                      type="button"
+                      onClick={handleAddManualAttachment}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add Attachment</span>
+                    </button>
                   </div>
-                )}
+                </div>
+
+                {/* Document Cards Grid (Compact ERP Tiles: 6 per row on wide screens, 5 on desktop, 4 on tablet) */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+                  {attachments.map((att, idx) => (
+                    <DocumentCard
+                      key={att.id || idx}
+                      att={att}
+                      index={idx}
+                      availableDocs={availableDocumentNames}
+                      onUpload={handleFileUpload}
+                      onDelete={handleDeleteFile}
+                      onView={handleView}
+                      onDownload={handleDownload}
+                      onChangeField={handleAttachmentChange}
+                    />
+                  ))}
+                </div>
               </div>
 
             </div>
@@ -1658,6 +2126,20 @@ export default function ShipmentStuffingExecutionModal({
               className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               Cancel
+            </button>
+
+            {/* GENERATE INVOICE */}
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                router.push(`/documents/export-invoices/new?shipmentId=${shipment.id}`);
+              }}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              title="Generate Commercial Export Invoice from this execution"
+            >
+              <Receipt className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Generate Invoice</span>
             </button>
 
             {/* SAVE AS DRAFT */}

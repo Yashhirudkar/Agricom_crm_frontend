@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import axiosClient from "@/lib/axios";
 import { toast } from "sonner";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function DocumentComplianceSection({
   documents = [],
@@ -28,6 +29,10 @@ export default function DocumentComplianceSection({
   const [selectedFile, setSelectedFile] = useState(null);
   const [showAddDocModal, setShowAddDocModal] = useState(false);
   const [selectedTradeDocId, setSelectedTradeDocId] = useState("");
+  useEscapeKey(() => {
+    if (selectedDocForUpload) setSelectedDocForUpload(null);
+    else setShowAddDocModal(false);
+  }, Boolean(selectedDocForUpload) || showAddDocModal);
 
   const handleDownload = async (attachmentId, filename, view = false) => {
     try {

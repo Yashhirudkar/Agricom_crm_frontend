@@ -13,6 +13,7 @@ import axiosClient, { getAvatarUrl } from "@/lib/axios";
 import Avatar from "../Timeline/Avatar";
 import { POSTING_POLICY } from "@/modules/chat/utils/channelPosting";
 import { copyToClipboard } from "@/utils/clipboard";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function GroupSettingsPanel({
   conversation,
@@ -20,6 +21,8 @@ export default function GroupSettingsPanel({
   onClose,
   onUpdateConversation // Callback to trigger list refresh on rename, delete, member add
 }) {
+  useEscapeKey(onClose);
+
   const dispatch = useDispatch();
   const { checkGroupPermission, hasPermission } = usePermissions();
   const [activeTab, setActiveTab] = useState("overview"); // "overview", "members", "shared", "pinned", "danger"
@@ -1187,6 +1190,8 @@ export default function GroupSettingsPanel({
 
 // ── Custom Confirmation Modal ──
 function ConfirmModal({ isOpen, onClose, title, message, confirmLabel, cancelLabel, onConfirm, isDestructive }) {
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   return (
@@ -1299,6 +1304,8 @@ function PostingPolicyTab({ conversation, currentUser, members, onUpdateConversa
 }
 
 function AddMemberModal({ isOpen, onClose, conversation, currentUser, onMemberAdded }) {
+  useEscapeKey(onClose, isOpen);
+
   const [employees, setEmployees] = useState([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1567,4 +1574,3 @@ function AddMemberModal({ isOpen, onClose, conversation, currentUser, onMemberAd
     </div>
   );
 }
-

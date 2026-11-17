@@ -30,6 +30,7 @@ import {
 import { toast } from "sonner";
 import { portsApi } from "@/api/ports.api";
 import CountrySelect from "@/components/common/CountrySelect";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 // ─── Port Type Helpers (Light Theme Badges) ──────────────────────────────────
 const PORT_TYPES = [
@@ -82,6 +83,11 @@ export default function PortMasterPage() {
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
   const [selectedPortDetails, setSelectedPortDetails] = useState(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  useEscapeKey(() => {
+    if (isImportModalOpen) setIsImportModalOpen(false);
+    else if (isDetailsDrawerOpen) setIsDetailsDrawerOpen(false);
+    else setIsAddEditModalOpen(false);
+  }, isImportModalOpen || isDetailsDrawerOpen || isAddEditModalOpen);
   const [isExporting, setIsExporting] = useState(false);
 
   // Form State

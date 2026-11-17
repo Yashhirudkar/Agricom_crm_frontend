@@ -5,6 +5,7 @@ import {
   Package,
   Copy,
   FileText,
+  Receipt,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -156,9 +157,8 @@ export default function DocumentsShipmentsTable({
                 <tr
                   key={s.id}
                   onClick={() => onRowClick && onRowClick(s)}
-                  className={`hover:bg-gray-50 transition-colors cursor-pointer ${
-                    isSelected ? "bg-blue-50/50" : ""
-                  }`}
+                  className={`hover:bg-gray-50 transition-colors cursor-pointer ${isSelected ? "bg-blue-50/50" : ""
+                    }`}
                 >
                   {/* Checkbox */}
                   <td
@@ -185,22 +185,22 @@ export default function DocumentsShipmentsTable({
                       </ShipmentRefTooltip>
                       {(s.businessReference ||
                         s.businessTransaction?.businessReference) && (
-                        <button
-                          type="button"
-                          onClick={(e) =>
-                            handleCopyBusinessReference(
-                              e,
-                              s.businessReference ||
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              handleCopyBusinessReference(
+                                e,
+                                s.businessReference ||
                                 s.businessTransaction?.businessReference,
-                            )
-                          }
-                          className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-                          title="Copy business reference"
-                          aria-label="Copy business reference"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </button>
-                      )}
+                              )
+                            }
+                            className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                            title="Copy business reference"
+                            aria-label="Copy business reference"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                     </div>
                   </td>
 
@@ -208,10 +208,10 @@ export default function DocumentsShipmentsTable({
                   <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
                     {s.shipmentDate
                       ? new Date(s.shipmentDate).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })
                       : "—"}
                   </td>
 
@@ -286,8 +286,8 @@ export default function DocumentsShipmentsTable({
                       ? Number.isInteger(Number(s.quantity))
                         ? Number(s.quantity).toLocaleString("en-US")
                         : Number(s.quantity).toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                          })
+                          minimumFractionDigits: 2,
+                        })
                       : "0"}
                   </td>
 
@@ -297,6 +297,19 @@ export default function DocumentsShipmentsTable({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        title="Generate / View Export Invoice"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/documents/export-invoices/new?shipmentId=${s.id}`);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer transition-colors"
+                      >
+                        <Receipt className="h-3.5 w-3.5" />
+                        <span>Invoice</span>
+                      </button>
+
                       <button
                         type="button"
                         title="Open Shipment Stuffing Execution Document"

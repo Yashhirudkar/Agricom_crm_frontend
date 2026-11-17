@@ -363,10 +363,12 @@ export default function AppShellClient({ children }) {
         <Sidebar />
         <main className={`flex-1 min-w-0 max-w-full overflow-x-hidden overflow-y-auto h-full ${isMastersPage ? "" : "app-uppercase-ui"}`}>{children}</main>
       </div>
-      <CommandPalette />
-      <FollowUpHeaderDrawer isOpen={isFollowUpsOpen} onClose={() => setIsFollowUpsOpen(false)} />
-      <FloatingChatLauncher />
-      <SalesMonthlyTargetWidget />
+      <div className="print:hidden">
+        <CommandPalette />
+        <FollowUpHeaderDrawer isOpen={isFollowUpsOpen} onClose={() => setIsFollowUpsOpen(false)} />
+        <FloatingChatLauncher />
+        <SalesMonthlyTargetWidget />
+      </div>
     </ChatSocketProvider>
   );
 }

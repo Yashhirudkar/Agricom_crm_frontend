@@ -39,7 +39,10 @@ export default function TermsSection({ form, setForm, isView }) {
 
   const handleKeyDown = (e, action) => {
     if (e.key === "Enter") { e.preventDefault(); action(); }
-    if (e.key === "Escape") handleCancelEdit();
+    if (e.key === "Escape") {
+      e.preventDefault();
+      handleCancelEdit();
+    }
   };
 
   return (

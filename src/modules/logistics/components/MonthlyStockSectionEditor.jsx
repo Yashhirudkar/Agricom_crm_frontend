@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { monthlyStockSummaryApi } from "../services/monthlyStockSummaryApi";
 import ConfirmModal from "@/components/modals/ConfirmModal";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function MonthlyStockSectionEditor({
   summaryId,
@@ -38,6 +39,11 @@ export default function MonthlyStockSectionEditor({
 
   // Edit Column Modal
   const [editColumnInfo, setEditColumnInfo] = useState(null); // { sectionId, columnId, columnName }
+  useEscapeKey(() => {
+    if (editColumnInfo) setEditColumnInfo(null);
+    else if (addColumnSectionId) setAddColumnSectionId(null);
+    else setIsAddSectionOpen(false);
+  }, isAddSectionOpen || Boolean(addColumnSectionId) || Boolean(editColumnInfo));
   const [editColumnNameInput, setEditColumnNameInput] = useState("");
 
   // Loading state per section

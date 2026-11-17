@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { X } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 0,
@@ -240,6 +241,8 @@ function resolveParty(m) {
 }
 
 export default function StockProductDrawer({ isOpen, onClose, selectedProduct, countryName }) {
+  useEscapeKey(onClose, isOpen && Boolean(selectedProduct));
+
   const movements = useMemo(() => {
     if (Array.isArray(selectedProduct?.movements) && selectedProduct.movements.length > 0) {
       let runningBalance = 0;
@@ -324,15 +327,6 @@ export default function StockProductDrawer({ isOpen, onClose, selectedProduct, c
         .join("\n\n"),
     [selectedProduct],
   );
-
-  useEffect(() => {
-    if (!isOpen) return undefined;
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
 
   if (!isOpen || !selectedProduct) return null;
 

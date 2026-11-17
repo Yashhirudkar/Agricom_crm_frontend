@@ -43,6 +43,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useRouter } from "next/navigation";
 import { selectActiveCompanyId, selectActiveCompany } from "@/store/slices/companyContextSlice";
 import { selectUserType } from "@/store/slices/authSlice";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function AttendanceDashboardPage() {
   const dispatch = useDispatch();
@@ -79,6 +80,7 @@ export default function AttendanceDashboardPage() {
   const [viewMode, setViewMode] = useState("attendance"); // 'attendance' | 'conflicts'
   const [selectedConflict, setSelectedConflict] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  useEscapeKey(() => setIsDrawerOpen(false), isDrawerOpen);
   const [resolutionRemarks, setResolutionRemarks] = useState("");
   const [resolvingOption, setResolvingOption] = useState("");
 

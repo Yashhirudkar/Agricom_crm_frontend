@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { salesContractApi } from "../services/salesContractApi";
 import RichTextEditor from "@/components/editor/RichTextEditor";
 import { getShipmentTypeShortForm } from "../utils/formatUtils";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,8 @@ export default function ContractViewModal({ contractId, onClose }) {
       setPrintOverrides(contract.printOverrides || {});
     }
   }, [contract]);
+
+  useEscapeKey(onClose);
 
   const handleSaveCustomOverrides = async () => {
     setSavingOverrides(true);

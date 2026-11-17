@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, useState } from "react";
 import { Vote, Lock, Users, Check } from "lucide-react";
 import { useVotePollMutation, useClosePollMutation } from "../../mutations/chat.mutations";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 // Error Boundary wrapper around Poll Card rendering
 class PollErrorBoundary extends React.Component {
@@ -209,6 +210,8 @@ export default function PollCard(props) {
 
 // ── Custom Confirmation Modal ──
 function ConfirmModal({ isOpen, onClose, title, message, confirmLabel, cancelLabel, onConfirm, isDestructive }) {
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   return (

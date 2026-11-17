@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Search, X, Calendar, User, FileText, Pin, Star } from "lucide-react";
 import { ChatAPI } from "@/api/chat.api";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const GlobalSearch = ({ activeConversationId, onClose, onJumpToMessage }) => {
+  useEscapeKey(onClose);
+
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -51,15 +54,6 @@ const GlobalSearch = ({ activeConversationId, onClose, onJumpToMessage }) => {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
-
-  // Escape to close
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
 
   // Highlight matches function
   const renderHighlightedSnippet = (text = "", match = "") => {

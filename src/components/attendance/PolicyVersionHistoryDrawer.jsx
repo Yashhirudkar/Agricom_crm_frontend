@@ -2,6 +2,7 @@
 
 import React from "react";
 import { X, History, RotateCcw, CheckCircle2, User, Calendar, FileText } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function PolicyVersionHistoryDrawer({
   isOpen,
@@ -9,6 +10,8 @@ export default function PolicyVersionHistoryDrawer({
   historyLogs = [],
   onRestoreVersion,
 }) {
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   return (

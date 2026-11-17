@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { X, Layers, ArrowRight } from "lucide-react";
 import { cargoAvailabilityApi } from "../services/cargoAvailabilityApi";
 import axiosClient from "@/lib/axios";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function ShipmentAllocationModal({
   cargoRecord,
@@ -11,6 +12,8 @@ export default function ShipmentAllocationModal({
   onClose,
   onSuccess,
 }) {
+  useEscapeKey(onClose, Boolean(cargoRecord));
+
   const [loading, setLoading] = useState(false);
   const [shipments, setShipments] = useState([]);
   const initialShipmentId = defaultShipmentId || targetShipment?.id ? String(defaultShipmentId || targetShipment.id) : "";

@@ -108,6 +108,20 @@ function RolesContent() {
     }
   }, [searchParams, roles]);
 
+  const refetchRolePermissions = async (roleId) => {
+    const targetId = roleId || selectedRole?.id;
+    if (!targetId) return;
+    try {
+      const res = await axiosClient.get(`/GetRolePermissions?roleId=${targetId}`);
+      const roleData = res.data?.roleActionPermissions || res.data || [];
+      const ids = roleData.map((p) => p.resource_action_id);
+      setAssignedPermissions(ids);
+      latestAssignedIdsRef.current = new Set(ids);
+    } catch (err) {
+      console.error("Failed to refetch role permissions:", err);
+    }
+  };
+
   const handleOpenDrawer = async (roleObj) => {
     setSelectedRole(roleObj);
     setDrawerOpen(true);
@@ -256,6 +270,37 @@ function RolesContent() {
     }
   };
 
+  const handleBatchPermissionsToggle = async (actionIds, shouldAssign, label = "Permissions") => {
+    if (!selectedRole?.id || !actionIds || actionIds.length === 0) return;
+    const currentIds = latestAssignedIdsRef.current;
+    let newAssignedIds;
+    const actionIdSet = new Set(actionIds);
+
+    if (shouldAssign) {
+      newAssignedIds = [...new Set([...Array.from(currentIds), ...actionIds])];
+    } else {
+      newAssignedIds = Array.from(currentIds).filter((id) => !actionIdSet.has(id));
+    }
+
+    // Optimistic update of refs and UI
+    latestAssignedIdsRef.current = new Set(newAssignedIds);
+    setAssignedPermissions(newAssignedIds);
+
+    try {
+      await axiosClient.post("/UpdateRolePermissions", {
+        roleId: selectedRole.id,
+        permissionIds: newAssignedIds,
+      });
+      showToast(
+        shouldAssign
+          ? `${label} enabled (${actionIds.length} rights granted)`
+          : `${label} disabled (${actionIds.length} rights revoked)`
+      );
+    } catch (err) {
+      showToast("Failed to update role permissions", "error");
+    }
+  };
+
   const toggleModuleAccordion = (category) => {
     setExpandedModules((prev) => ({
       ...prev,
@@ -340,8 +385,10 @@ function RolesContent() {
         toggleModuleAccordion={toggleModuleAccordion}
         assignedIds={assignedIds}
         handlePermissionToggle={handlePermissionToggle}
+        handleBatchPermissionsToggle={handleBatchPermissionsToggle}
         formatLabel={formatLabel}
         showToast={showToast}
+        refetchRolePermissions={refetchRolePermissions}
       />
 
       <CreateRoleModal

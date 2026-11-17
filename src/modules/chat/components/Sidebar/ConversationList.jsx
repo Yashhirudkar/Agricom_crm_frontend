@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 import {
   Pin,
   Star,
@@ -119,17 +120,15 @@ function ConversationContextMenu({
   onOpenSettings
 }) {
   const ref = useRef(null);
+  useEscapeKey(onClose);
 
   useEffect(() => {
     const handleClick = (e) => {
       if (ref.current && !ref.current.contains(e.target)) onClose();
     };
-    const handleEsc = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleEsc);
     return () => {
       document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleEsc);
     };
   }, [onClose]);
 

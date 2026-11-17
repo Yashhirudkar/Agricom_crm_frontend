@@ -2,6 +2,7 @@
 import React from "react";
 import { X, Boxes, ChevronRight, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function ShipmentAllocationSelectorModal({
   shipment,
@@ -9,6 +10,8 @@ export default function ShipmentAllocationSelectorModal({
   onClose,
 }) {
   const router = useRouter();
+
+  useEscapeKey(onClose, Boolean(shipment));
 
   if (!shipment) return null;
 

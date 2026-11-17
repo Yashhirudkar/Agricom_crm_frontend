@@ -12,6 +12,7 @@ import { Check, X, Clock, Calendar, AlertCircle, MessageSquare, Search, ChevronL
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import { usePermissions } from "@/hooks/usePermissions";
 import { subscribeToSocketEvent, unsubscribeFromSocketEvent } from "@/lib/socket";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function CorrectionsPage() {
   const dispatch = useDispatch();
@@ -87,6 +88,10 @@ export default function CorrectionsPage() {
     type: null, // 'APPROVE' | 'REJECT'
     id: null,
   });
+  useEscapeKey(
+    () => setConfirmModal({ isOpen: false, type: null, id: null }),
+    confirmModal.isOpen,
+  );
 
   const openConfirmModal = (id, type) => {
     dispatch(clearAttendanceError());

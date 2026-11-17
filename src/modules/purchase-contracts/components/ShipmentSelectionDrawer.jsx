@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { X, Search, Filter, Ship, Check, AlertCircle, ArrowUpDown } from "lucide-react";
 import { shipmentsApi } from "@/modules/shipments/services/shipmentsApi";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function ShipmentSelectionDrawer({
   isOpen,
@@ -12,6 +13,8 @@ export default function ShipmentSelectionDrawer({
   allAvailableShipments = [], // optional fallback list passed from parent
   onApplyAllocations,
 }) {
+  useEscapeKey(onClose, isOpen);
+
   const [loading, setLoading] = useState(false);
   const [fetchedShipments, setFetchedShipments] = useState([]);
   const [search, setSearch] = useState("");

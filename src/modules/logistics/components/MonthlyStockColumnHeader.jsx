@@ -153,7 +153,10 @@ export default function MonthlyStockColumnHeader({
             onChange={(e) => setNameInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSaveName();
-              if (e.key === "Escape") setIsEditingName(false);
+              if (e.key === "Escape") {
+                e.preventDefault();
+                setIsEditingName(false);
+              }
             }}
             className="w-full px-1 py-0.5 text-xs font-bold border border-[#107c41] bg-white text-gray-900 focus:outline-none"
           />
@@ -332,4 +335,3 @@ export default function MonthlyStockColumnHeader({
     </div>
   );
 }
-

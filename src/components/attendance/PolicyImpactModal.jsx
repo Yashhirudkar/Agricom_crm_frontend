@@ -3,6 +3,7 @@
 import React from "react";
 import { AlertCircle, CheckCircle2, ShieldAlert, Users, ArrowRight, X, Loader2 } from "lucide-react";
 import { parse24to12 } from "@/components/common/EnterpriseTimePicker";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function PolicyImpactModal({
   isOpen,
@@ -13,6 +14,8 @@ export default function PolicyImpactModal({
   impactData,
   isSaving,
 }) {
+  useEscapeKey(onClose, isOpen);
+
   if (!isOpen) return null;
 
   const fmt = (val) => {

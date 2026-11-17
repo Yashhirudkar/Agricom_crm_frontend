@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 import BusinessReference from "@/components/common/BusinessReference";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 import {
   X,
   Ship,
@@ -56,6 +57,8 @@ const getExecuteDisabledTooltip = (shipment) => {
 };
 
 export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContract, onOpenCargoDrawer, onOpenFreightDrawer }) {
+  useEscapeKey(onClose, Boolean(shipment));
+
   const router = useRouter();
   const [openStuffingModal, setOpenStuffingModal] = useState(false);
   const [openManualReadinessModal, setOpenManualReadinessModal] = useState(false);

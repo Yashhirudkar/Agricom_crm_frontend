@@ -1,7 +1,33 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Drawer from "@/components/drawers/Drawer";
-import { Info, ChevronDown, ChevronRight, Key, Tag, Search, CheckSquare, Square, Save, RotateCcw } from "lucide-react";
+import {
+  Info, ChevronDown, ChevronRight, Key, Tag, Search, CheckSquare, Square, Save, RotateCcw,
+  Shield, CalendarCheck, Clock, Users, FileCheck, MessageSquare, Truck, Database,
+  BarChart3, FileText, Briefcase, CheckCircle2, XCircle, AlertCircle, Sparkles, Folder, Layers, Check, Plus
+} from "lucide-react";
 import axiosClient from "@/lib/axios";
+
+const ICON_MAP = {
+  Shield,
+  CalendarCheck,
+  Clock,
+  Users,
+  FileCheck,
+  MessageSquare,
+  Truck,
+  Database,
+  BarChart3,
+  FileText,
+  Briefcase,
+  Folder,
+  Layers,
+  Sparkles,
+};
+
+const resolveGroupIcon = (iconName) => {
+  if (!iconName) return Folder;
+  return ICON_MAP[iconName] || Folder;
+};
 
 export default function RoleDetailsDrawer({
   drawerOpen,
@@ -16,8 +42,10 @@ export default function RoleDetailsDrawer({
   toggleModuleAccordion,
   assignedIds,
   handlePermissionToggle,
+  handleBatchPermissionsToggle,
   formatLabel,
   showToast,
+  refetchRolePermissions,
 }) {
   // ─── Partner Roles Tab State ───────────────────────────────────────────────
   const [allPartnerRoles, setAllPartnerRoles] = useState([]);
@@ -26,6 +54,139 @@ export default function RoleDetailsDrawer({
   const [prLoading, setPrLoading] = useState(false);
   const [prSaving, setPrSaving] = useState(false);
   const [prSearch, setPrSearch] = useState("");
+  const [matrixSearch, setMatrixSearch] = useState("");
+  const [groupSearch, setGroupSearch] = useState("");
+  const [expandedGroups, setExpandedGroups] = useState({});
+
+  // ─── Backend Permission Groups State (Backend-Driven RBAC) ────────────────
+  const [backendGroups, setBackendGroups] = useState([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [operatingGroupId, setOperatingGroupId] = useState(null);
+
+  const fetchRolePermissionGroups = async () => {
+    if (!selectedRole?.id) return;
+    setGroupsLoading(true);
+    try {
+      const res = await axiosClient.get(`/roles/${selectedRole.id}/permission-groups`);
+      setBackendGroups(res.data || []);
+    } catch (err) {
+      console.error("Failed to load permission groups:", err);
+    } finally {
+      setGroupsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (drawerOpen && selectedRole?.id) {
+      fetchRolePermissionGroups();
+    }
+  }, [drawerOpen, selectedRole?.id, activeTab]);
+
+  const handleGrantGroup = async (group) => {
+    if (!selectedRole?.id || !group?.id) return;
+    setOperatingGroupId(group.id);
+    try {
+      await axiosClient.post(`/roles/${selectedRole.id}/permission-groups`, {
+        groupId: group.id,
+      });
+      if (showToast) showToast(`Permission pack "${group.name}" granted successfully`);
+      await Promise.all([
+        fetchRolePermissionGroups(),
+        refetchRolePermissions ? refetchRolePermissions(selectedRole.id) : Promise.resolve(),
+      ]);
+    } catch (err) {
+      console.error("Failed to assign permission group:", err);
+      if (showToast) showToast(err?.response?.data?.message || "Failed to assign permission group", "error");
+    } finally {
+      setOperatingGroupId(null);
+    }
+  };
+
+  const handleRevokeGroup = async (group) => {
+    if (!selectedRole?.id || !group?.id) return;
+    setOperatingGroupId(group.id);
+    try {
+      await axiosClient.delete(`/roles/${selectedRole.id}/permission-groups/${group.id}`);
+      if (showToast) showToast(`Permission pack "${group.name}" revoked successfully`);
+      await Promise.all([
+        fetchRolePermissionGroups(),
+        refetchRolePermissions ? refetchRolePermissions(selectedRole.id) : Promise.resolve(),
+      ]);
+    } catch (err) {
+      console.error("Failed to revoke permission group:", err);
+      if (showToast) showToast(err?.response?.data?.message || "Failed to revoke permission group", "error");
+    } finally {
+      setOperatingGroupId(null);
+    }
+  };
+
+  const handleGrantAllGroups = async () => {
+    if (!selectedRole?.id || backendGroups.length === 0) return;
+    setGroupsLoading(true);
+    try {
+      for (const g of backendGroups) {
+        if (g.status !== "FULL") {
+          await axiosClient.post(`/roles/${selectedRole.id}/permission-groups`, {
+            groupId: g.id,
+          });
+        }
+      }
+      if (showToast) showToast("All enterprise groups granted successfully");
+      await Promise.all([
+        fetchRolePermissionGroups(),
+        refetchRolePermissions ? refetchRolePermissions(selectedRole.id) : Promise.resolve(),
+      ]);
+    } catch (err) {
+      if (showToast) showToast("Failed to grant all groups", "error");
+    } finally {
+      setGroupsLoading(false);
+    }
+  };
+
+  const handleRevokeAllGroups = async () => {
+    if (!selectedRole?.id || backendGroups.length === 0) return;
+    setGroupsLoading(true);
+    try {
+      for (const g of backendGroups) {
+        if (g.assignedCount > 0 || g.isExplicitlyAssigned) {
+          await axiosClient.delete(`/roles/${selectedRole.id}/permission-groups/${g.id}`);
+        }
+      }
+      if (showToast) showToast("All enterprise groups revoked successfully");
+      await Promise.all([
+        fetchRolePermissionGroups(),
+        refetchRolePermissions ? refetchRolePermissions(selectedRole.id) : Promise.resolve(),
+      ]);
+    } catch (err) {
+      if (showToast) showToast("Failed to revoke groups", "error");
+    } finally {
+      setGroupsLoading(false);
+    }
+  };
+
+  const toggleGroupAccordion = (groupId) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupId]: !prev[groupId],
+    }));
+  };
+
+  const sortedRegistry = useMemo(() => {
+    if (!Array.isArray(permissionRegistry)) return [];
+    let list = [...permissionRegistry].sort((a, b) =>
+      (a.module_name || "").localeCompare(b.module_name || "")
+    );
+    if (matrixSearch.trim()) {
+      const q = matrixSearch.toLowerCase().trim();
+      list = list.filter((m) =>
+        (m.module_name || "").toLowerCase().includes(q) ||
+        (m.resources || []).some((r) =>
+          (r.resource_name || "").toLowerCase().includes(q)
+        )
+      );
+    }
+    return list;
+  }, [permissionRegistry, matrixSearch]);
 
   // Load all partner roles (for the checklist) when drawer is opened
   useEffect(() => {
@@ -138,6 +299,7 @@ export default function RoleDetailsDrawer({
       tabs={[
         { id: "overview", label: "Overview" },
         { id: "permissions", label: "Permissions" },
+        { id: "groupPermissions", label: "Group Permissions" },
         { id: "partnerRoles", label: "Partner Roles" },
       ]}
     >
@@ -185,13 +347,33 @@ export default function RoleDetailsDrawer({
           {/* PERMISSIONS MATRIX TAB */}
           {activeTab === "permissions" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                  Enterprise Permission Matrix
-                </h3>
-                <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
-                  Toggle individual rights
-                </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    Enterprise Permission Matrix (A-Z)
+                  </h3>
+                  <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+                    Toggle individual rights
+                  </span>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={matrixSearch}
+                    onChange={(e) => setMatrixSearch(e.target.value)}
+                    placeholder="Search module..."
+                    className="w-full pl-8 pr-7 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#007aff] focus:bg-white transition-all text-gray-800"
+                  />
+                  {matrixSearch && (
+                    <button
+                      onClick={() => setMatrixSearch("")}
+                      className="absolute right-2.5 top-1.5 text-xs text-gray-400 hover:text-gray-600 font-bold"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="overflow-hidden bg-white border border-gray-100 rounded-xl shadow-2xs">
@@ -204,10 +386,16 @@ export default function RoleDetailsDrawer({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 text-xs">
-                      {permissionRegistry.map((modCat) => {
+                      {sortedRegistry.map((modCat) => {
                         const moduleKey = modCat.module_id;
                         const category = modCat.module_name;
                         const isExpanded = expandedModules[moduleKey];
+                        const modAllActions = (modCat.resources || []).flatMap((r) =>
+                          (r.actions || []).map((a) => a.action_id)
+                        );
+                        const assignedInMod = modAllActions.filter((id) => assignedIds.has(id)).length;
+                        const isModFull = modAllActions.length > 0 && assignedInMod === modAllActions.length;
+
                         return (
                           <React.Fragment key={moduleKey}>
                             <tr
@@ -218,14 +406,37 @@ export default function RoleDetailsDrawer({
                                 colSpan="2"
                                 className="px-4 py-2.5 font-bold text-gray-700 text-[11px] uppercase tracking-wider"
                               >
-                                <div className="flex items-center gap-2">
-                                  {isExpanded ? (
-                                    <ChevronDown className="h-4 w-4 text-gray-400 transition-transform" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4 text-gray-400 transition-transform" />
-                                  )}
-                                  <Key className="h-3.5 w-3.5 text-gray-400" />
-                                  {category}
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4 text-gray-400 transition-transform" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4 text-gray-400 transition-transform" />
+                                    )}
+                                    <Key className="h-3.5 w-3.5 text-gray-400" />
+                                    <span>{category}</span>
+                                    <span className="text-[10px] font-normal text-gray-400 lowercase">
+                                      ({assignedInMod}/{modAllActions.length} rights)
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (handleBatchPermissionsToggle) {
+                                          handleBatchPermissionsToggle(modAllActions, !isModFull, category);
+                                        }
+                                      }}
+                                      className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                                        isModFull
+                                          ? "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
+                                          : "bg-blue-50 text-[#007aff] border-blue-100 hover:bg-blue-100"
+                                      }`}
+                                    >
+                                      {isModFull ? "Deselect All" : "Select All"}
+                                    </button>
+                                  </div>
                                 </div>
                               </td>
                             </tr>
@@ -279,6 +490,276 @@ export default function RoleDetailsDrawer({
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* GROUP PERMISSIONS TAB (Enterprise Backend-Driven RBAC) */}
+          {activeTab === "groupPermissions" && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-amber-500" /> Enterprise Permission Groups
+                  </h3>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Backend-driven functional permission packs. Granting or revoking a group automatically assigns all underlying rights in the database.
+                  </p>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={groupSearch}
+                    onChange={(e) => setGroupSearch(e.target.value)}
+                    placeholder="Search groups or modules..."
+                    className="w-full pl-8 pr-7 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#007aff] focus:bg-white transition-all text-gray-800"
+                  />
+                  {groupSearch && (
+                    <button
+                      onClick={() => setGroupSearch("")}
+                      className="absolute right-2.5 top-1.5 text-xs text-gray-400 hover:text-gray-600 font-bold"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Summary Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50/70 border border-gray-100 rounded-xl text-xs gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-gray-700">Quick Actions:</span>
+                  <button
+                    type="button"
+                    onClick={handleGrantAllGroups}
+                    disabled={groupsLoading}
+                    className="px-2.5 py-1 bg-gray-900 hover:bg-black text-white rounded-lg font-bold text-[11px] transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+                  >
+                    Grant All Groups
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRevokeAllGroups}
+                    disabled={groupsLoading}
+                    className="px-2.5 py-1 bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-lg font-bold text-[11px] transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Revoke All
+                  </button>
+                </div>
+                <span className="text-gray-400 font-medium text-[11px]">
+                  {backendGroups.filter((g) => g.status === "FULL").length} of {backendGroups.length} Groups fully active
+                </span>
+              </div>
+
+              {/* Group Cards */}
+              {groupsLoading && backendGroups.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-2">
+                  <div className="h-6 w-6 border-2 border-[#007aff] border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs text-gray-400 font-semibold">Loading enterprise permission groups...</span>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {backendGroups
+                    .filter((g) => {
+                      if (!groupSearch.trim()) return true;
+                      const q = groupSearch.toLowerCase().trim();
+                      return (
+                        g.name?.toLowerCase().includes(q) ||
+                        g.description?.toLowerCase().includes(q) ||
+                        (g.modules || []).some((m) => m.name?.toLowerCase().includes(q))
+                      );
+                    })
+                    .map((g) => {
+                      const IconComponent = resolveGroupIcon(g.icon);
+                      const isExpanded = expandedGroups[g.id];
+                      const isOperating = operatingGroupId === g.id;
+                      const isFull = g.status === "FULL";
+                      const isPartial = g.status === "PARTIAL";
+
+                      return (
+                        <div
+                          key={g.id}
+                          className={`border rounded-xl transition-all overflow-hidden ${
+                            isFull
+                              ? "bg-white border-emerald-200 shadow-2xs"
+                              : isPartial
+                              ? "bg-white border-amber-200 shadow-2xs"
+                              : "bg-white border-gray-100"
+                          }`}
+                        >
+                          {/* Group Header */}
+                          <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            <div
+                              className="flex items-start gap-3 cursor-pointer flex-1"
+                              onClick={() => toggleGroupAccordion(g.id)}
+                            >
+                              <div
+                                className={`p-2.5 rounded-xl border flex-shrink-0 ${
+                                  isFull
+                                    ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                                    : isPartial
+                                    ? "bg-amber-50 text-amber-600 border-amber-100"
+                                    : "bg-gray-50 text-gray-400 border-gray-200"
+                                }`}
+                              >
+                                <IconComponent className="h-5 w-5" />
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-sm font-bold text-gray-900 tracking-tight">
+                                    {g.name}
+                                  </h4>
+                                  {isFull ? (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                      Full Access
+                                    </span>
+                                  ) : isPartial ? (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100">
+                                      Partial ({g.assignedCount}/{g.totalCount})
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-50 text-gray-500 border border-gray-100">
+                                      No Access (0/{g.totalCount})
+                                    </span>
+                                  )}
+                                  {g.isExplicitlyAssigned && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 text-blue-600 border border-blue-100">
+                                      Explicit Group
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-gray-500">{g.description}</p>
+                                <p className="text-[10px] text-gray-400 font-medium">
+                                  Modules:{" "}
+                                  <span className="text-gray-600">
+                                    {(g.modules || []).map((m) => m.name).join(", ")}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-2 self-end md:self-auto">
+                              {!isFull && (
+                                <button
+                                  type="button"
+                                  disabled={isOperating}
+                                  onClick={() => handleGrantGroup(g)}
+                                  className="px-3 py-1.5 bg-[#007aff] hover:bg-blue-600 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                                >
+                                  {isOperating ? (
+                                    <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                  )}
+                                  Grant Group
+                                </button>
+                              )}
+                              {(g.assignedCount > 0 || g.isExplicitlyAssigned) && (
+                                <button
+                                  type="button"
+                                  disabled={isOperating}
+                                  onClick={() => handleRevokeGroup(g)}
+                                  className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold border border-red-200 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                                >
+                                  {isOperating ? (
+                                    <div className="h-3.5 w-3.5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <XCircle className="h-3.5 w-3.5" />
+                                  )}
+                                  Revoke
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => toggleGroupAccordion(g.id)}
+                                className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                                title="Toggle Modules"
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Expanded Modules List */}
+                          {isExpanded && (
+                            <div className="border-t border-gray-100 bg-gray-50/40 p-4 space-y-2.5">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                Included Modules ({g.modules?.length || 0})
+                              </p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                {(g.modules || []).map((m) => {
+                                  // Look up matching module in permissionRegistry for granular info
+                                  const regMod = (permissionRegistry || []).find(
+                                    (pr) =>
+                                      pr.module_id === m.id ||
+                                      (pr.module_name || "").toLowerCase() === (m.name || "").toLowerCase()
+                                  );
+                                  const modActionIds = (regMod?.resources || []).flatMap((r) =>
+                                    (r.actions || []).map((a) => a.action_id)
+                                  );
+                                  const assignedInMod = modActionIds.filter((id) => assignedIds.has(id)).length;
+                                  const isModFull = modActionIds.length > 0 && assignedInMod === modActionIds.length;
+
+                                  return (
+                                    <div
+                                      key={m.id}
+                                      className={`p-3 rounded-lg border flex items-center justify-between transition-colors ${
+                                        isModFull
+                                          ? "bg-white border-emerald-200 shadow-2xs"
+                                          : assignedInMod > 0
+                                          ? "bg-white border-amber-200"
+                                          : "bg-white border-gray-100"
+                                      }`}
+                                    >
+                                      <div>
+                                        <div className="flex items-center gap-1.5">
+                                          <Key className="h-3.5 w-3.5 text-gray-400" />
+                                          <span className="text-xs font-bold text-gray-800">
+                                            {m.name}
+                                          </span>
+                                        </div>
+                                        <span className="text-[10px] text-gray-400 mt-0.5 block">
+                                          {modActionIds.length > 0
+                                            ? `${assignedInMod}/${modActionIds.length} rights granted`
+                                            : `${m.totalActions || 0} rights in database`}
+                                        </span>
+                                      </div>
+                                      {modActionIds.length > 0 && handleBatchPermissionsToggle && (
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            await handleBatchPermissionsToggle(
+                                              modActionIds,
+                                              !isModFull,
+                                              m.name
+                                            );
+                                            fetchRolePermissionGroups();
+                                          }}
+                                          className={`px-2.5 py-1 text-[10px] font-bold rounded border transition-colors cursor-pointer ${
+                                            isModFull
+                                              ? "bg-red-50 text-red-600 border-red-100 hover:bg-red-100"
+                                              : "bg-blue-50 text-[#007aff] border-blue-100 hover:bg-blue-100"
+                                          }`}
+                                        >
+                                          {isModFull ? "Revoke Module" : "Grant Module"}
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           )}
 

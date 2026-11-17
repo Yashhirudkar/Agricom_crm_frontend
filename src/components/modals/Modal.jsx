@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function Modal({ isOpen, onClose, title, children, maxWidth = "max-w-md" }) {
   const [mounted, setMounted] = useState(false);
@@ -11,12 +12,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = "ma
     setMounted(true);
   }, []);
 
-  // Close on Escape key
-  useEffect(() => {
-    const handler = (e) => { if (e.key === "Escape") onClose(); };
-    if (isOpen) window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [isOpen, onClose]);
+  useEscapeKey(onClose, isOpen);
 
   if (!isOpen || !mounted) return null;
 

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cargoAvailabilityApi } from "../services/cargoAvailabilityApi";
 import axiosClient from "@/lib/axios";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const STAGES = [
   "Draft",
@@ -45,6 +46,8 @@ export default function ExporterLoadingDrawer({
   onClose,
   onSuccess,
 }) {
+  useEscapeKey(onClose, Boolean(cargoRecord));
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [shipments, setShipments] = useState([]);

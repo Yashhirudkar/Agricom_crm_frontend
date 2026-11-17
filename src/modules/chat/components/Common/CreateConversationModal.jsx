@@ -18,8 +18,11 @@ import axiosClient, { getAvatarUrl } from "@/lib/axios";
 import { useCreateConversationMutation } from "@/modules/chat/mutations/chat.mutations";
 import { setActiveConversationId } from "@/modules/chat/store/chatSlice";
 import usePermissions from "@/hooks/usePermissions";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function CreateConversationModal({ isOpen, onClose, currentUser, companyId }) {
+  useEscapeKey(onClose, isOpen);
+
   const dispatch = useDispatch();
   const createConversationMutation = useCreateConversationMutation();
 

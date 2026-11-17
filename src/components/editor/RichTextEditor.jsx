@@ -6,6 +6,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Mention from '@tiptap/extension-mention';
 import { Maximize2, Minimize2 } from 'lucide-react';
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 // Simple toolbar for the editor
 const MenuBar = ({ editor, isFullscreen, toggleFullscreen }) => {
@@ -71,6 +72,7 @@ const MenuBar = ({ editor, isFullscreen, toggleFullscreen }) => {
 
 export default function RichTextEditor({ value, onChange, editable = true, placeholder = 'Add a description...', outputFormat = 'html' }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  useEscapeKey(() => setIsFullscreen(false), isFullscreen);
 
   const editor = useEditor({
     extensions: [

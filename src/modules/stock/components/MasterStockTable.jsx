@@ -78,7 +78,10 @@ function GrandTotalValue({ summary, formatAmounts }) {
       }
     };
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") setIsOpen(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsOpen(false);
+      }
     };
 
     document.addEventListener("pointerdown", handlePointerDown);

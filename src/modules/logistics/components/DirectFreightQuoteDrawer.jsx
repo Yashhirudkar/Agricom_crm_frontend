@@ -5,6 +5,7 @@ import SearchablePartnerSelect from "@/components/common/SearchablePartnerSelect
 import axiosClient from "@/lib/axios";
 import Select from "react-select";
 import { useCurrencyMaster } from "@/modules/enquiries/hooks/useCurrencyMaster";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function DirectFreightQuoteDrawer({
   isOpen,
@@ -12,6 +13,8 @@ export default function DirectFreightQuoteDrawer({
   onSave,
   quote = null,
 }) {
+  useEscapeKey(onClose, isOpen);
+
   const [productId, setProductId] = useState("");
   
   const [routes, setRoutes] = useState([

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Save, PlusCircle, AlertCircle } from "lucide-react";
 import axiosClient from "@/lib/axios";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const CATEGORY_NAMES = {
   TRUCK_TYPE: "Truck Type",
@@ -18,6 +19,8 @@ export default function AddEquipmentOptionModal({
   category = "TRUCK_TYPE",
   onSaveSuccess,
 }) {
+  useEscapeKey(onClose, isOpen);
+
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

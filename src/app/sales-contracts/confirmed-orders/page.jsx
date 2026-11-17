@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 import { ChevronLeft, FileCheck, Check, AlertCircle } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useEnquiries, useEnquiriesMasters } from "@/modules/enquiries/hooks/useEnquiries";
 import EnquiriesTable from "@/modules/enquiries/components/EnquiriesTable";
 import EnquiriesFilter from "@/modules/enquiries/components/EnquiriesFilter";
@@ -16,6 +17,8 @@ import TransportDrawer from "@/modules/logistics/components/TransportDrawer";
 export default function ConfirmedOrdersPage() {
   const router = useRouter();
   const activeCompanyId = useSelector(selectActiveCompanyId) || "";
+  const { hasPermission } = usePermissions();
+  const canView = hasPermission('confirmed_orders:view') || hasPermission('enquiry:view') || hasPermission('sales_contract:view');
 
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
@@ -80,6 +83,28 @@ export default function ConfirmedOrdersPage() {
       await confirmedQuery.fetchEnquiries();
     }
   };
+
+  if (!canView) {
+    return (
+      <div className="bg-gray-50 min-h-screen text-gray-800 p-8 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-md text-center">
+          <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Access Denied</h2>
+          <p className="text-gray-500 text-sm mb-6">
+            You do not have permission to view Confirmed Orders. Please contact your administrator.
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6">

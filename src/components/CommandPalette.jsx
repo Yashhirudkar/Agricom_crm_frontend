@@ -6,6 +6,7 @@ import { useSelector } from "react-redux";
 import { selectUserType, selectUser } from "@/store/slices/authSlice";
 import axiosClient from "@/lib/axios";
 import { Search, Globe, Building2, User, CornerDownLeft } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,6 +18,8 @@ export default function CommandPalette() {
   const router = useRouter();
   const userType = useSelector(selectUserType);
   const user = useSelector(selectUser);
+
+  useEscapeKey(() => setIsOpen(false), isOpen);
 
   const inputRef = useRef(null);
   const resultsRef = useRef([]);
@@ -143,8 +146,6 @@ export default function CommandPalette() {
       if (flatList[selectedIndex]) {
         handleSelect(flatList[selectedIndex]);
       }
-    } else if (e.key === "Escape") {
-      setIsOpen(false);
     }
   };
 

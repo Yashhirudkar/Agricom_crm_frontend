@@ -76,6 +76,7 @@ function EditableTextCell({ value, onSave, disabled }) {
   const handleKeyDown = (e) => {
     if (e.key === "Enter") handleBlur();
     if (e.key === "Escape") {
+      e.preventDefault();
       setVal(value || "");
       setIsEditing(false);
     }
@@ -126,6 +127,7 @@ function EditableNumberCell({ value, onSave, disabled }) {
   const handleKeyDown = (e) => {
     if (e.key === "Enter") handleBlur();
     if (e.key === "Escape") {
+      e.preventDefault();
       setVal(value || "");
       setIsEditing(false);
     }

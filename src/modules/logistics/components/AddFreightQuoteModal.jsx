@@ -27,6 +27,7 @@ import {
 import SearchablePartnerSelect from "@/components/common/SearchablePartnerSelect";
 import { useCurrencyMaster } from "@/modules/enquiries/hooks/useCurrencyMaster";
 import axiosClient from "@/lib/axios";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const ROAD_TRUCK_TYPES = [
   "Mini Truck", "Pickup", "Tata Ace", "14 FT Truck", "17 FT Truck",
@@ -74,6 +75,8 @@ export default function AddFreightQuoteModal({
   targetShipment = null,
   purchaseContractId = null,
 }) {
+  useEscapeKey(onClose, isOpen);
+
   // Form State
   const [sellerId, setSellerId] = useState("");
   const [contactPerson, setContactPerson] = useState("");
@@ -210,6 +213,7 @@ export default function AddFreightQuoteModal({
                     handleSaveInline(category, setter);
                   }
                   if (e.key === "Escape") {
+                    e.preventDefault();
                     setActiveInlineCategory(null);
                     setInlineError("");
                   }

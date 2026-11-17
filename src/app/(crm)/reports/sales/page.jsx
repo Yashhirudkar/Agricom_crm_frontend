@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import axiosInstance from '@/lib/axios';
 import Pagination from '@/components/common/Pagination';
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   FileSpreadsheet, Filter, X, Printer,
-  TrendingUp, Users, ShoppingCart, BarChart3
+  TrendingUp, Users, ShoppingCart, BarChart3, Lock
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 15;
@@ -13,6 +15,10 @@ const ITEMS_PER_PAGE = 15;
 const getExecutiveFirstName = name => name?.trim().split(/\s+/)[0] || '';
 
 export default function SalesReportPage() {
+  const { hasPermission } = usePermissions();
+  const canView = hasPermission('sales_report:view');
+  const canExport = hasPermission('sales_report:export');
+
   const [filters, setFilters] = useState({
     year: new Date().getFullYear().toString(),
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
@@ -39,6 +45,7 @@ export default function SalesReportPage() {
   const [availableExecutives, setAvailableExecutives] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const user = useSelector((state) => state.auth.user);
   const companyId = typeof window !== 'undefined' ? localStorage.getItem('activeCompanyId') : null;
   const totalPages = Math.ceil(data.orders.length / ITEMS_PER_PAGE);
   const firstOrderIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -46,29 +53,30 @@ export default function SalesReportPage() {
 
   // Load options for filters
   useEffect(() => {
+    if (!canView) return;
     const fetchOptions = async () => {
       try {
-        const [prodRes, custRes, countryRes, compRes] = await Promise.all([
-          axiosInstance.get('/reports/sales/products', { params: { companyId } }),
-          axiosInstance.get('/reports/sales/customers', { params: { companyId } }),
-          axiosInstance.get('/reports/sales/countries', { params: { companyId } }),
-          axiosInstance.get('/GetCompanies', { params: { limit: 100 } })
+        const [prodRes, custRes, countryRes] = await Promise.all([
+          axiosInstance.get('/reports/sales/products', { params: { companyId } }).catch(() => ({ data: [] })),
+          axiosInstance.get('/reports/sales/customers', { params: { companyId } }).catch(() => ({ data: [] })),
+          axiosInstance.get('/reports/sales/countries', { params: { companyId } }).catch(() => ({ data: [] })),
         ]);
         setOptions({
           products: prodRes.data || [],
           customers: custRes.data || [],
           countries: countryRes.data || [],
-          companies: compRes.data?.data || []
+          companies: user?.workspaces || []
         });
       } catch (err) {
         console.error("Failed to fetch options", err);
       }
     };
     fetchOptions();
-  }, [companyId]);
+  }, [companyId, canView, user?.workspaces]);
 
   // Load report data
   useEffect(() => {
+    if (!canView) return;
     const fetchReport = async () => {
       setData(prev => ({ ...prev, loading: true }));
       try {
@@ -203,6 +211,22 @@ export default function SalesReportPage() {
     </tr>
   );
 
+  if (!canView) {
+    return (
+      <div className="bg-gray-50 min-h-screen text-gray-800 p-8 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-md text-center">
+          <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-6 h-6" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">Access Restricted</h2>
+          <p className="text-sm text-gray-500">
+            You do not have permission to view the Sales Report. Please contact your administrator for access.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen text-gray-800 pb-20 print:bg-white print:p-0">
 
@@ -214,9 +238,11 @@ export default function SalesReportPage() {
             <p className="text-gray-500 text-sm mt-1">Detailed breakdown of confirmed orders and performance.</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium">
-              <FileSpreadsheet className="w-4 h-4 text-green-600" /> Export CSV
-            </button>
+            {canExport && (
+              <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium">
+                <FileSpreadsheet className="w-4 h-4 text-green-600" /> Export CSV
+              </button>
+            )}
             <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium">
               <Printer className="w-4 h-4 text-blue-600" /> Print
             </button>

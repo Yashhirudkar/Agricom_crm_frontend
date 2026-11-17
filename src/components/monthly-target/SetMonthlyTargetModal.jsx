@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Target, X } from "lucide-react";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function SetMonthlyTargetModal({
   isOpen,
@@ -10,6 +11,8 @@ export default function SetMonthlyTargetModal({
   monthName,
   year,
 }) {
+  useEscapeKey(onClose, isOpen);
+
   const [targetValue, setTargetValue] = useState("");
   const [error, setError] = useState("");
 
@@ -104,4 +107,3 @@ export default function SetMonthlyTargetModal({
     </div>
   );
 }
-
