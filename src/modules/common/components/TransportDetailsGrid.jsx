@@ -6,7 +6,7 @@ import { getShipmentTypeShortForm } from "@/modules/sales-contracts/utils/format
 
 /**
  * Repeatable Transport Details Grid
- * Columns: Origin* | Shipment Type / Incoterm* | Destination* | Freight Required (auto) | Actions
+ * Columns: Place of Loading (POL)* | Shipment Type / Incoterm* | Destination* | Freight Required (auto) | Actions
  */
 export default function TransportDetailsGrid({
   routes = [],
@@ -63,10 +63,10 @@ export default function TransportDetailsGrid({
             <tr>
               <th className="py-2 px-3 w-10 text-center">#</th>
               <th className="py-2 px-3 min-w-[140px]">
-                Origin <span className="text-red-500">*</span>
+                Place of Loading <span className="text-red-500">*</span>
               </th>
               <th className="py-2 px-3 min-w-[160px]">
-                Shipment Type / Incoterm <span className="text-red-500">*</span>
+                Incoterm <span className="text-red-500">*</span>
               </th>
               <th className="py-2 px-3 min-w-[140px]">
                 Destination <span className="text-red-500">*</span>
@@ -88,7 +88,7 @@ export default function TransportDetailsGrid({
                 >
                   {isView
                     ? "No transport routes configured."
-                    : "No routes added yet. Click \"+ Add Route\" to add an Origin → Incoterm → Destination route."}
+                    : "No routes added yet. Click \"+ Add Route\" to add a Place of Loading (POL) → Incoterm → Destination route."}
                 </td>
               </tr>
             ) : (
@@ -100,7 +100,7 @@ export default function TransportDetailsGrid({
                       {route.sequence || idx + 1}
                     </td>
 
-                    {/* Origin */}
+                    {/* Place of Loading (POL) */}
                     <td className="py-2 px-3">
                       {isView ? (
                         <span className="font-medium text-gray-800">
@@ -113,7 +113,7 @@ export default function TransportDetailsGrid({
                           onChange={(e) =>
                             handleFieldChange(idx, "origin", e.target.value)
                           }
-                          placeholder="e.g. Nagpur"
+                          placeholder="e.g. Sadas"
                           className="w-full px-2.5 py-1.5 text-xs text-gray-800 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#007aff] transition-all placeholder:text-gray-300"
                         />
                       )}
@@ -183,11 +183,10 @@ export default function TransportDetailsGrid({
                     {/* Freight Required (calculated automatically) */}
                     <td className="py-2 px-3 text-center">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide select-none ${
-                          freightReq
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : "bg-gray-100 text-gray-500 border border-gray-200"
-                        }`}
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide select-none ${freightReq
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-gray-100 text-gray-500 border border-gray-200"
+                          }`}
                         title={
                           freightReq
                             ? "Freight is required for this Incoterm (automatically evaluated)"
@@ -234,7 +233,7 @@ export default function TransportDetailsGrid({
             + Add Route
           </button>
           <span className="text-[10px] text-gray-400">
-            Route format: Origin → Incoterm → Destination (Freight calculated automatically)
+            Route format: Place of Loading (POL) → Incoterm → Destination (Freight calculated automatically)
           </span>
         </div>
       )}

@@ -732,7 +732,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       for (let i = 0; i < form.transportDetails.length; i++) {
         const r = form.transportDetails[i];
         if (!r.origin?.trim() || !r.incoterm?.trim() || !r.destination?.trim()) {
-          newErrors.transportDetails = `Route #${i + 1} is incomplete. Origin, Incoterm, and Destination are all required.`;
+          newErrors.transportDetails = `Route #${i + 1} is incomplete. Place of Loading (POL), Incoterm, and Destination are all required.`;
           break;
         }
       }
