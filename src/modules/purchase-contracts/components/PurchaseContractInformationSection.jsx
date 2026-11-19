@@ -195,7 +195,9 @@ export default function PurchaseContractInformationSection({
           </div>
 
           <div>
-            <label className={lbl}>Purchase Date</label>
+            <label className={lbl}>
+              Purchase Date <span className="text-red-500">*</span>
+            </label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{purchaseDateDisplay || "\u00A0"}</div>
             ) : (

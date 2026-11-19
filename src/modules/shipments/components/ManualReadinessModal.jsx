@@ -219,9 +219,9 @@ export default function ManualReadinessModal({
               <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200">
                 <span className="text-gray-600">Freight Allocation:</span>
                 {!isFreightRequired ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium shadow-2xs bg-slate-100 text-slate-600 border-slate-200">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Not Required</span>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium shadow-2xs bg-gray-50 text-gray-600 border-gray-200">
+                    <XCircle className="w-3.5 h-3.5 text-gray-500" />
+                    <span>NO</span>
                   </span>
                 ) : (
                   <span

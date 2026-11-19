@@ -6,13 +6,11 @@ import {
   CheckCircle,
   Clock,
   Plus,
-  FileCheck,
   Star,
   FileText,
   Edit2,
   Trash2,
   AlertTriangle,
-  Loader2,
   Truck,
 } from "lucide-react";
 
@@ -24,8 +22,6 @@ export default function SingleShipmentWorkspace({
   onEditQuote,
   onDeleteQuote,
   onSetPreferred,
-  onExecuteShipment,
-  executingShipmentId,
   expiringSoonIds = [],
   getPartnerInitials,
 }) {
@@ -112,18 +108,18 @@ export default function SingleShipmentWorkspace({
             {/* Freight Gate */}
             <span
               className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 select-none ${
-                shipment.freightReady || Boolean(prefQuote)
+                shipment.freightReady
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                   : "bg-rose-50 text-rose-700 border-rose-200"
               }`}
             >
-              {shipment.freightReady || Boolean(prefQuote) ? (
+              {shipment.freightReady ? (
                 <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
               ) : (
                 <Clock className="h-3.5 w-3.5 text-rose-500" />
               )}
               <span>
-                Freight: {shipment.freightReady || Boolean(prefQuote) ? "Allocated" : "Pending"}
+                Freight: {shipment.freightReady ? "Allocated" : "Pending"}
               </span>
             </span>
 
@@ -139,31 +135,10 @@ export default function SingleShipmentWorkspace({
                   Add Freight Quote
                 </button>
 
-                {/* Execute Shipment Button */}
-                {shipment.status === "Executed" ? (
+                {shipment.status === "Executed" && (
                   <span className="px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl font-bold flex items-center gap-1.5 text-xs select-none">
                     <CheckCircle className="h-3.5 w-3.5 text-emerald-600" /> Executed
                   </span>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={!shipment.readyForShipment || executingShipmentId === shipment.id}
-                    onClick={() => onExecuteShipment(shipment.id, shipment.shipmentReference)}
-                    title={
-                      shipment.readyForShipment
-                        ? "Click to execute this shipment independently"
-                        : shipment.readinessReason ||
-                          "Both Cargo and Freight allocations are required before execution"
-                    }
-                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl flex items-center gap-1.5 text-xs shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95"
-                  >
-                    {executingShipmentId === shipment.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <FileCheck className="h-3.5 w-3.5" />
-                    )}
-                    Execute Shipment
-                  </button>
                 )}
               </>
             )}

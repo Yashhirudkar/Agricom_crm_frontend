@@ -11,6 +11,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Pagination from "@/components/common/Pagination";
 import { selectActiveCompany } from "@/store/slices/companyContextSlice";
 import { selectPendingTransportEnquiryId, selectLatestTransportUpdate, setPendingTransportEnquiryId, setLatestTransportUpdate } from "@/store/slices/notificationsSlice";
+import { shipmentsApi } from "@/modules/shipments/services/shipmentsApi";
+import { isFreightRequiredForShipment } from "@/modules/shipments/utils/freightRuleEngine";
 
 export default function LogisticsQueuePage() {
   const company = useSelector(selectActiveCompany);
@@ -28,8 +30,12 @@ export default function LogisticsQueuePage() {
   const urlEnquiryId = searchParams?.get("enquiryId") || "";
   const urlShipmentId = searchParams?.get("shipmentId") || "";
   const urlShipmentRef = searchParams?.get("shipmentRef") || "";
+  const urlPurchaseContractId = searchParams?.get("purchaseContractId") || "";
+  const urlSalesContractId = searchParams?.get("salesContractId") || "";
   const urlFrom = searchParams?.get("from") || "";
   const urlTab = searchParams?.get("tab") || searchParams?.get("type") || "";
+  const isDirectShipmentWorkspace =
+    urlFrom === "shipments" && Boolean(urlShipmentId);
 
   // Helper to parse tab name from URL
   const getTabFromUrl = (raw) => {
@@ -77,6 +83,10 @@ export default function LogisticsQueuePage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hideTargetEnquiry, setHideTargetEnquiry] = useState(null);
   const [hideLoading, setHideLoading] = useState(false);
+  const [isFreightAllowedForUrlShipment, setIsFreightAllowedForUrlShipment] = useState(
+    urlShipmentId ? null : true
+  );
+  const [urlShipmentData, setUrlShipmentData] = useState(null);
 
   // Ref to prevent multiple auto-open triggers during same session
   const autoOpenHandled = useRef(false);
@@ -104,6 +114,85 @@ export default function LogisticsQueuePage() {
     }
   }, [searchParams]);
 
+  // Validate shipment freight requirement if deep-linked via shipmentId
+  useEffect(() => {
+    if (!isDirectShipmentWorkspace || !urlShipmentId) return;
+
+    let cancelled = false;
+    const initializeDirectWorkspace = async () => {
+      try {
+        const res = await logisticsApi.getShipmentWorkspace(urlShipmentId);
+        if (cancelled) return;
+        const data = res?.data;
+        if (!data) return;
+        setSelectedEnquiry({
+          ...(data.enquiry || {}),
+          ...(data.purchaseContract ? { purchaseContract: data.purchaseContract } : {}),
+          ...(data.salesContract ? { salesContract: data.salesContract } : {}),
+          id: data.enquiry?.id || data.enquiryId,
+          enquiryId: data.enquiry?.id || data.enquiryId,
+        });
+        setDrawerOpen(true);
+        autoOpenHandled.current = true;
+      } catch (err) {
+        if (!cancelled) {
+          toast.error(err?.response?.data?.message || "Failed to open the Transport Workspace.");
+        }
+      }
+    };
+
+    initializeDirectWorkspace();
+    return () => {
+      cancelled = true;
+    };
+  }, [isDirectShipmentWorkspace, urlShipmentId]);
+
+  useEffect(() => {
+    if (!urlShipmentId) return;
+
+    let cancelled = false;
+    const validateShipment = async () => {
+      try {
+        if (typeof shipmentsApi?.getShipment !== "function") return;
+        const res = await shipmentsApi.getShipment(urlShipmentId);
+        if (cancelled) return;
+
+        const s = res?.data;
+        if (s) {
+          setUrlShipmentData(s);
+          const isReq = isFreightRequiredForShipment(s);
+          setIsFreightAllowedForUrlShipment(isReq);
+
+          if (!isReq) {
+            autoOpenHandled.current = true;
+            setSelectedEnquiry(null);
+            setDrawerOpen(false);
+            try {
+              const url = new URL(window.location.href);
+              url.searchParams.delete("shipmentId");
+              url.searchParams.delete("shipmentRef");
+              url.searchParams.delete("openDrawer");
+              window.history.replaceState(
+                {},
+                "",
+                url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : "")
+              );
+            } catch (e) {}
+          }
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn("Could not check shipment freight requirement:", err);
+        }
+      }
+    };
+
+    validateShipment();
+    return () => {
+      cancelled = true;
+    };
+  }, [urlShipmentId]);
+
   // Debounce search - wait 400ms after user stops typing
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -123,11 +212,18 @@ export default function LogisticsQueuePage() {
     if (!list || list.length === 0) return null;
     if (urlShipmentId) {
       const match = list.find((e) => {
-        const directShipmentMatch = e.shipments?.some((s) => String(s.id) === String(urlShipmentId));
-        const pcShipmentMatch = e.purchaseContract?.shipments?.some((s) => String(s.id) === String(urlShipmentId));
-        return directShipmentMatch || pcShipmentMatch;
+        const directShipmentMatch = e.shipments?.find((s) => String(s.id) === String(urlShipmentId));
+        if (directShipmentMatch) {
+          return isFreightRequiredForShipment(directShipmentMatch);
+        }
+        const pcShipmentMatch = e.purchaseContract?.shipments?.find((s) => String(s.id) === String(urlShipmentId));
+        if (pcShipmentMatch) {
+          return isFreightRequiredForShipment(pcShipmentMatch);
+        }
+        return false;
       });
-      if (match) return match;
+      // When targeted for a specific shipment, never fall back to an arbitrary queue row
+      return match || null;
     }
     if (!list || list.length === 0) return null;
     if (urlEnquiryId) {
@@ -164,9 +260,11 @@ export default function LogisticsQueuePage() {
       });
       if (match) return match;
     }
-    // If only 1 result returned or user specifically searched for this record, pick it
-    if (list.length === 1) return list[0];
-    if ((urlBusinessRef || urlSearch) && list.length > 0) return list[0];
+    // If only 1 result returned or user specifically searched for this record, pick it (only when not targeting a specific shipment)
+    if (!urlShipmentId) {
+      if (list.length === 1) return list[0];
+      if ((urlBusinessRef || urlSearch) && list.length > 0) return list[0];
+    }
     return null;
   }, [urlEnquiryId, urlLogisticsId, urlBusinessRef, urlSearch, urlShipmentId]);
 
@@ -175,6 +273,14 @@ export default function LogisticsQueuePage() {
     let cancelled = false;
 
     const fetchQueue = async () => {
+      if (isDirectShipmentWorkspace) {
+        setLoading(false);
+        setData([]);
+        setTotal(0);
+        setTotalPages(1);
+        return;
+      }
+
       setLoading(true);
       try {
         const tabParam =
@@ -210,6 +316,11 @@ export default function LogisticsQueuePage() {
 
           // Deep-link auto-open handling
           if ((urlOpenDrawer || urlShipmentId) && !autoOpenHandled.current) {
+            // If targeting a shipment, ensure freight requirement is verified and allowed
+            if (urlShipmentId && isFreightAllowedForUrlShipment !== true) {
+              return;
+            }
+
             const matched = findMatchingEnquiry(list);
             if (matched) {
               autoOpenHandled.current = true;
@@ -229,11 +340,12 @@ export default function LogisticsQueuePage() {
               } catch (e) {
                 console.warn("Could not clean openDrawer query param:", e);
               }
-            } else if (urlEnquiryId) {
-              // Direct fallback if not on current page or filtered
+            } else if (!urlShipmentId && (urlEnquiryId || urlPurchaseContractId)) {
+              // Direct fallback if not on current page or filtered (only when not targeting a specific shipment)
+              const targetLookupId = urlEnquiryId || (urlPurchaseContractId ? `pc_${urlPurchaseContractId}` : "");
               try {
-                const directRes = await logisticsApi.getDetails(urlEnquiryId);
-                if (directRes.data && !cancelled) {
+                const directRes = await logisticsApi.getDetails(targetLookupId);
+                if (directRes?.data && !directRes?.data?.isBusinessRule && !cancelled) {
                   autoOpenHandled.current = true;
                   setSelectedEnquiry(directRes.data);
                   setDrawerOpen(true);
@@ -281,12 +393,20 @@ export default function LogisticsQueuePage() {
     refreshKey,
     urlOpenDrawer,
     urlEnquiryId,
+    urlShipmentId,
+    isFreightAllowedForUrlShipment,
+    isDirectShipmentWorkspace,
     findMatchingEnquiry,
   ]);
 
   // Handle Redux pending navigation state
   useEffect(() => {
-    if (pendingTransportEnquiryId && data.length > 0 && !drawerOpen) {
+    if (
+      pendingTransportEnquiryId &&
+      data.length > 0 &&
+      !drawerOpen &&
+      (!urlShipmentId || isFreightAllowedForUrlShipment === true)
+    ) {
       const target = data.find(
         (item) =>
           item.id === pendingTransportEnquiryId ||
@@ -299,11 +419,21 @@ export default function LogisticsQueuePage() {
         dispatch(setPendingTransportEnquiryId(null));
       }
     }
-  }, [pendingTransportEnquiryId, data, drawerOpen, dispatch]);
+  }, [
+    pendingTransportEnquiryId,
+    data,
+    drawerOpen,
+    dispatch,
+    urlShipmentId,
+    isFreightAllowedForUrlShipment,
+  ]);
 
   // Fallback deep-link check when data changes
   useEffect(() => {
     if (urlOpenDrawer && !autoOpenHandled.current && data.length > 0 && !drawerOpen) {
+      if (urlShipmentId && isFreightAllowedForUrlShipment !== true) {
+        return;
+      }
       const matched = findMatchingEnquiry(data);
       if (matched) {
         autoOpenHandled.current = true;
@@ -322,7 +452,7 @@ export default function LogisticsQueuePage() {
         } catch (e) {}
       }
     }
-  }, [data, urlOpenDrawer, drawerOpen, findMatchingEnquiry]);
+  }, [data, urlOpenDrawer, drawerOpen, findMatchingEnquiry, urlShipmentId, isFreightAllowedForUrlShipment]);
 
   // Handle real-time transport updates from Redux
   useEffect(() => {
@@ -406,6 +536,20 @@ export default function LogisticsQueuePage() {
       setHideLoading(false);
     }
   };
+
+  if (isDirectShipmentWorkspace) {
+    return (
+      <TransportDrawer
+        isOpen={drawerOpen}
+        onClose={handleCloseDrawer}
+        enquiry={selectedEnquiry}
+        targetShipmentId={urlShipmentId}
+        targetShipmentRef={urlShipmentRef}
+        fromSource="shipments"
+        shipment={urlShipmentData}
+      />
+    );
+  }
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6">
@@ -524,6 +668,7 @@ export default function LogisticsQueuePage() {
         targetShipmentId={urlShipmentId}
         targetShipmentRef={urlShipmentRef}
         fromSource={urlFrom}
+        shipment={urlShipmentData}
       />
 
       <ConfirmModal

@@ -32,6 +32,7 @@ export default function PartySection({ form, setForm, errors, masters = {}, isVi
           value={form.buyerId}
           onChange={(val) => setForm((f) => ({ ...f, buyerId: val ? Number(val) : "" }))}
           roleNames={["IMPORTER", "EXPORTER"]}
+          initialPartners={form.buyer ? [form.buyer, ...buyers] : buyers}
           disabled={isView}
           error={errors.buyerId}
           placeholder="Select Buyer"

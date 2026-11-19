@@ -145,9 +145,28 @@ axiosClient.interceptors.response.use(
       !originalRequest?.url?.includes("/auth/login") &&
       !originalRequest?.url?.includes("/auth/refresh");
 
+    // Distinguish handled business rule responses (e.g. Freight Required = NO) from system errors
+    const rawErrorMsg =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      "";
+    const errorMsgStr = (
+      Array.isArray(rawErrorMsg) ? rawErrorMsg.join(" ") : String(rawErrorMsg)
+    ).toLowerCase();
+
+    const isHandledBusinessRule =
+      Boolean(originalRequest?.isHandledBusinessRule) ||
+      (error.response?.status === 400 &&
+        (errorMsgStr.includes("freight is not required") ||
+          errorMsgStr.includes("freight required = no") ||
+          errorMsgStr.includes("freight not required") ||
+          errorMsgStr.includes("transport management is not available for shipment") ||
+          errorMsgStr.includes("transport not available because freight")));
+
     const shouldLogConsole =
       !isRefreshable401 &&
       !isBackgroundPolling &&
+      !isHandledBusinessRule &&
       !originalRequest?.suppressErrorLog &&
       error.response?.status !== 404;
 
@@ -157,6 +176,26 @@ axiosClient.interceptors.response.use(
       } else if (!axios.isCancel(error)) {
         console.error("[Axios Error]", originalRequest?.url, error.message || error);
       }
+    }
+
+    // Gracefully handle expected business rule responses without throwing Axios runtime error
+    if (isHandledBusinessRule) {
+      return Promise.resolve({
+        data: {
+          success: false,
+          isBusinessRule: true,
+          freightRequired: false,
+          message: Array.isArray(rawErrorMsg)
+            ? rawErrorMsg.join(" ")
+            : String(rawErrorMsg || "Freight is not required for this shipment."),
+          statusCode: error.response?.status || 400,
+          originalError: error,
+        },
+        status: 200,
+        statusText: "OK",
+        headers: error.response?.headers || {},
+        config: originalRequest,
+      });
     }
 
     if (typeof window !== "undefined") {

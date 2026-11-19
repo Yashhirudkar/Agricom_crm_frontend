@@ -1,11 +1,14 @@
 "use client";
 import React, { useState } from "react";
-import { X, Check, Loader2 } from "lucide-react";
+import { X, Check, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { shipmentsApi } from "../services/shipmentsApi";
 import { toast } from "sonner";
 import BusinessReference from "@/components/common/BusinessReference";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
-import { isFreightRequiredForShipment } from "../utils/freightRuleEngine";
+import {
+  isFreightAllocatedForShipment,
+  isFreightRequiredForShipment,
+} from "../utils/freightRuleEngine";
 
 const WORKFLOW_STATUSES = [
   "Scheduled",
@@ -31,8 +34,7 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
     ratePerMt: shipment?.ratePerMt || "",
     purchaseRate: shipment?.purchaseRate || "",
     forex: shipment?.forex || "",
-    freight: shipment?.freight ?? "",
-    freightAllocationStatus: shipment?.freightAllocationStatus || (shipment?.freightReady ? "Yes" : "No"),
+    freight: isFreightRequiredForShipment(shipment) ? (shipment?.freight ?? "") : "",
     freightCurrency: shipment?.freightCurrency || shipment?.salesContract?.currencyCode || "",
     freightDescription: shipment?.freightDescription || "",
     status: shipment?.status || "Scheduled",
@@ -52,8 +54,7 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
       ratePerMt: shipment.ratePerMt || "",
       purchaseRate: shipment.purchaseRate || "",
       forex: shipment.forex || "",
-      freight: shipment.freight ?? "",
-      freightAllocationStatus: shipment.freightAllocationStatus || (shipment.freightReady ? "Yes" : "No"),
+      freight: isFreightRequiredForShipment(shipment) ? (shipment.freight ?? "") : "",
       freightCurrency: shipment.freightCurrency || shipment.salesContract?.currencyCode || "",
       freightDescription: shipment.freightDescription || "",
       status: shipment.status || "Scheduled",
@@ -66,6 +67,7 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
   if (!isOpen || !shipment) return null;
 
   const isFreightRequired = isFreightRequiredForShipment(shipment);
+  const isFreightAllocated = isFreightAllocatedForShipment(shipment);
 
   const handleInputChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -105,10 +107,8 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
         forex: form.forex ? parseFloat(form.forex) : null,
         // If Freight Required = NO: completely clear and do not save
         freight: isFreightRequired ? (form.freight !== "" && form.freight !== null ? parseFloat(form.freight) : null) : null,
-        freightAllocationStatus: isFreightRequired ? (form.freightAllocationStatus || null) : null,
         freightCurrency: isFreightRequired ? (form.freightCurrency || null) : null,
         freightDescription: isFreightRequired ? (form.freightDescription || null) : null,
-        freightRequired: isFreightRequired,
         status: form.status,
         remarks: form.remarks || null,
         shipmentNo: form.shipmentNo ? parseInt(form.shipmentNo, 10) : null
@@ -284,16 +284,22 @@ export default function ShipmentEditModal({ shipment, isOpen, onClose, onSaveSuc
                 {/* Freight Allocation */}
                 <div>
                   <label className={labelCls}>Freight Allocation</label>
-                  <div className="relative">
-                    <select
-                      value={form.freightAllocationStatus}
-                      onChange={(e) => handleInputChange("freightAllocationStatus", e.target.value)}
-                      className={`${inpCls} appearance-none pr-8`}
+                  <div className="py-1">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold ${
+                        isFreightAllocated
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : "bg-red-50 text-red-700 border-red-200"
+                      }`}
+                      title="Freight Allocation is entirely system-driven"
                     >
-                      <option value="No">No (Pending)</option>
-                      <option value="Yes">Yes (Allocated)</option>
-                    </select>
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">▼</span>
+                      {isFreightAllocated ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                      ) : (
+                        <XCircle className="h-3.5 w-3.5 text-red-600" />
+                      )}
+                      <span>{isFreightAllocated ? "YES" : "NO"}</span>
+                    </span>
                   </div>
                 </div>
 

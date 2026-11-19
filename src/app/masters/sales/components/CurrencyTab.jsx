@@ -1,17 +1,15 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { mastersApi } from "@/modules/sales-contracts/services/salesContractApi";
 import { Coins, Search, Check, AlertCircle, RefreshCw } from "lucide-react";
 
 export default function CurrencyTab() {
-  const [items, setItems] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [isLoading, setIsLoading] = useState(true);
 
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = "success") => {
@@ -22,31 +20,42 @@ export default function CurrencyTab() {
   const [togglingId, setTogglingId] = useState(null);
 
   const itemsPerPage = 25;
+  const queryClient = useQueryClient();
 
-  const fetchCurrencies = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const status = statusFilter === "all" ? undefined : statusFilter === "true" ? "Active" : "Inactive";
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const status = statusFilter === "all" ? undefined : statusFilter === "true" ? "Active" : "Inactive";
+  const { data: pageData, isLoading, isError, error } = useQuery({
+    queryKey: ["currency-master", currentPage, debouncedSearch, statusFilter],
+    queryFn: async () => {
       const res = await mastersApi.getCurrencies({
         page: currentPage,
         limit: itemsPerPage,
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         status,
       });
-      setItems(res.data?.data || []);
-      setTotal(res.data?.total || 0);
-      setTotalPages(res.data?.totalPages || 1);
-    } catch (err) {
-      console.error("Failed to load currencies", err);
-      showToast("Failed to load currencies master", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentPage, search, statusFilter]);
+      return res.data || { data: [], total: 0, totalPages: 1 };
+    },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const items = pageData?.data || [];
+  const total = pageData?.total || 0;
+  const totalPages = pageData?.totalPages || 1;
 
   useEffect(() => {
-    fetchCurrencies();
-  }, [fetchCurrencies]);
+    if (!isError) return;
+    console.error("Failed to load currencies", error);
+    setToast({ msg: "Failed to load currencies master", type: "error" });
+  }, [isError, error]);
 
   const handleToggle = async (currency) => {
     setTogglingId(currency.id);
@@ -58,12 +67,7 @@ export default function CurrencyTab() {
           newActive ? "ON (Visible in dropdown)" : "OFF (Hidden from dropdown)"
         }`
       );
-      // Update local state immediately for instant feedback
-      setItems((prev) =>
-        prev.map((c) =>
-          c.id === currency.id ? { ...c, isActive: newActive, status: newActive ? "Active" : "Inactive" } : c
-        )
-      );
+      await queryClient.invalidateQueries({ queryKey: ["currency-master"] });
     } catch (err) {
       showToast("Failed to toggle currency status", "error");
     } finally {

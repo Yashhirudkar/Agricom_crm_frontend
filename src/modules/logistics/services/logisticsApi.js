@@ -6,16 +6,23 @@ export const logisticsApi = {
   unhideEnquiry: (enquiryId) => axiosClient.delete(`/logistics/enquiry/${enquiryId}/hide`),
   getAllFreightQuotes: (params) => axiosClient.get("/logistics/quotes", { params }),
   getDetails: (enquiryId, shipmentId) => axiosClient.get(`/logistics/enquiry/${enquiryId}`, { params: shipmentId ? { shipmentId } : {} }),
+  getShipmentWorkspace: (shipmentId) => axiosClient.get(`/logistics/shipments/${shipmentId}/workspace`),
   addFreightQuote: (id, data) => axiosClient.post(`/logistics/${id}/quotes`, data),
   addDirectFreightQuote: (data) => axiosClient.post(`/logistics/direct-quotes`, data),
   updateDirectFreightQuote: (quoteId, data) => axiosClient.patch(`/logistics/direct-quotes/${quoteId}`, data),
   deleteDirectFreightQuote: (quoteId) => axiosClient.delete(`/logistics/direct-quotes/${quoteId}`),
   updateFreightQuote: (id, quoteId, data) =>
     axiosClient.patch(`/logistics/${id}/quotes/${quoteId}`, data),
-  deleteFreightQuote: (id, quoteId) =>
-    axiosClient.delete(`/logistics/${id}/quotes/${quoteId}`),
-  setPreferredQuote: (id, quoteId) =>
-    axiosClient.patch(`/logistics/${id}/quotes/${quoteId}/preferred`),
+  deleteFreightQuote: (id, quoteId, shipmentId) =>
+    axiosClient.delete(`/logistics/${id}/quotes/${quoteId}`, {
+      params: shipmentId ? { shipmentId } : {},
+    }),
+  setPreferredQuote: (id, quoteId, shipmentId) =>
+    axiosClient.patch(
+      `/logistics/${id}/quotes/${quoteId}/preferred`,
+      {},
+      { params: shipmentId ? { shipmentId } : {} },
+    ),
   updateStatus: (id, data) => axiosClient.patch(`/logistics/${id}/status`, data),
   executeShipment: (shipmentId) => axiosClient.post(`/logistics/shipments/${shipmentId}/execute`),
   generateShipment: (id) => axiosClient.post(`/logistics/${id}/generate-shipment`),

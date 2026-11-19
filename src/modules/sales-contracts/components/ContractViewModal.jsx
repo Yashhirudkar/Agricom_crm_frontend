@@ -333,6 +333,12 @@ export default function ContractViewModal({ contractId, onClose }) {
             padding: 0;
             border: none;
           }
+          #contract-print-area .contract-print-footer {
+            transform: translateY(5px);
+          }
+          #contract-print-area .contract-print-website-footer {
+            transform: translateY(4px);
+          }
           .print-avoid-break { break-inside: avoid !important; page-break-inside: avoid !important; }
           .print-page-break-before { break-before: page !important; page-break-before: always !important; }
         }
@@ -433,7 +439,7 @@ export default function ContractViewModal({ contractId, onClose }) {
             <tr>
               <td>
                 {/* ── REPEATING PAGE FOOTER ──────────────────────────── */}
-                <div className="font-serif text-[13px] text-black">
+                <div className="contract-print-footer font-serif text-[13px] text-black">
                   {/* Signature row */}
                   {(hasSeller || hasBroker || hasBuyer) && (
                     <div className="flex items-start justify-between px-8 md:px-10 pt-6 pb-2 print:px-0 print:pt-4">
@@ -521,7 +527,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                   )}
 
                   {/* Website footer line */}
-                  <div className="mx-8 md:mx-10 mt-3 mb-4 pt-2 border-t-2 border-[#8dc63f] text-center print:mx-0 print:mb-1">
+                  <div className="contract-print-website-footer mx-8 md:mx-10 mt-3 mb-4 pt-2 border-t-2 border-[#8dc63f] text-center print:mx-0 print:mb-1">
                     <p className="text-[11px] text-gray-500 font-medium">www.agricomimpex.com</p>
                   </div>
                 </div>
@@ -535,7 +541,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                 <div className="px-8 md:px-10 pb-8 md:pb-10 print:px-0 print:pb-0 print:pt-0 text-slate-900">
 
                   {/* ── TITLE & META ─────────────────────────────────────── */}
-                  <div className="flex justify-between items-start mb-6 print-avoid-break">
+                  <div className="flex justify-between items-start mb-4 print:mb-2 print-avoid-break">
                     <div className="w-1/4" />
                     <div className="text-center w-2/4">
                       <h2 className="text-lg font-bold uppercase tracking-widest mb-1 text-slate-900">
@@ -546,26 +552,25 @@ export default function ContractViewModal({ contractId, onClose }) {
                   </div>
 
                   {/* ── BODY ─────────────────────────────────────────────── */}
-                  <div className="font-serif text-[13px] leading-snug text-black mt-8">
+                  <div className="font-serif text-[13px] leading-snug text-black mt-8 print:mt-2">
                     {/* Reference No + Contract Date */}
-                    <table className="mb-3 text-[13px]">
-                      <tbody>
-                        <tr>
-                          <td className="pr-8 pb-2 font-bold uppercase text-slate-900 whitespace-nowrap">Reference No :</td>
-                          <td className="font-bold pb-2 text-slate-900 uppercase">{contract.contractNumber || "—"}</td>
-                        </tr>
-                        <tr>
-                          <td className="pr-8 pb-2 font-bold uppercase text-slate-900 whitespace-nowrap">Business Ref No. :</td>
-                          <td className="font-bold pb-2 text-slate-900 uppercase">{contract.businessReference || contract.businessTransaction?.businessReference || "—"}</td>
-                        </tr>
-                        <tr>
-                          <td className="pr-8 font-bold uppercase text-slate-900 whitespace-nowrap">Contract Date :</td>
-                          <td className="font-bold text-slate-900">{formatDate(contract.contractDate)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    <div className="text-[13px] mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold uppercase">DATE :</span>
+                        <span className="font-bold">
+                          {formatDate(contract.contractDate)}
+                        </span>
+                      </div>
 
-                    <p className="font-bold uppercase mb-4">
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="font-bold uppercase">CONTRACT NO :</span>
+                        <span className="font-bold uppercase">
+                          {contract.contractNumber || "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="font-bold uppercase mb-4 print:mb-2">
                       We Herewith Confirm The Following Transaction Between Following:
                     </p>
 
@@ -629,35 +634,9 @@ export default function ContractViewModal({ contractId, onClose }) {
                       </Row>
                     )} */}
 
-                    {/* TRANSPORT DETAILS */}
-                    {contract.transportDetails?.length > 0 && (
-                      <Row label="Transport Details" className="mb-4">
-                        <div className="w-full">
-                          <table className="w-full border-collapse border border-black text-[12px] my-1">
-                            <thead>
-                              <tr className="bg-gray-100">
-                                <th className="border border-black px-2 py-1 text-left font-bold">#</th>
-                                <th className="border border-black px-2 py-1 text-left font-bold">Origin</th>
-                                <th className="border border-black px-2 py-1 text-left font-bold">Incoterm</th>
-                                <th className="border border-black px-2 py-1 text-left font-bold">Destination</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {contract.transportDetails.map((t, idx) => (
-                                <tr key={t.id || idx}>
-                                  <td className="border border-black px-2 py-1">{t.sequence || idx + 1}</td>
-                                  <td className="border border-black px-2 py-1">{t.origin}</td>
-                                  <td className="border border-black px-2 py-1 font-bold">{t.incoterm}</td>
-                                  <td className="border border-black px-2 py-1">{t.destination}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </Row>
-                    )}
 
-                    <div className="mb-4" />
+
+                    <div className="mb-4 print:mb-1" />
 
                     {/* ── PRODUCT ITEMS ──────────────────────────────────────────────────────────────────────────────────── */}
                     {contract.items?.map((item, idx) => (
@@ -690,10 +669,10 @@ export default function ContractViewModal({ contractId, onClose }) {
                             const isOldFormat =
                               override &&
                               (override.includes("OF APPROX.") ||
-                               override.includes("\n") ||
-                               override.includes("(40 FT)") ||
-                               override.includes("(20 FT)") ||
-                               override.includes(" . "));
+                                override.includes("\n") ||
+                                override.includes("(40 FT)") ||
+                                override.includes("(20 FT)") ||
+                                override.includes(" . "));
 
                             const currentOverride = isOldFormat ? undefined : override;
                             const effectiveValue = legacyDefault || currentOverride || calculatedQty;
@@ -767,7 +746,7 @@ export default function ContractViewModal({ contractId, onClose }) {
                     {/* PAYMENT */}
                     <Row label="Payment">
                       {renderValue("payment", contract.paymentTerm?.name?.toUpperCase() || "—")}
-                      <div className="mt-3 text-[13px] text-black font-serif leading-snug">
+                      <div className="mt-3 print:mt-1 text-[13px] text-black font-serif leading-snug">
                         IN THE EVENT OF DELAY IN PAYMENT FOR THE GOODS BEYOND THE TERMS SPECIFIED IN THIS CONTRACT, THE BUYER SHALL BE ENTITLED TO A PENALTY, WHICH SHALL BE CALCULATED AT 0.5 % OF THE VALUE OF THE COMMERCIAL INVOICE FOR EACH DAY OF DELAY. THE PROPERTY RIGHT TO A CARGO PASSES FROM THE SELLER TO THE BUYER AFTER 100% PAYMENT OF CARGO
                       </div>
                     </Row>
@@ -786,7 +765,7 @@ export default function ContractViewModal({ contractId, onClose }) {
 
                     {/* NOTE / REMARKS */}
                     {contract.remarks && (
-                      <Row label="Note" className="mb-6">
+                      <Row label="Note" className="mb-6 print:mb-1">
                         {renderValue("note", contract.remarks?.toUpperCase())}
                       </Row>
                     )}
@@ -795,7 +774,7 @@ export default function ContractViewModal({ contractId, onClose }) {
 
                     {/* ── TERMS & CONDITIONS ──────────────────────────────── */}
                     {contract.terms?.length > 0 && (
-                      <div className="mb-6 mt-4 print:mt-0 print-avoid-break">
+                      <div className="mb-6 mt-4 print:mb-2 print:mt-0 print-avoid-break">
                         <h4 className="font-bold uppercase mb-3">Terms &amp; Conditions</h4>
                         <ul className="list-disc pl-5 space-y-1">
                           {contract.terms.map((term, idx) => (
@@ -807,7 +786,7 @@ export default function ContractViewModal({ contractId, onClose }) {
 
                     {/* OTHER CONDITIONS */}
                     {contract.otherConditions?.length > 0 && (
-                      <div className="mb-6 print-avoid-break">
+                      <div className="mb-6 print:mb-2 print-avoid-break">
                         <h4 className="font-bold uppercase mb-3">Other Conditions</h4>
                         <ul className="list-disc pl-5 space-y-1">
                           {contract.otherConditions.map((cond, idx) => (
@@ -819,7 +798,7 @@ export default function ContractViewModal({ contractId, onClose }) {
 
                     {/* DISPUTE RESOLUTION */}
                     {contract.disputeResolution && (
-                      <div className="mb-6 print-avoid-break">
+                      <div className="mb-6 print:mb-2 print-avoid-break">
                         <h4 className="font-bold uppercase mb-3">Dispute Resolution</h4>
                         <div className="uppercase -mx-4 -mt-2">
                           <RichTextEditor value={contract.disputeResolution} editable={false} outputFormat="json" />
@@ -829,7 +808,7 @@ export default function ContractViewModal({ contractId, onClose }) {
 
                     {/* FORCE MAJEURE */}
                     {contract.forceMajeure && (
-                      <div className="mb-10 print-avoid-break">
+                      <div className="mb-10 print:mb-3 print-avoid-break">
                         <h4 className="font-bold uppercase mb-3">Force Majeure</h4>
                         <div className="uppercase -mx-4 -mt-2">
                           <RichTextEditor value={contract.forceMajeure} editable={false} outputFormat="json" />

@@ -17,6 +17,11 @@ import ShipmentAllocationModal from "@/modules/cargo-availability/components/Shi
 import MttReadinessFormModal from "@/modules/cargo-availability/components/MttReadinessFormModal";
 import { cargoAvailabilityApi } from "@/modules/cargo-availability/services/cargoAvailabilityApi";
 import FreightAllocationDrawer from "../components/FreightAllocationDrawer";
+import {
+  isFreightAllocatedForShipment,
+  isFreightRequiredForShipment,
+  openShipmentFreightWorkflow,
+} from "../utils/freightRuleEngine";
 
 export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, preOpenFreight, contextContractNo }) {
   const router = useRouter();
@@ -455,8 +460,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
                 // Delegate to handleOpenCargoAllocation to ensure MTT opens modal, not workspace
                 handleOpenCargoAllocation(resolved);
               } else if (preOpenFreight) {
-                // Auto-open FreightAllocationDrawer when ?openFreight=true
-                setFreightShipment(resolved);
+                openShipmentFreightWorkflow(resolved, router);
               } else {
                 // Default: open ShipmentDetailsDrawer
                 setActiveShipment(resolved);
@@ -469,7 +473,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
       };
       loadPreselected();
     }
-  }, [preSelectedShipmentId, preOpenCargo, preOpenFreight]);
+  }, [preSelectedShipmentId, preOpenCargo, preOpenFreight, router]);
 
   // Reset Filters Handler
   const handleResetFilters = () => {
@@ -752,7 +756,11 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
           onManageDocuments={(contractObj) => setDocContract(contractObj)}
           onPrintShipment={handlePrintSingleShipment}
           onOpenCargoDrawer={handleOpenCargoAllocation}
-          onOpenFreightDrawer={(s) => setFreightShipment(s)}
+          onOpenFreightDrawer={(s) => {
+            if (isFreightRequiredForShipment(s) && isFreightAllocatedForShipment(s)) {
+              setFreightShipment(s);
+            }
+          }}
         />
 
         <div className="print:hidden">
@@ -781,6 +789,10 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
           onClose={() => setActiveShipment(null)}
           onViewContract={(id) => setViewContractId(id)}
           onOpenCargoDrawer={handleOpenCargoAllocation}
+          onOpenFreightDrawer={(s) => {
+            if (!isFreightRequiredForShipment(s) || !isFreightAllocatedForShipment(s)) return;
+            setFreightShipment(s);
+          }}
         />
       )}
 
@@ -793,7 +805,9 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
       )}
 
       {/* Freight Allocation Dedicated Drawer */}
-      {freightShipment && (
+      {freightShipment &&
+        isFreightRequiredForShipment(freightShipment) &&
+        isFreightAllocatedForShipment(freightShipment) && (
         <FreightAllocationDrawer
           shipment={freightShipment}
           onClose={() => setFreightShipment(null)}

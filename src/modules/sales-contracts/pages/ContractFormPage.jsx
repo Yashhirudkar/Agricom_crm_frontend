@@ -1,8 +1,10 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSelector } from "react-redux";
 import { ArrowLeft, Save, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { selectActiveCompany } from "@/store/slices/companyContextSlice";
 import { useSalesMasters } from "../hooks/useSalesContracts";
 import { salesContractApi } from "../services/salesContractApi";
 import { enquiryApi } from "@/modules/enquiries/services/enquiryApi";
@@ -33,6 +35,7 @@ const defaultForm = () => ({
   contractDate: "",
   contractType: "Export",
   buyerId: "",
+  buyer: null,
   sellerId: null,
   brokerId: null,
   currencyCode: "",
@@ -72,11 +75,28 @@ const defaultForm = () => ({
 });
 
 function getEnquiryDestination(enquiry, savedDestinations = []) {
+  if (!enquiry) return "";
+  const responseDestination =
+    typeof enquiry.enquiryDestination === "string"
+      ? enquiry.enquiryDestination.trim()
+      : "";
+  if (responseDestination) return responseDestination;
+
+  const defaultRoute = Array.isArray(enquiry.transportDetails)
+    ? [...enquiry.transportDetails].sort(
+      (a, b) => Number(a.sequence ?? 1) - Number(b.sequence ?? 1)
+    )[0]
+    : null;
+  const routeDestination =
+    typeof defaultRoute?.destination === "string"
+      ? defaultRoute.destination.trim()
+      : "";
+  if (routeDestination) return routeDestination;
+
   const savedDestination = (Array.isArray(savedDestinations) ? savedDestinations : []).find(
     (destination) => typeof destination === "string" && destination.trim()
   );
   if (savedDestination) return savedDestination;
-  if (!enquiry) return "";
   if (enquiry.shipmentMode === "SHIP") {
     return enquiry.destinationPort || enquiry.podPort || "";
   }
@@ -176,6 +196,7 @@ export default function ContractFormPage({ editId, viewId }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const enquiryId = searchParams ? searchParams.get("enquiryId") : null;
+  const activeCompany = useSelector(selectActiveCompany);
   const { masters, loading: mastersLoading } = useSalesMasters();
   const [form, setForm] = useState(defaultForm());
   const [errors, setErrors] = useState({});
@@ -222,9 +243,9 @@ export default function ContractFormPage({ editId, viewId }) {
         const c = res.data;
         const [linkedEnquiry, savedEnquiryDestinations] = c.enquiryId
           ? await Promise.all([
-              enquiryApi.getOne(c.enquiryId),
-              enquiriesApi.getDestinations(c.enquiryId),
-            ])
+            enquiryApi.getOne(c.enquiryId),
+            enquiriesApi.getDestinations(c.enquiryId),
+          ])
           : [null, []];
         const legacyEnquiryDestination =
           Boolean(c.enquiryId) &&
@@ -243,6 +264,7 @@ export default function ContractFormPage({ editId, viewId }) {
           contractDate: c.contractDate ? c.contractDate.split("T")[0] : "",
           contractType: c.contractType || "Export",
           buyerId: c.buyerId || "",
+          buyer: c.buyer || null,
           sellerId: c.sellerId || null,
           brokerId: c.brokerId || null,
           currencyCode: c.currencyCode || "",
@@ -255,12 +277,12 @@ export default function ContractFormPage({ editId, viewId }) {
             c.enquiryDestination ||
             (destinationSelectionMode === "enquiry"
               ? getEnquiryDestination(
-                  linkedEnquiry?.data || linkedEnquiry,
-                  savedEnquiryDestinations
-                ) ||
-                c.destinationLocationName ||
-                c.portOfDischarge ||
-                ""
+                linkedEnquiry?.data || linkedEnquiry,
+                savedEnquiryDestinations
+              ) ||
+              c.destinationLocationName ||
+              c.portOfDischarge ||
+              ""
               : ""),
           // Multi-Modal Transport Routing
           originTransportMode: c.originTransportMode || c.transportMode || "sea",
@@ -298,11 +320,11 @@ export default function ContractFormPage({ editId, viewId }) {
               (item.quality && String(item.quality).trim() !== "")
                 ? String(item.quality).trim()
                 : (overrideQuality ||
-                   [item.product?.qualitySubType, item.product?.specification, item.productQuality, c.quality]
-                     .filter(Boolean)
-                     .join(" - ") ||
-                   c.enquiry?.purity ||
-                   "");
+                  [item.product?.qualitySubType, item.product?.specification, item.productQuality, c.quality]
+                    .filter(Boolean)
+                    .join(" - ") ||
+                  c.enquiry?.purity ||
+                  "");
 
             return {
               id: item.id,
@@ -408,25 +430,38 @@ export default function ContractFormPage({ editId, viewId }) {
         const eq = res.data;
         if (!eq) return;
 
-        // Auto-select seller partner if sellerCompany name matches a partner
+        // Resolve the seller using enquiry data first, then the active workspace.
         let matchedSellerId = null;
-        if (eq.sellerCompany && masters.sellers) {
-          const sellerName = eq.sellerCompany.trim().toLowerCase();
-          const found = masters.sellers.find(
-            s => s.entityName && s.entityName.trim().toLowerCase() === sellerName
-          );
-          if (found) matchedSellerId = found.id;
+        const sellerId = eq.sellerId || eq.seller?.id;
+        const sellers = masters.sellers || [];
+        if (sellerId) {
+          matchedSellerId = Number(sellerId);
+        } else {
+          const sellerNames = [
+            eq.sellerCompany,
+            eq.company?.legalName,
+            eq.company?.name,
+            activeCompany?.legalName,
+            activeCompany?.name,
+          ]
+            .filter(Boolean)
+            .map(name => name.trim().toLowerCase());
+          const foundSeller =
+            sellerNames
+              .map(name => sellers.find(
+                seller => seller.entityName?.trim().toLowerCase() === name
+              ))
+              .find(Boolean) ||
+            sellerNames
+              .map(name => sellers.find((seller) => {
+                const entityName = seller.entityName?.trim().toLowerCase();
+                return entityName && (entityName.startsWith(name) || name.startsWith(entityName));
+              }))
+              .find(Boolean);
+          if (foundSeller) matchedSellerId = foundSeller.id;
         }
 
-        // Auto-select broker partner if broker name matches
-        let matchedBrokerId = null;
-        if (eq.broker && masters.brokers) {
-          const brokerName = eq.broker.trim().toLowerCase();
-          const found = masters.brokers.find(
-            b => b.entityName && b.entityName.trim().toLowerCase() === brokerName
-          );
-          if (found) matchedBrokerId = found.id;
-        }
+        const matchedBrokerId = eq.brokerId || eq.broker?.id || null;
 
         // Auto-match Shipment Type (Incoterms) by name or code from Enquiry's Transport Details or fields
         let matchedShipmentTypeId = "";
@@ -516,12 +551,12 @@ export default function ContractFormPage({ editId, viewId }) {
         // Multi-Modal transport mode mapping from Enquiry
         const mappedOriginMode = eq.shipmentMode === "ROAD" ? "road"
           : eq.shipmentMode === "AIR" ? "air"
-          : eq.shipmentMode === "RAIL" ? "rail"
-          : "sea";
+            : eq.shipmentMode === "RAIL" ? "rail"
+              : "sea";
         const mappedDestMode = eq.shipmentMode === "ROAD" ? "road"
           : eq.shipmentMode === "AIR" ? "air"
-          : eq.shipmentMode === "RAIL" ? "rail"
-          : "sea";
+            : eq.shipmentMode === "RAIL" ? "rail"
+              : "sea";
 
         const savedEnquiryDestinations = await enquiriesApi.getDestinations(enquiryId);
         const resolvedEnquiryDestination = getEnquiryDestination(eq, savedEnquiryDestinations);
@@ -532,7 +567,13 @@ export default function ContractFormPage({ editId, viewId }) {
           businessReference: eq.businessReference || f.businessReference,
           contractDate: todayStr,
           financialYear: getFinancialYearForDate(todayStr),
-          buyerId: eq.buyerId || f.buyerId,
+          buyerId:
+            eq.buyerId ||
+            eq.buyer?.id ||
+            eq.partnerId ||
+            eq.partner?.id ||
+            f.buyerId,
+          buyer: eq.buyer || eq.partner || f.buyer,
           sellerId: matchedSellerId || f.sellerId,
           brokerId: matchedBrokerId || f.brokerId,
           currencyCode: enquiryCurrency || f.currencyCode,
@@ -552,23 +593,23 @@ export default function ContractFormPage({ editId, viewId }) {
           portOfDischarge: eq.destinationPort || eq.podPort || "",
           transportDetails: eq.transportDetails && eq.transportDetails.length > 0
             ? eq.transportDetails.map((r, i) => {
-                const matchedSt = masters.shipmentTypes?.find(st => st.id === (matchedShipmentTypeId || f.shipmentTypeId));
-                const defaultIncoterm = matchedSt ? (matchedSt.code || matchedSt.name) : "";
-                return {
-                  sequence: i + 1,
-                  origin: r.origin || "",
-                  incoterm: r.incoterm || defaultIncoterm || "",
-                  destination: r.destination || "",
-                };
-              })
+              const matchedSt = masters.shipmentTypes?.find(st => st.id === (matchedShipmentTypeId || f.shipmentTypeId));
+              const defaultIncoterm = matchedSt ? (matchedSt.code || matchedSt.name) : "";
+              return {
+                sequence: i + 1,
+                origin: r.origin || "",
+                incoterm: r.incoterm || defaultIncoterm || "",
+                destination: r.destination || "",
+              };
+            })
             : (matchedShipmentTypeId
-                ? [{
-                    sequence: 1,
-                    origin: eq.originPort || eq.originCity || eq.originCountryId || "",
-                    incoterm: masters.shipmentTypes?.find(st => st.id === matchedShipmentTypeId)?.code || "",
-                    destination: resolvedEnquiryDestination || eq.destinationCountry || "",
-                  }]
-                : f.transportDetails || []),
+              ? [{
+                sequence: 1,
+                origin: eq.originPort || eq.originCity || eq.originCountryId || "",
+                incoterm: masters.shipmentTypes?.find(st => st.id === matchedShipmentTypeId)?.code || "",
+                destination: resolvedEnquiryDestination || eq.destinationCountry || "",
+              }]
+              : f.transportDetails || []),
           items: mappedItems.length > 0 ? mappedItems : f.items,
         }));
       } catch (err) {
@@ -577,7 +618,7 @@ export default function ContractFormPage({ editId, viewId }) {
     };
 
     fillFromEnquiry();
-  }, [enquiryId, isEdit, isView, masters]);
+  }, [enquiryId, isEdit, isView, masters, activeCompany]);
 
   const handleSave = async (asDraft = false) => {
     setPageError(null);
@@ -763,141 +804,147 @@ export default function ContractFormPage({ editId, viewId }) {
     <div className="min-h-screen bg-slate-50/60 pb-16">
       {/* Sticky Top Header */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs mb-5">
-      <div className="px-6 md:px-8 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push("/sales-contracts")}
-            className="h-8 w-8 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50 text-gray-500 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-gray-900">
-                {isView ? "View Contract" : isEdit ? "Edit Contract" : "New Sales Contract"}
-              </h1>
-              {form.contractNumber && (
-                <span className="font-mono text-xs font-semibold text-[#007aff] bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-                  {form.contractNumber}
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] text-gray-400">
-              {isView ? "Review contract specifications and terms" : "Fill in contract specifications, terms, and shipment schedule"}
-            </p>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        {!isView && (
-          <div className="flex items-center gap-2">
+        <div className="px-6 md:px-8 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => router.push("/sales-contracts")}
-              className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+              className="h-8 w-8 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50 text-gray-500 transition-colors"
             >
-              Cancel
+              <ArrowLeft className="h-4 w-4" />
             </button>
-            <button
-              onClick={() => handleSave(true)}
-              disabled={isFormBlocked}
-              className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Save Draft
-            </button>
-            <button
-              onClick={() => handleSave(false)}
-              disabled={isFormBlocked}
-              className="px-5 py-2 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
-            >
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-              {isEdit ? "Update" : "Save"}
-            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base font-bold text-gray-900">
+                  {isView ? "View Contract" : isEdit ? "Edit Sales Contract" : "New Sales Contract"}
+                </h1>
+                {form.contractNumber && (
+                  <span className="font-mono text-xs font-semibold text-[#007aff] bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+                    {form.contractNumber}
+                  </span>
+                )}
+                {form.businessReference && (
+                  <BusinessReference
+                    reference={form.businessReference}
+                    className="rounded-lg border border-indigo-100 bg-indigo-50 px-2 py-0.5"
+                  />
+                )}
+              </div>
+              <p className="text-[11px] text-gray-400">
+                {isView ? "Review contract specifications and terms" : "Fill in contract specifications, terms, and shipment schedule"}
+              </p>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Action Buttons */}
+          {!isView && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push("/sales-contracts")}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSave(true)}
+                disabled={isFormBlocked}
+                className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Save Draft
+              </button>
+              <button
+                onClick={() => handleSave(false)}
+                disabled={isFormBlocked}
+                className="px-5 py-2 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
+              >
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                {isEdit ? "Update" : "Save"}
+              </button>
+            </div>
+          )}
+        </div>
       </div>{/* end sticky header wrapper */}
 
       <div className="px-6 md:px-8 space-y-5">
-      {/* Validation Summary */}
-      {hasErrors && (
-        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
-          <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-xs font-bold text-red-700">Please fix the following errors before saving:</p>
-            <ul className="mt-1 space-y-0.5">
-              {Object.entries(errors).map(([key, msg], i) => (
-                <li key={i} className="text-[11px] text-red-600">
-                  {key === "activation" || key === "apiError" ? <pre className="font-sans whitespace-pre-wrap">{msg}</pre> : `• ${msg}`}
-                </li>
-              ))}
-            </ul>
+        {/* Validation Summary */}
+        {hasErrors && (
+          <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+            <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-red-700">Please fix the following errors before saving:</p>
+              <ul className="mt-1 space-y-0.5">
+                {Object.entries(errors).map(([key, msg], i) => (
+                  <li key={i} className="text-[11px] text-red-600">
+                    {key === "activation" || key === "apiError" ? <pre className="font-sans whitespace-pre-wrap">{msg}</pre> : `• ${msg}`}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Form Sections */}
-      <HeaderSection
-        form={form}
-        setForm={setForm}
-        errors={errors}
-        masters={masters}
-        isView={isView}
-        contractNumberPreview={isAutoNumber ? contractNumberPreview : undefined}
-        isLoadingContractNumber={isLoadingContractNumber}
-        onContractDateChange={handleContractDateChange}
-      />
-      <PartySection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
-      <ItemsTable form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
-      <CommercialSection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
-      <ShipmentTable
-        form={form}
-        setForm={setForm}
-        errors={errors}
-        masters={masters}
-        isView={isView}
-        isEdit={isEdit}
-        totalProductQty={totalProductQty}
-        numberOfShipments={numberOfShipments}
-        productItems={productItems}
-      />
-      <DocumentSection form={form} setForm={setForm} masters={masters} isView={isView} uploadedDocIds={uploadedDocIds} />
-      <RemarksSection form={form} setForm={setForm} isView={isView} />
-      <TermsSection form={form} setForm={setForm} isView={isView} />
-      <OtherConditionsSection form={form} setForm={setForm} isView={isView} />
-      <DisputeResolutionSection form={form} setForm={setForm} isView={isView} />
-      <ForceMajeureSection form={form} setForm={setForm} isView={isView} />
-      <ContractAcceptanceSection form={form} setForm={setForm} isView={isView} masters={masters} />
+        {/* Form Sections */}
+        <HeaderSection
+          form={form}
+          setForm={setForm}
+          errors={errors}
+          masters={masters}
+          isView={isView}
+          contractNumberPreview={isAutoNumber ? contractNumberPreview : undefined}
+          isLoadingContractNumber={isLoadingContractNumber}
+          onContractDateChange={handleContractDateChange}
+        />
+        <PartySection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
+        <ItemsTable form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
+        <CommercialSection form={form} setForm={setForm} errors={errors} masters={masters} isView={isView} />
+        <ShipmentTable
+          form={form}
+          setForm={setForm}
+          errors={errors}
+          masters={masters}
+          isView={isView}
+          isEdit={isEdit}
+          totalProductQty={totalProductQty}
+          numberOfShipments={numberOfShipments}
+          productItems={productItems}
+        />
+        <DocumentSection form={form} setForm={setForm} masters={masters} isView={isView} uploadedDocIds={uploadedDocIds} />
+        <RemarksSection form={form} setForm={setForm} isView={isView} />
+        <TermsSection form={form} setForm={setForm} isView={isView} />
+        <OtherConditionsSection form={form} setForm={setForm} isView={isView} />
+        <DisputeResolutionSection form={form} setForm={setForm} isView={isView} />
+        <ForceMajeureSection form={form} setForm={setForm} isView={isView} />
+        <ContractAcceptanceSection form={form} setForm={setForm} isView={isView} masters={masters} />
 
-      {/* Bottom Action Bar */}
-      {!isView && (
-        <div className="sticky bottom-4 flex justify-end gap-2.5">
-          <div className="cursor-pointer bg-white border border-gray-200 rounded-2xl shadow-lg px-4 py-2.5 flex items-center gap-2.5">
-            <button
-              onClick={() => router.push("/sales-contracts")}
-              className="cursor-pointer px-3 py-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleSave(true)}
-              disabled={isFormBlocked}
-              className="cursor-pointer px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              {saving && <Loader2 className="h-3 w-3 animate-spin" />}
-              Save Draft
-            </button>
-            <button
-              onClick={() => handleSave(false)}
-              disabled={isFormBlocked}
-              className="cursor-pointer px-4 py-1.5 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
-            >
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-              {isEdit ? "Update" : "Save & Activate"}
-            </button>
+        {/* Bottom Action Bar */}
+        {!isView && (
+          <div className="sticky bottom-4 flex justify-end gap-2.5">
+            <div className="cursor-pointer bg-white border border-gray-200 rounded-2xl shadow-lg px-4 py-2.5 flex items-center gap-2.5">
+              <button
+                onClick={() => router.push("/sales-contracts")}
+                className="cursor-pointer px-3 py-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSave(true)}
+                disabled={isFormBlocked}
+                className="cursor-pointer px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                {saving && <Loader2 className="h-3 w-3 animate-spin" />}
+                Save Draft
+              </button>
+              <button
+                onClick={() => handleSave(false)}
+                disabled={isFormBlocked}
+                className="cursor-pointer px-4 py-1.5 text-xs font-semibold text-white bg-[#007aff] rounded-xl hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer"
+              >
+                {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                {isEdit ? "Update" : "Save & Activate"}
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>{/* end content wrapper */}
     </div>
   );

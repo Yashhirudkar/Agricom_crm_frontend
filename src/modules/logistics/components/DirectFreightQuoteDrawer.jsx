@@ -38,7 +38,9 @@ export default function DirectFreightQuoteDrawer({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [productOptionsList, setProductOptionsList] = useState([]);
-  const { data: currencies = [], isLoading: currenciesLoading } = useCurrencyMaster();
+  const { data: currencies = [], isLoading: currenciesLoading } = useCurrencyMaster({
+    enabled: isOpen,
+  });
 
   const currencyOptions = useMemo(() => {
     return currencies.map((c) => ({

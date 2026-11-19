@@ -19,7 +19,10 @@ import ManualReadinessModal from "./ManualReadinessModal";
 import ShipmentStuffingExecutionModal from "./ShipmentStuffingExecutionModal";
 import ShipmentRefTooltip from "./ShipmentRefTooltip";
 import { copyToClipboard } from "@/utils/clipboard";
-import { isFreightRequiredForShipment } from "../utils/freightRuleEngine";
+import {
+  isFreightRequiredForShipment,
+  openShipmentFreightWorkflow,
+} from "../utils/freightRuleEngine";
 
 const getTimelineDisplay = (timeline = {}) => {
   const parsedDays = Number(timeline.days);
@@ -157,68 +160,14 @@ export default function ShipmentsTable({
 
   const handleExecuteShipment = (e, s) => {
     e.stopPropagation();
-    if (!s.cargoReady || !s.freightReady || !s.readyForShipment) return;
+    const canExecute = s.canExecute === true || s.readyForShipment === true;
+    if (!canExecute) return;
     setStuffingShipment(s);
   };
 
   const handleFreightClick = (e, s) => {
     e.stopPropagation();
-    const isFreightNotApplicable =
-      s.isFreightNotApplicable ||
-      s.freightAllocationStatus === "Not Applicable" ||
-      s.salesContract?.shipmentType?.purchaseContractDeliveryPlaceRequired === false;
-    if (isFreightNotApplicable) return;
-    if (s.freightReady) {
-      // IF status == YES -> Open Freight Allocation details directly on the Shipment page
-      if (onOpenFreightDrawer) {
-        onOpenFreightDrawer(s);
-      } else {
-        const searchVal =
-          s.businessReference ||
-          s.businessTransaction?.businessReference ||
-          s.shipmentReference ||
-          "";
-        const params = new URLSearchParams();
-        if (searchVal) {
-          params.set("search", searchVal);
-          params.set("businessRef", searchVal);
-        }
-        if (s.logisticsId) {
-          params.set("logisticsId", String(s.logisticsId));
-        }
-        if (s.salesContract?.enquiryId) {
-          params.set("enquiryId", String(s.salesContract.enquiryId));
-        }
-        params.set("shipmentId", String(s.id));
-        if (s.shipmentReference) params.set("shipmentRef", s.shipmentReference);
-        params.set("from", "shipments");
-        params.set("openDrawer", "true");
-        router.push(`/logistics/transport-management?${params.toString()}`);
-      }
-    } else {
-      // IF status == NO -> Redirect directly with openDrawer=true so TransportDrawer opens automatically
-      const searchVal =
-        s.businessReference ||
-        s.businessTransaction?.businessReference ||
-        s.shipmentReference ||
-        "";
-      const params = new URLSearchParams();
-      if (searchVal) {
-        params.set("search", searchVal);
-        params.set("businessRef", searchVal);
-      }
-      if (s.logisticsId) {
-        params.set("logisticsId", String(s.logisticsId));
-      }
-      if (s.salesContract?.enquiryId) {
-        params.set("enquiryId", String(s.salesContract.enquiryId));
-      }
-      params.set("shipmentId", String(s.id));
-      if (s.shipmentReference) params.set("shipmentRef", s.shipmentReference);
-      params.set("from", "shipments");
-      params.set("openDrawer", "true");
-      router.push(`/logistics/transport-management?${params.toString()}`);
-    }
+    openShipmentFreightWorkflow(s, router);
   };
 
   if (loading) {
@@ -323,8 +272,7 @@ export default function ShipmentsTable({
                 ["Executed", "Dispatched", "Completed"].includes(s.status) ||
                 ["Executed", "Loading Completed", "Dispatched", "Completed"].includes(s.executionStatus) ||
                 executedShipmentIds.has(s.id);
-              const allocationsReady = Boolean(s.cargoReady && s.freightReady);
-              const canExecute = allocationsReady && s.readyForShipment;
+              const canExecute = s.canExecute === true || s.readyForShipment === true;
 
               return (
                 <tr
@@ -487,34 +435,41 @@ export default function ShipmentsTable({
                       if (!isFreightRequired) {
                         return (
                           <span
-                            className="text-gray-400 font-medium select-none"
-                            title="Freight Allocation is not required for this shipment"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold bg-green-50 text-green-700 border-green-200 select-none shadow-2xs"
+                            title="Freight is not required; no freight activity is pending."
                           >
-                            —
+                            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                            <span>YES</span>
                           </span>
                         );
                       }
+
+                      const isAllocated =
+                        String(s.freightAllocationStatus || "")
+                          .trim()
+                          .toLowerCase() === "yes";
 
                       return (
                         <button
                           type="button"
                           onClick={(e) => handleFreightClick(e, s)}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all cursor-pointer shadow-2xs hover:shadow-xs hover:scale-105 active:scale-95 ${s.freightReady
-                            ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300"
-                            : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300"
-                            }`}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold transition-all cursor-pointer shadow-2xs hover:shadow-xs hover:scale-105 active:scale-95 ${
+                            isAllocated
+                              ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300"
+                              : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300"
+                          }`}
                           title={
-                            s.freightReady
-                              ? "Freight Allocated. Click to view Freight Allocation details."
-                              : "Freight Not Allocated. Click to complete freight allocation."
+                            isAllocated
+                              ? "Freight Allocated. Click to open Transport Workspace."
+                              : "Freight Required. Click to open Transport Workspace."
                           }
                         >
-                          {s.freightReady ? (
+                          {isAllocated ? (
                             <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                           ) : (
                             <XCircle className="h-3.5 w-3.5 text-red-600" />
                           )}
-                          <span>{s.freightReady ? "Yes" : "No"}</span>
+                          <span>{isAllocated ? "YES" : "NO"}</span>
                         </button>
                       );
                     })()}
@@ -542,9 +497,9 @@ export default function ShipmentsTable({
                           type="button"
                           disabled={!canExecute}
                           title={
-                            !allocationsReady
-                              ? "Complete Cargo & Freight Allocation first"
-                              : getExecuteDisabledTooltip(s)
+                            !canExecute
+                              ? getExecuteDisabledTooltip(s)
+                              : "Execute Shipment Stuffing"
                           }
                           onClick={(e) => handleExecuteShipment(e, s)}
                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-xs ${

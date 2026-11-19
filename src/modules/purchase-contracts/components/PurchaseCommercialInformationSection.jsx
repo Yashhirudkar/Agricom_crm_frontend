@@ -5,6 +5,7 @@ import { mastersApi } from "@/modules/sales-contracts/services/salesContractApi"
 import CountrySelect from "@/components/common/CountrySelect";
 import { getShipmentTypeShortForm } from "@/modules/sales-contracts/utils/formatUtils";
 import { formatPurchaseDate } from "../utils/purchaseDate";
+import { evaluateFreightRequired } from "@/modules/shipments/utils/freightRuleEngine";
 
 export default function PurchaseCommercialInformationSection({
   contract,
@@ -170,14 +171,29 @@ export default function PurchaseCommercialInformationSection({
 
   const selectedShipmentTypeObj = (masters?.shipmentTypes || []).find(
     (s) => String(s.id) === String(form.shipmentTypeId)
-  );
+  ) || (typeof form.shipmentType === "object" ? form.shipmentType : null) || null;
 
-  const isDeliveryPlaceRequired = (
-    selectedShipmentTypeObj ||
-    (typeof form.shipmentType === "object" ? form.shipmentType : null) ||
-    (typeof contract?.shipmentType === "object" ? contract.shipmentType : null) ||
-    (typeof contract?.salesContract?.shipmentType === "object" ? contract.salesContract.shipmentType : null)
-  )?.purchaseContractDeliveryPlaceRequired !== false;
+  const scShipmentTypeObj =
+    contract?.salesContract?.shipmentType ||
+    (masters?.shipmentTypes || []).find(
+      (s) => String(s.id) === String(contract?.salesContract?.shipmentTypeId)
+    ) ||
+    null;
+
+  const isScLinked = Boolean(contract?.salesContractId || contract?.salesContract);
+  const freightDecision = isScLinked
+    ? evaluateFreightRequired(selectedShipmentTypeObj, scShipmentTypeObj)
+    : null;
+
+  // Dynamic Freight Decision Engine:
+  // If Freight Required = NO -> Hide Delivery Place completely, remove validation, not mandatory
+  // If Freight Required = YES -> Show Delivery Place, mandatory validation, save normally
+  const isFreightRequired = isScLinked
+    ? freightDecision.freightRequired
+    : (selectedShipmentTypeObj?.purchaseContractDeliveryPlaceRequired !== false);
+
+  const isDeliveryPlaceVisible = isFreightRequired;
+  const isDeliveryPlaceRequired = isFreightRequired;
 
 
 
@@ -501,7 +517,7 @@ export default function PurchaseCommercialInformationSection({
         </div>
 
         {/* Row 3: Place of Loading, Delivery Place & Date */}
-        <div className="grid grid-cols-1 sm:grid-cols-6 gap-4 pt-2 border-t border-gray-100">
+        <div className={`grid grid-cols-1 ${isDeliveryPlaceVisible ? "sm:grid-cols-6" : "sm:grid-cols-5"} gap-4 pt-2 border-t border-gray-100`}>
           <div>
             <label className={lbl}>Incoterms <span className="text-red-500">*</span></label>
             {isView ? (
@@ -524,14 +540,18 @@ export default function PurchaseCommercialInformationSection({
                     const nextType = (masters?.shipmentTypes || []).find(
                       (s) => String(s.id) === String(nextId)
                     );
-                    const requiresDelivery = nextType
-                      ? nextType.purchaseContractDeliveryPlaceRequired !== false
-                      : true;
+                    const decision = isScLinked
+                      ? evaluateFreightRequired(nextType, scShipmentTypeObj)
+                      : null;
+                    const req = isScLinked
+                      ? decision.freightRequired
+                      : (nextType ? nextType.purchaseContractDeliveryPlaceRequired !== false : true);
 
                     setForm((f) => ({
                       ...f,
                       shipmentTypeId: nextId,
-                      ...(requiresDelivery ? {} : { deliveryPlace: "", freightRequired: true }),
+                      freightRequired: req,
+                      deliveryPlace: req ? f.deliveryPlace : "",
                     }));
                   }}
                   className={`${inp} appearance-none pr-8`}
@@ -576,27 +596,26 @@ export default function PurchaseCommercialInformationSection({
             )}
           </div>
 
-          <div>
-            <label className={lbl}>
-              Delivery Place
-              {isDeliveryPlaceRequired && <span className="text-red-500"> *</span>}
-            </label>
-            {isView ? (
-              <div className="text-sm font-semibold text-gray-900 py-1.5">
-                {!isDeliveryPlaceRequired ? "Not applicable for this Shipment Type" : (form.deliveryPlace || "—")}
-              </div>
-            ) : (
-              <input
-                type="text"
-                disabled={!isDeliveryPlaceRequired}
-                readOnly={!isDeliveryPlaceRequired}
-                value={!isDeliveryPlaceRequired ? "" : (form.deliveryPlace || "")}
-                onChange={(e) => setForm((f) => ({ ...f, deliveryPlace: e.target.value }))}
-                className={`${inp} ${!isDeliveryPlaceRequired ? "!bg-gray-100 !cursor-not-allowed !text-gray-500 opacity-75 select-none" : ""}`}
-                placeholder={!isDeliveryPlaceRequired ? "Not applicable for this Shipment Type" : "e.g. Port of Discharge / Location"}
-              />
-            )}
-          </div>
+          {isDeliveryPlaceVisible && (
+            <div>
+              <label className={lbl}>
+                Delivery Place <span className="text-red-500">*</span>
+              </label>
+              {isView ? (
+                <div className="text-sm font-semibold text-gray-900 py-1.5">
+                  {form.deliveryPlace || "—"}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={form.deliveryPlace || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, deliveryPlace: e.target.value }))}
+                  className={inp}
+                  placeholder="e.g. Port of Discharge / Location"
+                />
+              )}
+            </div>
+          )}
 
           <div>
             <label className={lbl}>Shipment (From) <span className="text-red-500">*</span></label>

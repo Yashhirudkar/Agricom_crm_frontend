@@ -15,7 +15,6 @@ import {
 import CountrySelect from "@/components/common/CountrySelect";
 import { getAlpha2Code } from "@/lib/countryUtils";
 import { getShipmentTypeShortForm } from "../utils/formatUtils";
-import TransportDetailsGrid from "@/modules/common/components/TransportDetailsGrid";
 
 
 // ---------------------------------------------------------------------------
@@ -569,34 +568,14 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
                   const requiresDelivery = nextType
                     ? nextType.salesContractDeliveryPlaceRequired !== false
                     : true;
-                  const nextIncoterm = nextType
-                    ? (getShipmentTypeShortForm(nextType) || nextType.code || nextType.name)
-                    : "";
 
-                  setForm((f) => {
-                    const currentRoutes = Array.isArray(f.transportDetails) ? [...f.transportDetails] : [];
-                    let updatedRoutes = currentRoutes;
-                    if (nextIncoterm) {
-                      if (currentRoutes.length === 0) {
-                        updatedRoutes = [{
-                          sequence: 1,
-                          origin: f.originLocationName || "",
-                          incoterm: nextIncoterm,
-                          destination: f.destinationLocationName || f.enquiryDestination || "",
-                        }];
-                      } else {
-                        updatedRoutes = currentRoutes.map((r, i) => (i === 0 ? { ...r, incoterm: nextIncoterm } : r));
-                      }
-                    }
-                    return {
-                      ...f,
-                      shipmentTypeId: nextId,
-                      transportDetails: updatedRoutes,
-                      ...(requiresDelivery
-                        ? {}
-                        : { destinationLocationName: "", deliveryPlace: "" }),
-                    };
-                  });
+                  setForm((f) => ({
+                    ...f,
+                    shipmentTypeId: nextId,
+                    ...(requiresDelivery
+                      ? {}
+                      : { destinationLocationName: "", deliveryPlace: "" }),
+                  }));
                 }}
                 disabled={isView}
                 className={`${inp} appearance-none pr-8 ${errors.shipmentTypeId ? "border-red-300" : ""}`}
@@ -679,42 +658,6 @@ export default function CommercialSection({ form, setForm, errors, masters, isVi
             {errors.currencyCode && <p className={err}>{errors.currencyCode}</p>}
           </div>
 
-        </div>
-
-        {/* ── Transport Details (Origin → Incoterm → Destination) ───────── */}
-        <div className="pt-2 border-t border-gray-100 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-xs font-bold text-gray-900">Transport Details</h4>
-              <p className="text-[11px] text-gray-400">
-                Define shipment routes (Origin → Incoterm → Destination). Freight requirement is auto-calculated.
-              </p>
-            </div>
-          </div>
-          <TransportDetailsGrid
-            routes={form.transportDetails || []}
-            onChange={(updated) => {
-              const firstIncoterm = updated?.[0]?.incoterm;
-              let matchingShipmentTypeId = form.shipmentTypeId;
-              if (firstIncoterm && masters?.shipmentTypes) {
-                const match = masters.shipmentTypes.find(
-                  (st) =>
-                    (st.code && st.code.toLowerCase() === firstIncoterm.toLowerCase()) ||
-                    (st.name && st.name.toLowerCase() === firstIncoterm.toLowerCase()) ||
-                    (firstIncoterm.toLowerCase().includes((st.code || "").toLowerCase()))
-                );
-                if (match) matchingShipmentTypeId = match.id;
-              }
-              setForm((f) => ({
-                ...f,
-                transportDetails: updated,
-                shipmentTypeId: matchingShipmentTypeId || f.shipmentTypeId,
-              }));
-            }}
-            shipmentTypes={masters?.shipmentTypes || []}
-            isView={isView}
-            error={errors?.transportDetails}
-          />
         </div>
 
       </div>

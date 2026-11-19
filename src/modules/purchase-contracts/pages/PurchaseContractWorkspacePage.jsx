@@ -457,13 +457,18 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         ...(!form.deliveryToDate ? ["To"] : []),
       ];
 
-      const shipmentType = (masters?.shipmentTypes || []).find(
+      const pcShipmentType = (masters?.shipmentTypes || []).find(
         (item) => String(item.id) === String(form.shipmentTypeId)
       );
-      if (
-        shipmentType?.purchaseContractDeliveryPlaceRequired !== false
-        && !form.deliveryPlace?.trim()
-      ) {
+      const scShipmentType = contract?.salesContract?.shipmentType || (masters?.shipmentTypes || []).find(
+        (s) => String(s.id) === String(contract?.salesContract?.shipmentTypeId)
+      ) || null;
+      const isScLinked = Boolean(contract?.salesContractId || contract?.salesContract);
+      const isFreightReqForValidation = isScLinked
+        ? evaluateFreightRequired(pcShipmentType, scShipmentType).freightRequired
+        : (pcShipmentType?.purchaseContractDeliveryPlaceRequired !== false);
+
+      if (isFreightReqForValidation && !form.deliveryPlace?.trim()) {
         requiredFields.push("Delivery Place");
       }
 
@@ -609,8 +614,13 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
       const selectedShipmentType = (masters?.shipmentTypes || []).find(
         (s) => String(s.id) === String(form.shipmentTypeId)
       );
-      const scShipmentType = contract?.salesContract?.shipmentType || null;
-      const isFreightReq = evaluateFreightRequired(selectedShipmentType, scShipmentType).freightRequired;
+      const scShipmentType = contract?.salesContract?.shipmentType || (masters?.shipmentTypes || []).find(
+        (s) => String(s.id) === String(contract?.salesContract?.shipmentTypeId)
+      ) || null;
+      const isScLinked = Boolean(contract?.salesContractId || contract?.salesContract);
+      const isFreightReq = isScLinked
+        ? evaluateFreightRequired(selectedShipmentType, scShipmentType).freightRequired
+        : Boolean(selectedShipmentType?.purchaseContractDeliveryPlaceRequired !== false);
 
       const payload = {
         purchaseType: form.purchaseType || (isManual ? "MTT" : "SC"),
@@ -635,7 +645,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         brokerCommission: form.brokerCommission || null,
         placeOfLoading: form.placeOfLoading || null,
         loadingCountry: form.loadingCountry || null,
-        deliveryPlace: form.deliveryPlace || null,
+        deliveryPlace: isFreightReq ? (form.deliveryPlace?.trim() || null) : null,
         dispatchDate: form.deliveryDate || null,
         dispatchToDate: form.deliveryToDate || null,
         notes: form.notes || null,

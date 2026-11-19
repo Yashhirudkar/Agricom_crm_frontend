@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import axiosClient from "@/lib/axios";
 
-export function useCurrencyMaster() {
+export function useCurrencyMaster({ enabled = true } = {}) {
   return useQuery({
     queryKey: ["currencies", "active"],
     queryFn: async () => {
@@ -12,5 +12,6 @@ export function useCurrencyMaster() {
     },
     staleTime: 10 * 60 * 1000, // 10 minutes cache
     gcTime: 30 * 60 * 1000,    // 30 minutes garbage collection time (Next.js/React Query v5)
+    enabled,
   });
 }

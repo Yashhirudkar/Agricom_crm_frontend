@@ -26,7 +26,11 @@ import {
 } from "lucide-react";
 import ShipmentStuffingExecutionModal from "./ShipmentStuffingExecutionModal";
 import ManualReadinessModal from "./ManualReadinessModal";
-import { isFreightRequiredForShipment } from "../utils/freightRuleEngine";
+import {
+  isFreightAllocatedForShipment,
+  isFreightRequiredForShipment,
+  openShipmentFreightWorkflow,
+} from "../utils/freightRuleEngine";
 
 // Dynamic Tooltip Reason Helper for Shipment Readiness
 const getExecuteDisabledTooltip = (shipment) => {
@@ -69,6 +73,7 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
     shipment.stuffingCompleted === true ||
     ['Dispatched', 'Completed'].includes(shipment.status);
   const isFreightRequired = isFreightRequiredForShipment(shipment);
+  const isFreightAllocated = isFreightAllocatedForShipment(shipment);
   const allocationsReady = Boolean(shipment.cargoReady && (!isFreightRequired || shipment.freightReady));
   const canExecute = allocationsReady && shipment.readyForShipment;
 
@@ -301,82 +306,42 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
               </div>
             </div>
 
-            {isFreightRequired && (
               <div className="pr-2">
                 <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Freight Allocation</span>
                 <div className="mt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (shipment.freightReady) {
-                        if (onOpenFreightDrawer) onOpenFreightDrawer(shipment);
-                        else {
-                          const searchVal =
-                            shipment.businessReference ||
-                            shipment.businessTransaction?.businessReference ||
-                            shipment.shipmentReference ||
-                            "";
-                          const params = new URLSearchParams();
-                          if (searchVal) {
-                            params.set("search", searchVal);
-                            params.set("businessRef", searchVal);
-                          }
-                          if (shipment.logisticsId) {
-                            params.set("logisticsId", String(shipment.logisticsId));
-                          }
-                          if (shipment.salesContract?.enquiryId) {
-                            params.set("enquiryId", String(shipment.salesContract.enquiryId));
-                          }
-                          params.set("shipmentId", String(shipment.id));
-                          if (shipment.shipmentReference) params.set("shipmentRef", shipment.shipmentReference);
-                          params.set("from", "shipments");
-                          params.set("openDrawer", "true");
-                          router.push(`/logistics/transport-management?${params.toString()}`);
-                        }
-                      } else {
-                        const searchVal =
-                          shipment.businessReference ||
-                          shipment.businessTransaction?.businessReference ||
-                          shipment.shipmentReference ||
-                          "";
-                        const params = new URLSearchParams();
-                        if (searchVal) {
-                          params.set("search", searchVal);
-                          params.set("businessRef", searchVal);
-                        }
-                        if (shipment.logisticsId) {
-                          params.set("logisticsId", String(shipment.logisticsId));
-                        }
-                        if (shipment.salesContract?.enquiryId) {
-                          params.set("enquiryId", String(shipment.salesContract.enquiryId));
-                        }
-                        params.set("shipmentId", String(shipment.id));
-                        if (shipment.shipmentReference) params.set("shipmentRef", shipment.shipmentReference);
-                        params.set("from", "shipments");
-                        params.set("openDrawer", "true");
-                        router.push(`/logistics/transport-management?${params.toString()}`);
-                      }
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium transition-all cursor-pointer hover:scale-105 ${shipment.freightReady
-                        ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                        : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                      }`}
-                    title={
-                      shipment.freightReady
-                        ? "Freight Allocated. Click to view Freight Allocation details."
-                        : "Freight Not Allocated. Click to complete freight allocation."
-                    }
-                  >
-                    {shipment.freightReady ? (
-                      <CheckCircle2 className="h-3 w-3 text-green-600" />
-                    ) : (
+                  {!isFreightRequired ? (
+                    <span
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-semibold bg-red-50 text-red-700 border-red-200 select-none shadow-2xs"
+                      title="Freight Allocation is not required for this shipment."
+                    >
                       <XCircle className="h-3 w-3 text-red-600" />
-                    )}
-                    <span>{shipment.freightReady ? "Yes" : "No"}</span>
-                  </button>
+                      <span>NO</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => openShipmentFreightWorkflow(shipment, router)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-semibold transition-all cursor-pointer hover:scale-105 ${
+                        isFreightAllocated
+                          ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                          : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                        }`}
+                      title={
+                        isFreightAllocated
+                          ? "Freight Allocated. Click to open Transport Workspace."
+                          : "Freight Required. Click to open Transport Workspace."
+                      }
+                    >
+                      {isFreightAllocated ? (
+                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <XCircle className="h-3 w-3 text-red-600" />
+                      )}
+                      <span>{isFreightAllocated ? "YES" : "NO"}</span>
+                    </button>
+                  )}
                 </div>
               </div>
-            )}
 
           </div>
 

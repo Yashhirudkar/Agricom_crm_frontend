@@ -565,7 +565,9 @@ export default function AddFreightQuoteModal({
 
   const contactPersonInputRef = useRef(null);
 
-  const { data: currencies = [], isLoading: currenciesLoading } = useCurrencyMaster();
+  const { data: currencies = [], isLoading: currenciesLoading } = useCurrencyMaster({
+    enabled: isOpen,
+  });
 
   const currencyOptions = useMemo(() => {
     return currencies.map((c) => ({ value: c.code, label: `${c.code} - ${c.name}` }));
@@ -757,7 +759,8 @@ export default function AddFreightQuoteModal({
     if (isReadOnly) return;
     const modeNorm = (transportMode || "").toLowerCase();
 
-    if (!sellerId) { setError("Please select a transport partner."); return; }
+    const parsedSellerId = sellerId ? parseInt(String(sellerId), 10) : NaN;
+    if (!sellerId || !Number.isInteger(parsedSellerId) || parsedSellerId <= 0) { setError("Please select a transport partner."); return; }
     if (contactNumber && !validatePhone(contactNumber)) { setError("Please enter a valid phone number."); return; }
 
     if (modeNorm !== "sea") {
@@ -799,7 +802,7 @@ export default function AddFreightQuoteModal({
     setLoading(true);
     try {
       const payload = {
-        quoteDate, sellerId: Number(sellerId), freightAmount: calculatedGrandTotal,
+        quoteDate, sellerId: parsedSellerId, freightAmount: calculatedGrandTotal,
         charges: charges.map((c, idx) => ({
           ...(c.chargeMasterId && { chargeMasterId: c.chargeMasterId }),
           chargeName: c.chargeName.trim(), amount: parseFloat(c.amount),
@@ -811,9 +814,11 @@ export default function AddFreightQuoteModal({
         ...(contactNumber && contactNumber.trim() && { contactNumber: contactNumber.trim() }),
         ...(paymentTerms && paymentTerms.trim() && { paymentTerms: paymentTerms.trim() }),
         ...(remarks && remarks.trim() && { remarks: remarks.trim() }),
-        ...(selectedRoute?.id && selectedRoute.id !== 'all' && { routeId: selectedRoute.id }),
-        ...(targetShipment?.id && { shipmentId: targetShipment.id }),
-        ...((targetShipment?.purchaseContractId || purchaseContractId) && { purchaseContractId: targetShipment?.purchaseContractId || purchaseContractId }),
+        ...(selectedRoute?.id && selectedRoute.id !== 'all' && { routeId: Number(selectedRoute.id) }),
+        ...(targetShipment?.id && { shipmentId: Number(targetShipment.id) }),
+        ...((targetShipment?.purchaseContractId || purchaseContractId) && {
+          purchaseContractId: Number(targetShipment?.purchaseContractId || purchaseContractId),
+        }),
 
         ...(modeNorm === "road" && { truckType: truckType.trim(), truckCapacity: truckCapacity.trim(), vehicleType: truckType.trim() }),
         ...(modeNorm === "sea" && {

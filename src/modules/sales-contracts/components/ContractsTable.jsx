@@ -1,7 +1,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { currencies } from "@/constants/currenciesData";
-import { Eye, Pencil, Trash2, Rocket, FolderOpen, Ship, Copy } from "lucide-react";
+import { Eye, Pencil, Trash2, Briefcase, FolderOpen, Ship, Copy } from "lucide-react";
 import { toast } from "sonner";
 import ContractStatusBadge from "./ContractStatusBadge";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
@@ -197,7 +197,7 @@ export default function ContractsTable({ contracts, loading, onView, onEdit, onD
                         : 'Execute + Workspace'
                     }
                   >
-                    <Rocket className={`h-3.5 w-3.5 ${c.purchaseContractStatus === 'FULL' ? 'text-gray-300' : 'text-purple-600'}`} />
+                    <Briefcase className={`h-4 w-4 ${c.purchaseContractStatus === 'FULL' ? 'text-gray-300' : 'text-purple-600'}`} />
                   </button>
                   {(c.status === "Draft" || c.status === "Cancelled") && (
                     <button

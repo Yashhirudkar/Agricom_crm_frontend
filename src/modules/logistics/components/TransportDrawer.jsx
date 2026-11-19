@@ -24,11 +24,9 @@ import {
   Download,
   CheckCircle2,
   ShieldCheck,
-  Zap,
   Building2,
-  Check,
   RotateCw,
-  Layers,
+  Copy,
   Package,
   Eye,
   Search,
@@ -49,6 +47,8 @@ import { resolvePhone } from "@/lib/contactUtils";
 import { useSelector } from "react-redux";
 import { selectActiveCompany } from "@/store/slices/companyContextSlice";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { isFreightRequiredForShipment } from "@/modules/shipments/utils/freightRuleEngine";
+import { shipmentsApi } from "@/modules/shipments/services/shipmentsApi";
 
 const STATUS_STEPS = [
   "Pending",
@@ -81,6 +81,7 @@ export default function TransportDrawer({
   targetShipmentId = null,
   targetShipmentRef = null,
   fromSource = null,
+  shipment = null,
 }) {
   useEscapeKey(onClose, isOpen);
 
@@ -96,7 +97,6 @@ export default function TransportDrawer({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [targetShipmentForQuote, setTargetShipmentForQuote] = useState(null);
-  const [executingShipmentId, setExecutingShipmentId] = useState(null);
   const [collapsedShipments, setCollapsedShipments] = useState(new Set());
 
   const toggleShipmentCollapse = (shipmentId) => {
@@ -139,8 +139,7 @@ export default function TransportDrawer({
 
   const isSingleShipmentMode = Boolean(
     effectiveTargetShipmentId ||
-    effectiveFrom === "shipments" ||
-    (details?.shipments && details.shipments.length === 1)
+    effectiveFrom === "shipments"
   );
 
   const isSingleShipmentView = isSingleShipmentMode;
@@ -180,10 +179,12 @@ export default function TransportDrawer({
     if (effectiveTargetShipmentId) {
       const found = list.find((s) => String(s.id) === String(effectiveTargetShipmentId));
       if (found) return found;
+      return null;
     }
     if (effectiveTargetShipmentRef) {
       const found = list.find((s) => s.shipmentReference === effectiveTargetShipmentRef);
       if (found) return found;
+      return null;
     }
     if (list.length === 1) return list[0];
     return null;
@@ -207,25 +208,6 @@ export default function TransportDrawer({
     setSelectedQuote(quote);
     setTargetShipmentForQuote(shipment);
     setIsModalOpen(true);
-  };
-
-  const handleExecuteShipment = async (shipmentId, shipmentRef) => {
-    if (isReadOnly) return;
-    setExecutingShipmentId(shipmentId);
-    try {
-      await logisticsApi.executeShipment(shipmentId);
-      toast.success(`Shipment ${shipmentRef || ""} executed successfully!`);
-      loadDetails();
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("shipment-executed", { detail: { shipmentId } }),
-        );
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to execute shipment.");
-    } finally {
-      setExecutingShipmentId(null);
-    }
   };
 
   // Attachments & Custom Document Categories
@@ -273,7 +255,18 @@ export default function TransportDrawer({
     const hasPc = Boolean(pc);
     const hasSc = Boolean(sc);
 
-    const pcOrigin = (hasPc && pc.placeOfLoading) ? pc.placeOfLoading : null;
+    const loadingPlace = pc?.placeOfLoading?.trim();
+    const loadingCountry = pc?.loadingCountry?.trim();
+    const pcOrigin = hasPc
+      ? loadingPlace
+        ? `${loadingPlace}${
+            loadingCountry &&
+            !loadingPlace.toLowerCase().includes(loadingCountry.toLowerCase())
+              ? `, ${loadingCountry}`
+              : ""
+          }`
+        : loadingCountry || null
+      : null;
     const scDest = (hasSc && (sc.destinationLocationName || sc.portOfDischarge || sc.deliveryPlace))
       ? (sc.destinationLocationName || sc.portOfDischarge || sc.deliveryPlace)
       : (details?.destination && details.destination !== "—" ? details.destination : null);
@@ -284,9 +277,10 @@ export default function TransportDrawer({
     if (details?.logistics?.routes && details.logistics.routes.length > 0) {
       return details.logistics.routes.map((r, idx) => {
         const matchingTd = enquiryRoutes[idx] || (idx === 0 ? targetRoute : null);
-        const origin = (r.origin && r.origin !== "Unknown Origin" && r.origin !== "—")
-          ? r.origin
-          : (pcOrigin || matchingTd?.origin || enquiry?.origin || details?.enquiry?.originPort || details?.enquiry?.originCity || "—");
+        const origin = pcOrigin ||
+          ((r.origin && r.origin !== "Unknown Origin" && r.origin !== "—")
+            ? r.origin
+            : (matchingTd?.origin || enquiry?.origin || details?.enquiry?.originPort || details?.enquiry?.originCity || "—"));
 
         const destination = (r.destination && r.destination !== "Unknown Destination" && r.destination !== "—")
           ? r.destination
@@ -305,13 +299,17 @@ export default function TransportDrawer({
     }
 
     if (enquiryRoutes.length > 0) {
-      return enquiryRoutes.map((td, idx) => ({
-        id: td.id || `td_${idx + 1}`,
-        origin: td.origin || pcOrigin || "—",
-        destination: td.destination || scDest || "—",
-        incoterm: td.incoterm || null,
-        label: `${td.origin || pcOrigin || "—"} → ${td.destination || scDest || "—"}`
-      }));
+      return enquiryRoutes.map((td, idx) => {
+        const origin = pcOrigin || td.origin || "—";
+        const destination = td.destination || scDest || "—";
+        return {
+          id: td.id || `td_${idx + 1}`,
+          origin,
+          destination,
+          incoterm: td.incoterm || null,
+          label: `${origin} → ${destination}`
+        };
+      });
     }
 
     const fallbackO = pcOrigin || enquiry?.origin || details?.enquiry?.originPort || details?.enquiry?.originCity || "—";
@@ -321,6 +319,14 @@ export default function TransportDrawer({
 
   useEffect(() => {
     if (availableRoutes.length > 0) {
+      const currentSelection = availableRoutes.find(
+        (route) => route.id === selectedRoute?.id
+      );
+      if (currentSelection) {
+        if (currentSelection !== selectedRoute) setSelectedRoute(currentSelection);
+        return;
+      }
+
       const target = enquiry?.transportRoute || enquiry;
       let matched = null;
       if (target?.origin && target?.destination) {
@@ -330,9 +336,7 @@ export default function TransportDrawer({
             r.destination?.toLowerCase() === target.destination?.toLowerCase()
         );
       }
-      if (!selectedRoute || !availableRoutes.find((r) => r.id === selectedRoute.id)) {
-        setSelectedRoute(matched || availableRoutes[0]);
-      }
+      setSelectedRoute(matched || availableRoutes[0]);
     }
   }, [availableRoutes, selectedRoute, enquiry]);
 
@@ -435,6 +439,39 @@ export default function TransportDrawer({
   };
 
   const loadDetails = useCallback(async () => {
+    // Guard 1: Direct shipment prop or enquiry shipment check
+    const effectiveShipment =
+      shipment ||
+      enquiry?.targetShipment ||
+      enquiry?.shipment ||
+      (effectiveTargetShipmentId && (
+        enquiry?.shipments?.find((s) => String(s.id) === String(effectiveTargetShipmentId)) ||
+        enquiry?.purchaseContract?.shipments?.find((s) => String(s.id) === String(effectiveTargetShipmentId))
+      ));
+
+    if (effectiveShipment && !isFreightRequiredForShipment(effectiveShipment)) {
+      setLoading(false);
+      onClose?.();
+      return;
+    }
+
+    // Guard 2: If effectiveTargetShipmentId is provided, verify freight requirement before making logistics calls
+    if (effectiveTargetShipmentId) {
+      try {
+        if (typeof shipmentsApi?.getShipment === "function") {
+          const sRes = await shipmentsApi.getShipment(effectiveTargetShipmentId);
+          const sData = sRes?.data;
+          if (sData && !isFreightRequiredForShipment(sData)) {
+            setLoading(false);
+            onClose?.();
+            return;
+          }
+        }
+      } catch (e) {
+        // Safe bypass if shipment check fails
+      }
+    }
+
     const rawEnquiryId = enquiry?.enquiryId || enquiry?.id;
     const cleanEnquiryId = rawEnquiryId ? String(rawEnquiryId).split('_')[0] : rawEnquiryId;
     if (!cleanEnquiryId) return;
@@ -443,6 +480,14 @@ export default function TransportDrawer({
     try {
       const sId = effectiveTargetShipmentId ? Number(effectiveTargetShipmentId) : undefined;
       const res = await logisticsApi.getDetails(cleanEnquiryId, sId);
+
+      // Handled business rule: If backend returned business response indicating freight not required, exit cleanly
+      if (res?.data?.isBusinessRule || res?.data?.freightRequired === false) {
+        setLoading(false);
+        onClose?.();
+        return;
+      }
+
       setDetails(res.data);
 
       const log = res.data?.logistics;
@@ -456,16 +501,32 @@ export default function TransportDrawer({
         setLogisticsStatus(log.status || "Pending");
       }
     } catch (err) {
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        "";
+      const isExpectedBusinessRule =
+        err.response?.status === 400 &&
+        (String(errorMsg).toLowerCase().includes("freight is not required") ||
+          String(errorMsg).toLowerCase().includes("freight required = no") ||
+          String(errorMsg).toLowerCase().includes("transport management is not available"));
+
+      if (isExpectedBusinessRule) {
+        // Handled business rule: Do NOT log console.error or show error overlay
+        onClose?.();
+        return;
+      }
+
       console.error(err);
       if (err.response?.status === 404 && effectiveTargetShipmentId) {
         setShipmentNotFoundError(true);
       } else {
-        toast.error("Failed to load transport details.");
+        toast.error(errorMsg || "Failed to load transport details.");
       }
     } finally {
       setLoading(false);
     }
-  }, [enquiry, effectiveTargetShipmentId]);
+  }, [enquiry, effectiveTargetShipmentId, shipment, onClose]);
 
   useEffect(() => {
     if (isOpen && enquiry?.id) {
@@ -524,24 +585,6 @@ export default function TransportDrawer({
     }
   };
 
-  const handleStepClick = async (step) => {
-    if (isReadOnly || !details?.logistics?.id || savingStatus) return;
-    setLogisticsStatus(step);
-    setSavingStatus(true);
-    try {
-      await logisticsApi.updateStatus(details.logistics.id, {
-        status: step,
-        transportMode,
-      });
-      toast.success(`Logistics status updated to "${step}"!`);
-      loadDetails();
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to update status.");
-    } finally {
-      setSavingStatus(false);
-    }
-  };
-
   // Add/Edit Quote
   const handleSaveQuote = async (payload) => {
     if (isReadOnly || !details?.logistics?.id) return;
@@ -558,7 +601,14 @@ export default function TransportDrawer({
   const handleDeleteQuote = async (quoteId) => {
     if (isReadOnly || !details?.logistics?.id) return;
     try {
-      await logisticsApi.deleteFreightQuote(details.logistics.id, quoteId);
+      const shipmentId = isSingleShipmentMode && effectiveTargetShipmentId
+        ? Number(effectiveTargetShipmentId)
+        : undefined;
+      await logisticsApi.deleteFreightQuote(
+        details.logistics.id,
+        quoteId,
+        shipmentId,
+      );
       toast.success("Quote removed.");
       loadDetails();
     } catch (err) {
@@ -569,7 +619,14 @@ export default function TransportDrawer({
   const handleSetPreferred = async (quoteId) => {
     if (isReadOnly || !details?.logistics?.id) return;
     try {
-      await logisticsApi.setPreferredQuote(details.logistics.id, quoteId);
+      const shipmentId = isSingleShipmentMode && effectiveTargetShipmentId
+        ? Number(effectiveTargetShipmentId)
+        : undefined;
+      await logisticsApi.setPreferredQuote(
+        details.logistics.id,
+        quoteId,
+        shipmentId,
+      );
       toast.success("Preferred Quote selected & locked!");
       loadDetails();
     } catch (err) {
@@ -715,8 +772,6 @@ export default function TransportDrawer({
 
   if (!isOpen) return null;
 
-  const currentStepIndex = STATUS_STEPS.indexOf(logisticsStatus);
-
   // Quote Badges & Intelligence Logic
   const quotes = details?.logistics?.quotes?.filter(q => selectedRoute?.id === 'all' || q.routeId === selectedRoute?.id || (!q.routeId && availableRoutes.length === 1)) || [];
   const expiringSoonIds = [];
@@ -760,6 +815,28 @@ export default function TransportDrawer({
     return details?.logistics?.mode || "Domestic";
   };
   const displayMode = getDisplayMode();
+  const businessReference =
+    details?.purchaseContract?.businessReference ||
+    enquiry?.purchaseContract?.businessReference ||
+    enquiry?.businessReference ||
+    enquiry?.businessTransaction?.businessReference ||
+    details?.enquiry?.businessReference ||
+    "";
+  const purchaseContractNumber =
+    details?.purchaseContract?.contractNumber ||
+    enquiry?.purchaseContract?.contractNumber ||
+    "";
+  const salesContractBuyer =
+    details?.salesContract?.buyer?.entityName ||
+    enquiry?.salesContract?.buyer?.entityName ||
+    details?.salesContract?.buyerName ||
+    "—";
+  const purchaseContractSeller =
+    details?.purchaseContract?.sellerName ||
+    details?.purchaseContract?.seller?.entityName ||
+    enquiry?.purchaseContract?.sellerName ||
+    enquiry?.purchaseContract?.seller?.entityName ||
+    "—";
 
   return (
     <>
@@ -778,19 +855,38 @@ export default function TransportDrawer({
               <Truck className="h-5 w-5" />
             </div>
             <div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-base font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
-                  <span>Workspace:</span>
-                  <span className="font-mono text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200">
-                    {details?.logistics?.logisticsNumber || "LOG/2026/000000"}
-                  </span>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-base font-extrabold tracking-tight text-slate-900">
+                  Shipments Transport
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-purple-100 text-purple-700 border border-purple-200">
-                  {displayMode} Mode
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-100 text-amber-700 border border-amber-200">
-                  Normal Priority
-                </span>
+                <div className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1">
+                  <span className="text-xs font-semibold text-blue-700">Ref No:</span>
+                  <span className="font-mono text-sm font-extrabold text-blue-800">
+                    {businessReference || "—"}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!businessReference}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(String(businessReference));
+                        toast.success("Reference number copied.");
+                      } catch {
+                        toast.error("Could not copy reference number.");
+                      }
+                    }}
+                    aria-label="Copy reference number"
+                    title="Copy reference number"
+                    className="ml-0.5 rounded p-1 text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {purchaseContractNumber && (
+                  <span className="text-sm font-semibold text-slate-600">
+                    PC: <strong className="font-extrabold text-slate-800">{purchaseContractNumber}</strong>
+                  </span>
+                )}
                 {isReadOnly && (
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1">
                     <Eye className="h-3 w-3" /> View Only
@@ -798,21 +894,15 @@ export default function TransportDrawer({
                 )}
               </div>
               <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-2">
-                {(details?.purchaseContract?.contractNumber || enquiry?.purchaseContract?.contractNumber) ? (
+                {enquiry?.enquiryNo && (
                   <>
-                    <span>PC: <strong className="text-slate-700">{details?.purchaseContract?.contractNumber || enquiry?.purchaseContract?.contractNumber}</strong></span>
-                    {enquiry?.enquiryNo && (
-                      <>
-                        <span>•</span>
-                        <span>Enquiry: <strong className="text-slate-500">{enquiry.enquiryNo}</strong></span>
-                      </>
-                    )}
+                    <span>Enquiry: <strong className="text-slate-700">{enquiry.enquiryNo}</strong></span>
+                    <span>•</span>
                   </>
-                ) : (
-                  <span>Enquiry: <strong className="text-slate-700">{enquiry?.enquiryNo || "—"}</strong></span>
                 )}
+                <span>Buyer: <strong className="text-slate-700">{salesContractBuyer}</strong></span>
                 <span>•</span>
-                <span>Buyer: <strong className="text-slate-700">{enquiry?.partner?.entityName || "Standard Buyer"}</strong></span>
+                <span>Seller: <strong className="text-slate-700">{purchaseContractSeller}</strong></span>
                 {(() => {
                   const incotermDisplay =
                     selectedRoute?.incoterm ||
@@ -860,190 +950,7 @@ export default function TransportDrawer({
             </span>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col min-h-0 p-3 sm:p-4 lg:p-5 gap-5">
-            {/* ================================================================================= */}
-            {/* 2. MINIMAL PROGRESS BAR & PREMIUM ROUTE BOARD */}
-            {/* ================================================================================= */}
-            <div className="shrink-0 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
-              {STATUS_STEPS.map((step, idx) => {
-                const isActive = step === logisticsStatus;
-                const isCompleted = idx < currentStepIndex;
-                
-                return (
-                  <div key={step} onClick={() => !isReadOnly && !savingStatus && handleStepClick(step)} className={`flex items-center shrink-0 ${isReadOnly ? '' : 'cursor-pointer'}`}>
-                    <div className={`px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider transition-all border ${
-                      isActive ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm' : 
-                      isCompleted ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 
-                      'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
-                    }`}>
-                      {isCompleted && <Check className="w-3 h-3 inline-block mr-1" />}
-                      {step}
-                    </div>
-                    {idx < STATUS_STEPS.length - 1 && (
-                      <div className={`w-6 h-px mx-1.5 ${isCompleted ? 'bg-emerald-300' : 'bg-slate-200'}`} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="shrink-0 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 flex flex-col xl:flex-row gap-6">
-              {/* Left Side: Route Details */}
-              <div className="flex-1 flex flex-col justify-center">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-                        <MapPin className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest whitespace-nowrap">Active Route</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-1 w-full max-w-xl">
-                      {/* From */}
-                      <div className="flex-1 flex flex-col gap-1 min-w-0">
-                        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 truncate" title={Array.from(new Set(availableRoutes.filter(r => r.origin !== "—").map(r => r.origin))).join(", ") || "—"}>
-                          {Array.from(new Set(availableRoutes.filter(r => r.origin !== "—").map(r => r.origin))).join(", ") || "—"}
-                        </div>
-                        {Boolean(details?.purchaseContract || enquiry?.purchaseContract) && (
-                          <span
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help w-fit"
-                            title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
-                          >
-                            <FileText className="h-2.5 w-2.5 text-blue-600 shrink-0" />
-                            <span>Purchase Contract</span>
-                          </span>
-                        )}
-                      </div>
-
-                      <ArrowRight className="h-4 w-4 text-slate-400 shrink-0 self-center" />
-
-                      {/* To */}
-                      <div className="flex-1 flex flex-col gap-1 min-w-0">
-                        <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 truncate" title={Array.from(new Set(availableRoutes.filter(r => r.destination !== "—").map(r => r.destination))).join(", ") || "—"}>
-                          {Array.from(new Set(availableRoutes.filter(r => r.destination !== "—").map(r => r.destination))).join(", ") || "—"}
-                        </div>
-                        <span
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70 select-none cursor-help w-fit"
-                          title={"Source: Linked Sales Contract → Delivery Place\n\nAlways auto-derived from linked Sales Contract."}
-                        >
-                          <FileText className="h-2.5 w-2.5 text-emerald-600 shrink-0" />
-                          <span>Sales Contract</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-center pl-2">
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">From</p>
-                      {Boolean(details?.purchaseContract || enquiry?.purchaseContract) && (
-                        <span
-                          className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-medium bg-blue-50 text-blue-700 border border-blue-200/60 select-none cursor-help"
-                          title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
-                        >
-                          <FileText className="h-2 w-2 text-blue-600 shrink-0" />
-                          <span>PC</span>
-                        </span>
-                      )}
-                    </div>
-                    <p className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 truncate">
-                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" /> {selectedRoute ? selectedRoute.origin : "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">To</p>
-                      <span
-                        className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none cursor-help"
-                        title={"Source: Linked Sales Contract → Delivery Place\n\nAlways auto-derived from linked Sales Contract."}
-                      >
-                        <FileText className="h-2 w-2 text-emerald-600 shrink-0" />
-                        <span>SC</span>
-                      </span>
-                    </div>
-                    <p className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 truncate">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" /> {selectedRoute ? selectedRoute.destination : "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Commodity</p>
-                    <p className="font-extrabold text-xs text-slate-800 flex items-center gap-1.5 truncate">
-                      <Package className="h-3.5 w-3.5 text-slate-400 shrink-0" /> {details?.purchaseContract?.productName || enquiry?.purchaseContract?.productName || enquiry?.product?.name || "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Quantity</p>
-                    <p className="font-extrabold text-xs text-slate-800 tabular-nums">
-                      {isSingleShipmentView && singleShipment?.quantity
-                        ? `${Number(singleShipment.quantity).toLocaleString()} MT`
-                        : `${Number(enquiry?.quantity || 0).toLocaleString()} MT`}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Side: Pipeline Control */}
-              {!isReadOnly && (
-                <div className="xl:w-[400px] xl:border-l xl:border-slate-100 xl:pl-6 flex flex-col justify-center">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-[10px] font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <Zap className="h-3 w-3 text-blue-600" /> Pipeline Control
-                    </h4>
-                    <button
-                      onClick={handleUpdateHeader}
-                      disabled={savingStatus}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-lg text-[10px] flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/20 cursor-pointer active:scale-95 transition-all disabled:opacity-50"
-                    >
-                      {savingStatus ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="h-3 w-3" />
-                      )}
-                      Apply
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 relative">
-                      <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                        <Truck className="h-3.5 w-3.5" />
-                      </div>
-                      <select
-                        value={transportMode}
-                        onChange={(e) => setTransportMode(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg bg-slate-50 font-bold text-xs text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer transition-all hover:bg-slate-100 appearance-none truncate"
-                      >
-                        <option value="Road">Road</option>
-                        <option value="Sea">Sea</option>
-                        <option value="Rail">Rail</option>
-                        <option value="Air">Air</option>
-                      </select>
-                    </div>
-
-                    <div className="flex-1 relative">
-                      <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                      </div>
-                      <select
-                        value={logisticsStatus}
-                        onChange={(e) => setLogisticsStatus(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg bg-slate-50 font-bold text-xs text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer transition-all hover:bg-slate-100 appearance-none truncate"
-                      >
-                        {STATUS_STEPS.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
+          <div className="flex-1 flex flex-col min-h-0 px-3 pb-3 pt-0 sm:px-4 sm:pb-4 lg:px-5 lg:pb-5 gap-2">
             {/* ================================================================================= */}
             {/* 4. FREIGHT MATRIX CONTENT (SHIPMENT-WISE & ROUTE FALLBACK) */}
             {/* ================================================================================= */}
@@ -1060,8 +967,6 @@ export default function TransportDrawer({
                       onEditQuote={handleOpenEditQuoteForShipment}
                       onDeleteQuote={handleDeleteQuote}
                       onSetPreferred={handleSetPreferred}
-                      onExecuteShipment={handleExecuteShipment}
-                      executingShipmentId={executingShipmentId}
                       expiringSoonIds={expiringSoonIds}
                       getPartnerInitials={getPartnerInitials}
                     />
@@ -1080,35 +985,86 @@ export default function TransportDrawer({
                   )
                 ) : details?.shipments && details.shipments.length > 0 ? (
                   /* ================= GROUPED PURCHASE CONTRACT WORKSPACE ================= */
-                  <div className="space-y-6">
-                    {/* Contract Group Banner - Only in Grouped Multi-Shipment View */}
-                    <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-4 text-white shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
-                          <Layers className="h-5 w-5" />
+                  <div className="space-y-4">
+                    <div className="sticky top-0 z-20 -mx-4 -mt-4 -translate-y-2 flex flex-wrap items-center gap-3 border-b border-slate-100 bg-white/95 px-4 py-0 backdrop-blur-sm xl:flex-nowrap xl:justify-between">
+                      <div className="flex flex-1 flex-wrap items-center justify-start gap-x-4 gap-y-1 xl:min-w-0 xl:flex-nowrap">
+                        <div className="flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px]">
+                          <span className="text-[9px] font-bold text-blue-700 uppercase tracking-wider">From</span>
+                          {Boolean(details?.purchaseContract || enquiry?.purchaseContract) && (
+                            <span className="rounded-full bg-white px-1.5 py-0.5 text-[9px] font-medium text-blue-700 border border-blue-200/60">PC</span>
+                          )}
+                          <span className="max-w-[170px] truncate font-extrabold text-blue-900" title={selectedRoute?.origin || "—"}>
+                            {selectedRoute?.origin || "—"}
+                          </span>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs uppercase font-extrabold tracking-wider text-slate-300">
-                              Purchase Contract Group:
-                            </span>
-                            <span className="font-mono text-sm font-black text-white bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-700">
-                              {details?.purchaseContract?.contractNumber || enquiry?.purchaseContract?.contractNumber || "Contract"}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/30 text-blue-300 border border-blue-400/30">
-                              {details.shipments.length} {details.shipments.length === 1 ? "Shipment" : "Shipments"}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            Each shipment maintains its own independent freight quotes, preferred carrier, transit parameters, and execution gate.
-                          </p>
+                        <div className="flex shrink-0 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px]">
+                          <span className="text-[9px] font-bold text-emerald-700 uppercase tracking-wider">To</span>
+                          <span className="rounded-full bg-white px-1.5 py-0.5 text-[9px] font-medium text-emerald-700 border border-emerald-200/60">SC</span>
+                          <span className="max-w-[170px] truncate font-extrabold text-emerald-900" title={selectedRoute?.destination || "—"}>
+                            {selectedRoute?.destination || "—"}
+                          </span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-semibold text-slate-300 bg-slate-800/60 px-3 py-1.5 rounded-xl border border-slate-700/60">
-                          Total Commodity: <strong>{Number(enquiry?.quantity || details?.purchaseContract?.quantity || 0).toLocaleString()} MT</strong>
+                        <div className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px]">
+                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Commodity</span>
+                          <Package className="h-3 w-3 text-slate-500 shrink-0" />
+                          <span className="max-w-[130px] truncate font-extrabold text-slate-800" title={details?.purchaseContract?.productName || enquiry?.purchaseContract?.productName || enquiry?.product?.name || "—"}>
+                            {details?.purchaseContract?.productName || enquiry?.purchaseContract?.productName || enquiry?.product?.name || "—"}
+                          </span>
+                        </div>
+                        <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700">
+                          Total Commodity:
+                          <strong className="font-extrabold text-violet-800">
+                            {Number(enquiry?.quantity || details?.purchaseContract?.quantity || 0).toLocaleString()} MT
+                          </strong>
                         </span>
                       </div>
+                      {!isReadOnly && (
+                        <div className="ml-auto flex shrink-0 items-center gap-2">
+                          <div className="w-28 relative">
+                            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                              <Truck className="h-3 w-3" />
+                            </div>
+                            <select
+                              value={transportMode}
+                              onChange={(e) => setTransportMode(e.target.value)}
+                              className="w-full pl-7 pr-2 py-1 border border-slate-200 rounded-lg bg-slate-50 font-bold text-[10px] text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer transition-all hover:bg-slate-100 appearance-none truncate"
+                            >
+                              <option value="Road">Road</option>
+                              <option value="Sea">Sea</option>
+                              <option value="Rail">Rail</option>
+                              <option value="Air">Air</option>
+                            </select>
+                          </div>
+                          <div className="w-32 relative">
+                            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                              <CheckCircle2 className="h-3 w-3" />
+                            </div>
+                            <select
+                              value={logisticsStatus}
+                              onChange={(e) => setLogisticsStatus(e.target.value)}
+                              className="w-full pl-7 pr-2 py-1 border border-slate-200 rounded-lg bg-slate-50 font-bold text-[10px] text-slate-900 focus:outline-none focus:border-blue-500 cursor-pointer transition-all hover:bg-slate-100 appearance-none truncate"
+                            >
+                              {STATUS_STEPS.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <button
+                            onClick={handleUpdateHeader}
+                            disabled={savingStatus}
+                            className="shrink-0 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-lg text-[9px] flex items-center justify-center gap-1 shadow-sm shadow-blue-500/20 cursor-pointer active:scale-95 transition-all disabled:opacity-50"
+                          >
+                            {savingStatus ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="h-3 w-3" />
+                            )}
+                            Apply
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Shipments List (Grouped Multi-Shipment Layout) */}
@@ -1198,35 +1154,6 @@ export default function TransportDrawer({
 
                               {/* Right: Gate Badges & Action Buttons */}
                               <div className="flex items-center gap-2.5 flex-wrap justify-end shrink-0">
-                                {/* Cargo Gate */}
-                                <span className={`px-2.5 py-1 rounded-lg text-xs font-black border flex items-center gap-1.5 ${
-                                  s.cargoReady
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                    : "bg-amber-50 text-amber-700 border-amber-200"
-                                }`}>
-                                  {s.cargoReady ? <CheckCircle className="h-3.5 w-3.5 text-emerald-600" /> : <Clock className="h-3.5 w-3.5 text-amber-600" />}
-                                  <span>Cargo: {s.cargoReady ? "Ready" : "Pending"}</span>
-                                </span>
-
-                                {/* Freight Gate */}
-                                <span className={`px-2.5 py-1 rounded-lg text-xs font-black border flex items-center gap-1.5 ${
-                                  s.freightReady || Boolean(prefQuote)
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                    : "bg-rose-50 text-rose-700 border-rose-200"
-                                }`}>
-                                  {s.freightReady || Boolean(prefQuote) ? (
-                                    <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-                                  ) : (
-                                    <Clock className="h-3.5 w-3.5 text-rose-500" />
-                                  )}
-                                  <span>Freight: {s.freightReady || Boolean(prefQuote) ? "Allocated" : "Pending"}</span>
-                                </span>
-
-                                {/* Status */}
-                                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                                  {s.status || "Pending"}
-                                </span>
-
                                 {!isReadOnly && (
                                   <>
                                     {/* + Add Quote for THIS Shipment */}
@@ -1239,30 +1166,10 @@ export default function TransportDrawer({
                                       Add Freight Quote
                                     </button>
 
-                                    {/* Independent Execute button */}
-                                    {s.status === "Executed" ? (
+                                    {s.status === "Executed" && (
                                       <span className="px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl font-bold flex items-center gap-1.5 text-xs select-none">
                                         <CheckCircle className="h-3.5 w-3.5 text-emerald-600" /> Executed
                                       </span>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        disabled={!s.readyForShipment || executingShipmentId === s.id}
-                                        onClick={() => handleExecuteShipment(s.id, s.shipmentReference)}
-                                        title={
-                                          s.readyForShipment
-                                            ? "Click to execute this shipment independently"
-                                            : s.readinessReason || "Both Cargo and Freight allocations are required before execution"
-                                        }
-                                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl flex items-center gap-1.5 text-xs shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95"
-                                      >
-                                        {executingShipmentId === s.id ? (
-                                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                        ) : (
-                                          <FileCheck className="h-3.5 w-3.5" />
-                                        )}
-                                        Execute Shipment
-                                      </button>
                                     )}
                                   </>
                                 )}
@@ -1768,6 +1675,7 @@ export default function TransportDrawer({
           onClose={() => {
             setIsModalOpen(false);
             setSelectedQuote(null);
+            setTargetShipmentForQuote(null);
           }}
           onSave={handleSaveQuote}
           quote={selectedQuote}
@@ -1779,6 +1687,7 @@ export default function TransportDrawer({
           onOpenAddContact={handleOpenAddContact}
           autoSelectPartner={autoSelectPartner}
           isReadOnly={isReadOnly}
+          targetShipment={targetShipmentForQuote}
         />
 
         <PartnerDrawer
