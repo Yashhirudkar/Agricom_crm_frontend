@@ -212,7 +212,14 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         ratePerMt: firstItem.ratePerMt != null ? Number(firstItem.ratePerMt) || "" : (f.ratePerMt ?? ""),
         placeOfLoading: contract.placeOfLoading || f.placeOfLoading || "",
         loadingCountry: contract.loadingCountry || salesContract.originCountry || f.loadingCountry || "",
-        deliveryPlace: contract.deliveryPlace || salesContract.portOfLoading || f.deliveryPlace || "",
+        deliveryPlace:
+          contract.deliveryPlace ||
+          salesContract.deliveryPlace ||
+          salesContract.destinationLocationName ||
+          salesContract.enquiryDestination ||
+          salesContract.portOfDischarge ||
+          f.deliveryPlace ||
+          "",
         deliveryDate: contract.dispatchDate || f.deliveryDate || "",
         deliveryToDate: contract.dispatchToDate || f.deliveryToDate || "",
         paymentTermId: contract.paymentTermId || salesContract.paymentTermId || f.paymentTermId || null,

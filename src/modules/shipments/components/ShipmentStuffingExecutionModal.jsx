@@ -381,13 +381,6 @@ function DocumentCard({
   );
 }
 
-const TRANSPORTER_ROLES = [
-  "CHA",
-  "FREIGHT FORWARDER",
-  "TRANSPORT-DOMESTIC",
-  "TRANSPORT-INTERNATIONAL",
-];
-
 const normalizeMobileNumber = (value) => {
   const digits = String(value || "").replace(/\D/g, "");
   return digits ? `+${digits}` : "";
@@ -596,10 +589,9 @@ export default function ShipmentStuffingExecutionModal({
       truckNo: "",
       driver: "",
       mobile: "",
-      transporter: "",
+      remark: "",
     },
   ]);
-  const [transporterOptions, setTransporterOptions] = useState([]);
 
   // Section 5: Dynamic Attachments & Shipment Mode
   const [shipmentMode, setShipmentMode] = useState("Sea");
@@ -632,58 +624,6 @@ export default function ShipmentStuffingExecutionModal({
   // Existing stuffing execution status
   const [stuffingStatus, setStuffingStatus] = useState("Draft");
   const [executionStatus, setExecutionStatus] = useState("Draft");
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    let isMounted = true;
-    const fetchTransporters = async () => {
-      try {
-        const params = {
-          roleName: TRANSPORTER_ROLES.join(","),
-          limit: 50,
-          page: 1,
-        };
-        const firstResponse = await axiosClient.get("/masters/partners/options", { params });
-        const firstPage = firstResponse.data?.data || firstResponse.data || [];
-        const totalPages = firstResponse.data?.totalPages || 1;
-        const remainingPages = await Promise.all(
-          Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
-            axiosClient.get("/masters/partners/options", {
-              params: { ...params, page: index + 2 },
-            }),
-          ),
-        );
-        const partners = [
-          ...(Array.isArray(firstPage) ? firstPage : []),
-          ...remainingPages.flatMap((response) => {
-            const page = response.data?.data || response.data || [];
-            return Array.isArray(page) ? page : [];
-          }),
-        ];
-
-        if (isMounted) {
-          setTransporterOptions(
-            [...new Set(
-              partners
-                .filter((partner) => partner.entityName)
-                .map((partner) => partner.entityName),
-            )],
-          );
-        }
-      } catch (error) {
-        console.error("Failed to load transporter partners", error);
-        if (isMounted) {
-          toast.error("Could not load transporter partners");
-        }
-      }
-    };
-
-    fetchTransporters();
-    return () => {
-      isMounted = false;
-    };
-  }, [isOpen]);
 
   // Fetch Auto-Populated Data and Trade Documents Master
   useEffect(() => {
@@ -787,7 +727,7 @@ export default function ShipmentStuffingExecutionModal({
                   truckNo: t.truckNo || "",
                   driver: t.driver || "",
                   mobile: normalizeMobileNumber(t.mobile || t.driverPhone),
-                  transporter: t.transporter || "",
+                  remark: t.remark || t.remarks || "",
                 }))
               );
             }
@@ -887,7 +827,7 @@ export default function ShipmentStuffingExecutionModal({
   const handleAddTruck = () => {
     setTrucks((prev) => [
       ...prev,
-      { truckNo: "", driver: "", mobile: "", transporter: "" },
+      { truckNo: "", driver: "", mobile: "", remark: "" },
     ]);
   };
 
@@ -1161,7 +1101,21 @@ export default function ShipmentStuffingExecutionModal({
         netWeight: parseFloat(loadingInfo.netWeight) || 0,
         freightOverrides: { ...freightData, shipmentMode },
         containers: containers.filter((c) => c.containerNo?.trim()),
-        trucks: trucks.filter((t) => t.truckNo?.trim() !== "" || t.driver?.trim() !== "" || t.mobile?.trim() !== "" || t.transporter?.trim() !== ""),
+        trucks: trucks
+          .filter(
+            (t) =>
+              t.truckNo?.trim() !== "" ||
+              t.driver?.trim() !== "" ||
+              t.mobile?.trim() !== "" ||
+              t.remark?.trim() !== "",
+          )
+          .map((t) => ({
+            truckNo: t.truckNo?.trim() || "",
+            driver: t.driver?.trim() || "",
+            mobile: t.mobile || "",
+            remark: t.remark?.trim() || "",
+            remarks: t.remark?.trim() || "",
+          })),
         attachments: attachments.filter((a) => a.documentName || a.fileName),
         remarks: remarks,
         autoPopulated: autoData,
@@ -1929,7 +1883,7 @@ export default function ShipmentStuffingExecutionModal({
                         <th className="py-2.5 px-3">Truck No.</th>
                         <th className="py-2.5 px-3">Driver Name</th>
                         <th className="py-2.5 px-3">Mobile No.</th>
-                        <th className="py-2.5 px-3">Transporter</th>
+                        <th className="py-2.5 px-3">Remark</th>
                         <th className="py-2.5 px-3 text-center">Action</th>
                       </tr>
                     </thead>
@@ -1974,19 +1928,13 @@ export default function ShipmentStuffingExecutionModal({
                             </div>
                           </td>
                           <td className="py-2 px-3">
-                            <select
-                              value={t.transporter}
-                              onChange={(e) => handleTruckChange(idx, "transporter", e.target.value)}
+                            <input
+                              type="text"
+                              placeholder="Remark"
+                              value={t.remark || ""}
+                              onChange={(e) => handleTruckChange(idx, "remark", e.target.value)}
                               className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden"
-                            >
-                              <option value="">Select transporter</option>
-                              {!transporterOptions.includes(t.transporter) && t.transporter && (
-                                <option value={t.transporter}>{t.transporter}</option>
-                              )}
-                              {transporterOptions.map((name, optionIndex) => (
-                                <option key={`${name}-${optionIndex}`} value={name}>{name}</option>
-                              ))}
-                            </select>
+                            />
                           </td>
                           <td className="py-2 px-3 text-center">
                             <button

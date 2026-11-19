@@ -83,7 +83,7 @@ export default function CompletedEnquiriesListPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
               <MessageSquare className="h-6 w-6 text-[#007aff]" />
-              Completed Enquiries (Orders)
+              Completed Enquiries
             </h1>
             <p className="text-xs text-gray-400 font-medium mt-1">
               View confirmed and closed enquiries.

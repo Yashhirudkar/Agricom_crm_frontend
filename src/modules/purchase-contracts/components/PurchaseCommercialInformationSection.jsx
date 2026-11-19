@@ -547,11 +547,18 @@ export default function PurchaseCommercialInformationSection({
                       ? decision.freightRequired
                       : (nextType ? nextType.purchaseContractDeliveryPlaceRequired !== false : true);
 
+                    const scDestination =
+                      contract?.salesContract?.deliveryPlace ||
+                      contract?.salesContract?.destinationLocationName ||
+                      contract?.salesContract?.enquiryDestination ||
+                      contract?.salesContract?.portOfDischarge ||
+                      "";
+
                     setForm((f) => ({
                       ...f,
                       shipmentTypeId: nextId,
                       freightRequired: req,
-                      deliveryPlace: req ? f.deliveryPlace : "",
+                      deliveryPlace: req ? (f.deliveryPlace || scDestination) : "",
                     }));
                   }}
                   className={`${inp} appearance-none pr-8`}

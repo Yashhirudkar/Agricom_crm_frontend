@@ -139,7 +139,7 @@ export default function EnquiriesListPage() {
             onClick={() => router.push("/enquiries/view-orders")}
             className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm transition-colors cursor-pointer self-start sm:self-auto"
           >
-            View Orders
+            View Completed Enquiries
           </button>
           <button
             onClick={() => {
