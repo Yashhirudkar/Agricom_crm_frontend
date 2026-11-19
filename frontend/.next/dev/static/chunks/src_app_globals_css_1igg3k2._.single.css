@@ -5209,6 +5209,10 @@
     background-color: #fee2e2;
   }
 
+  .bg-\[\#FEF2F2\] {
+    background-color: #fef2f2;
+  }
+
   .bg-\[\#FEF3C7\] {
     background-color: #fef3c7;
   }
@@ -9954,6 +9958,12 @@
   }
 
   @media (hover: hover) {
+    .group-hover\:bg-\[\#FEE2E2\]:is(:where(.group):hover *) {
+      background-color: #fee2e2;
+    }
+  }
+
+  @media (hover: hover) {
     .group-hover\:bg-\[\#f8f9fa\]:is(:where(.group):hover *) {
       background-color: #f8f9fa;
     }
@@ -10872,6 +10882,12 @@
     .hover\:bg-\[\#F1F5F9\]\/80:hover {
       background-color: #f1f5f9cc;
       background-color: lab(96.3163% -.834882 -2.41705 / .8);
+    }
+  }
+
+  @media (hover: hover) {
+    .hover\:bg-\[\#FEE2E2\]:hover {
+      background-color: #fee2e2;
     }
   }
 

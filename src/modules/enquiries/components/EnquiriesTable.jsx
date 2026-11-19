@@ -109,20 +109,27 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
         </thead>
         <tbody className="divide-y divide-gray-50">
           {enquiries.map((e) => {
+            const rowBackground = e.isOverdue
+              ? "bg-[#FEF2F2] group-hover:bg-[#FEE2E2]"
+              : "bg-white group-hover:bg-gray-50/70";
             return (
               <tr
                 key={e.id}
-                className="transition-colors group hover:bg-gray-50/70"
+                className={`transition-colors group ${
+                  e.isOverdue
+                    ? "bg-[#FEF2F2] hover:bg-[#FEE2E2]"
+                    : "hover:bg-gray-50/70"
+                }`}
               >
-                <td className="px-3 py-3 font-mono font-bold text-[#007aff] whitespace-nowrap sticky left-0 z-30 bg-white group-hover:bg-gray-50/70 transition-colors w-[120px] min-w-[120px] max-w-[120px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none">
+                <td className={`px-3 py-3 font-mono font-bold text-[#007aff] whitespace-nowrap sticky left-0 z-30 ${rowBackground} transition-colors w-[120px] min-w-[120px] max-w-[120px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none`}>
                   {e.enquiryNo}
                 </td>
 
-                <td className="px-3 py-3 text-gray-600 whitespace-nowrap sticky left-[120px] z-29 bg-white group-hover:bg-gray-50/70 transition-colors w-[100px] min-w-[100px] max-w-[100px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none">
+                <td className={`px-3 py-3 text-gray-600 whitespace-nowrap sticky left-[120px] z-29 ${rowBackground} transition-colors w-[100px] min-w-[100px] max-w-[100px] xl:static xl:z-auto xl:bg-transparent xl:w-auto xl:min-w-0 xl:max-w-none`}>
                   {e.enquiryDate ? new Date(e.enquiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </td>
                 <td
-                  className="px-3 py-3 text-gray-800 font-medium whitespace-nowrap sticky left-[220px] z-28 bg-white group-hover:bg-gray-50/70 transition-colors border-r border-gray-100 min-w-[160px] max-w-[160px] xl:static xl:z-auto xl:bg-transparent xl:border-r-0"
+                  className={`px-3 py-3 text-gray-800 font-medium whitespace-nowrap sticky left-[220px] z-28 ${rowBackground} transition-colors border-r border-gray-100 min-w-[160px] max-w-[160px] xl:static xl:z-auto xl:bg-transparent xl:border-r-0`}
                   title={e.partnerName || ""}
                 >
                   {e.partnerName
