@@ -1,7 +1,5 @@
 import React from "react";
-import { Truck, Ship, Train, ArrowRight, Eye, EyeOff, FileText, Copy } from "lucide-react";
-import { toast } from "sonner";
-import { copyToClipboard } from "@/utils/clipboard";
+import { Truck, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 const LOGISTICS_STATUS_CLASSES = {
   "Pending": "bg-gray-50 text-gray-600 border-gray-100",
@@ -24,20 +22,7 @@ export default function LogisticsQueueTable({
   isPurchaseContractsTab = false,
   mode = "All",
   highlightedRowId,
-  onSortBusinessReference,
 }) {
-  const handleCopyReference = async (event, reference) => {
-    event.stopPropagation();
-    if (!reference || reference === "—") return;
-
-    try {
-      await copyToClipboard(reference);
-      toast.success("Business reference copied");
-    } catch (error) {
-      console.error("Failed to copy business reference", error);
-      toast.error("Unable to copy business reference");
-    }
-  };
 
   if (loading) {
     return (
@@ -70,8 +55,8 @@ export default function LogisticsQueueTable({
       return e.originPort
         ? `🚢 ${e.originPort}`
         : e.originCountryId
-        ? `🌍 ${e.originCountryId}`
-        : "—";
+          ? `🌍 ${e.originCountryId}`
+          : "—";
     }
     if (e.shipmentMode === "ROAD" || e.shipmentMode === "RAIL") {
       const parts = [e.originCity, e.originState, e.originCountryId].filter(Boolean);
@@ -113,22 +98,25 @@ export default function LogisticsQueueTable({
     return destinations.length ? destinations : ["—"];
   };
 
-  const getModeIcon = (mode) => {
-    switch (mode) {
-      case "SHIP": return <Ship className="h-3.5 w-3.5 text-blue-500" />;
-      case "RAIL": return <Train className="h-3.5 w-3.5 text-indigo-500" />;
-      default:     return <Truck className="h-3.5 w-3.5 text-emerald-500" />;
-    }
-  };
-
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
+    <div className="w-full overflow-hidden">
+      <table className="w-full table-fixed text-xs" style={{ tableLayout: "fixed", width: "100%" }}>
+        <colgroup>
+          <col style={{ width: "9%" }} />
+          <col style={{ width: "7%" }} />
+          <col style={{ width: "13%" }} />
+          <col style={{ width: "6%" }} />
+          <col style={{ width: "12%" }} />
+          <col style={{ width: "12%" }} />
+          <col style={{ width: "16%" }} />
+          <col style={{ width: "13%" }} />
+          <col style={{ width: "12%" }} />
+        </colgroup>
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/60">
-            {["Enquiry / PC No.", "Business Ref No.", "Date", "Product", "Qty (MT)", "From", "To", "Shipment Type", "Mode", "Logistics Status", "Action"].map((h) => (
-              <th key={h} className="px-4 py-3 text-left font-semibold text-gray-500 tracking-wide whitespace-nowrap">
-                {h === "Business Ref No." && onSortBusinessReference ? <button type="button" onClick={onSortBusinessReference}>{h}</button> : h}
+            {["Enquiry / PC No.", "Date", "Product", "Qty (MT)", "From", "To", "Shipment Type", "Logistics Status", "Action"].map((h) => (
+              <th key={h} className={`h-11 ${h === "Qty (MT)" ? "pl-2 pr-4" : "px-2"} py-2 font-semibold text-gray-500 tracking-wide whitespace-nowrap ${h === "Date" || h === "Qty (MT)" ? "text-center" : "text-left"}`}>
+                {h}
               </th>
             ))}
           </tr>
@@ -138,59 +126,85 @@ export default function LogisticsQueueTable({
             const logisticsStatus = e.logistics?.status || "Pending";
             const badgeClass = LOGISTICS_STATUS_CLASSES[logisticsStatus] || "bg-gray-50 text-gray-600 border-gray-100";
             const isHighlighted = highlightedRowId === e.id;
+            const isFreightPendingEnquiry = !e.purchaseContract && logisticsStatus === "Pending";
+            const showNewBadge =
+              !isFreightPendingEnquiry &&
+              (!e.logistics || e.logistics.isViewed === false);
+            const businessReference =
+              e.purchaseContract?.businessReference ||
+              e.businessReference ||
+              e.businessTransaction?.businessReference ||
+              "";
 
             return (
-              <tr key={e.queueRowId || (e.transportDetailId ? `${e.id}_${e.transportDetailId}` : `${e.id}_${idx}`)} className={`transition-all duration-500 group hover:bg-gray-50/70 ${isHighlighted ? "bg-blue-50/50 shadow-inner" : ""}`}>
-                <td className="px-4 py-4.5 font-mono font-bold text-[#007aff] whitespace-nowrap">
-                  <div className="flex items-center gap-1.5">
+              <tr key={e.queueRowId || (e.transportDetailId ? `${e.id}_${e.transportDetailId}` : `${e.id}_${idx}`)} className={`transition-all duration-500 group hover:bg-gray-50/70 ${isHighlighted ? "bg-blue-50/50 shadow-inner" : ""} ${isFreightPendingEnquiry ? "logistics-pending-row" : ""}`}>
+                <td className="h-[44px] px-3 py-1 font-mono font-bold text-[#007aff]">
+                  {isFreightPendingEnquiry && (
+                    <svg aria-hidden="true" className="freight-pending-scanner">
+                      {/* Static subtle border — always visible, never animated */}
+                      <rect
+                        x="0.5"
+                        y="0.5"
+                        width="calc(100% - 1px)"
+                        height="calc(100% - 1px)"
+                        rx="3"
+                        className="freight-pending-scanner__base"
+                      />
+                      {/* Single red dot — 9 units out of pathLength 1000 → ~9px */}
+                      <rect
+                        x="0.5"
+                        y="0.5"
+                        width="calc(100% - 1px)"
+                        height="calc(100% - 1px)"
+                        rx="3"
+                        pathLength="1000"
+                        className="freight-pending-scanner__dot"
+                      />
+                    </svg>
+                  )}
+                  <div className="flex min-w-0 flex-col items-start leading-tight">
                     {e.purchaseContract?.contractNumber ? (
-                      <div className="flex flex-col items-start">
-                        <span className="text-gray-900 font-bold">{e.purchaseContract.contractNumber}</span>
-                        {e.enquiryNo && (
-                          <span className="text-[10px] text-gray-400 font-normal">Enq: {e.enquiryNo}</span>
-                        )}
-                      </div>
+                      <>
+                        <span className="max-w-full truncate text-gray-900 font-bold" title={e.purchaseContract.contractNumber}>
+                          {e.purchaseContract.contractNumber}
+                        </span>
+                        <div className="flex min-w-0 max-w-full items-center gap-1">
+                          {businessReference ? (
+                            <span className="truncate text-[10px] text-indigo-600 font-normal" title={businessReference}>{businessReference}</span>
+                          ) : e.enquiryNo ? (
+                            <span className="truncate text-[10px] text-gray-400 font-normal" title={`Enq: ${e.enquiryNo}`}>Enq: {e.enquiryNo}</span>
+                          ) : null}
+                          {showNewBadge && (
+                            <span className="shrink-0 rounded border border-red-200 bg-red-100 px-1 py-0.5 text-[8px] font-extrabold uppercase leading-none text-red-600">
+                              New
+                            </span>
+                          )}
+                        </div>
+                      </>
                     ) : (
-                      <span>{e.enquiryNo}</span>
-                    )}
-                    {(!e.logistics || e.logistics.isViewed === false) && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-red-100 text-red-600 border border-red-200">
-                        New
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-4.5 font-mono font-semibold text-indigo-700 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <span>{e.purchaseContract?.businessReference || e.businessReference || e.businessTransaction?.businessReference || "—"}</span>
-                    {(e.purchaseContract?.businessReference || e.businessReference || e.businessTransaction?.businessReference) && (
-                      <button
-                        type="button"
-                        onClick={(event) => handleCopyReference(
-                          event,
-                          e.purchaseContract?.businessReference || e.businessReference || e.businessTransaction?.businessReference
+                      <>
+                        <span className="max-w-full truncate">{e.enquiryNo || ""}</span>
+                        {showNewBadge && (
+                          <span className="mt-0.5 rounded border border-red-200 bg-red-100 px-1 py-0.5 text-[8px] font-extrabold uppercase leading-none text-red-600">
+                            New
+                          </span>
                         )}
-                        className="text-gray-400 hover:text-indigo-600 transition-colors cursor-pointer"
-                        title="Copy business reference"
-                        aria-label="Copy business reference"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                      </button>
+                      </>
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
+                <td className="h-[44px] px-3 py-2 text-center text-gray-600 whitespace-nowrap">
                   {(e.purchaseContract?.purchaseDate || e.purchaseDate || e.enquiryDate)
                     ? new Date(e.purchaseContract?.purchaseDate || e.purchaseDate || e.enquiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                     : "—"}
                 </td>
-                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap max-w-[150px] truncate" title={e.purchaseContract?.productName || e.product?.name || ""}>
+                <td className="h-[44px] px-2 py-2 text-gray-600 truncate" title={e.purchaseContract?.productName || e.product?.name || ""}>
                   {e.purchaseContract?.productName || e.product?.name || "—"}
                 </td>
-                <td className="px-4 py-4.5 text-gray-800 font-bold tabular-nums">
+                <td className="h-[44px] pl-2 pr-4 py-2 text-center text-gray-800 font-bold tabular-nums">
                   {Number(e.purchaseContract?.quantity != null ? e.purchaseContract.quantity : (e.quantity || 0)).toLocaleString("en-IN")}
                 </td>
-                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
+                <td className="h-[44px] px-2 py-2 text-gray-600 truncate">
                   {(() => {
                     const hasPurchaseContract = Boolean(e.purchaseContract);
                     const origins = getOrigins(e);
@@ -198,34 +212,22 @@ export default function LogisticsQueueTable({
                     const originDisplay = (e.origin && e.origin !== "—")
                       ? e.origin
                       : (hasPurchaseContract
-                          ? (e.purchaseContract.placeOfLoading || defaultOrigin)
-                          : defaultOrigin);
+                        ? (e.purchaseContract.placeOfLoading || defaultOrigin)
+                        : defaultOrigin);
 
                     return (
-                      <div className="flex flex-col items-start gap-1">
-                        <span className="max-w-[170px] truncate font-medium text-gray-800" title={originDisplay}>
+                      <div className="flex flex-col items-start">
+                        <span className="block max-w-full truncate rounded-sm bg-amber-100 px-1 font-semibold text-amber-900" title={originDisplay}>
                           {originDisplay}
                         </span>
-                        {hasPurchaseContract && !e.origin ? (
-                          <span
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200/70 select-none cursor-help max-w-fit"
-                            title={"Source: Purchase Contract\n\nAutomatically synced from Purchase Contract."}
-                          >
-                            <FileText className="h-2.5 w-2.5 text-blue-600 shrink-0" />
-                            <span>Purchase Contract</span>
-                          </span>
-                        ) : (
-                          origins.length > 1 && (
-                            <span className="text-[10px] text-blue-600 font-semibold mt-0.5">
-                              +{origins.length - 1} More
-                            </span>
-                          )
+                        {origins.length > 1 && (
+                          <span className="text-[10px] text-blue-600 font-semibold">+{origins.length - 1} More</span>
                         )}
                       </div>
                     );
                   })()}
                 </td>
-                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
+                <td className="h-[44px] px-2 py-2 text-gray-600 truncate">
                   {(() => {
                     const sc = e.salesContract;
                     const hasSc = Boolean(sc && (sc.destinationLocationName || sc.deliveryPlace));
@@ -234,54 +236,41 @@ export default function LogisticsQueueTable({
                     const destDisplay = (e.destination && e.destination !== "—")
                       ? e.destination
                       : (hasSc
-                          ? (sc.destinationLocationName || sc.deliveryPlace || defaultDest)
-                          : defaultDest);
+                        ? (sc.destinationLocationName || sc.deliveryPlace || defaultDest)
+                        : defaultDest);
 
                     return (
-                      <div className="flex flex-col items-start gap-1">
-                        <span className="max-w-[170px] truncate font-medium text-gray-800" title={destDisplay}>
+                      <div className="flex flex-col items-start">
+                        <span className="block max-w-full truncate rounded-sm bg-amber-100 px-1 font-semibold text-amber-900" title={destDisplay}>
                           {destDisplay}
                         </span>
-                        {hasSc && !e.destination ? (
-                          <span
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70 select-none cursor-help max-w-fit"
-                            title={"Source: Linked Sales Contract → Delivery Place\n\nAlways auto-derived from linked Sales Contract."}
-                          >
-                            <FileText className="h-2.5 w-2.5 text-emerald-600 shrink-0" />
-                            <span>Sales Contract</span>
-                          </span>
-                        ) : (
-                          dests.length > 1 && (
-                            <span className="text-[10px] text-blue-600 font-semibold mt-0.5">
-                              +{dests.length - 1} More
-                            </span>
-                          )
+                        {dests.length > 1 && (
+                          <span className="text-[10px] text-blue-600 font-semibold">+{dests.length - 1} More</span>
                         )}
                       </div>
                     );
                   })()}
                 </td>
-                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
-                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium text-[10px]">
-                    {e.incoterm || e.transportRoute?.incoterm || e.purchaseContract?.shipmentTypeName || "—"}
-                  </span>
-                </td>
-                <td className="px-4 py-4.5 text-gray-600 whitespace-nowrap">
-                  <div className="flex items-center gap-1.5 font-semibold text-gray-700 capitalize">
-                    {getModeIcon(e.shipmentMode)}
-                    <span className="text-[10px]">{e.shipmentMode ? e.shipmentMode.toLowerCase() : "road"}</span>
+                <td className="h-[44px] px-3 py-1 text-gray-600 whitespace-nowrap">
+                  <div className="flex flex-col items-start gap-0.5">
+                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium text-[10px]">
+                      {e.incoterm || e.transportRoute?.incoterm || e.purchaseContract?.shipmentTypeName || "—"}
+                    </span>
+                    <div className="font-semibold text-gray-700 capitalize">
+                      <span className="text-[10px]">{e.shipmentMode ? e.shipmentMode.toLowerCase() : "road"}</span>
+                    </div>
                   </div>
                 </td>
-                <td className="px-4 py-4.5 whitespace-nowrap">
+                <td className="h-[44px] px-3 py-2 whitespace-nowrap">
                   <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badgeClass}`}>
                     {logisticsStatus}
                   </span>
                 </td>
-                <td className="px-4 py-4.5 whitespace-nowrap">
+                <td className="h-[44px] px-3 py-2 whitespace-nowrap">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onManage(e)}
-                      className="px-3 py-1 bg-white hover:bg-slate-50 border border-gray-200 text-gray-700 rounded-lg flex items-center gap-1 text-[11px] font-bold shadow-2xs hover:border-gray-300 transition-colors cursor-pointer"
+                      className="h-8 px-2.5 bg-white hover:bg-slate-50 border border-gray-200 text-gray-700 rounded-md flex items-center gap-1 text-[11px] font-bold shadow-2xs hover:border-gray-300 transition-colors cursor-pointer"
                     >
                       Transport <ArrowRight className="h-3 w-3 text-gray-400" />
                     </button>

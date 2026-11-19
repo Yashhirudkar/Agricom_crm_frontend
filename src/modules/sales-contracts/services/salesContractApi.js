@@ -9,15 +9,10 @@ export const salesContractApi = {
     axiosClient.patch(`/sales-contracts/${id}/status`, { status }),
   remove: (id) => axiosClient.delete(`/sales-contracts/${id}`),
 
-  // Preview the next auto-generated contract number (Agricom sellers only).
-  // Prefix = <BuyerInitial><SellerCode>  — both buyer and seller are required.
-  // Returns { contractNo: string | null }
   getNextContractNumber: (sellerId, buyerId, financialYear) =>
     axiosClient.get("/sales-contracts/next-number", {
       params: { sellerId, buyerId, financialYear },
     }),
-
-  // Document Endpoints
 
   getDocuments: (id) => axiosClient.get(`/sales-contracts/${id}/documents`),
   uploadDocument: (id, tradeDocumentId, data, onUploadProgress) =>
@@ -28,9 +23,18 @@ export const salesContractApi = {
   deleteDocument: (id, tradeDocumentId) =>
     axiosClient.delete(`/sales-contracts/${id}/documents/${tradeDocumentId}`),
 
-  // Returns distinct financial years stored in the database for list filtering
   getFilterFinancialYears: () =>
     axiosClient.get("/sales-contracts/financial-years"),
+};
+
+let currenciesCache = null;
+let currenciesCacheTime = 0;
+let currenciesInFlightPromise = null;
+
+const invalidateCurrenciesCache = () => {
+  currenciesCache = null;
+  currenciesCacheTime = 0;
+  currenciesInFlightPromise = null;
 };
 
 export const mastersApi = {
@@ -50,28 +54,70 @@ export const mastersApi = {
     axiosClient.get("/masters/products", { params }),
   getProductsOptions: (params) =>
     axiosClient.get("/masters/products/options", { params }),
-  getCountries: (params) =>
+  getCountries: () =>
     Promise.resolve({ data: { data: [] } }),
-  // bag-types and packing-types use isActive (boolean), not status
   getBagTypes: () =>
     axiosClient.get("/masters/bag-types", { params: { isActive: true } }),
   getPackingTypes: () =>
     axiosClient.get("/masters/packing-types", { params: { isActive: true } }),
-  // bag-specifications uses isActive param
   getBagSpecs: () =>
     axiosClient.get("/masters/bag-specifications", { params: { isActive: true, limit: 100 } }),
   getStitchingTypes: () =>
     axiosClient.get("/masters/stitching-types").catch(() => ({ data: [] })),
   getMarkingTypes: () =>
     axiosClient.get("/masters/marking-types").catch(() => ({ data: [] })),
-  getCurrencies: (params) =>
-    axiosClient.get("/masters/currencies", { params }),
-  createCurrency: (data) =>
-    axiosClient.post("/masters/currencies", data),
-  updateCurrency: (id, data) =>
-    axiosClient.patch(`/masters/currencies/${id}`, data),
-  toggleCurrency: (id) =>
-    axiosClient.patch(`/masters/currencies/${id}/toggle`),
-  deleteCurrency: (id) =>
-    axiosClient.delete(`/masters/currencies/${id}`),
+
+  getCurrencies: (params) => {
+    const isStandardActiveQuery =
+      params &&
+      params.status === "Active" &&
+      !params.search &&
+      (!params.page || Number(params.page) === 1);
+
+    const now = Date.now();
+    if (isStandardActiveQuery && currenciesCache && now - currenciesCacheTime < 60000) {
+      return Promise.resolve(currenciesCache);
+    }
+    if (isStandardActiveQuery && currenciesInFlightPromise) {
+      return currenciesInFlightPromise;
+    }
+
+    const reqPromise = axiosClient
+      .get("/masters/currencies", { params })
+      .then((res) => {
+        if (isStandardActiveQuery) {
+          currenciesCache = res;
+          currenciesCacheTime = Date.now();
+        }
+        return res;
+      })
+      .finally(() => {
+        if (isStandardActiveQuery) {
+          currenciesInFlightPromise = null;
+        }
+      });
+
+    if (isStandardActiveQuery) {
+      currenciesInFlightPromise = reqPromise;
+    }
+    return reqPromise;
+  },
+
+  invalidateCurrenciesCache,
+  createCurrency: (data) => {
+    invalidateCurrenciesCache();
+    return axiosClient.post("/masters/currencies", data);
+  },
+  updateCurrency: (id, data) => {
+    invalidateCurrenciesCache();
+    return axiosClient.patch(`/masters/currencies/${id}`, data);
+  },
+  toggleCurrency: (id) => {
+    invalidateCurrenciesCache();
+    return axiosClient.patch(`/masters/currencies/${id}/toggle`);
+  },
+  deleteCurrency: (id) => {
+    invalidateCurrenciesCache();
+    return axiosClient.delete(`/masters/currencies/${id}`);
+  },
 };

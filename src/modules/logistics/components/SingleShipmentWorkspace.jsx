@@ -11,7 +11,6 @@ import {
   Edit2,
   Trash2,
   AlertTriangle,
-  Truck,
 } from "lucide-react";
 
 export default function SingleShipmentWorkspace({
@@ -382,21 +381,25 @@ export default function SingleShipmentWorkspace({
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-slate-50/70 rounded-xl border border-dashed border-slate-200">
-                <Truck className="h-8 w-8 text-slate-300 mb-2" />
-                <p className="text-xs font-bold text-slate-600">No freight quotes added yet</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Request quotations from transporters or enter rates directly for this shipment.
-                </p>
-                {!isReadOnly && (
-                  <button
-                    type="button"
-                    onClick={() => onAddQuote(shipment)}
-                    className="mt-3 px-3 py-1.5 text-xs font-bold text-blue-600 bg-white hover:bg-blue-50 rounded-lg border border-blue-200 shadow-2xs flex items-center gap-1.5 cursor-pointer transition-colors"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Add First Freight Quote
-                  </button>
-                )}
+              <div className="pending-action-card">
+                <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-2xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                    <p className="text-xs font-bold text-slate-800">No freight quotes added yet</p>
+                  </div>
+                  <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed">
+                    Add at least one Freight Quote to continue the transport process.
+                  </p>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={() => onAddQuote(shipment)}
+                      className="mt-4 px-3.5 py-1.5 text-xs font-bold text-blue-600 bg-white hover:bg-blue-50 rounded-lg border border-blue-200 shadow-2xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add First Freight Quote
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>

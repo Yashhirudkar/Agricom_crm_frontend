@@ -208,11 +208,10 @@ export default function MonthlyStockSummaryPage() {
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  statusFilter === st
-                    ? "bg-white text-gray-900 shadow-xs border border-gray-200/50"
-                    : "text-gray-400 hover:text-gray-600"
-                }`}
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${statusFilter === st
+                  ? "bg-white text-gray-900 shadow-xs border border-gray-200/50"
+                  : "text-gray-400 hover:text-gray-600"
+                  }`}
               >
                 {st}
               </button>

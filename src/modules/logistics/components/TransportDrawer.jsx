@@ -1427,14 +1427,25 @@ export default function TransportDrawer({
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className="rounded-xl border border-dashed border-slate-200 bg-white p-6 py-8 text-center text-slate-400">
-                                    <Truck className="h-7 w-7 text-slate-300 mx-auto mb-2" />
-                                    <p className="text-xs font-bold text-slate-600">
-                                      No freight quotes recorded yet for {s.shipmentReference || `Shipment #${s.shipmentNo || sIdx + 1}`}.
-                                    </p>
-                                    <p className="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">
-                                      Click &quot;Add Freight Quote&quot; above to enter quotations from transport partners specifically for this shipment.
-                                    </p>
+                                  <div className="pending-action-card">
+                                    <div className="flex flex-col items-center justify-center py-10 px-4 text-center bg-white rounded-2xl">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                                        <p className="text-xs font-bold text-slate-800">No freight quotes added yet</p>
+                                      </div>
+                                      <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed">
+                                        Add at least one Freight Quote to continue the transport process.
+                                      </p>
+                                      {!isReadOnly && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenAddQuoteForShipment(s)}
+                                          className="mt-4 px-3.5 py-1.5 text-xs font-bold text-blue-600 bg-white hover:bg-blue-50 rounded-lg border border-blue-200 shadow-2xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                                        >
+                                          <Plus className="h-3.5 w-3.5" /> Add First Freight Quote
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -1651,9 +1662,33 @@ export default function TransportDrawer({
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className="space-y-2 rounded-2xl border border-slate-200/80 bg-white p-6 py-12 text-center text-slate-400">
-                                    <p className="text-xs font-bold text-slate-500">No freight quotes added yet for this route.</p>
-                                    <p className="text-[11px] text-slate-400">Click &quot;Add Freight Quote&quot; above to enter quotations from transport partners.</p>
+                                  <div className="pending-action-card">
+                                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-white rounded-2xl">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                                        <p className="text-xs font-bold text-slate-800">No freight quotes added yet</p>
+                                      </div>
+                                      <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed">
+                                        Add at least one Freight Quote to continue the transport process.
+                                      </p>
+                                      {!isReadOnly && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setSelectedQuote(null);
+                                            if (route.id !== 'all') {
+                                              setSelectedRoute(availableRoutes.find(r => r.id === route.id));
+                                            } else {
+                                              setSelectedRoute(availableRoutes[0]);
+                                            }
+                                            setIsModalOpen(true);
+                                          }}
+                                          className="mt-4 px-3.5 py-1.5 text-xs font-bold text-blue-600 bg-white hover:bg-blue-50 rounded-lg border border-blue-200 shadow-2xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                                        >
+                                          <Plus className="h-4 w-4" /> Add First Freight Quote
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                 )}
                               </div>

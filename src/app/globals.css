@@ -160,6 +160,73 @@ table {
   }
 }
 
+/* ── Marching-ants / pending-action border animation ──────────────────────── */
+/* Clockwise marching dashed border using a conic-gradient SVG trick via       */
+/* background-image on a pseudo-element overlay. Pure CSS, no JS.              */
+/* Usage: apply class `pending-action-card` to the container.                  */
+
+@keyframes marching-ants {
+  0%   { background-position: 0 0, 100% 0, 100% 100%, 0 100%; }
+  100% { background-position: 100% 0, 100% 100%, 0 100%, 0 0; }
+}
+
+.pending-action-card {
+  position: relative;
+  border-radius: 16px;
+  /* White background stays inside */
+  background-color: #ffffff;
+}
+
+/* The animated border is painted via a pseudo-element so the
+   inner layout is never affected — no layout shift. */
+.pending-action-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+
+  /* Four repeating-linear-gradient segments — one per side.
+     Each segment draws a dashed line of #EF4444 dots on that edge.
+     background-size controls dash length + gap.                       */
+  background-image:
+    repeating-linear-gradient(90deg,  #EF4444 0, #EF4444 8px, transparent 8px, transparent 16px),  /* top    */
+    repeating-linear-gradient(180deg, #EF4444 0, #EF4444 8px, transparent 8px, transparent 16px),  /* right  */
+    repeating-linear-gradient(90deg,  #EF4444 0, #EF4444 8px, transparent 8px, transparent 16px),  /* bottom */
+    repeating-linear-gradient(180deg, #EF4444 0, #EF4444 8px, transparent 8px, transparent 16px);  /* left   */
+
+  background-size:
+    16px 2px,  /* top    — horizontal repeats */
+    2px 16px,  /* right  — vertical repeats   */
+    16px 2px,  /* bottom — horizontal repeats */
+    2px 16px;  /* left   — vertical repeats   */
+
+  background-position:
+    0 0,        /* top-left corner → runs right  */
+    100% 0,     /* top-right corner → runs down  */
+    100% 100%,  /* bottom-right → runs left      */
+    0 100%;     /* bottom-left → runs up         */
+
+  background-repeat: repeat-x, repeat-y, repeat-x, repeat-y;
+
+  animation: marching-ants 1.6s linear infinite;
+  /* Clip the pseudo-element to only the border zone */
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+/* Children must sit above the pseudo-element overlay */
+.pending-action-card > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* Prevent flash of unstyled content on page transitions */
 [data-loading="true"] {
   opacity: 0;
@@ -184,6 +251,59 @@ table {
 
 .animate-radar {
   animation: radar-pulse 1.2s infinite;
+}
+
+/* ── Freight Pending Row: single red dot scanner on the row border ─────────── */
+/* The <tr> gets position:relative so the SVG can fill it absolutely.          */
+/* The SVG is a no-fill rect covering the row; only one tiny red dash travels  */
+/* continuously around its perimeter. No overlay, no background, no content   */
+/* interference — pointer-events:none ensures full interactivity beneath it.   */
+
+.logistics-pending-row {
+  position: relative;
+}
+
+/* SVG sits behind all td content (z-index: 0) — it has no fill so it is      */
+/* fully transparent; only the 1px border stroke and the moving dot are drawn. */
+.freight-pending-scanner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+/* Static subtle border drawn around the row — always visible, never animated. */
+.freight-pending-scanner__base {
+  fill: none;
+  stroke: #cbd5e1;   /* slate-300 — subtle, not intrusive */
+  stroke-width: 1;
+}
+
+/* The single moving red dot — 9px dash, rest is gap, travels the perimeter.  */
+/* pathLength="1000" normalises the perimeter so dasharray is in "%" units.   */
+.freight-pending-scanner__dot {
+  fill: none;
+  stroke: #ef4444;
+  stroke-width: 2;
+  stroke-linecap: round;
+  /* Two ~500px lines (≈200 units each) separated by gap, then remaining perimeter */
+  stroke-dasharray: 200 150 200 450;
+  stroke-dashoffset: 0;
+  animation: freight-scanner-travel 7s linear infinite;
+}
+
+@keyframes freight-scanner-travel {
+  from { stroke-dashoffset: 0;     }
+  to   { stroke-dashoffset: -1000; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .freight-pending-scanner__dot {
+    animation: none;
+  }
 }
 
 .animate-dot-left {

@@ -2637,9 +2637,6 @@ const salesContractApi = {
             status
         }),
     remove: (id)=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].delete(`/sales-contracts/${id}`),
-    // Preview the next auto-generated contract number (Agricom sellers only).
-    // Prefix = <BuyerInitial><SellerCode>  — both buyer and seller are required.
-    // Returns { contractNo: string | null }
     getNextContractNumber: (sellerId, buyerId, financialYear)=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].get("/sales-contracts/next-number", {
             params: {
                 sellerId,
@@ -2647,7 +2644,6 @@ const salesContractApi = {
                 financialYear
             }
         }),
-    // Document Endpoints
     getDocuments: (id)=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].get(`/sales-contracts/${id}/documents`),
     uploadDocument: (id, tradeDocumentId, data, onUploadProgress)=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].post(`/sales-contracts/${id}/documents/${tradeDocumentId}/upload`, data, {
             headers: {
@@ -2656,8 +2652,15 @@ const salesContractApi = {
             onUploadProgress
         }),
     deleteDocument: (id, tradeDocumentId)=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].delete(`/sales-contracts/${id}/documents/${tradeDocumentId}`),
-    // Returns distinct financial years stored in the database for list filtering
     getFilterFinancialYears: ()=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].get("/sales-contracts/financial-years")
+};
+let currenciesCache = null;
+let currenciesCacheTime = 0;
+let currenciesInFlightPromise = null;
+const invalidateCurrenciesCache = ()=>{
+    currenciesCache = null;
+    currenciesCacheTime = 0;
+    currenciesInFlightPromise = null;
 };
 const mastersApi = {
     getShipmentTypes: (params)=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].get("/masters/shipment-types", {
@@ -2684,12 +2687,11 @@ const mastersApi = {
     getProductsOptions: (params)=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].get("/masters/products/options", {
             params
         }),
-    getCountries: (params)=>Promise.resolve({
+    getCountries: ()=>Promise.resolve({
             data: {
                 data: []
             }
         }),
-    // bag-types and packing-types use isActive (boolean), not status
     getBagTypes: ()=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].get("/masters/bag-types", {
             params: {
                 isActive: true
@@ -2700,7 +2702,6 @@ const mastersApi = {
                 isActive: true
             }
         }),
-    // bag-specifications uses isActive param
     getBagSpecs: ()=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].get("/masters/bag-specifications", {
             params: {
                 isActive: true,
@@ -2713,13 +2714,50 @@ const mastersApi = {
     getMarkingTypes: ()=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].get("/masters/marking-types").catch(()=>({
                 data: []
             })),
-    getCurrencies: (params)=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].get("/masters/currencies", {
+    getCurrencies: (params)=>{
+        const isStandardActiveQuery = params && params.status === "Active" && !params.search && (!params.page || Number(params.page) === 1);
+        const now = Date.now();
+        if (isStandardActiveQuery && currenciesCache && now - currenciesCacheTime < 60000) {
+            return Promise.resolve(currenciesCache);
+        }
+        if (isStandardActiveQuery && currenciesInFlightPromise) {
+            return currenciesInFlightPromise;
+        }
+        const reqPromise = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].get("/masters/currencies", {
             params
-        }),
-    createCurrency: (data)=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].post("/masters/currencies", data),
-    updateCurrency: (id, data)=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].patch(`/masters/currencies/${id}`, data),
-    toggleCurrency: (id)=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].patch(`/masters/currencies/${id}/toggle`),
-    deleteCurrency: (id)=>__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].delete(`/masters/currencies/${id}`)
+        }).then((res)=>{
+            if (isStandardActiveQuery) {
+                currenciesCache = res;
+                currenciesCacheTime = Date.now();
+            }
+            return res;
+        }).finally(()=>{
+            if (isStandardActiveQuery) {
+                currenciesInFlightPromise = null;
+            }
+        });
+        if (isStandardActiveQuery) {
+            currenciesInFlightPromise = reqPromise;
+        }
+        return reqPromise;
+    },
+    invalidateCurrenciesCache,
+    createCurrency: (data)=>{
+        invalidateCurrenciesCache();
+        return __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].post("/masters/currencies", data);
+    },
+    updateCurrency: (id, data)=>{
+        invalidateCurrenciesCache();
+        return __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].patch(`/masters/currencies/${id}`, data);
+    },
+    toggleCurrency: (id)=>{
+        invalidateCurrenciesCache();
+        return __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].patch(`/masters/currencies/${id}/toggle`);
+    },
+    deleteCurrency: (id)=>{
+        invalidateCurrenciesCache();
+        return __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].delete(`/masters/currencies/${id}`);
+    }
 };
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
     __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);

@@ -29,7 +29,10 @@ import {
   Search,
   X,
   ChevronDown,
-  User
+  User,
+  Ship,
+  Truck,
+  Train
 } from "lucide-react";
 import { enquiriesApi } from "../services/enquiriesApi";
 import { useEnquiriesMasters } from "../hooks/useEnquiries";
@@ -40,6 +43,12 @@ import axiosClient from "@/lib/axios";
 import { getAllCountryOptions } from "@/lib/countryUtils";
 import usePermissions from "@/hooks/usePermissions";
 import TransportDetailsGrid from "@/modules/common/components/TransportDetailsGrid";
+
+const SHIPMENT_MODE_OPTIONS = [
+  { value: "SHIP", label: "Ship", Icon: Ship },
+  { value: "ROAD", label: "Road", Icon: Truck },
+  { value: "RAIL", label: "Rail / Wagon", Icon: Train },
+];
 
 function resolveIncotermFromData(data, mastersShipmentTypes = []) {
   if (!data) return "";
@@ -622,8 +631,32 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     }),
   };
 
-  const handleShipmentModeChange = (e) => {
-    const val = e.target.value;
+  const shipmentModeSelectStyles = {
+    control: (base, state) => ({
+      ...base,
+      borderColor: errors.shipmentMode ? "#ef4444" : state.isFocused ? "#007aff" : "#e2e8f0",
+      borderRadius: "0.75rem",
+      fontSize: "12px",
+      boxShadow: "none",
+      minHeight: "38px",
+      backgroundColor: "white",
+      "&:hover": { borderColor: errors.shipmentMode ? "#ef4444" : state.isFocused ? "#007aff" : "#cbd5e1" },
+    }),
+    valueContainer: (base) => ({ ...base, padding: "0 0.5rem" }),
+    indicatorsContainer: (base) => ({ ...base, height: "36px" }),
+    dropdownIndicator: (base) => ({ ...base, padding: "0 0.5rem" }),
+    clearIndicator: (base) => ({ ...base, padding: "0 0.25rem" }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isSelected ? "#007aff" : state.isFocused ? "#f8fafc" : "white",
+      color: state.isSelected ? "white" : "#334155",
+      fontSize: "12px",
+      cursor: "pointer",
+    }),
+    menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+  };
+
+  const handleShipmentModeChange = (val) => {
     setForm((f) => {
       const updated = { ...f, shipmentMode: val };
       if (val === "SHIP") {
@@ -981,20 +1014,24 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
 
                   <div>
                     <label className={lbl}>Shipment Mode</label>
-                    <div className="relative">
-                      <select
-                        value={form.shipmentMode || ""}
-                        onChange={handleShipmentModeChange}
-                        disabled={isViewMode}
-                        className={`${inp} appearance-none pr-8 ${errors.shipmentMode ? "border-red-300" : ""}`}
-                      >
-                        <option value="">Select Shipment Mode</option>
-                        <option value="SHIP">ðŸš¢ Ship</option>
-                        <option value="ROAD">ðŸš› Road</option>
-                        <option value="RAIL">ðŸš† Rail / Wagon</option>
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-                    </div>
+                    <Select
+                      options={SHIPMENT_MODE_OPTIONS}
+                      value={SHIPMENT_MODE_OPTIONS.find((option) => option.value === form.shipmentMode) || null}
+                      onChange={(option) => handleShipmentModeChange(option?.value || "")}
+                      isDisabled={isViewMode}
+                      isClearable
+                      formatOptionLabel={(option) => (
+                        <span className="flex items-center gap-2">
+                          <option.Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                          <span>{option.label}</span>
+                        </span>
+                      )}
+                      styles={shipmentModeSelectStyles}
+                      placeholder="Select Shipment Mode"
+                      menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                      menuPosition="fixed"
+                      className="text-xs"
+                    />
                     {errors.shipmentMode && <p className={err}>{errors.shipmentMode}</p>}
                   </div>
                 </div>
