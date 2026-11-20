@@ -42,6 +42,7 @@ import DirectFreightQuoteDrawer from "../components/DirectFreightQuoteDrawer";
 import Pagination from "@/components/common/Pagination";
 import { copyToClipboard } from "@/utils/clipboard";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { normalizeTruckCapacity } from "../utils/truckCapacity";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -87,7 +88,8 @@ function getEquipmentDisplay(quote) {
     const parts = [quote.wagonType, quote.wagonCapacity].filter(Boolean);
     return parts.join(" · ") || "N/A";
   }
-  const parts = [quote.truckType, quote.truckCapacity].filter(Boolean);
+  const truckCap = quote.truckCapacity ? normalizeTruckCapacity(quote.truckCapacity) : "";
+  const parts = [quote.truckType, truckCap].filter(Boolean);
   return parts.join(" · ") || quote.vehicleType || "N/A";
 }
 

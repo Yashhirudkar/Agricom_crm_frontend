@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { X, Save, PlusCircle, AlertCircle } from "lucide-react";
 import axiosClient from "@/lib/axios";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { normalizeTruckCapacity } from "../utils/truckCapacity";
 
 const CATEGORY_NAMES = {
   TRUCK_TYPE: "Truck Type",
@@ -43,13 +44,22 @@ export default function AddEquipmentOptionModal({
       return;
     }
 
+    let finalValue = value.trim();
+    if (category === "TRUCK_CAPACITY") {
+      finalValue = normalizeTruckCapacity(finalValue);
+      if (!finalValue) {
+        setError("Please enter a valid truck capacity number.");
+        return;
+      }
+    }
+
     setLoading(true);
     setError("");
 
     try {
       const response = await axiosClient.post("/masters/equipment-options", {
         category,
-        value: value.trim(),
+        value: finalValue,
       });
       const created = response.data?.data || response.data;
       if (onSaveSuccess) {
@@ -112,7 +122,11 @@ export default function AddEquipmentOptionModal({
                 type="text"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder={`e.g. 22 FT Refrigerated Truck`}
+                placeholder={
+                  category === "TRUCK_CAPACITY"
+                    ? "e.g. 22 or 22 MT"
+                    : "e.g. 22 FT Refrigerated Truck"
+                }
                 maxLength={100}
                 autoFocus
                 className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:border-blue-600 text-xs shadow-xs"

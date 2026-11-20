@@ -44,9 +44,10 @@ import {
   TrainTrack,
 } from "lucide-react";
 import { shipmentsApi } from "../services/shipmentsApi";
+import { useCurrencyMaster } from "@/modules/enquiries/hooks/useCurrencyMaster";
 import {
+  formatMtWeightDigits,
   formatMtWeightInput,
-  isValidMtWeightInput,
 } from "../utils/mtWeight";
 import axiosClient from "@/lib/axios";
 
@@ -103,6 +104,17 @@ const CAD_DOCUMENTS = [
   "Request Letter",
 ];
 
+const DOWNTIME_REASONS = [
+  "Equipment Breakdown",
+  "Weather Conditions",
+  "Loading / Unloading Delay",
+  "Transport Delay",
+  "Labor Shortage",
+  "Documentation / Customs Delay",
+  "Awaiting Cargo",
+];
+const CUSTOM_DOWNTIME_REASON = "__CUSTOM_DOWNTIME_REASON__";
+
 // Helper to detect CAD Payment terms from Sales Contract
 const isCadPayment = (terms) => {
   if (!terms || typeof terms !== "string") return false;
@@ -121,7 +133,33 @@ const detectMode = (modeStr) => {
   const clean = String(modeStr || "").toUpperCase();
   if (clean.includes("TRUCK") || clean.includes("ROAD")) return "Truck";
   if (clean.includes("WAGON") || clean.includes("RAIL")) return "Wagon";
+  if (clean.includes("AIR")) return "Truck";
   return "Sea";
+};
+
+const isContainerTransportMode = (mode) =>
+  /\bSEA\b|CONTAINER|OCEAN|MARITIME/i.test(String(mode || ""));
+
+const parseDowntimeDate = (value) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || "")) return null;
+  const parsedDate = new Date(`${value}T00:00:00.000Z`);
+  if (
+    Number.isNaN(parsedDate.getTime()) ||
+    parsedDate.toISOString().slice(0, 10) !== value
+  ) {
+    return null;
+  }
+  return parsedDate.getTime();
+};
+
+const calculateDowntimeDuration = (fromDate, toDate) => {
+  const fromTimestamp = parseDowntimeDate(fromDate);
+  const toTimestamp = parseDowntimeDate(toDate);
+  if (fromTimestamp === null || toTimestamp === null) return "";
+  const totalDays = (toTimestamp - fromTimestamp) / 86400000;
+  if (!Number.isInteger(totalDays) || totalDays < 0) return "";
+
+  return `${totalDays} ${totalDays === 1 ? "day" : "days"}`;
 };
 
 // Helper to get predefined document names for mode & CAD terms
@@ -447,6 +485,11 @@ export default function ShipmentStuffingExecutionModal({
   useEscapeKey(onClose, isOpen);
 
   const router = useRouter();
+  const {
+    data: currencies = [],
+    isLoading: currenciesLoading,
+    isError: currenciesError,
+  } = useCurrencyMaster({ enabled: isOpen });
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -484,6 +527,12 @@ export default function ShipmentStuffingExecutionModal({
       paymentTerms: contract.paymentTerm?.name || "",
       paymentTerm: contract.paymentTerm?.name || "",
       shipmentDate: shipment.shipmentDate || "",
+      transportMode:
+        shipment.logistics?.transportMode ||
+        shipment.transportMode ||
+        contract.transportMode ||
+        contract.originTransportMode ||
+        "",
       freightType: contract.shipmentType?.name || "—",
       shipmentType: contract.contractType || "Export",
       route: `${contract.portOfLoading || "—"} ➔ ${contract.portOfDischarge || "—"}`,
@@ -520,6 +569,15 @@ export default function ShipmentStuffingExecutionModal({
   // Auto-populated data from backend
   const [autoData, setAutoData] = useState(fallbackAuto);
   const [tradeDocsList, setTradeDocsList] = useState([]);
+  const activeTransportMode =
+    autoData?.transportMode ||
+    shipment?.logistics?.transportMode ||
+    shipment?.transportMode ||
+    shipment?.salesContract?.transportMode ||
+    shipment?.salesContract?.originTransportMode ||
+    "";
+  const showContainerDetails =
+    isContainerTransportMode(activeTransportMode);
 
   // Section 2: Stuffing Information
   const [stuffingInfo, setStuffingInfo] = useState({
@@ -541,16 +599,20 @@ export default function ShipmentStuffingExecutionModal({
     netWeight: "",
   });
 
-  const handleMtWeightChange = (field, value) => {
-    if (!isValidMtWeightInput(value)) return;
+  const handleMtWeightChange = (field, event) => {
+    const input = event.currentTarget;
+    const value = formatMtWeightDigits(input.value);
     setLoadingInfo((prev) => ({ ...prev, [field]: value }));
+    requestAnimationFrame(() => {
+      if (document.activeElement === input) {
+        input.setSelectionRange(value.length, value.length);
+      }
+    });
   };
 
-  const handleMtWeightBlur = (field) => {
-    setLoadingInfo((prev) => ({
-      ...prev,
-      [field]: formatMtWeightInput(prev[field]),
-    }));
+  const moveMtWeightCursorToEnd = (event) => {
+    const input = event.currentTarget;
+    input.setSelectionRange(input.value.length, input.value.length);
   };
 
   // Freight Details (Editable if missing)
@@ -571,11 +633,7 @@ export default function ShipmentStuffingExecutionModal({
     {
       containerNo: "",
       containerSize: "",
-      vehicleNumber: "",
       sealNo: "",
-      stuffingDate: "",
-      warehouse: "",
-      status: "Pending",
       remarks: "",
       tareWeight: "",
       grossWeight: "",
@@ -620,6 +678,8 @@ export default function ShipmentStuffingExecutionModal({
 
   // Section 6: Execution Remarks
   const [remarks, setRemarks] = useState("");
+  const [downtimes, setDowntimes] = useState([]);
+  const [customDowntimeReasons, setCustomDowntimeReasons] = useState([]);
 
   // Existing stuffing execution status
   const [stuffingStatus, setStuffingStatus] = useState("Draft");
@@ -631,14 +691,19 @@ export default function ShipmentStuffingExecutionModal({
 
     let isMounted = true;
     setAutoData(fallbackAuto);
+    setDowntimes([]);
+    setCustomDowntimeReasons([]);
     setLoading(true);
     setErrorMsg("");
 
     const initialMode = detectMode(
+      fallbackAuto.transportMode ||
+      shipment?.logistics?.transportMode ||
+      shipment?.transportMode ||
+      shipment?.salesContract?.transportMode ||
+      shipment?.salesContract?.originTransportMode ||
       fallbackAuto.freightType ||
       fallbackAuto.shipmentType ||
-      shipment?.transportMode ||
-      shipment?.salesContract?.originTransportMode ||
       "Sea"
     );
     const initialIsCad = isCadPayment(
@@ -677,15 +742,17 @@ export default function ShipmentStuffingExecutionModal({
           // If existing stuffing execution exists, load it
           const existing = data.existingStuffing;
           const savedMode = existing?.freightOverrides?.shipmentMode;
-          const detectedMode =
-            savedMode ||
-            detectMode(
+          const detectedMode = detectMode(
+            mergedAuto.transportMode ||
+              shipment?.logistics?.transportMode ||
+              shipment?.transportMode ||
+              shipment?.salesContract?.transportMode ||
+              shipment?.salesContract?.originTransportMode ||
+              savedMode ||
               mergedAuto.freightType ||
               mergedAuto.shipmentType ||
-              shipment?.transportMode ||
-              shipment?.salesContract?.originTransportMode ||
               "Sea"
-            );
+          );
           setShipmentMode(detectedMode);
 
           const isCadActive = isCadPayment(
@@ -711,7 +778,9 @@ export default function ShipmentStuffingExecutionModal({
               loadingDate: existing.loadingDate || new Date().toISOString().split("T")[0],
               loadingStartTime: existing.loadingStartTime || "",
               loadingEndTime: existing.loadingEndTime || "",
-              actualLoadingWeight: Number(existing.actualLoadingWeight) > 0 ? existing.actualLoadingWeight : "",
+              actualLoadingWeight: Number(existing.actualLoadingWeight) > 0
+                ? formatMtWeightInput(existing.actualLoadingWeight)
+                : "",
               grossWeight: formatMtWeightInput(existing.grossWeight),
               netWeight: formatMtWeightInput(existing.netWeight),
             });
@@ -731,6 +800,38 @@ export default function ShipmentStuffingExecutionModal({
                 }))
               );
             }
+            const existingDowntimes = Array.isArray(existing.downtimes)
+              ? existing.downtimes
+              : [];
+            const loadedDowntimes = existingDowntimes.map((downtime) => {
+              const savedReason = downtime.reason || "";
+              if (savedReason === "Other") {
+                const legacyCustomReason = String(
+                  downtime.customReason || "",
+                ).trim();
+                return {
+                  ...downtime,
+                  reason: legacyCustomReason || CUSTOM_DOWNTIME_REASON,
+                  customReason: "",
+                };
+              }
+              return { ...downtime, customReason: "" };
+            });
+            setDowntimes(loadedDowntimes);
+            setCustomDowntimeReasons(
+              Array.from(
+                new Set(
+                  loadedDowntimes
+                    .map((downtime) => downtime.reason)
+                    .filter(
+                      (reason) =>
+                        reason &&
+                        reason !== CUSTOM_DOWNTIME_REASON &&
+                        !DOWNTIME_REASONS.includes(reason),
+                    ),
+                ),
+              ),
+            );
             const savedAttachments = Array.isArray(existing.attachments) ? existing.attachments : [];
             setAttachments(buildAttachmentsForMode(detectedMode, isCadActive, savedAttachments));
             if (existing.remarks) {
@@ -795,7 +896,7 @@ export default function ShipmentStuffingExecutionModal({
   const handleAddContainer = () => {
     setContainers((prev) => [
       ...prev,
-      { containerNo: "", containerSize: "", vehicleNumber: "", sealNo: "", stuffingDate: "", warehouse: "", status: "Pending", remarks: "", tareWeight: "", grossWeight: "", netWeight: "" },
+      { containerNo: "", containerSize: "", sealNo: "", remarks: "", tareWeight: "", grossWeight: "", netWeight: "" },
     ]);
   };
 
@@ -842,6 +943,56 @@ export default function ShipmentStuffingExecutionModal({
       updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
+  };
+
+  const handleAddDowntime = () => {
+    setDowntimes((prev) => [
+      ...prev,
+      {
+        price: "",
+        currency: "",
+        reason: "",
+        customReason: "",
+        fromDate: "",
+        toDate: "",
+        remarks: "",
+      },
+    ]);
+  };
+
+  const handleDowntimeChange = (index, field, value) => {
+    setDowntimes((prev) =>
+      prev.map((downtime, rowIndex) =>
+        rowIndex === index
+          ? {
+              ...downtime,
+              [field]: value,
+              ...(field === "reason" && value !== CUSTOM_DOWNTIME_REASON
+                ? { customReason: "" }
+                : {}),
+            }
+          : downtime,
+      ),
+    );
+  };
+
+  const handleAddCustomDowntimeReason = (index) => {
+    const customReason = String(downtimes[index]?.customReason || "").trim();
+    if (!customReason) return;
+
+    const existingReason = [...DOWNTIME_REASONS, ...customDowntimeReasons].find(
+      (reason) => reason.toLowerCase() === customReason.toLowerCase(),
+    );
+    const selectedReason = existingReason || customReason;
+    if (!existingReason) {
+      setCustomDowntimeReasons((prev) => [...prev, selectedReason]);
+    }
+    handleDowntimeChange(index, "reason", selectedReason);
+    setErrorMsg("");
+  };
+
+  const handleRemoveDowntime = (index) => {
+    setDowntimes((prev) => prev.filter((_, rowIndex) => rowIndex !== index));
   };
 
   // Attachment Handlers
@@ -1037,6 +1188,37 @@ export default function ShipmentStuffingExecutionModal({
     setErrorMsg("");
     setSuccessToast("");
 
+    const invalidDowntimeIndex = downtimes.findIndex((downtime) => {
+      const price = Number(downtime.price);
+      return (
+        !Number.isFinite(price) ||
+        price <= 0 ||
+        !String(downtime.currency || "").trim() ||
+        (downtime.reason === CUSTOM_DOWNTIME_REASON &&
+          !String(downtime.customReason || "").trim()) ||
+        (downtime.fromDate &&
+          downtime.toDate &&
+          downtime.fromDate > downtime.toDate)
+      );
+    });
+    if (invalidDowntimeIndex >= 0) {
+      const downtime = downtimes[invalidDowntimeIndex];
+      const price = Number(downtime.price);
+      const issue =
+        !Number.isFinite(price) || price <= 0
+          ? "Price must be greater than 0."
+          : !String(downtime.currency || "").trim()
+            ? "Currency is required."
+            : downtime.reason === CUSTOM_DOWNTIME_REASON &&
+                !String(downtime.customReason || "").trim()
+              ? "Custom reason is required."
+              : "From Date cannot be later than To Date.";
+      const msg = `Downtime entry ${invalidDowntimeIndex + 1}: ${issue}`;
+      setErrorMsg(msg);
+      toast.error(msg);
+      return;
+    }
+
     // Client-side validation when Completing Stuffing
     if (action === "complete") {
       const requiredLoadingFields = [
@@ -1101,6 +1283,18 @@ export default function ShipmentStuffingExecutionModal({
         netWeight: parseFloat(loadingInfo.netWeight) || 0,
         freightOverrides: { ...freightData, shipmentMode },
         containers: containers.filter((c) => c.containerNo?.trim()),
+        downtimes: downtimes.map((downtime) => ({
+          ...downtime,
+          reason:
+            downtime.reason === CUSTOM_DOWNTIME_REASON
+              ? String(downtime.customReason || "").trim()
+              : downtime.reason,
+          customReason: "",
+          duration: calculateDowntimeDuration(
+            downtime.fromDate,
+            downtime.toDate,
+          ),
+        })),
         trucks: trucks
           .filter(
             (t) =>
@@ -1427,7 +1621,7 @@ export default function ShipmentStuffingExecutionModal({
                         </div>
                         <div>
                           <span className="text-slate-400 font-medium">Freight & Shipment Mode</span>
-                          <p className="font-semibold text-slate-900">{shipmentMode} • {autoData.shipmentType || "Export"}</p>
+                          <p className="font-semibold text-slate-900">{activeTransportMode || shipmentMode} • {autoData.shipmentType || "Export"}</p>
                         </div>
                         <div>
                           <span className="text-slate-400 font-medium">Route</span>
@@ -1668,11 +1862,13 @@ export default function ShipmentStuffingExecutionModal({
                       Actual Loading Weight (MT) <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="number"
-                      step="0.01"
-                      placeholder="e.g. 26.50"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="000.000"
                       value={loadingInfo.actualLoadingWeight}
-                      onChange={(e) => setLoadingInfo((prev) => ({ ...prev, actualLoadingWeight: e.target.value }))}
+                      onChange={(e) => handleMtWeightChange("actualLoadingWeight", e)}
+                      onFocus={moveMtWeightCursorToEnd}
+                      onClick={moveMtWeightCursorToEnd}
                       aria-required="true"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-bold text-indigo-700"
                     />
@@ -1684,10 +1880,11 @@ export default function ShipmentStuffingExecutionModal({
                     <input
                       type="text"
                       inputMode="decimal"
-                      placeholder="0.000"
+                      placeholder="000.000"
                       value={loadingInfo.grossWeight}
-                      onChange={(e) => handleMtWeightChange("grossWeight", e.target.value)}
-                      onBlur={() => handleMtWeightBlur("grossWeight")}
+                      onChange={(e) => handleMtWeightChange("grossWeight", e)}
+                      onFocus={moveMtWeightCursorToEnd}
+                      onClick={moveMtWeightCursorToEnd}
                       aria-required="true"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                     />
@@ -1699,10 +1896,11 @@ export default function ShipmentStuffingExecutionModal({
                     <input
                       type="text"
                       inputMode="decimal"
-                      placeholder="0.000"
+                      placeholder="000.000"
                       value={loadingInfo.netWeight}
-                      onChange={(e) => handleMtWeightChange("netWeight", e.target.value)}
-                      onBlur={() => handleMtWeightBlur("netWeight")}
+                      onChange={(e) => handleMtWeightChange("netWeight", e)}
+                      onFocus={moveMtWeightCursorToEnd}
+                      onClick={moveMtWeightCursorToEnd}
                       aria-required="true"
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-semibold text-emerald-700"
                     />
@@ -1722,8 +1920,10 @@ export default function ShipmentStuffingExecutionModal({
                 </div>
               </div>
 
-              {/* 3. CONTAINER DETAILS (DYNAMIC) */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-xs">
+              {showContainerDetails && (
+                <>
+                  {/* 3. CONTAINER DETAILS (DYNAMIC) */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-xs">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-indigo-600" />
@@ -1749,11 +1949,7 @@ export default function ShipmentStuffingExecutionModal({
                         <th className="py-2.5 px-3">#</th>
                         <th className="py-2.5 px-3">Container No.</th>
                         <th className="py-2.5 px-3">Size</th>
-                        <th className="py-2.5 px-3">Vehicle No.</th>
                         <th className="py-2.5 px-3">Seal No.</th>
-                        <th className="py-2.5 px-3">Stuffing Date</th>
-                        <th className="py-2.5 px-3">Warehouse</th>
-                        <th className="py-2.5 px-3">Container Status</th>
                         <th className="py-2.5 px-3">Remarks</th>
                         <th className="py-2.5 px-3">Tare Wt (MT)</th>
                         <th className="py-2.5 px-3">Gross Wt (MT)</th>
@@ -1780,9 +1976,6 @@ export default function ShipmentStuffingExecutionModal({
                             </select>
                           </td>
                           <td className="py-2 px-3">
-                            <input type="text" value={c.vehicleNumber || ""} onChange={(e) => handleContainerChange(idx, "vehicleNumber", e.target.value.toUpperCase())} placeholder="Vehicle No." className="min-w-28 rounded border border-slate-200 px-2 py-1.5" />
-                          </td>
-                          <td className="py-2 px-3">
                             <input
                               type="text"
                               placeholder="e.g. SL987654"
@@ -1790,17 +1983,6 @@ export default function ShipmentStuffingExecutionModal({
                               onChange={(e) => handleContainerChange(idx, "sealNo", e.target.value.toUpperCase())}
                               className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium"
                             />
-                          </td>
-                          <td className="py-2 px-3">
-                            <input type="date" value={c.stuffingDate || ""} onChange={(e) => handleContainerChange(idx, "stuffingDate", e.target.value)} className="min-w-32 rounded border border-slate-200 px-2 py-1.5" />
-                          </td>
-                          <td className="py-2 px-3">
-                            <input type="text" value={c.warehouse || ""} onChange={(e) => handleContainerChange(idx, "warehouse", e.target.value)} placeholder="Warehouse" className="min-w-28 rounded border border-slate-200 px-2 py-1.5" />
-                          </td>
-                          <td className="py-2 px-3">
-                            <select value={c.status || "Pending"} onChange={(e) => handleContainerChange(idx, "status", e.target.value)} className="min-w-32 rounded border border-slate-200 px-2 py-1.5">
-                              {["Pending", "Stuffing Started", "Stuffing In Progress", "Stuffing Completed", "Loading Completed"].map((status) => <option key={status} value={status}>{status}</option>)}
-                            </select>
                           </td>
                           <td className="py-2 px-3">
                             <input type="text" value={c.remarks || ""} onChange={(e) => handleContainerChange(idx, "remarks", e.target.value)} placeholder="Remarks" className="min-w-28 rounded border border-slate-200 px-2 py-1.5" />
@@ -1853,10 +2035,14 @@ export default function ShipmentStuffingExecutionModal({
                     </tbody>
                   </table>
                 </div>
-              </div>
+                  </div>
+                </>
+              )}
 
-              {/* 4. TRUCK DETAILS (DYNAMIC) */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-xs">
+              {!showContainerDetails && (
+                <>
+                  {/* 4. TRUCK DETAILS (DYNAMIC) */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-xs">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
                   <div className="flex items-center gap-2">
                     <Truck className="h-4 w-4 text-indigo-600" />
@@ -1954,13 +2140,251 @@ export default function ShipmentStuffingExecutionModal({
                     </tbody>
                   </table>
                 </div>
+                  </div>
+                </>
+              )}
+
+              {/* 5. SHIPMENT DOWNTIME */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-indigo-600" />
+                    <span className="font-bold text-sm text-indigo-700">
+                      5. Shipment Downtime
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddDowntime}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Add Downtime</span>
+                  </button>
+                </div>
+
+                {downtimes.length === 0 ? (
+                  <p className="py-2 text-xs text-slate-400">
+                    No downtime entries added.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {currenciesError && (
+                      <p className="text-xs text-red-600">
+                        Currency master could not be loaded.
+                      </p>
+                    )}
+                    {downtimes.map((downtime, index) => (
+                      <div
+                        key={index}
+                        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3"
+                      >
+                        <div>
+                          <label
+                            htmlFor={`downtime-price-${index}`}
+                            className="mb-1 block text-xs font-medium text-slate-600"
+                          >
+                            Price *
+                          </label>
+                          <input
+                            id={`downtime-price-${index}`}
+                            type="number"
+                            min="0.01"
+                            step="any"
+                            required
+                            value={downtime.price ?? ""}
+                            onChange={(event) =>
+                              handleDowntimeChange(index, "price", event.target.value)
+                            }
+                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            htmlFor={`downtime-currency-${index}`}
+                            className="mb-1 block text-xs font-medium text-slate-600"
+                          >
+                            Currency *
+                          </label>
+                          <select
+                            id={`downtime-currency-${index}`}
+                            value={downtime.currency || ""}
+                            required
+                            disabled={currenciesLoading || currenciesError}
+                            onChange={(event) =>
+                              handleDowntimeChange(index, "currency", event.target.value)
+                            }
+                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden disabled:cursor-not-allowed disabled:bg-slate-100"
+                          >
+                            <option value="">
+                              {currenciesLoading ? "Loading currencies..." : "Select currency"}
+                            </option>
+                            {currencies.map((currency) => (
+                              <option key={currency.code} value={currency.code}>
+                                {currency.code} - {currency.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label
+                            htmlFor={`downtime-reason-${index}`}
+                            className="mb-1 block text-xs font-medium text-slate-600"
+                          >
+                            Reason
+                          </label>
+                          <select
+                            id={`downtime-reason-${index}`}
+                            value={downtime.reason || ""}
+                            onChange={(event) =>
+                              handleDowntimeChange(index, "reason", event.target.value)
+                            }
+                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
+                          >
+                            <option value="">Select reason</option>
+                            {[...DOWNTIME_REASONS, ...customDowntimeReasons].map((reason) => (
+                              <option key={reason} value={reason}>
+                                {reason}
+                              </option>
+                            ))}
+                            <option value={CUSTOM_DOWNTIME_REASON}>
+                              + Add Custom...
+                            </option>
+                          </select>
+                          {downtime.reason === CUSTOM_DOWNTIME_REASON && (
+                            <div className="mt-2 flex gap-1.5">
+                              <input
+                                type="text"
+                                required
+                                value={downtime.customReason || ""}
+                                onChange={(event) =>
+                                  handleDowntimeChange(
+                                    index,
+                                    "customReason",
+                                    event.target.value,
+                                  )
+                                }
+                                onBlur={() =>
+                                  handleAddCustomDowntimeReason(index)
+                                }
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    handleAddCustomDowntimeReason(index);
+                                  }
+                                }}
+                                placeholder="Enter custom reason"
+                                className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
+                              />
+                              <button
+                                type="button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() =>
+                                  handleAddCustomDowntimeReason(index)
+                                }
+                                aria-label={`Add custom reason for downtime entry ${index + 1}`}
+                                className="rounded-md border border-indigo-200 bg-indigo-50 px-2 text-indigo-700 hover:bg-indigo-100"
+                              >
+                                <Check className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <label
+                            htmlFor={`downtime-from-${index}`}
+                            className="mb-1 block text-xs font-medium text-slate-600"
+                          >
+                            From Date
+                          </label>
+                          <input
+                            id={`downtime-from-${index}`}
+                            type="date"
+                            max={downtime.toDate || undefined}
+                            value={downtime.fromDate || ""}
+                            onChange={(event) =>
+                              handleDowntimeChange(index, "fromDate", event.target.value)
+                            }
+                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            htmlFor={`downtime-to-${index}`}
+                            className="mb-1 block text-xs font-medium text-slate-600"
+                          >
+                            To Date
+                          </label>
+                          <input
+                            id={`downtime-to-${index}`}
+                            type="date"
+                            min={downtime.fromDate || undefined}
+                            value={downtime.toDate || ""}
+                            onChange={(event) =>
+                              handleDowntimeChange(index, "toDate", event.target.value)
+                            }
+                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            htmlFor={`downtime-duration-${index}`}
+                            className="mb-1 block text-xs font-medium text-slate-600"
+                          >
+                            Duration
+                          </label>
+                          <input
+                            id={`downtime-duration-${index}`}
+                            type="text"
+                            readOnly
+                            value={calculateDowntimeDuration(
+                              downtime.fromDate,
+                              downtime.toDate,
+                            )}
+                            className="w-full rounded-md border border-slate-200 bg-slate-100 px-2.5 py-2 text-xs text-slate-600 outline-hidden"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            htmlFor={`downtime-remarks-${index}`}
+                            className="mb-1 block text-xs font-medium text-slate-600"
+                          >
+                            Remarks (Optional)
+                          </label>
+                          <input
+                            id={`downtime-remarks-${index}`}
+                            type="text"
+                            value={downtime.remarks || ""}
+                            onChange={(event) =>
+                              handleDowntimeChange(index, "remarks", event.target.value)
+                            }
+                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
+                          />
+                        </div>
+                        <div className="flex flex-col justify-end">
+                          <span className="mb-1 text-xs font-medium text-slate-600">
+                            Action
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDowntime(index)}
+                            aria-label={`Remove downtime entry ${index + 1}`}
+                            className="rounded-md p-2 text-red-500 transition-colors hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* 5. EXECUTION REMARKS */}
+              {/* 6. EXECUTION REMARKS */}
               <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-xs">
                 <div className="flex items-center gap-2 pb-2.5 mb-2.5 border-b border-slate-100 text-indigo-700 font-bold text-sm">
                   <FileText className="h-4 w-4 text-indigo-600" />
-                  <span>5. Execution Remarks</span>
+                  <span>6. Execution Remarks</span>
                 </div>
                 <textarea
                   rows={4}

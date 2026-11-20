@@ -473,13 +473,12 @@ export default function TransportDrawer({
     }
 
     const rawEnquiryId = enquiry?.enquiryId || enquiry?.id;
-    const cleanEnquiryId = rawEnquiryId ? String(rawEnquiryId).split('_')[0] : rawEnquiryId;
-    if (!cleanEnquiryId) return;
+    if (!rawEnquiryId) return;
     setLoading(true);
     setShipmentNotFoundError(false);
     try {
       const sId = effectiveTargetShipmentId ? Number(effectiveTargetShipmentId) : undefined;
-      const res = await logisticsApi.getDetails(cleanEnquiryId, sId);
+      const res = await logisticsApi.getDetails(rawEnquiryId, sId);
 
       // Handled business rule: If backend returned business response indicating freight not required, exit cleanly
       if (res?.data?.isBusinessRule || res?.data?.freightRequired === false) {

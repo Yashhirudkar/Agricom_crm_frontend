@@ -14,6 +14,7 @@ import {
   isFreightAllocatedForShipment,
   isFreightRequiredForShipment,
 } from "../utils/freightRuleEngine";
+import { normalizeTruckCapacity } from "@/modules/logistics/utils/truckCapacity";
 
 export default function FreightAllocationDrawer({
   shipment,
@@ -225,8 +226,9 @@ export default function FreightAllocationDrawer({
                 </span>
                 <span className="text-xs font-bold text-slate-800 mt-0.5 block">
                   {selectedQuote?.containerType ||
-                    selectedQuote?.vehicleType ||
-                    "Standard 20'/40' Containers"}
+                    (selectedQuote?.truckType || selectedQuote?.truckCapacity
+                      ? [selectedQuote.truckType, selectedQuote.truckCapacity ? normalizeTruckCapacity(selectedQuote.truckCapacity) : null].filter(Boolean).join(" · ")
+                      : selectedQuote?.vehicleType || "Standard 20'/40' Containers")}
                 </span>
               </div>
 

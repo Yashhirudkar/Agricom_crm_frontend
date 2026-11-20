@@ -3180,6 +3180,18 @@
     width: 32%;
   }
 
+  .w-\[35\%\] {
+    width: 35%;
+  }
+
+  .w-\[36\%\] {
+    width: 36%;
+  }
+
+  .w-\[40px\] {
+    width: 40px;
+  }
+
   .w-\[45\%\] {
     width: 45%;
   }
@@ -12011,6 +12023,18 @@
   }
 
   @media (hover: hover) {
+    .hover\:bg-indigo-100\/80:hover {
+      background-color: #e0e7ffcc;
+    }
+
+    @supports (color: color-mix(in lab, red, red)) {
+      .hover\:bg-indigo-100\/80:hover {
+        background-color: color-mix(in oklab, var(--color-indigo-100) 80%, transparent);
+      }
+    }
+  }
+
+  @media (hover: hover) {
     .hover\:bg-indigo-600:hover {
       background-color: var(--color-indigo-600);
     }
@@ -14868,6 +14892,12 @@
   @media (min-width: 80rem) {
     .xl\:grid-cols-7 {
       grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 80rem) {
+    .xl\:grid-cols-8 {
+      grid-template-columns: repeat(8, minmax(0, 1fr));
     }
   }
 

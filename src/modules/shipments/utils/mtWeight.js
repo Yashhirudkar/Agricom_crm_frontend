@@ -13,9 +13,17 @@ export function formatMtWeightInput(value) {
     if (!Number.isFinite(numericValue) || numericValue < 0 || numericValue > 999.999) {
       return "";
     }
-    return numericValue.toFixed(3);
+    return numericValue.toFixed(3).padStart(7, "0");
   }
 
   const [integerPart = "", fractionalPart = ""] = input.split(".");
-  return `${integerPart || "0"}.${fractionalPart.padEnd(3, "0")}`;
+  return `${integerPart.padStart(3, "0")}.${fractionalPart.padEnd(3, "0")}`;
+}
+
+export function formatMtWeightDigits(value) {
+  const digits = String(value ?? "").replace(/\D/g, "").slice(-6);
+  if (digits === "") return "";
+
+  const paddedDigits = digits.padStart(6, "0");
+  return `${paddedDigits.slice(0, 3)}.${paddedDigits.slice(3)}`;
 }

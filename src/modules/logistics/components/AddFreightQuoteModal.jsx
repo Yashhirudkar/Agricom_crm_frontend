@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import Select from "react-select";
+import Select, { components } from "react-select";
 import {
   X,
   Save,
@@ -22,24 +22,21 @@ import {
   ArrowDown,
   Info,
   MapPin,
-  Map
+  Map,
+  CreditCard,
 } from "lucide-react";
 import SearchablePartnerSelect from "@/components/common/SearchablePartnerSelect";
 import { useCurrencyMaster } from "@/modules/enquiries/hooks/useCurrencyMaster";
 import axiosClient from "@/lib/axios";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import {
+  DEFAULT_TRUCK_CAPACITIES,
+  normalizeTruckCapacity,
+  canonicalCapacityKey,
+  normalizeAndDeduplicateCapacities,
+} from "../utils/truckCapacity";
 
-const ROAD_TRUCK_TYPES = [
-  "Mini Truck", "Pickup", "Tata Ace", "14 FT Truck", "17 FT Truck",
-  "20 FT Truck", "22 FT Truck", "24 FT Truck", "32 FT Single Axle",
-  "32 FT Multi Axle", "Trailer", "Flatbed Trailer", "Low Bed Trailer",
-  "Hydraulic Trailer", "Tanker", "Refrigerated Truck", "Open Body Truck", "Closed Body Truck",
-];
-
-const ROAD_TRUCK_CAPACITIES = [
-  "1 MT", "2 MT", "3 MT", "5 MT", "7 MT", "9 MT", "10 MT",
-  "12 MT", "15 MT", "18 MT", "20 MT", "25 MT", "30 MT", "35 MT", "40 MT",
-];
+const ROAD_TRUCK_CAPACITIES = [...DEFAULT_TRUCK_CAPACITIES];
 
 const SEA_CONTAINER_TYPES = [
   "Standard (Dry)", "High Cube", "Open Top", "Hard Top",
@@ -97,7 +94,7 @@ export default function AddFreightQuoteModal({
   const [wagonCapacity, setWagonCapacity] = useState("");
 
   const [equipmentOptionsMap, setEquipmentOptionsMap] = useState({
-    TRUCK_TYPE: ROAD_TRUCK_TYPES,
+    TRUCK_TYPE: [],
     TRUCK_CAPACITY: ROAD_TRUCK_CAPACITIES,
     CONTAINER_TYPE: SEA_CONTAINER_TYPES,
     CONTAINER_SIZE: SEA_CONTAINER_SIZES,
@@ -123,18 +120,22 @@ export default function AddFreightQuoteModal({
           if (grouped[item.category]) grouped[item.category].push(item.value);
         });
         setEquipmentOptionsMap((prev) => ({
-          TRUCK_TYPE: [...new Set([...ROAD_TRUCK_TYPES, ...grouped.TRUCK_TYPE])],
-          TRUCK_CAPACITY: [...new Set([...ROAD_TRUCK_CAPACITIES, ...grouped.TRUCK_CAPACITY])],
-          CONTAINER_TYPE: [...new Set([...SEA_CONTAINER_TYPES, ...grouped.CONTAINER_TYPE])],
-          CONTAINER_SIZE: [...new Set([...SEA_CONTAINER_SIZES, ...grouped.CONTAINER_SIZE])],
-          WAGON_TYPE: [...new Set([...RAIL_WAGON_TYPES, ...grouped.WAGON_TYPE])],
-          WAGON_CAPACITY: [...new Set([...RAIL_WAGON_CAPACITIES, ...grouped.WAGON_CAPACITY])],
+          TRUCK_TYPE: grouped.TRUCK_TYPE.length > 0 ? grouped.TRUCK_TYPE : prev.TRUCK_TYPE,
+          TRUCK_CAPACITY: normalizeAndDeduplicateCapacities([...ROAD_TRUCK_CAPACITIES, ...grouped.TRUCK_CAPACITY]),
+          CONTAINER_TYPE: grouped.CONTAINER_TYPE.length > 0 ? grouped.CONTAINER_TYPE : prev.CONTAINER_TYPE,
+          CONTAINER_SIZE: grouped.CONTAINER_SIZE.length > 0 ? grouped.CONTAINER_SIZE : prev.CONTAINER_SIZE,
+          WAGON_TYPE: grouped.WAGON_TYPE.length > 0 ? grouped.WAGON_TYPE : prev.WAGON_TYPE,
+          WAGON_CAPACITY: grouped.WAGON_CAPACITY.length > 0 ? grouped.WAGON_CAPACITY : prev.WAGON_CAPACITY,
         }));
       }
     } catch (err) {
       console.warn("Failed to load equipment options:", err);
     }
   };
+
+  useEffect(() => {
+    fetchEquipmentOptions();
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -150,15 +151,44 @@ export default function AddFreightQuoteModal({
       setInlineError("Please enter an option value.");
       return;
     }
+
+    let valueToSave = inlineValue.trim();
+
+    if (category === "TRUCK_CAPACITY") {
+      valueToSave = normalizeTruckCapacity(valueToSave);
+      if (!valueToSave) {
+        setInlineError("Please enter a valid truck capacity number.");
+        return;
+      }
+
+      // Check if it already exists in options (ignoring case and whitespace)
+      const currentOptions = equipmentOptionsMap.TRUCK_CAPACITY || ROAD_TRUCK_CAPACITIES;
+      const targetKey = canonicalCapacityKey(valueToSave);
+      const existingMatch = currentOptions.find(
+        (opt) => canonicalCapacityKey(opt) === targetKey
+      );
+
+      if (existingMatch) {
+        // Requirement 4: If the normalized value already exists, do not create another record. Instead, select the existing one.
+        setter(existingMatch);
+        setActiveInlineCategory(null);
+        setInlineValue("");
+        setInlineError("");
+        return;
+      }
+    }
+
     setInlineLoading(true);
     setInlineError("");
     try {
       const res = await axiosClient.post("/masters/equipment-options", {
         category,
-        value: inlineValue.trim(),
+        value: valueToSave,
       });
       const created = res.data?.data || res.data;
-      const createdVal = created?.value || inlineValue.trim();
+      const createdVal = created?.value
+        ? (category === "TRUCK_CAPACITY" ? normalizeTruckCapacity(created.value) : created.value)
+        : valueToSave;
       await fetchEquipmentOptions();
       setter(createdVal);
       setActiveInlineCategory(null);
@@ -171,9 +201,13 @@ export default function AddFreightQuoteModal({
     }
   };
 
-  const renderEquipmentSelectField = (label, value, setter, category, defaultOptions, placeholder) => {
-    const isInline = activeInlineCategory === category;
-    const options = equipmentOptionsMap[category] || defaultOptions;
+  const renderEquipmentSelectField = (label, value, setter, category, defaultOptions, placeholder, allowCustom = true) => {
+    const isInline = activeInlineCategory === category && allowCustom;
+    const rawOptions = equipmentOptionsMap[category] || defaultOptions;
+    const options = category === "TRUCK_CAPACITY"
+      ? normalizeAndDeduplicateCapacities(rawOptions)
+      : rawOptions;
+    const displayValue = category === "TRUCK_CAPACITY" ? normalizeTruckCapacity(value) : value;
 
     return (
       <div>
@@ -181,7 +215,7 @@ export default function AddFreightQuoteModal({
           <label className="block text-sm font-semibold text-slate-700">
             {label} <span className="text-red-500">*</span>
           </label>
-          {!isInline && !isReadOnly && (
+          {allowCustom && !isInline && !isReadOnly && (
             <button
               type="button"
               onClick={() => {
@@ -203,7 +237,7 @@ export default function AddFreightQuoteModal({
                 type="text"
                 value={inlineValue}
                 onChange={(e) => setInlineValue(e.target.value)}
-                placeholder={`New ${label}...`}
+                placeholder={category === "TRUCK_CAPACITY" ? "e.g. 22 or 22 MT..." : `New ${label}...`}
                 maxLength={100}
                 autoFocus
                 className="min-w-0 flex-1 px-3 py-2 border border-indigo-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white shadow-sm"
@@ -250,14 +284,14 @@ export default function AddFreightQuoteModal({
           </div>
         ) : (
           <select
-            value={value}
+            value={displayValue}
             onChange={(e) => {
-              if (e.target.value === "__ADD_NEW__") {
+              if (allowCustom && e.target.value === "__ADD_NEW__") {
                 setActiveInlineCategory(category);
                 setInlineValue("");
                 setInlineError("");
               } else {
-                setter(e.target.value);
+                setter(category === "TRUCK_CAPACITY" ? normalizeTruckCapacity(e.target.value) : e.target.value);
               }
             }}
             disabled={isReadOnly}
@@ -267,9 +301,11 @@ export default function AddFreightQuoteModal({
             {options.map((opt, idx) => (
               <option key={`${opt}-${idx}`} value={opt}>{opt}</option>
             ))}
-            <option value="__ADD_NEW__" className="font-semibold text-indigo-600 bg-indigo-50">
-              + Add Custom...
-            </option>
+            {allowCustom && (
+              <option value="__ADD_NEW__" className="font-semibold text-indigo-600 bg-indigo-50">
+                + Add Custom...
+              </option>
+            )}
           </select>
         )}
       </div>
@@ -328,13 +364,16 @@ export default function AddFreightQuoteModal({
         chargeMasterId: c.chargeMasterId || null,
         chargeName: c.chargeName || "",
         amount: c.amount ? String(c.amount) : "",
+        chargeDate: c.chargeDate ? c.chargeDate.split("T")[0] : "",
         remarks: c.remarks || "",
       })));
     } else if (quote && quote.freightAmount && Number(quote.freightAmount) > 0) {
       const defaultName = (transportMode || "").toLowerCase() === "sea" ? "Ocean Freight" : "Basic Freight";
       setCharges([{
         id: Date.now(), chargeMasterId: null, chargeName: defaultName,
-        amount: String(quote.freightAmount), remarks: quote.remarks || "",
+        amount: String(quote.freightAmount),
+        chargeDate: quote.quoteDate ? quote.quoteDate.split("T")[0] : "",
+        remarks: quote.remarks || "",
       }]);
     } else {
       setCharges([]);
@@ -415,7 +454,14 @@ export default function AddFreightQuoteModal({
     setContainerRates(prev => {
       const arr = [...prev];
       const charges = [...arr[rateIndex].charges];
-      charges.push({ id: Date.now() + Math.random(), chargeMasterId: null, chargeName: "", amount: "", remarks: "" });
+      charges.push({
+        id: Date.now() + Math.random(),
+        chargeMasterId: null,
+        chargeName: "",
+        amount: "",
+        chargeDate: quoteDate || new Date().toISOString().split("T")[0],
+        remarks: "",
+      });
       arr[rateIndex] = { ...arr[rateIndex], charges };
       return arr;
     });
@@ -431,7 +477,17 @@ export default function AddFreightQuoteModal({
   };
 
   const handleAddChargeRow = () => {
-    setCharges((prev) => [...prev, { id: Date.now() + Math.random(), chargeMasterId: null, chargeName: "", amount: "", remarks: "" }]);
+    setCharges((prev) => [
+      ...prev,
+      {
+        id: Date.now() + Math.random(),
+        chargeMasterId: null,
+        chargeName: "",
+        amount: "",
+        chargeDate: quoteDate || new Date().toISOString().split("T")[0],
+        remarks: "",
+      },
+    ]);
   };
 
   const handleRemoveChargeRow = (index) => {
@@ -549,6 +605,14 @@ export default function AddFreightQuoteModal({
   const [validityDate, setValidityDate] = useState("");
   const [quoteDate, setQuoteDate] = useState(new Date().toISOString().split("T")[0]);
   const [paymentTerms, setPaymentTerms] = useState("");
+  const [paymentTermId, setPaymentTermId] = useState(null);
+  const [paymentTermsList, setPaymentTermsList] = useState([]);
+  const [paymentTermsLoading, setPaymentTermsLoading] = useState(false);
+  const [paymentTermInputSearch, setPaymentTermInputSearch] = useState("");
+  const [isAddPaymentTermModalOpen, setIsAddPaymentTermModalOpen] = useState(false);
+  const [newPaymentTermName, setNewPaymentTermName] = useState("");
+  const [newPaymentTermLoading, setNewPaymentTermLoading] = useState(false);
+  const [newPaymentTermError, setNewPaymentTermError] = useState("");
   const [remarks, setRemarks] = useState("");
 
   const [pol, setPol] = useState("");
@@ -601,6 +665,140 @@ export default function AddFreightQuoteModal({
     menuPortal: (base) => ({ ...base, zIndex: 9999 }),
   };
 
+  const fetchPaymentTerms = async () => {
+    try {
+      setPaymentTermsLoading(true);
+      const res = await axiosClient.get("/masters/payment-terms", {
+        params: { status: "Active", limit: 1000 },
+      });
+      const data = res.data?.data || res.data || [];
+      setPaymentTermsList(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to fetch payment terms:", err);
+    } finally {
+      setPaymentTermsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchPaymentTerms();
+    }
+  }, [isOpen]);
+
+  const paymentTermOptions = useMemo(() => {
+    const list = paymentTermsList.map((pt) => ({
+      value: String(pt.id),
+      id: pt.id,
+      label: pt.name,
+      creditDays: pt.creditDays,
+    }));
+    list.push({
+      value: "__ADD_NEW_PAYMENT_TERM__",
+      id: null,
+      label: "+ Custom...",
+      isCustom: true,
+    });
+    return list;
+  }, [paymentTermsList]);
+
+  const selectedPaymentTermOption = useMemo(() => {
+    if (!paymentTerms && !paymentTermId) return null;
+    const match = paymentTermOptions.find(
+      (opt) =>
+        !opt.isCustom &&
+        ((paymentTermId && opt.id === paymentTermId) ||
+          (paymentTerms &&
+            opt.label.trim().toLowerCase() === paymentTerms.trim().toLowerCase()))
+    );
+    if (match) return match;
+    return paymentTerms
+      ? { value: String(paymentTermId || paymentTerms), id: paymentTermId, label: paymentTerms }
+      : null;
+  }, [paymentTermOptions, paymentTerms, paymentTermId]);
+
+  const filterPaymentTermOption = (candidate, input) => {
+    if (candidate.data.isCustom) return true;
+    if (!input) return true;
+    return candidate.label.toLowerCase().includes(input.toLowerCase());
+  };
+
+  const PaymentTermOption = (props) => {
+    if (props.data.isCustom) {
+      return (
+        <div
+          {...props.innerProps}
+          className="px-3 py-2.5 text-sm font-semibold text-indigo-600 bg-indigo-50/70 hover:bg-indigo-100/80 cursor-pointer flex items-center gap-2 border-t border-slate-100 transition-colors"
+        >
+          <Plus className="h-4 w-4 text-indigo-600" />
+          <span>Custom...</span>
+        </div>
+      );
+    }
+    return <components.Option {...props} />;
+  };
+
+  const handlePaymentTermChange = (opt) => {
+    if (!opt) {
+      setPaymentTerms("");
+      setPaymentTermId(null);
+      return;
+    }
+    if (opt.value === "__ADD_NEW_PAYMENT_TERM__" || opt.isCustom) {
+      setNewPaymentTermName(paymentTermInputSearch.trim());
+      setNewPaymentTermError("");
+      setIsAddPaymentTermModalOpen(true);
+      return;
+    }
+    setPaymentTerms(opt.label);
+    setPaymentTermId(opt.id || null);
+  };
+
+  const handleSaveNewPaymentTerm = async (e) => {
+    e.preventDefault();
+    const trimmed = (newPaymentTermName || "").trim();
+    if (!trimmed) {
+      setNewPaymentTermError("Payment Term cannot be empty.");
+      return;
+    }
+
+    const isDuplicate = paymentTermsList.some(
+      (pt) => (pt.name || "").trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) {
+      setNewPaymentTermError(`Payment Term "${trimmed}" already exists.`);
+      return;
+    }
+
+    setNewPaymentTermLoading(true);
+    setNewPaymentTermError("");
+    try {
+      const res = await axiosClient.post("/masters/payment-terms", {
+        name: trimmed,
+      });
+      const created = res.data?.data || res.data;
+      const createdName = created?.name || trimmed;
+      const createdId = created?.id || null;
+
+      await fetchPaymentTerms();
+
+      setPaymentTerms(createdName);
+      setPaymentTermId(createdId);
+
+      setIsAddPaymentTermModalOpen(false);
+      setNewPaymentTermName("");
+      setNewPaymentTermError("");
+      setPaymentTermInputSearch("");
+    } catch (err) {
+      console.error("Failed to save payment term:", err);
+      setNewPaymentTermError(
+        err.response?.data?.message || "Failed to save payment term."
+      );
+    } finally {
+      setNewPaymentTermLoading(false);
+    }
+  };
+
   useEffect(() => {
     const modeNorm = (transportMode || "").toLowerCase();
     if (quote) {
@@ -621,8 +819,12 @@ export default function AddFreightQuoteModal({
           containerType: cr.containerType || "",
           containerSize: cr.containerSize || "",
           charges: Array.isArray(cr.charges) ? cr.charges.map((c, idx) => ({
-            id: c.id || Date.now() + idx, chargeMasterId: c.chargeMasterId || null,
-            chargeName: c.chargeName || "", amount: c.amount ? String(c.amount) : "", remarks: c.remarks || "",
+            id: c.id || Date.now() + idx,
+            chargeMasterId: c.chargeMasterId || null,
+            chargeName: c.chargeName || "",
+            amount: c.amount ? String(c.amount) : "",
+            chargeDate: c.chargeDate ? c.chargeDate.split("T")[0] : "",
+            remarks: c.remarks || "",
           })) : [],
         })));
       } else {
@@ -630,7 +832,7 @@ export default function AddFreightQuoteModal({
       }
 
       setTruckType(quote.truckType || (modeNorm === "road" ? quote.vehicleType : "") || "");
-      setTruckCapacity(quote.truckCapacity || "");
+      setTruckCapacity(normalizeTruckCapacity(quote.truckCapacity) || "");
       setWagonType(quote.wagonType || (modeNorm === "rail" ? quote.vehicleType : "") || "");
       setWagonCapacity(quote.wagonCapacity || "");
 
@@ -640,7 +842,8 @@ export default function AddFreightQuoteModal({
       setTransitDays(quote.transitDays || "");
       setValidityDate(quote.validityDate ? quote.validityDate.split("T")[0] : "");
       setQuoteDate(quote.quoteDate ? quote.quoteDate.split("T")[0] : new Date().toISOString().split("T")[0]);
-      setPaymentTerms(quote.paymentTerms || "");
+      setPaymentTerms(quote.paymentTerms || quote.paymentTerm?.name || "");
+      setPaymentTermId(quote.paymentTermId || quote.paymentTerm?.id || null);
       setRemarks(quote.remarks || "");
 
       setPol(quote.pol || ""); setPod(quote.pod || "");
@@ -654,7 +857,7 @@ export default function AddFreightQuoteModal({
       setContainerRates([{ id: Date.now() + Math.random(), containerType: "", containerSize: "", charges: [] }]);
       setTruckType(""); setTruckCapacity(""); setWagonType(""); setWagonCapacity("");
       setFreightAmount(""); setCurrency(mode === "International" || mode === "Export" || mode === "Merchant Export" ? "USD" : "INR");
-      setTransitDays(""); setValidityDate(""); setQuoteDate(new Date().toISOString().split("T")[0]); setPaymentTerms(""); setRemarks("");
+      setTransitDays(""); setValidityDate(""); setQuoteDate(new Date().toISOString().split("T")[0]); setPaymentTerms(""); setPaymentTermId(null); setPaymentTermInputSearch(""); setRemarks("");
       setPol(""); setPod(""); setEtd(""); setEta(""); setFreeDays(0); setCutoffDate(""); setVessel(""); setVoyage("");
     }
     setError("");
@@ -805,14 +1008,18 @@ export default function AddFreightQuoteModal({
         quoteDate, sellerId: parsedSellerId, freightAmount: calculatedGrandTotal,
         charges: charges.map((c, idx) => ({
           ...(c.chargeMasterId && { chargeMasterId: c.chargeMasterId }),
-          chargeName: c.chargeName.trim(), amount: parseFloat(c.amount),
-          ...(c.remarks && { remarks: c.remarks.trim() }), displayOrder: idx + 1,
+          chargeName: c.chargeName.trim(),
+          amount: parseFloat(c.amount),
+          ...(c.chargeDate && { chargeDate: c.chargeDate }),
+          ...(c.remarks && { remarks: c.remarks.trim() }),
+          displayOrder: idx + 1,
         })),
         currency: currency || "INR", fuelCharges: 0, additionalCharges: 0, transitDays: parseInt(transitDays, 10), validityDate,
         ...(carrierReferenceNo && carrierReferenceNo.trim() && { carrierReferenceNo: carrierReferenceNo.trim() }),
         ...(contactPerson && contactPerson.trim() && { contactPerson: contactPerson.trim() }),
         ...(contactNumber && contactNumber.trim() && { contactNumber: contactNumber.trim() }),
         ...(paymentTerms && paymentTerms.trim() && { paymentTerms: paymentTerms.trim() }),
+        ...(paymentTermId && { paymentTermId: Number(paymentTermId) }),
         ...(remarks && remarks.trim() && { remarks: remarks.trim() }),
         ...(selectedRoute?.id && selectedRoute.id !== 'all' && { routeId: Number(selectedRoute.id) }),
         ...(targetShipment?.id && { shipmentId: Number(targetShipment.id) }),
@@ -820,14 +1027,21 @@ export default function AddFreightQuoteModal({
           purchaseContractId: Number(targetShipment?.purchaseContractId || purchaseContractId),
         }),
 
-        ...(modeNorm === "road" && { truckType: truckType.trim(), truckCapacity: truckCapacity.trim(), vehicleType: truckType.trim() }),
+        ...(modeNorm === "road" && {
+          truckType: truckType.trim(),
+          truckCapacity: normalizeTruckCapacity(truckCapacity),
+          vehicleType: truckType.trim(),
+        }),
         ...(modeNorm === "sea" && {
           containerRates: containerRates.map((cr, idx) => ({
             containerType: cr.containerType.trim(), containerSize: cr.containerSize.trim(),
             charges: cr.charges.map((c, cIdx) => ({
               ...(c.chargeMasterId && { chargeMasterId: c.chargeMasterId }),
-              chargeName: c.chargeName.trim(), amount: parseFloat(c.amount),
-              ...(c.remarks && { remarks: c.remarks.trim() }), displayOrder: cIdx + 1,
+              chargeName: c.chargeName.trim(),
+              amount: parseFloat(c.amount),
+              ...(c.chargeDate && { chargeDate: c.chargeDate }),
+              ...(c.remarks && { remarks: c.remarks.trim() }),
+              displayOrder: cIdx + 1,
             })),
           })),
           ...(shippingLine && { shippingLine: shippingLine.trim() }),
@@ -844,9 +1058,13 @@ export default function AddFreightQuoteModal({
 
       try {
         localStorage.setItem(`agricom_last_equipment_${modeNorm}`, JSON.stringify({
-          truckType: (truckType || "").trim(), truckCapacity: (truckCapacity || "").trim(),
-          containerType: (containerType || "").trim(), containerSize: (containerSize || "").trim(),
-          wagonType: (wagonType || "").trim(), wagonCapacity: (wagonCapacity || "").trim(), shippingLine: (shippingLine || "").trim(),
+          truckType: (truckType || "").trim(),
+          truckCapacity: normalizeTruckCapacity(truckCapacity),
+          containerType: (containerType || "").trim(),
+          containerSize: (containerSize || "").trim(),
+          wagonType: (wagonType || "").trim(),
+          wagonCapacity: (wagonCapacity || "").trim(),
+          shippingLine: (shippingLine || "").trim(),
         }));
       } catch (err) { }
 
@@ -1106,12 +1324,19 @@ export default function AddFreightQuoteModal({
 
                   {modeNorm === "road" && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      {renderEquipmentSelectField("Truck Type", truckType, (val) => {
-                        setTruckType(val);
-                        if (val && !truckCapacity) setTruckCapacity((equipmentOptionsMap.TRUCK_CAPACITY || ROAD_TRUCK_CAPACITIES)[0] || "10 MT");
-                      }, "TRUCK_TYPE", ROAD_TRUCK_TYPES, "Select Truck Type"
+                      {renderEquipmentSelectField(
+                        "Truck Type",
+                        truckType,
+                        (val) => {
+                          setTruckType(val);
+                          if (val && !truckCapacity) setTruckCapacity((equipmentOptionsMap.TRUCK_CAPACITY || ROAD_TRUCK_CAPACITIES)[0] || "10 MT");
+                        },
+                        "TRUCK_TYPE",
+                        equipmentOptionsMap.TRUCK_TYPE || [],
+                        "Select Truck Type",
+                        false
                       )}
-                      {renderEquipmentSelectField("Truck Capacity", truckCapacity, setTruckCapacity, "TRUCK_CAPACITY", ROAD_TRUCK_CAPACITIES, "Select Truck Capacity")}
+                      {renderEquipmentSelectField("Truck Capacity", truckCapacity, setTruckCapacity, "TRUCK_CAPACITY", ROAD_TRUCK_CAPACITIES, "Select Truck Capacity", true)}
                     </div>
                   )}
 
@@ -1199,10 +1424,11 @@ export default function AddFreightQuoteModal({
                             <table className="w-full text-left text-sm">
                               <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                                 <tr>
-                                  <th className="px-4 py-3 w-[50%]">Charge Type *</th>
-                                  <th className="px-4 py-3 w-[25%] text-right">Amount ({currency}) *</th>
-                                  <th className="px-4 py-3">Remarks</th>
-                                  {!isReadOnly && <th className="px-4 py-3 text-center w-[50px]"></th>}
+                                  <th className="px-3 py-3 w-[36%]">Charge Type *</th>
+                                  <th className="px-3 py-3 w-[22%] text-right">Amount ({currency}) *</th>
+                                  <th className="px-3 py-3 w-[18%]">Date</th>
+                                  <th className="px-3 py-3">Remarks</th>
+                                  {!isReadOnly && <th className="px-3 py-3 text-center w-[40px]"></th>}
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-100">
@@ -1226,6 +1452,15 @@ export default function AddFreightQuoteModal({
                                         onChange={(e) => handleContainerRateChargeChange(rateIdx, chargeIdx, "amount", e.target.value)}
                                         disabled={isReadOnly} placeholder="0.00"
                                         className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-right tabular-nums focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                                      />
+                                    </td>
+                                    <td className="p-2">
+                                      <input
+                                        type="date"
+                                        value={row.chargeDate ? row.chargeDate.split("T")[0] : ""}
+                                        onChange={(e) => handleContainerRateChargeChange(rateIdx, chargeIdx, "chargeDate", e.target.value)}
+                                        disabled={isReadOnly}
+                                        className="w-full px-2.5 py-2 border border-slate-200 rounded-md text-xs sm:text-sm text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
                                       />
                                     </td>
                                     <td className="p-2">
@@ -1311,8 +1546,9 @@ export default function AddFreightQuoteModal({
                       <table className="w-full text-left text-sm">
                         <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
                           <tr>
-                            <th className="px-4 py-3 w-[45%]">Charge Type *</th>
+                            <th className="px-4 py-3 w-[35%]">Charge Type *</th>
                             <th className="px-4 py-3 w-[20%] text-right">Amount ({currency}) *</th>
+                            <th className="px-4 py-3 w-[18%]">Date</th>
                             <th className="px-4 py-3">Remarks</th>
                             {!isReadOnly && <th className="px-4 py-3 text-center w-[100px]">Actions</th>}
                           </tr>
@@ -1338,6 +1574,15 @@ export default function AddFreightQuoteModal({
                                   onChange={(e) => handleChargeRowChange(idx, "amount", e.target.value)}
                                   disabled={isReadOnly} placeholder="0.00"
                                   className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm text-right tabular-nums focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                                />
+                              </td>
+                              <td className="p-3">
+                                <input
+                                  type="date"
+                                  value={row.chargeDate ? row.chargeDate.split("T")[0] : ""}
+                                  onChange={(e) => handleChargeRowChange(idx, "chargeDate", e.target.value)}
+                                  disabled={isReadOnly}
+                                  className="w-full px-2.5 py-2 border border-slate-200 rounded-md text-xs sm:text-sm text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
                                 />
                               </td>
                               <td className="p-3">
@@ -1418,8 +1663,48 @@ export default function AddFreightQuoteModal({
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Payment Terms</label>
-                <input type="text" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} disabled={isReadOnly} placeholder="e.g. 30 Days Credit" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white shadow-sm disabled:bg-slate-50" />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Payment Terms
+                  </label>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewPaymentTermName(paymentTermInputSearch.trim());
+                        setNewPaymentTermError("");
+                        setIsAddPaymentTermModalOpen(true);
+                      }}
+                      className="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="h-3 w-3" /> Add Custom
+                    </button>
+                  )}
+                </div>
+                {paymentTermsLoading && paymentTermsList.length === 0 ? (
+                  <div className="px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-400 text-sm flex items-center gap-2">
+                    <div className="h-4 w-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                    <span>Loading Payment Terms...</span>
+                  </div>
+                ) : (
+                  <Select
+                    options={paymentTermOptions}
+                    value={selectedPaymentTermOption}
+                    onChange={handlePaymentTermChange}
+                    onInputChange={(val, { action }) => {
+                      if (action === "input-change") setPaymentTermInputSearch(val);
+                    }}
+                    isDisabled={isReadOnly}
+                    styles={reactSelectStyles}
+                    placeholder="Select or Search Payment Term..."
+                    isClearable
+                    filterOption={filterPaymentTermOption}
+                    components={{ Option: PaymentTermOption }}
+                    menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                    menuPosition="fixed"
+                    noOptionsMessage={() => "No payment terms found"}
+                  />
+                )}
               </div>
             </div>
 
@@ -1493,6 +1778,83 @@ export default function AddFreightQuoteModal({
           </div>
         </form>
       </div>
+
+      {/* Add Custom Payment Term Modal */}
+      {isAddPaymentTermModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-sm p-6 space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-indigo-600" /> New Payment Term
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddPaymentTermModalOpen(false);
+                  setNewPaymentTermName("");
+                  setNewPaymentTermError("");
+                }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {newPaymentTermError && (
+              <div className="p-3 bg-red-50 border border-red-100 rounded-lg text-red-700 text-sm font-medium flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-500 mt-0.5" />
+                <span>{newPaymentTermError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveNewPaymentTerm} className="space-y-4 text-sm">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-2">
+                  Payment Term <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newPaymentTermName}
+                  onChange={(e) => {
+                    setNewPaymentTermName(e.target.value);
+                    if (newPaymentTermError) setNewPaymentTermError("");
+                  }}
+                  placeholder="e.g. 30 Days Credit, LC at Sight"
+                  autoFocus
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddPaymentTermModalOpen(false);
+                    setNewPaymentTermName("");
+                    setNewPaymentTermError("");
+                  }}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={newPaymentTermLoading}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-70 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  {newPaymentTermLoading ? (
+                    <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4" />
+                  )}
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Add Custom Charge Modal */}
       {isAddChargeModalOpen && (
