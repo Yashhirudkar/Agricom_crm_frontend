@@ -16,9 +16,12 @@ import {
   Calendar,
   Layers,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { exportInvoicesApi } from "../services/exportInvoicesApi";
+import banksApi from "@/api/banksApi";
 import { formatAmountInWords } from "../utils/amountInWords";
+import { createBankDetailsSnapshot } from "../utils/bankDetailsFormatter";
 import ExportInvoicePreviewModal from "./ExportInvoicePreviewModal";
 
 const resolveBackendUrl = (url) => {
@@ -133,40 +136,329 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
     remarks: initialData?.remarks || "",
   });
 
-  // Bank Options
-  const [availableBanks, setAvailableBanks] = useState(
-    initialData?.availableBanks || []
-  );
-
-  // Preview Modal
+  // Preview Modal & State
   const [showPreview, setShowPreview] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [newTruckInput, setNewTruckInput] = useState("");
 
-  // Load Bank Options if not passed
+  // Bank Management State (Domestic -> Currency -> Auto Nostro)
+  const [domesticBanks, setDomesticBanks] = useState([]);
+  const [selectedDomesticBankId, setSelectedDomesticBankId] = useState(
+    initialData?.bankDetails?.selectedDomesticBankId ||
+    initialData?.bankDetails?.domesticBank?.id ||
+    ""
+  );
+  const [selectedBankCurrency, setSelectedBankCurrency] = useState(
+    initialData?.bankDetails?.selectedCurrency ||
+    initialData?.currency ||
+    "USD"
+  );
+  const [loadingBanks, setLoadingBanks] = useState(true);
+
+  // Load Active Domestic Banks once on mount
   useEffect(() => {
     let isMounted = true;
-    if (availableBanks.length === 0) {
-      exportInvoicesApi
-        .getBankOptions(formData.currency)
-        .then((res) => {
-          if (!isMounted) return;
-          setAvailableBanks(res.data || []);
-          if (!formData.bankDetails && res.data?.length > 0) {
-            const first = res.data[0];
+    banksApi
+      .getDomesticBanks({ status: "Active" })
+      .then((res) => {
+        if (!isMounted) return;
+        const list = res.data?.rows || res.data || [];
+        setDomesticBanks(list);
+
+        if (list.length === 0) {
+          setLoadingBanks(false);
+          return;
+        }
+
+        // If editing an existing invoice and bank snapshot already exists
+        if (isEdit && (initialData?.bankDetails || initialData?.bankKey)) {
+          const existingBankId =
+            initialData?.bankDetails?.selectedDomesticBankId ||
+            initialData?.bankDetails?.domesticBank?.id;
+
+          let matchedBank = null;
+          if (existingBankId) {
+            matchedBank = list.find((b) => b.id === Number(existingBankId));
+          }
+          if (!matchedBank && initialData?.bankDetails?.bankName) {
+            matchedBank = list.find(
+              (b) =>
+                b.bankName.toLowerCase().trim() ===
+                initialData.bankDetails.bankName.toLowerCase().trim()
+            );
+          }
+          if (!matchedBank) {
+            matchedBank = list[0];
+          }
+
+          const currentBankId = matchedBank.id;
+          const curr = (
+            initialData?.bankDetails?.selectedCurrency ||
+            initialData?.currency ||
+            matchedBank.currency ||
+            "INR"
+          ).toUpperCase();
+
+          setSelectedDomesticBankId(currentBankId);
+          setSelectedBankCurrency(curr);
+
+          // Preserve existing immutable formatted text on edit
+          if (initialData?.bankDetails) {
+            const preservedFormattedText =
+              initialData.bankDetails.formattedText ||
+              initialData.bankDetails.bankDetailsText ||
+              initialData.bankDetails.additionalDetails;
+
+            const nostroList =
+              matchedBank.linkedNostroAccounts ||
+              matchedBank.nostroAccounts ||
+              [];
+            const matchedNostro = nostroList.find(
+              (n) =>
+                n.currency?.toUpperCase() === curr && n.status === "Active"
+            );
+
+            const snapshot = createBankDetailsSnapshot({
+              domesticBank: matchedBank,
+              nostroBank: matchedNostro,
+              currency: curr,
+              beneficiaryName:
+                initialData.bankDetails.accountName ||
+                initialData.sellerDetails?.name ||
+                formData.sellerDetails?.name ||
+                matchedBank.company?.legalName ||
+                matchedBank.company?.name,
+              customFormattedText: preservedFormattedText,
+            });
+
             setFormData((prev) => ({
               ...prev,
-              bankKey: first.key,
-              bankDetails: first.details,
+              bankKey: snapshot.key,
+              bankDetails: snapshot,
             }));
           }
-        })
-        .catch((err) => console.error("Failed to load bank options", err));
-    }
+        } else {
+          // Create Mode: pick default domestic bank and resolve
+          const defaultBank = list[0];
+          const defaultBankId = defaultBank.id;
+          setSelectedDomesticBankId(defaultBankId);
+
+          const nostroList = (
+            defaultBank.linkedNostroAccounts ||
+            defaultBank.nostroAccounts ||
+            []
+          ).filter((n) => n.status === "Active");
+
+          const bankCurrencies = Array.from(
+            new Set([
+              (defaultBank.currency || "INR").toUpperCase(),
+              ...nostroList.map((n) => n.currency.toUpperCase()),
+            ])
+          );
+
+          const targetCurrency = (formData.currency || "USD").toUpperCase();
+          const chosenCurrency = bankCurrencies.includes(targetCurrency)
+            ? targetCurrency
+            : bankCurrencies[0] || "INR";
+
+          setSelectedBankCurrency(chosenCurrency);
+
+          const matchedNostro = nostroList.find(
+            (n) => n.currency.toUpperCase() === chosenCurrency
+          );
+          const snapshot = createBankDetailsSnapshot({
+            domesticBank: defaultBank,
+            nostroBank: matchedNostro,
+            currency: chosenCurrency,
+            beneficiaryName:
+              formData.sellerDetails?.name ||
+              defaultBank.company?.legalName ||
+              defaultBank.company?.name,
+          });
+
+          setFormData((prev) => ({
+            ...prev,
+            currency: chosenCurrency,
+            bankKey: snapshot.key,
+            bankDetails: snapshot,
+            amountInWords: formatAmountInWords(prev.amountChargeable, chosenCurrency),
+          }));
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load domestic banks", err);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingBanks(false);
+      });
+
     return () => {
       isMounted = false;
     };
-  }, [formData.currency, availableBanks.length, formData.bankDetails]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Currently selected Domestic Bank object
+  const currentDomesticBank = React.useMemo(() => {
+    return domesticBanks.find((b) => b.id === Number(selectedDomesticBankId)) || null;
+  }, [domesticBanks, selectedDomesticBankId]);
+
+  // Derived available currencies for current domestic bank
+  const availableCurrencies = React.useMemo(() => {
+    if (!currentDomesticBank) return [];
+    const nostros = (
+      currentDomesticBank.linkedNostroAccounts ||
+      currentDomesticBank.nostroAccounts ||
+      []
+    ).filter((n) => n.status === "Active");
+
+    return Array.from(
+      new Set([
+        (currentDomesticBank.currency || "INR").toUpperCase(),
+        ...nostros.map((n) => n.currency.toUpperCase()),
+      ])
+    );
+  }, [currentDomesticBank]);
+
+  // Derived linked Nostro for currentDomesticBank + selectedBankCurrency
+  const currentResolvedNostro = React.useMemo(() => {
+    if (!currentDomesticBank) return null;
+    const nostros = (
+      currentDomesticBank.linkedNostroAccounts ||
+      currentDomesticBank.nostroAccounts ||
+      []
+    ).filter((n) => n.status === "Active");
+
+    return (
+      nostros.find(
+        (n) =>
+          n.currency?.toUpperCase() ===
+          (selectedBankCurrency || "").toUpperCase()
+      ) || null
+    );
+  }, [currentDomesticBank, selectedBankCurrency]);
+
+  // Handler: When Domestic Bank changes
+  const handleDomesticBankChange = (newBankId) => {
+    const bank = domesticBanks.find((b) => b.id === Number(newBankId));
+    if (!bank) return;
+
+    setSelectedDomesticBankId(bank.id);
+
+    // Derive available currencies for newly selected domestic bank
+    const nostros = (
+      bank.linkedNostroAccounts ||
+      bank.nostroAccounts ||
+      []
+    ).filter((n) => n.status === "Active");
+
+    const bankCurrencies = Array.from(
+      new Set([
+        (bank.currency || "INR").toUpperCase(),
+        ...nostros.map((n) => n.currency.toUpperCase()),
+      ])
+    );
+
+    // If previous currency is valid for this new bank, retain it; otherwise default to first available
+    const newCurrency = bankCurrencies.includes(selectedBankCurrency)
+      ? selectedBankCurrency
+      : bankCurrencies[0] || "INR";
+
+    setSelectedBankCurrency(newCurrency);
+
+    // Auto-resolve linked Nostro for (bank + newCurrency)
+    const linkedNostro = nostros.find(
+      (n) => n.currency.toUpperCase() === newCurrency
+    );
+
+    const snapshot = createBankDetailsSnapshot({
+      domesticBank: bank,
+      nostroBank: linkedNostro,
+      currency: newCurrency,
+      beneficiaryName:
+        formData.sellerDetails?.name ||
+        bank.company?.legalName ||
+        bank.company?.name,
+    });
+
+    setFormData((prev) => ({
+      ...prev,
+      currency: newCurrency,
+      bankKey: snapshot.key,
+      bankDetails: snapshot,
+      amountInWords: formatAmountInWords(prev.amountChargeable, newCurrency),
+    }));
+  };
+
+  // Handler: When Currency changes
+  const handleBankCurrencyChange = (newCurrency) => {
+    const curr = (newCurrency || "").toUpperCase().trim();
+    if (!curr) return;
+
+    setSelectedBankCurrency(curr);
+
+    const bank = currentDomesticBank;
+    if (!bank) return;
+
+    const nostros = (
+      bank.linkedNostroAccounts ||
+      bank.nostroAccounts ||
+      []
+    ).filter((n) => n.status === "Active");
+
+    const linkedNostro = nostros.find((n) => n.currency.toUpperCase() === curr);
+
+    const snapshot = createBankDetailsSnapshot({
+      domesticBank: bank,
+      nostroBank: linkedNostro,
+      currency: curr,
+      beneficiaryName:
+        formData.sellerDetails?.name ||
+        bank.company?.legalName ||
+        bank.company?.name,
+    });
+
+    setFormData((prev) => ({
+      ...prev,
+      currency: curr,
+      bankKey: snapshot.key,
+      bankDetails: snapshot,
+      amountInWords: formatAmountInWords(prev.amountChargeable, curr),
+    }));
+  };
+
+  // Handler: User modifies multiline bank text in textarea
+  const handleCustomBankTextChange = (text) => {
+    setFormData((prev) => ({
+      ...prev,
+      bankDetails: {
+        ...(prev.bankDetails || {}),
+        bankDetailsText: text,
+        formattedText: text,
+        additionalDetails: text,
+      },
+    }));
+  };
+
+  // Handler: Reset custom bank text back to standard template
+  const handleResetBankText = () => {
+    if (!currentDomesticBank) return;
+    const snapshot = createBankDetailsSnapshot({
+      domesticBank: currentDomesticBank,
+      nostroBank: currentResolvedNostro,
+      currency: selectedBankCurrency,
+      beneficiaryName:
+        formData.sellerDetails?.name ||
+        currentDomesticBank.company?.legalName ||
+        currentDomesticBank.company?.name,
+    });
+
+    setFormData((prev) => ({
+      ...prev,
+      bankDetails: snapshot,
+    }));
+    toast.success("Bank details text reset to standard format");
+  };
 
   // Recalculate totals and amount in words whenever goodsItems change
   const handleItemChange = (index, field, value) => {
@@ -272,19 +564,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
     }));
   };
 
-  // Bank dropdown selection
-  const handleSelectBank = (key) => {
-    const bankOpt = availableBanks.find(
-      (b) => b.key.toLowerCase() === key.toLowerCase()
-    );
-    if (bankOpt) {
-      setFormData((prev) => ({
-        ...prev,
-        bankKey: bankOpt.key,
-        bankDetails: bankOpt.details,
-      }));
-    }
-  };
+
 
   // Sequence Number updates -> dynamically format preview
   const handleSequenceChange = async (seqVal) => {
@@ -361,6 +641,16 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
 
     if (formData.goodsItems.length === 0) {
       toast.error("Please add at least one goods item");
+      return;
+    }
+
+    if (!selectedDomesticBankId && !formData.bankDetails?.bankName && !formData.bankDetails?.domesticBank?.bankName) {
+      toast.error("Domestic Bank is mandatory. Please select a bank.");
+      return;
+    }
+
+    if (!formData.currency) {
+      toast.error("Currency is mandatory. Please select a currency.");
       return;
     }
 
@@ -535,18 +825,17 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </p>
             </div>
 
-            {/* Invoice Number */}
+            {/* Invoice Number (System Generated - Read-only) */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">
                 Generated Invoice Number *
               </label>
               <input
                 type="text"
-                value={formData.invoiceNumber}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, invoiceNumber: e.target.value }))
-                }
-                className="w-full px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50/30 text-xs font-mono font-bold text-blue-900 focus:ring-1 focus:ring-blue-500 uppercase"
+                value={formData.invoiceNumber || ""}
+                readOnly
+                title="System-generated invoice number (auto-derived from running sequence)"
+                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 bg-gray-100/90 text-xs font-mono font-bold text-gray-700 cursor-not-allowed uppercase select-all"
               />
             </div>
 
@@ -1185,107 +1474,180 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
         <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-gray-100 pb-2">
             <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-blue-600" />
-                Bank Details (Modular Master Ready)
-              </h2>
-              <p className="text-[10px] text-gray-400 mt-0.5">
-                Select dummy bank options (EURO, USD, INR). Once Bank Master is created, it will bind seamlessly here without changing invoice code.
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-blue-600" />
+                  Bank Details (International Banking)
+                </h2>
+                {currentResolvedNostro ? (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
+                    Auto-resolved Nostro ({selectedBankCurrency})
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                    Beneficiary Only ({selectedBankCurrency})
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] text-gray-500 mt-0.5">
+                Domestic Bank &amp; Currency selection with automatic Nostro routing and immutable snapshot.
               </p>
             </div>
+          </div>
 
-            <div className="w-56">
+          {/* Cascading Selectors: Domestic Bank * and Currency * */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50/50 p-3 rounded-xl border border-gray-200/60">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Domestic Bank <span className="text-red-500">*</span>
+              </label>
               <select
-                value={formData.bankKey || ""}
-                onChange={(e) => handleSelectBank(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-lg border border-blue-300 bg-blue-50/20 text-xs font-bold text-blue-900 focus:ring-1 focus:ring-blue-500"
+                value={selectedDomesticBankId || ""}
+                onChange={(e) => handleDomesticBankChange(Number(e.target.value))}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-900 focus:ring-1 focus:ring-blue-500"
               >
-                <option value="">Select Bank Account...</option>
-                {availableBanks.map((b) => (
-                  <option key={b.key} value={b.key}>
-                    {b.name} ({b.currency})
+                <option value="">
+                  {loadingBanks ? "Loading domestic banks..." : "Select Domestic Bank..."}
+                </option>
+                {domesticBanks.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.bankName} ({b.currency || "INR"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Currency <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedBankCurrency || ""}
+                onChange={(e) => handleBankCurrencyChange(e.target.value)}
+                disabled={!selectedDomesticBankId || availableCurrencies.length === 0}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-900 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
+              >
+                <option value="">Select Currency...</option>
+                {availableCurrencies.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Current Bank Details Display */}
-          {formData.bankDetails && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3 bg-gray-50/70 rounded-xl text-xs border border-gray-200/70">
-              <div>
-                <span className="font-semibold text-gray-500 block text-[10px] uppercase">
-                  Bank Name:
-                </span>
-                <span className="font-bold text-gray-900">
-                  {formData.bankDetails.bankName}
-                </span>
+          {/* Current Bank Details Display Card */}
+          {formData.bankDetails ? (
+            <div className="space-y-3">
+              {/* Nostro details summary if resolved */}
+              {currentResolvedNostro && (
+                <div className="p-3 bg-blue-50/50 rounded-xl text-xs border border-blue-200/60">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-blue-900 mb-2 flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
+                    Auto-Linked Nostro Bank ({selectedBankCurrency})
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                    <div>
+                      <span className="font-semibold text-gray-500 block text-[10px] uppercase">Bank:</span>
+                      <span className="font-bold text-gray-900">{currentResolvedNostro.bankName}</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-gray-500 block text-[10px] uppercase">Account Name:</span>
+                      <span className="font-medium text-gray-900">{currentResolvedNostro.accountName}</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-gray-500 block text-[10px] uppercase">Account No / IBAN:</span>
+                      <span className="font-mono font-bold text-blue-900">{currentResolvedNostro.accountNumber}</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-gray-500 block text-[10px] uppercase">SWIFT Code:</span>
+                      <span className="font-mono font-bold text-gray-900">{currentResolvedNostro.swiftCode}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Beneficiary Domestic Bank Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3 bg-gray-50/70 rounded-xl text-xs border border-gray-200/70">
+                <div>
+                  <span className="font-semibold text-gray-500 block text-[10px] uppercase">
+                    Beneficiary Bank:
+                  </span>
+                  <span className="font-bold text-gray-900">
+                    {formData.bankDetails.bankName || formData.bankDetails.domesticBank?.bankName || "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-500 block text-[10px] uppercase">
+                    Beneficiary Name:
+                  </span>
+                  <span className="font-medium text-gray-900">
+                    {formData.bankDetails.accountName || formData.bankDetails.beneficiaryName || "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-500 block text-[10px] uppercase">
+                    Account Number:
+                  </span>
+                  <span className="font-mono font-bold text-blue-900">
+                    {formData.bankDetails.accountNumber || formData.bankDetails.domesticBank?.accountNumber || "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-semibold text-gray-500 block text-[10px] uppercase">
+                    SWIFT / BIC:
+                  </span>
+                  <span className="font-mono font-bold text-gray-900">
+                    {formData.bankDetails.swiftCode || formData.bankDetails.domesticBank?.swiftCode || "—"}
+                  </span>
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="font-semibold text-gray-500 block text-[10px] uppercase">
+                    Address / Branch:
+                  </span>
+                  <span className="text-gray-900">
+                    {formData.bankDetails.branch || formData.bankDetails.bankAddress || formData.bankDetails.domesticBank?.bankAddress || "—"}
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="font-semibold text-gray-500 block text-[10px] uppercase">
-                  Account Name:
-                </span>
-                <span className="font-medium text-gray-900">
-                  {formData.bankDetails.accountName || "—"}
-                </span>
+            </div>
+          ) : (
+            <div className="p-3.5 bg-amber-50/90 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+              <div className="flex items-center gap-2 font-bold text-amber-800">
+                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                <span>No active domestic bank selected</span>
               </div>
-              <div>
-                <span className="font-semibold text-gray-500 block text-[10px] uppercase">
-                  Account Number:
-                </span>
-                <span className="font-mono font-bold text-blue-900">
-                  {formData.bankDetails.accountNumber}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold text-gray-500 block text-[10px] uppercase">
-                  IBAN:
-                </span>
-                <span className="font-mono font-bold text-gray-900">
-                  {formData.bankDetails.iban || "—"}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold text-gray-500 block text-[10px] uppercase">
-                  SWIFT / BIC:
-                </span>
-                <span className="font-mono font-bold text-gray-900">
-                  {formData.bankDetails.swiftCode || "—"}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold text-gray-500 block text-[10px] uppercase">
-                  Branch / Location:
-                </span>
-                <span className="text-gray-900">
-                  {formData.bankDetails.branch || "—"}
-                </span>
-              </div>
+              <p className="text-[11px] text-amber-700 pl-6">
+                Please select an active domestic bank from the dropdown above.
+              </p>
             </div>
           )}
 
           {/* Editable Formatted Bank Text (Prints in goods table on invoice) */}
           {formData.bankDetails && (
-            <div className="pt-2">
-              <label className="block text-xs font-semibold text-gray-700 mb-1">
-                Bank Details Multi-Line Text (Prints directly in the Goods Table area on invoice)
-              </label>
+            <div className="pt-2 space-y-1">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-gray-700">
+                  Bank Details Multi-Line Text (Prints directly in Goods Table area on invoice)
+                </label>
+                <button
+                  type="button"
+                  onClick={handleResetBankText}
+                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                >
+                  Reset to Standard Format
+                </button>
+              </div>
               <textarea
-                rows={6}
+                rows={8}
                 value={
                   formData.bankDetails.formattedText ||
+                  formData.bankDetails.bankDetailsText ||
                   formData.bankDetails.additionalDetails ||
                   ""
                 }
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    bankDetails: {
-                      ...prev.bankDetails,
-                      formattedText: e.target.value,
-                    },
-                  }))
-                }
+                onChange={(e) => handleCustomBankTextChange(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 text-xs font-mono font-medium text-gray-900 bg-white"
                 placeholder="Enter or customize bank details..."
               />

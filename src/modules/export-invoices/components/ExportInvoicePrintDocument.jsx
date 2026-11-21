@@ -120,41 +120,114 @@ export default function ExportInvoicePrintDocument({
       ? trucks.join(" / ")
       : invoice.truckNo || invoice.truckNumber || "";
 
-  // Dynamic Bank Details generator
+  // Dynamic Bank Details generator strictly from Database & Snapshot
   const renderBankDetails = () => {
-    if (bank.formattedText || bank.additionalDetails) {
-      return bank.formattedText || bank.additionalDetails;
-    }
-    if (bank.bankName || bank.accountNumber || bank.swiftCode) {
-      const lines = [];
-      lines.push(bank.header || `BANK DETAILS (${currencyLabel})`);
-      if (bank.nostroBankName) lines.push(bank.nostroBankName);
-      if (bank.nostroAccountNo) lines.push(`ACCOUNT NO: ${bank.nostroAccountNo}`);
-      if (bank.nostroSwiftCode) lines.push(`SWIFT CODE: ${bank.nostroSwiftCode}`);
-      lines.push(
-        `Beneficiary Name: ${bank.beneficiaryName || seller.name || "AGRICOM IMPEX"}`
-      );
-      if (bank.bankName) lines.push(`BANK NAME : ${bank.bankName}`);
-      if (bank.accountNumber) lines.push(`ACCOUNT NO: ${bank.accountNumber}`);
-      if (bank.swiftCode) lines.push(`SWIFT CODE: ${bank.swiftCode}`);
-      if (bank.branchAddress || bank.address) {
-        lines.push(`ADDRESS: ${bank.branchAddress || bank.address}`);
+    // 1. Resolve structured bank details from snapshot or top-level bank object
+    const domestic =
+      bank.domesticBank ||
+      (bank.domesticBankName || bank.bankName
+        ? {
+          bankName: bank.domesticBankName || bank.bankName,
+          accountNumber: bank.domesticAccountNumber || bank.accountNumber,
+          swiftCode: bank.domesticSwiftCode || bank.swiftCode,
+          bankAddress:
+            bank.domesticBankAddress ||
+            bank.branchAddress ||
+            bank.branch ||
+            bank.address ||
+            "",
+          accountName:
+            bank.accountName ||
+            bank.beneficiaryName ||
+            seller.legalName ||
+            seller.name ||
+            "AGRICOM IMPEX PVT LTD",
+        }
+        : null);
+
+    const nostro =
+      bank.nostroBank ||
+      (bank.nostroBankName
+        ? {
+          bankName: bank.nostroBankName,
+          accountName: bank.nostroAccountName,
+          accountNumber: bank.nostroAccountNumber || bank.nostroAccountNo,
+          swiftCode: bank.nostroSwiftCode,
+          bankAddress: bank.nostroBankAddress || bank.nostroAddress,
+        }
+        : null);
+
+    const benef =
+      domestic?.accountName ||
+      bank.accountName ||
+      bank.beneficiaryName ||
+      seller.legalName ||
+      seller.name ||
+      "AGRICOM IMPEX PVT LTD";
+
+    const formatAddressInlineTwoLines = (addr) => {
+      if (!addr || !String(addr).trim()) return "";
+      const parts = String(addr)
+        .split(/\r?\n/)
+        .map((l) => l.trim().replace(/,+$/, ""))
+        .filter(Boolean);
+
+      if (parts.length <= 2) {
+        return `ADDRESS : ${parts.join(", ")}`;
       }
-      if (bank.abaRouting) lines.push(`ABA / Routing: ${bank.abaRouting}`);
+
+      // Split evenly into 2 lines so it doesn't overflow the table boundary
+      const mid = Math.ceil(parts.length / 2);
+      const line1 = parts.slice(0, mid).join(", ") + ",";
+      const line2 = parts.slice(mid).join(", ");
+      return `ADDRESS : ${line1}\n          ${line2}`;
+    };
+
+    const domesticAddrBlock = formatAddressInlineTwoLines(domestic?.bankAddress);
+
+    // Case 1: Linked Nostro exists -> Tight continuous block with NO gap
+    if (nostro && (nostro.bankName || nostro.accountNumber)) {
+      const lines = [
+        "NOSTRO BANK DETAILS ",
+        nostro.bankName || "",
+        `ACCOUNT NO. : ${nostro.accountNumber || ""}`,
+        `SWIFT CODE  : ${nostro.swiftCode || ""}`,
+        `BENEFICIARY NAME : ${benef}`,
+        `BANK NAME        : ${domestic?.bankName || ""}`,
+        `ACCOUNT NO.      : ${domestic?.accountNumber || ""}`,
+        `SWIFT CODE       : ${domestic?.swiftCode || ""}`,
+      ];
+
+      if (domesticAddrBlock) {
+        lines.push(domesticAddrBlock);
+      }
+
       return lines.join("\n");
     }
 
-    return [
-      "NOSTRO BANK DETAILS",
-      "ICICI BANK UK PLC GERMANY BRANCH",
-      "ACCOUNT NO: 00800484637",
-      "SWIFT CODE: ICICDEFFXXX",
-      `Beneficiary Name: ${seller.name || "AGRICOM IMPEX"}`,
-      "BANK NAME : ICICI BANK LTD",
-      "ACCOUNT NO: 624205012998",
-      "SWIFT CODE: ICICINBBCTS",
-      "ADDRESS: Akarshan Busiplex 26, Central Bazar Road, Ramdaspeth, Nagpur-440010",
-    ].join("\n");
+    // Case 2: No Nostro -> Domestic Beneficiary only with NO gap
+    if (domestic && (domestic.bankName || domestic.accountNumber)) {
+      const lines = [
+        "BANK DETAILS :",
+        `BENEFICIARY NAME : ${benef}`,
+        `BANK NAME        : ${domestic?.bankName || ""}`,
+        `ACCOUNT NO.      : ${domestic?.accountNumber || ""}`,
+        `SWIFT CODE       : ${domestic?.swiftCode || ""}`,
+      ];
+
+      if (domesticAddrBlock) {
+        lines.push(domesticAddrBlock);
+      }
+
+      return lines.join("\n");
+    }
+
+    // Fallback: If legacy formattedText or custom text exists
+    if (bank.formattedText || bank.bankDetailsText || bank.additionalDetails) {
+      return bank.formattedText || bank.bankDetailsText || bank.additionalDetails;
+    }
+
+    return "";
   };
 
   // Format Amount Chargeable (matches "EURO 14300" without decimals if whole)

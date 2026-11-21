@@ -75,7 +75,6 @@ const SEA_DOCUMENTS = [
   "Custom Declaration",
   "Set of Loading Photos",
   "Loading Photos",
-  "Supplier's Contract & Invoice",
   "Invoice & Packing List",
   "Insurance Certificate",
   "COA Certificate",
@@ -135,6 +134,11 @@ const detectMode = (modeStr) => {
   if (clean.includes("WAGON") || clean.includes("RAIL")) return "Wagon";
   if (clean.includes("AIR")) return "Truck";
   return "Sea";
+};
+
+const hideLeadingZeros = (value) => {
+  if (value === null || value === undefined || value === "") return "";
+  return String(value).replace(/^0+(?=\d)/, "");
 };
 
 const isContainerTransportMode = (mode) =>
@@ -1865,7 +1869,7 @@ export default function ShipmentStuffingExecutionModal({
                       type="text"
                       inputMode="decimal"
                       placeholder="000.000"
-                      value={loadingInfo.actualLoadingWeight}
+                      value={hideLeadingZeros(loadingInfo.actualLoadingWeight)}
                       onChange={(e) => handleMtWeightChange("actualLoadingWeight", e)}
                       onFocus={moveMtWeightCursorToEnd}
                       onClick={moveMtWeightCursorToEnd}
@@ -1881,7 +1885,7 @@ export default function ShipmentStuffingExecutionModal({
                       type="text"
                       inputMode="decimal"
                       placeholder="000.000"
-                      value={loadingInfo.grossWeight}
+                      value={hideLeadingZeros(loadingInfo.grossWeight)}
                       onChange={(e) => handleMtWeightChange("grossWeight", e)}
                       onFocus={moveMtWeightCursorToEnd}
                       onClick={moveMtWeightCursorToEnd}
@@ -1897,7 +1901,7 @@ export default function ShipmentStuffingExecutionModal({
                       type="text"
                       inputMode="decimal"
                       placeholder="000.000"
-                      value={loadingInfo.netWeight}
+                      value={hideLeadingZeros(loadingInfo.netWeight)}
                       onChange={(e) => handleMtWeightChange("netWeight", e)}
                       onFocus={moveMtWeightCursorToEnd}
                       onClick={moveMtWeightCursorToEnd}

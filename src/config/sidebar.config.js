@@ -7,6 +7,7 @@ import {
   Clock,
   Calendar,
   DollarSign,
+  Landmark,
 } from "lucide-react";
 
 export const MENU_CONFIG = [
@@ -69,6 +70,26 @@ export const MENU_CONFIG = [
         title: "PAYROLL MANAGEMENT",
         items: [
           { id: "salary_details", name: "Salary Details", icon: DollarSign, href: "#", permission: "payroll.view" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "accounts_department",
+    title: "ACCOUNTS",
+    type: "parent_collapsible",
+    modules: [
+      {
+        id: "banking_module",
+        title: "BANKING",
+        items: [
+          {
+            id: "bank_management",
+            name: "Bank Management",
+            icon: Landmark,
+            href: "/accounts/bank-management",
+            permission: null,
+          },
         ],
       },
     ],

@@ -4447,7 +4447,6 @@ const SEA_DOCUMENTS = [
     "Custom Declaration",
     "Set of Loading Photos",
     "Loading Photos",
-    "Supplier's Contract & Invoice",
     "Invoice & Packing List",
     "Insurance Certificate",
     "COA Certificate",
@@ -4496,6 +4495,10 @@ const detectMode = (modeStr)=>{
     if (clean.includes("WAGON") || clean.includes("RAIL")) return "Wagon";
     if (clean.includes("AIR")) return "Truck";
     return "Sea";
+};
+const hideLeadingZeros = (value)=>{
+    if (value === null || value === undefined || value === "") return "";
+    return String(value).replace(/^0+(?=\d)/, "");
 };
 const isContainerTransportMode = (mode)=>/\bSEA\b|CONTAINER|OCEAN|MARITIME/i.test(String(mode || ""));
 const parseDowntimeDate = (value)=>{
@@ -4617,7 +4620,7 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                 onChange: handleFileChange
             }, void 0, false, {
                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                lineNumber: 276,
+                lineNumber: 280,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4630,13 +4633,13 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                 className: "h-3.5 w-3.5 text-emerald-600 shrink-0"
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 287,
+                                lineNumber: 291,
                                 columnNumber: 13
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$file$2d$text$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__FileText$3e$__["FileText"], {
                                 className: "h-3.5 w-3.5 text-red-500 shrink-0"
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 289,
+                                lineNumber: 293,
                                 columnNumber: 13
                             }, this),
                             att.isPredefined ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4645,7 +4648,7 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                 children: att.documentName
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 293,
+                                lineNumber: 297,
                                 columnNumber: 13
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                 type: "text",
@@ -4657,13 +4660,13 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                 className: "w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[11px] font-semibold text-slate-900 focus:border-indigo-500 outline-hidden"
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 300,
+                                lineNumber: 304,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 285,
+                        lineNumber: 289,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4676,21 +4679,21 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                         className: "h-2.5 w-2.5 text-emerald-700"
                                     }, void 0, false, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 315,
+                                        lineNumber: 319,
                                         columnNumber: 15
                                     }, this),
                                     "Uploaded"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 314,
+                                lineNumber: 318,
                                 columnNumber: 13
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 className: "text-[9px] font-bold text-red-600 bg-red-100/70 border border-red-200/60 px-1.5 py-0.2 rounded",
                                 children: "Pending"
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 319,
+                                lineNumber: 323,
                                 columnNumber: 13
                             }, this),
                             !att.isPredefined && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4705,24 +4708,24 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                     className: "h-3 w-3"
                                 }, void 0, false, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 334,
+                                    lineNumber: 338,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 325,
+                                lineNumber: 329,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 312,
+                        lineNumber: 316,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                lineNumber: 284,
+                lineNumber: 288,
                 columnNumber: 7
             }, this),
             isUploaded ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4736,7 +4739,7 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                 className: "h-3 w-3 text-emerald-600 shrink-0"
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 347,
+                                lineNumber: 351,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4744,13 +4747,13 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                 children: att.fileName
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 348,
+                                lineNumber: 352,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 343,
+                        lineNumber: 347,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4768,12 +4771,12 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                     className: "h-3 w-3"
                                 }, void 0, false, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 363,
+                                    lineNumber: 367,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 354,
+                                lineNumber: 358,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4788,12 +4791,12 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                     className: "h-3 w-3"
                                 }, void 0, false, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 374,
+                                    lineNumber: 378,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 365,
+                                lineNumber: 369,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4808,12 +4811,12 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                     className: "h-3 w-3"
                                 }, void 0, false, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 385,
+                                    lineNumber: 389,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 376,
+                                lineNumber: 380,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4828,24 +4831,24 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                     className: "h-3 w-3"
                                 }, void 0, false, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 396,
+                                    lineNumber: 400,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 387,
+                                lineNumber: 391,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 353,
+                        lineNumber: 357,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                lineNumber: 342,
+                lineNumber: 346,
                 columnNumber: 9
             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "flex items-center justify-between mt-1 pt-1 border-t border-red-100/60 text-[10px]",
@@ -4857,14 +4860,14 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                 className: "h-3 w-3 animate-spin text-red-500"
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 404,
+                                lineNumber: 408,
                                 columnNumber: 15
                             }, this),
                             "Uploading..."
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 403,
+                        lineNumber: 407,
                         columnNumber: 13
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                         className: "flex items-center gap-1 text-red-600 font-semibold group-hover:text-red-700",
@@ -4873,20 +4876,20 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                                 className: "h-3 w-3"
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 409,
+                                lineNumber: 413,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 children: "Upload Required"
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 410,
+                                lineNumber: 414,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 408,
+                        lineNumber: 412,
                         columnNumber: 13
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4894,19 +4897,19 @@ function DocumentCard({ att, index, availableDocs, onUpload, onDelete, onView, o
                         children: "Browse ↗"
                     }, void 0, false, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 413,
+                        lineNumber: 417,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                lineNumber: 401,
+                lineNumber: 405,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-        lineNumber: 264,
+        lineNumber: 268,
         columnNumber: 5
     }, this);
 }
@@ -4943,13 +4946,13 @@ function SimpleTimePicker({ label, value, onChange, required = false }) {
                                 children: "*"
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 454,
+                                lineNumber: 458,
                                 columnNumber: 32
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 453,
+                        lineNumber: 457,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4959,13 +4962,13 @@ function SimpleTimePicker({ label, value, onChange, required = false }) {
                         children: "Now"
                     }, void 0, false, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 456,
+                        lineNumber: 460,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                lineNumber: 452,
+                lineNumber: 456,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4975,7 +4978,7 @@ function SimpleTimePicker({ label, value, onChange, required = false }) {
                         className: "h-3.5 w-3.5 text-indigo-600 shrink-0"
                     }, void 0, false, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 465,
+                        lineNumber: 469,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$aria$2d$components$2f$dist$2f$private$2f$DateField$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DateInput"], {
@@ -4985,24 +4988,24 @@ function SimpleTimePicker({ label, value, onChange, required = false }) {
                                 className: "rounded px-0.5 outline-none focus:bg-indigo-100 data-[type=literal]:text-slate-400 cursor-pointer"
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 468,
+                                lineNumber: 472,
                                 columnNumber: 13
                             }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 466,
+                        lineNumber: 470,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                lineNumber: 464,
+                lineNumber: 468,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-        lineNumber: 438,
+        lineNumber: 442,
         columnNumber: 5
     }, this);
 }
@@ -5830,7 +5833,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                 onClick: onClose
             }, void 0, false, {
                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                lineNumber: 1355,
+                lineNumber: 1359,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -5852,12 +5855,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                             className: "h-5 w-5"
                                         }, void 0, false, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 1370,
+                                            lineNumber: 1374,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 1369,
+                                        lineNumber: 1373,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -5870,7 +5873,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                         children: "Shipment Stuffing Execution Form"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                        lineNumber: 1374,
+                                                        lineNumber: 1378,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5880,14 +5883,14 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                 className: "h-3.5 w-3.5 text-emerald-600"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 1378,
+                                                                lineNumber: 1382,
                                                                 columnNumber: 19
                                                             }, this),
                                                             "85% Auto-Populated"
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                        lineNumber: 1377,
+                                                        lineNumber: 1381,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5895,13 +5898,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                         children: executionStatus === "Stuffed" || stuffingStatus === "Completed" ? "Completed / Stuffed" : "Draft Execution"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                        lineNumber: 1381,
+                                                        lineNumber: 1385,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 1373,
+                                                lineNumber: 1377,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -5913,31 +5916,6 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
                                                                 className: "font-semibold text-slate-800",
                                                                 children: autoData.shipmentRef || shipment.shipmentReference || "N/A"
-                                                            }, void 0, false, {
-                                                                fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 1394,
-                                                                columnNumber: 33
-                                                            }, this)
-                                                        ]
-                                                    }, void 0, true, {
-                                                        fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                        lineNumber: 1393,
-                                                        columnNumber: 17
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                        className: "text-slate-300",
-                                                        children: "•"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                        lineNumber: 1396,
-                                                        columnNumber: 17
-                                                    }, this),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                        children: [
-                                                            "Business Ref: ",
-                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
-                                                                className: "font-semibold text-slate-800",
-                                                                children: autoData.businessRefNo || shipment.businessReference || "N/A"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                 lineNumber: 1398,
@@ -5959,37 +5937,62 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                         children: [
-                                                            "Sales Contract: ",
+                                                            "Business Ref: ",
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
                                                                 className: "font-semibold text-slate-800",
-                                                                children: autoData.salesContractNo || "N/A"
+                                                                children: autoData.businessRefNo || shipment.businessReference || "N/A"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                 lineNumber: 1402,
-                                                                columnNumber: 35
+                                                                columnNumber: 33
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                         lineNumber: 1401,
                                                         columnNumber: 17
+                                                    }, this),
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                        className: "text-slate-300",
+                                                        children: "•"
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                        lineNumber: 1404,
+                                                        columnNumber: 17
+                                                    }, this),
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                        children: [
+                                                            "Sales Contract: ",
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                                                className: "font-semibold text-slate-800",
+                                                                children: autoData.salesContractNo || "N/A"
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                lineNumber: 1406,
+                                                                columnNumber: 35
+                                                            }, this)
+                                                        ]
+                                                    }, void 0, true, {
+                                                        fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                        lineNumber: 1405,
+                                                        columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 1392,
+                                                lineNumber: 1396,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 1372,
+                                        lineNumber: 1376,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 1368,
+                                lineNumber: 1372,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6006,7 +6009,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                     className: "h-3.5 w-3.5 text-slate-500"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1417,
+                                                    lineNumber: 1421,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6014,13 +6017,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                     children: "90% Width"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1418,
+                                                    lineNumber: 1422,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 1416,
+                                            lineNumber: 1420,
                                             columnNumber: 17
                                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
                                             children: [
@@ -6028,7 +6031,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                     className: "h-3.5 w-3.5 text-slate-500"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1422,
+                                                    lineNumber: 1426,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6036,18 +6039,18 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                     children: "Full Screen"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1423,
+                                                    lineNumber: 1427,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 1421,
+                                            lineNumber: 1425,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 1409,
+                                        lineNumber: 1413,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -6059,24 +6062,24 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                             className: "h-5 w-5"
                                         }, void 0, false, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 1433,
+                                            lineNumber: 1437,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 1427,
+                                        lineNumber: 1431,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 1408,
+                                lineNumber: 1412,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 1367,
+                        lineNumber: 1371,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6092,7 +6095,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                 children: "Product & Grade:"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 1442,
+                                                lineNumber: 1446,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6105,20 +6108,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 1443,
+                                                lineNumber: 1447,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 1441,
+                                        lineNumber: 1445,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "h-7 w-px bg-slate-200 hidden sm:block"
                                     }, void 0, false, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 1445,
+                                        lineNumber: 1449,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6128,7 +6131,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                 children: "Quantity (MT):"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 1447,
+                                                lineNumber: 1451,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6141,20 +6144,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 1448,
+                                                lineNumber: 1452,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 1446,
+                                        lineNumber: 1450,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "h-7 w-px bg-slate-200 hidden sm:block"
                                     }, void 0, false, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 1450,
+                                        lineNumber: 1454,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6164,7 +6167,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                 children: "Allocated Cargo:"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 1452,
+                                                lineNumber: 1456,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6181,26 +6184,26 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                        lineNumber: 1453,
+                                                        lineNumber: 1457,
                                                         columnNumber: 92
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 1453,
+                                                lineNumber: 1457,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 1451,
+                                        lineNumber: 1455,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "h-7 w-px bg-slate-200 hidden sm:block"
                                     }, void 0, false, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 1455,
+                                        lineNumber: 1459,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6210,7 +6213,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                 children: "Incoterm & Route:"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 1457,
+                                                lineNumber: 1461,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6224,19 +6227,19 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 1458,
+                                                lineNumber: 1462,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 1456,
+                                        lineNumber: 1460,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 1440,
+                                lineNumber: 1444,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6246,18 +6249,18 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                     children: "Execution Entry Mode"
                                 }, void 0, false, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 1463,
+                                    lineNumber: 1467,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 1462,
+                                lineNumber: 1466,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 1439,
+                        lineNumber: 1443,
                         columnNumber: 9
                     }, this),
                     errorMsg && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6267,20 +6270,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                 className: "h-4 w-4 shrink-0 text-red-600"
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 1472,
+                                lineNumber: 1476,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 children: errorMsg
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 1473,
+                                lineNumber: 1477,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 1471,
+                        lineNumber: 1475,
                         columnNumber: 11
                     }, this),
                     successToast && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6290,20 +6293,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                 className: "h-4 w-4 shrink-0 text-emerald-600"
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 1478,
+                                lineNumber: 1482,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 children: successToast
                             }, void 0, false, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 1479,
+                                lineNumber: 1483,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 1477,
+                        lineNumber: 1481,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6315,7 +6318,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                     className: "h-8 w-8 animate-spin text-indigo-600"
                                 }, void 0, false, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 1487,
+                                    lineNumber: 1491,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6323,13 +6326,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                     children: "Fetching 80–90% pre-filled data across Shipment, Contract, Cargo & Freight..."
                                 }, void 0, false, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 1488,
+                                    lineNumber: 1492,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                            lineNumber: 1486,
+                            lineNumber: 1490,
                             columnNumber: 13
                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "space-y-6",
@@ -6351,12 +6354,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                 className: "h-4 w-4"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 1502,
+                                                                lineNumber: 1506,
                                                                 columnNumber: 23
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1501,
+                                                            lineNumber: 1505,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6369,7 +6372,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "1. Auto-Populated Details (Read Only)"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1506,
+                                                                            lineNumber: 1510,
                                                                             columnNumber: 25
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6377,13 +6380,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "85% Masters"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1509,
+                                                                            lineNumber: 1513,
                                                                             columnNumber: 25
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1505,
+                                                                    lineNumber: 1509,
                                                                     columnNumber: 23
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6391,19 +6394,19 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: "Shipment & Contract, Cargo Allocation, Freight & Logistics, Seller & Buyer Details"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1513,
+                                                                    lineNumber: 1517,
                                                                     columnNumber: 23
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1504,
+                                                            lineNumber: 1508,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1500,
+                                                    lineNumber: 1504,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6414,32 +6417,32 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             children: isAutoExpanded ? "Collapse Details" : "Expand to View Details"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1519,
+                                                            lineNumber: 1523,
                                                             columnNumber: 21
                                                         }, this),
                                                         isAutoExpanded ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$chevron$2d$up$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ChevronUp$3e$__["ChevronUp"], {
                                                             className: "h-4 w-4 text-slate-500"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1523,
+                                                            lineNumber: 1527,
                                                             columnNumber: 23
                                                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$chevron$2d$down$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ChevronDown$3e$__["ChevronDown"], {
                                                             className: "h-4 w-4 text-slate-500"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1525,
+                                                            lineNumber: 1529,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1518,
+                                                    lineNumber: 1522,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 1495,
+                                            lineNumber: 1499,
                                             columnNumber: 17
                                         }, this),
                                         !isAutoExpanded && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6454,7 +6457,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: "Contract:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1534,
+                                                                    lineNumber: 1538,
                                                                     columnNumber: 29
                                                                 }, this),
                                                                 " ",
@@ -6462,7 +6465,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1534,
+                                                            lineNumber: 1538,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6471,7 +6474,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: "Buyer:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1535,
+                                                                    lineNumber: 1539,
                                                                     columnNumber: 29
                                                                 }, this),
                                                                 " ",
@@ -6479,7 +6482,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1535,
+                                                            lineNumber: 1539,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6488,7 +6491,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: "Product:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1536,
+                                                                    lineNumber: 1540,
                                                                     columnNumber: 29
                                                                 }, this),
                                                                 " ",
@@ -6499,7 +6502,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1536,
+                                                            lineNumber: 1540,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6508,7 +6511,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: "Qty:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1537,
+                                                                    lineNumber: 1541,
                                                                     columnNumber: 29
                                                                 }, this),
                                                                 " ",
@@ -6517,7 +6520,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1537,
+                                                            lineNumber: 1541,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6526,7 +6529,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: "Allocated:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1538,
+                                                                    lineNumber: 1542,
                                                                     columnNumber: 29
                                                                 }, this),
                                                                 " ",
@@ -6535,7 +6538,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1538,
+                                                            lineNumber: 1542,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6544,7 +6547,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: "Route:"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1539,
+                                                                    lineNumber: 1543,
                                                                     columnNumber: 29
                                                                 }, this),
                                                                 " ",
@@ -6554,13 +6557,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1539,
+                                                            lineNumber: 1543,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1533,
+                                                    lineNumber: 1537,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -6570,13 +6573,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                     children: "View All Masters"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1541,
+                                                    lineNumber: 1545,
                                                     columnNumber: 21
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 1532,
+                                            lineNumber: 1536,
                                             columnNumber: 19
                                         }, this),
                                         isAutoExpanded && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6592,20 +6595,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     className: "h-4 w-4 text-indigo-600"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1558,
+                                                                    lineNumber: 1562,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                     children: "Shipment & Sales Contract Master"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1559,
+                                                                    lineNumber: 1563,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1557,
+                                                            lineNumber: 1561,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6618,36 +6621,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "Shipment Ref"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1563,
-                                                                            columnNumber: 27
-                                                                        }, this),
-                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                            className: "font-semibold text-slate-900",
-                                                                            children: autoData.shipmentRef || "—"
-                                                                        }, void 0, false, {
-                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1564,
-                                                                            columnNumber: 27
-                                                                        }, this)
-                                                                    ]
-                                                                }, void 0, true, {
-                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1562,
-                                                                    columnNumber: 25
-                                                                }, this),
-                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                    children: [
-                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                            className: "text-slate-400 font-medium",
-                                                                            children: "Business Ref No."
-                                                                        }, void 0, false, {
-                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1567,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.businessRefNo || "—"
+                                                                            children: autoData.shipmentRef || "—"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1568,
@@ -6663,7 +6642,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Sales Contract No."
+                                                                            children: "Business Ref No."
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1571,
@@ -6671,7 +6650,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.salesContractNo || "—"
+                                                                            children: autoData.businessRefNo || "—"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1572,
@@ -6687,7 +6666,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Purchase Contract No."
+                                                                            children: "Sales Contract No."
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1575,
@@ -6695,7 +6674,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.purchaseContractNo || "—"
+                                                                            children: autoData.salesContractNo || "—"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1576,
@@ -6711,7 +6690,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Enquiry Ref"
+                                                                            children: "Purchase Contract No."
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1579,
@@ -6719,7 +6698,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.enquiryRef || "—"
+                                                                            children: autoData.purchaseContractNo || "—"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1580,
@@ -6735,7 +6714,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Buyer"
+                                                                            children: "Enquiry Ref"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1583,
@@ -6743,7 +6722,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.buyer || "—"
+                                                                            children: autoData.enquiryRef || "—"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1584,
@@ -6759,7 +6738,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Seller"
+                                                                            children: "Buyer"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1587,
@@ -6767,7 +6746,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.seller || "—"
+                                                                            children: autoData.buyer || "—"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1588,
@@ -6783,7 +6762,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Product"
+                                                                            children: "Seller"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1591,
@@ -6791,7 +6770,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.product || "—"
+                                                                            children: autoData.seller || "—"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1592,
@@ -6807,7 +6786,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Commodity Grade"
+                                                                            children: "Product"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1595,
@@ -6815,7 +6794,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.commodityGrade || "—"
+                                                                            children: autoData.product || "—"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1596,
@@ -6831,19 +6810,16 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Quantity (MT)"
+                                                                            children: "Commodity Grade"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1599,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                            className: "font-bold text-indigo-700",
-                                                                            children: [
-                                                                                autoData.quantityMt || 0,
-                                                                                " MT"
-                                                                            ]
-                                                                        }, void 0, true, {
+                                                                            className: "font-semibold text-slate-900",
+                                                                            children: autoData.commodityGrade || "—"
+                                                                        }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1600,
                                                                             columnNumber: 27
@@ -6858,16 +6834,19 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Packing Type"
+                                                                            children: "Quantity (MT)"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1603,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                            className: "font-semibold text-slate-900",
-                                                                            children: autoData.packingType || "—"
-                                                                        }, void 0, false, {
+                                                                            className: "font-bold text-indigo-700",
+                                                                            children: [
+                                                                                autoData.quantityMt || 0,
+                                                                                " MT"
+                                                                            ]
+                                                                        }, void 0, true, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1604,
                                                                             columnNumber: 27
@@ -6882,7 +6861,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Bag Size & Total Bags"
+                                                                            children: "Packing Type"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1607,
@@ -6890,13 +6869,8 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: [
-                                                                                autoData.bagSize || "50 Kg",
-                                                                                " • ",
-                                                                                autoData.totalBags || 0,
-                                                                                " Bags"
-                                                                            ]
-                                                                        }, void 0, true, {
+                                                                            children: autoData.packingType || "—"
+                                                                        }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1608,
                                                                             columnNumber: 27
@@ -6911,7 +6885,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Incoterm"
+                                                                            children: "Bag Size & Total Bags"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1611,
@@ -6919,8 +6893,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.incoterm || autoData.shipmentType || "—"
-                                                                        }, void 0, false, {
+                                                                            children: [
+                                                                                autoData.bagSize || "50 Kg",
+                                                                                " • ",
+                                                                                autoData.totalBags || 0,
+                                                                                " Bags"
+                                                                            ]
+                                                                        }, void 0, true, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1612,
                                                                             columnNumber: 27
@@ -6935,7 +6914,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Payment Terms"
+                                                                            children: "Incoterm"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1615,
@@ -6943,7 +6922,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.paymentTerms || shipment?.salesContract?.paymentTerm?.name || "—"
+                                                                            children: autoData.incoterm || autoData.shipmentType || "—"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1616,
@@ -6959,7 +6938,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Shipment Date"
+                                                                            children: "Payment Terms"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1619,
@@ -6967,7 +6946,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.shipmentDate || "—"
+                                                                            children: autoData.paymentTerms || shipment?.salesContract?.paymentTerm?.name || "—"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1620,
@@ -6983,7 +6962,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Freight & Shipment Mode"
+                                                                            children: "Shipment Date"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1623,
@@ -6991,12 +6970,8 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: [
-                                                                                activeTransportMode || shipmentMode,
-                                                                                " • ",
-                                                                                autoData.shipmentType || "Export"
-                                                                            ]
-                                                                        }, void 0, true, {
+                                                                            children: autoData.shipmentDate || "—"
+                                                                        }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1624,
                                                                             columnNumber: 27
@@ -7011,7 +6986,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Route"
+                                                                            children: "Freight & Shipment Mode"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1627,
@@ -7019,8 +6994,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.route || "—"
-                                                                        }, void 0, false, {
+                                                                            children: [
+                                                                                activeTransportMode || shipmentMode,
+                                                                                " • ",
+                                                                                autoData.shipmentType || "Export"
+                                                                            ]
+                                                                        }, void 0, true, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1628,
                                                                             columnNumber: 27
@@ -7035,7 +7014,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Origin Country & Port"
+                                                                            children: "Route"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1631,
@@ -7043,13 +7022,8 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: [
-                                                                                autoData.originCountry || "—",
-                                                                                " (",
-                                                                                autoData.originPort || "—",
-                                                                                ")"
-                                                                            ]
-                                                                        }, void 0, true, {
+                                                                            children: autoData.route || "—"
+                                                                        }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1632,
                                                                             columnNumber: 27
@@ -7064,7 +7038,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Destination Country & Port"
+                                                                            children: "Origin Country & Port"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1635,
@@ -7073,9 +7047,9 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
                                                                             children: [
-                                                                                autoData.destinationCountry || "—",
+                                                                                autoData.originCountry || "—",
                                                                                 " (",
-                                                                                autoData.destinationPort || "—",
+                                                                                autoData.originPort || "—",
                                                                                 ")"
                                                                             ]
                                                                         }, void 0, true, {
@@ -7088,17 +7062,46 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                     lineNumber: 1634,
                                                                     columnNumber: 25
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                            className: "text-slate-400 font-medium",
+                                                                            children: "Destination Country & Port"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                            lineNumber: 1639,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                                            className: "font-semibold text-slate-900",
+                                                                            children: [
+                                                                                autoData.destinationCountry || "—",
+                                                                                " (",
+                                                                                autoData.destinationPort || "—",
+                                                                                ")"
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                            lineNumber: 1640,
+                                                                            columnNumber: 27
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                    lineNumber: 1638,
+                                                                    columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1561,
+                                                            lineNumber: 1565,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1556,
+                                                    lineNumber: 1560,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7111,20 +7114,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     className: "h-4 w-4 text-emerald-600"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1644,
+                                                                    lineNumber: 1648,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                     children: "Cargo Allocation Master"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1645,
+                                                                    lineNumber: 1649,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1643,
+                                                            lineNumber: 1647,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7137,36 +7140,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "Allocated Cargo Lots"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1649,
-                                                                            columnNumber: 27
-                                                                        }, this),
-                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                            className: "font-semibold text-slate-900",
-                                                                            children: autoData.allocatedCargoLots || "LOT-" + shipment.id
-                                                                        }, void 0, false, {
-                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1650,
-                                                                            columnNumber: 27
-                                                                        }, this)
-                                                                    ]
-                                                                }, void 0, true, {
-                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1648,
-                                                                    columnNumber: 25
-                                                                }, this),
-                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                    children: [
-                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                            className: "text-slate-400 font-medium",
-                                                                            children: "Warehouse"
-                                                                        }, void 0, false, {
-                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1653,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                             className: "font-semibold text-slate-900",
-                                                                            children: autoData.warehouse || "Main Warehouse"
+                                                                            children: autoData.allocatedCargoLots || "LOT-" + shipment.id
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1654,
@@ -7182,19 +7161,16 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Available Weight"
+                                                                            children: "Warehouse"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1657,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                            className: "font-bold text-slate-900",
-                                                                            children: [
-                                                                                autoData.availableWeight || 0,
-                                                                                " MT"
-                                                                            ]
-                                                                        }, void 0, true, {
+                                                                            className: "font-semibold text-slate-900",
+                                                                            children: autoData.warehouse || "Main Warehouse"
+                                                                        }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1658,
                                                                             columnNumber: 27
@@ -7209,16 +7185,16 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Allocated Weight"
+                                                                            children: "Available Weight"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1661,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                            className: "font-bold text-emerald-700",
+                                                                            className: "font-bold text-slate-900",
                                                                             children: [
-                                                                                autoData.allocatedWeight || 0,
+                                                                                autoData.availableWeight || 0,
                                                                                 " MT"
                                                                             ]
                                                                         }, void 0, true, {
@@ -7236,16 +7212,16 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             className: "text-slate-400 font-medium",
-                                                                            children: "Balance Weight"
+                                                                            children: "Allocated Weight"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1665,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                            className: "font-bold text-slate-700",
+                                                                            className: "font-bold text-emerald-700",
                                                                             children: [
-                                                                                autoData.balanceWeight || 0,
+                                                                                autoData.allocatedWeight || 0,
                                                                                 " MT"
                                                                             ]
                                                                         }, void 0, true, {
@@ -7258,17 +7234,44 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                     lineNumber: 1664,
                                                                     columnNumber: 25
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                            className: "text-slate-400 font-medium",
+                                                                            children: "Balance Weight"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                            lineNumber: 1669,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                                            className: "font-bold text-slate-700",
+                                                                            children: [
+                                                                                autoData.balanceWeight || 0,
+                                                                                " MT"
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                            lineNumber: 1670,
+                                                                            columnNumber: 27
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                    lineNumber: 1668,
+                                                                    columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1647,
+                                                            lineNumber: 1651,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1642,
+                                                    lineNumber: 1646,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7283,25 +7286,25 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         className: "h-4 w-4 text-indigo-600"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 1675,
+                                                                        lineNumber: 1679,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                         children: "Freight & Logistics Master (Editable if not available)"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 1676,
+                                                                        lineNumber: 1680,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 1674,
+                                                                lineNumber: 1678,
                                                                 columnNumber: 25
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1673,
+                                                            lineNumber: 1677,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7314,7 +7317,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "Shipping Line"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1681,
+                                                                            lineNumber: 1685,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -7328,13 +7331,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1682,
+                                                                            lineNumber: 1686,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1680,
+                                                                    lineNumber: 1684,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7344,7 +7347,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "Vessel"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1691,
+                                                                            lineNumber: 1695,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -7358,13 +7361,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1692,
+                                                                            lineNumber: 1696,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1690,
+                                                                    lineNumber: 1694,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7374,7 +7377,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "Voyage"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1701,
+                                                                            lineNumber: 1705,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -7388,13 +7391,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1702,
+                                                                            lineNumber: 1706,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1700,
+                                                                    lineNumber: 1704,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7404,7 +7407,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "Container Type"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1711,
+                                                                            lineNumber: 1715,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -7418,13 +7421,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1712,
+                                                                            lineNumber: 1716,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1710,
+                                                                    lineNumber: 1714,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7434,7 +7437,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "Freight Forwarder"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1721,
+                                                                            lineNumber: 1725,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -7448,13 +7451,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1722,
+                                                                            lineNumber: 1726,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1720,
+                                                                    lineNumber: 1724,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7464,7 +7467,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "ETD"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1731,
+                                                                            lineNumber: 1735,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -7477,13 +7480,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1732,
+                                                                            lineNumber: 1736,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1730,
+                                                                    lineNumber: 1734,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7493,7 +7496,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "ETA"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1740,
+                                                                            lineNumber: 1744,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -7506,13 +7509,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1741,
+                                                                            lineNumber: 1745,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1739,
+                                                                    lineNumber: 1743,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7522,7 +7525,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "POL (Port of Loading)"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1749,
+                                                                            lineNumber: 1753,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -7536,13 +7539,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1750,
+                                                                            lineNumber: 1754,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1748,
+                                                                    lineNumber: 1752,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7552,7 +7555,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: "POD (Port of Discharge)"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1759,
+                                                                            lineNumber: 1763,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -7566,25 +7569,25 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1760,
+                                                                            lineNumber: 1764,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1758,
+                                                                    lineNumber: 1762,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1679,
+                                                            lineNumber: 1683,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1672,
+                                                    lineNumber: 1676,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7600,20 +7603,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "h-4 w-4 text-indigo-600"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1776,
+                                                                            lineNumber: 1780,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             children: "Seller Details"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1777,
+                                                                            lineNumber: 1781,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1775,
+                                                                    lineNumber: 1779,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7626,36 +7629,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                     children: "Company Name"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 1781,
+                                                                                    lineNumber: 1785,
                                                                                     columnNumber: 29
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                                     className: "font-semibold text-slate-900",
                                                                                     children: autoData.sellerCompany || "—"
-                                                                                }, void 0, false, {
-                                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 1782,
-                                                                                    columnNumber: 29
-                                                                                }, this)
-                                                                            ]
-                                                                        }, void 0, true, {
-                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1780,
-                                                                            columnNumber: 27
-                                                                        }, this),
-                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                            children: [
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                    className: "text-slate-400 font-medium",
-                                                                                    children: "Address"
-                                                                                }, void 0, false, {
-                                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 1785,
-                                                                                    columnNumber: 29
-                                                                                }, this),
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                                    className: "font-medium text-slate-800",
-                                                                                    children: autoData.sellerAddress || "—"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                                     lineNumber: 1786,
@@ -7668,6 +7647,30 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                                    className: "text-slate-400 font-medium",
+                                                                                    children: "Address"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                                    lineNumber: 1789,
+                                                                                    columnNumber: 29
+                                                                                }, this),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                                                    className: "font-medium text-slate-800",
+                                                                                    children: autoData.sellerAddress || "—"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                                    lineNumber: 1790,
+                                                                                    columnNumber: 29
+                                                                                }, this)
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                            lineNumber: 1788,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                             className: "grid grid-cols-2 gap-2",
                                                                             children: [
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7677,36 +7680,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                             children: "GST / Tax ID"
                                                                                         }, void 0, false, {
                                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                            lineNumber: 1790,
-                                                                                            columnNumber: 31
-                                                                                        }, this),
-                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                                            className: "font-semibold text-slate-900",
-                                                                                            children: autoData.gst || "—"
-                                                                                        }, void 0, false, {
-                                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                            lineNumber: 1791,
-                                                                                            columnNumber: 31
-                                                                                        }, this)
-                                                                                    ]
-                                                                                }, void 0, true, {
-                                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 1789,
-                                                                                    columnNumber: 29
-                                                                                }, this),
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                    children: [
-                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                            className: "text-slate-400 font-medium",
-                                                                                            children: "IEC"
-                                                                                        }, void 0, false, {
-                                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                                             lineNumber: 1794,
                                                                                             columnNumber: 31
                                                                                         }, this),
                                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                                             className: "font-semibold text-slate-900",
-                                                                                            children: autoData.iec || "—"
+                                                                                            children: autoData.gst || "—"
                                                                                         }, void 0, false, {
                                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                                             lineNumber: 1795,
@@ -7717,11 +7696,35 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                                     lineNumber: 1793,
                                                                                     columnNumber: 29
+                                                                                }, this),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                                    children: [
+                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                                            className: "text-slate-400 font-medium",
+                                                                                            children: "IEC"
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                                            lineNumber: 1798,
+                                                                                            columnNumber: 31
+                                                                                        }, this),
+                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                                                            className: "font-semibold text-slate-900",
+                                                                                            children: autoData.iec || "—"
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                                            lineNumber: 1799,
+                                                                                            columnNumber: 31
+                                                                                        }, this)
+                                                                                    ]
+                                                                                }, void 0, true, {
+                                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                                    lineNumber: 1797,
+                                                                                    columnNumber: 29
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1788,
+                                                                            lineNumber: 1792,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7731,7 +7734,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                     children: "Contact"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 1799,
+                                                                                    lineNumber: 1803,
                                                                                     columnNumber: 29
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -7739,25 +7742,25 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                     children: autoData.contactDetails || "—"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 1800,
+                                                                                    lineNumber: 1804,
                                                                                     columnNumber: 29
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1798,
+                                                                            lineNumber: 1802,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1779,
+                                                                    lineNumber: 1783,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1774,
+                                                            lineNumber: 1778,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7770,20 +7773,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "h-4 w-4 text-indigo-600"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1808,
+                                                                            lineNumber: 1812,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             children: "Buyer Details"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1809,
+                                                                            lineNumber: 1813,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1807,
+                                                                    lineNumber: 1811,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7796,36 +7799,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                     children: "Buyer Name"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 1813,
+                                                                                    lineNumber: 1817,
                                                                                     columnNumber: 29
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                                                                     className: "font-semibold text-slate-900",
                                                                                     children: autoData.buyerName || "—"
-                                                                                }, void 0, false, {
-                                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 1814,
-                                                                                    columnNumber: 29
-                                                                                }, this)
-                                                                            ]
-                                                                        }, void 0, true, {
-                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1812,
-                                                                            columnNumber: 27
-                                                                        }, this),
-                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                            children: [
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                    className: "text-slate-400 font-medium",
-                                                                                    children: "Address"
-                                                                                }, void 0, false, {
-                                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 1817,
-                                                                                    columnNumber: 29
-                                                                                }, this),
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                                    className: "font-medium text-slate-800",
-                                                                                    children: autoData.buyerAddress || "—"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                                     lineNumber: 1818,
@@ -7841,15 +7820,15 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: [
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                                     className: "text-slate-400 font-medium",
-                                                                                    children: "Country"
+                                                                                    children: "Address"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                                     lineNumber: 1821,
                                                                                     columnNumber: 29
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                                    className: "font-semibold text-slate-900",
-                                                                                    children: autoData.buyerCountry || "—"
+                                                                                    className: "font-medium text-slate-800",
+                                                                                    children: autoData.buyerAddress || "—"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                                     lineNumber: 1822,
@@ -7865,15 +7844,15 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: [
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                                     className: "text-slate-400 font-medium",
-                                                                                    children: "Contact Person"
+                                                                                    children: "Country"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                                     lineNumber: 1825,
                                                                                     columnNumber: 29
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                                    className: "font-medium text-slate-800",
-                                                                                    children: autoData.buyerContactPerson || "—"
+                                                                                    className: "font-semibold text-slate-900",
+                                                                                    children: autoData.buyerCountry || "—"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                                     lineNumber: 1826,
@@ -7884,35 +7863,59 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
                                                                             lineNumber: 1824,
                                                                             columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                                    className: "text-slate-400 font-medium",
+                                                                                    children: "Contact Person"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                                    lineNumber: 1829,
+                                                                                    columnNumber: 29
+                                                                                }, this),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                                                    className: "font-medium text-slate-800",
+                                                                                    children: autoData.buyerContactPerson || "—"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                                    lineNumber: 1830,
+                                                                                    columnNumber: 29
+                                                                                }, this)
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
+                                                                            lineNumber: 1828,
+                                                                            columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1811,
+                                                                    lineNumber: 1815,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1806,
+                                                            lineNumber: 1810,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1772,
+                                                    lineNumber: 1776,
                                                     columnNumber: 21
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 1553,
+                                            lineNumber: 1557,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 1494,
+                                    lineNumber: 1498,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7928,20 +7931,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             className: "h-4 w-4 text-indigo-600"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1840,
+                                                            lineNumber: 1844,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                             children: "2. Loading & Weights"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1841,
+                                                            lineNumber: 1845,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1839,
+                                                    lineNumber: 1843,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -7949,13 +7952,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                     children: "Weighbridge Slip Sync"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1843,
+                                                    lineNumber: 1847,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 1838,
+                                            lineNumber: 1842,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7972,13 +7975,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: "*"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1850,
+                                                                    lineNumber: 1854,
                                                                     columnNumber: 39
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1849,
+                                                            lineNumber: 1853,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -7992,13 +7995,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             className: "w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium hover:cursor-pointer"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1852,
+                                                            lineNumber: 1856,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1848,
+                                                    lineNumber: 1852,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8012,20 +8015,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: "*"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1862,
+                                                                    lineNumber: 1866,
                                                                     columnNumber: 50
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1861,
+                                                            lineNumber: 1865,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                                             type: "text",
                                                             inputMode: "decimal",
                                                             placeholder: "000.000",
-                                                            value: loadingInfo.actualLoadingWeight,
+                                                            value: hideLeadingZeros(loadingInfo.actualLoadingWeight),
                                                             onChange: (e)=>handleMtWeightChange("actualLoadingWeight", e),
                                                             onFocus: moveMtWeightCursorToEnd,
                                                             onClick: moveMtWeightCursorToEnd,
@@ -8033,13 +8036,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             className: "w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-bold text-indigo-700"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1864,
+                                                            lineNumber: 1868,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1860,
+                                                    lineNumber: 1864,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8053,20 +8056,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: "*"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1878,
+                                                                    lineNumber: 1882,
                                                                     columnNumber: 41
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1877,
+                                                            lineNumber: 1881,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                                             type: "text",
                                                             inputMode: "decimal",
                                                             placeholder: "000.000",
-                                                            value: loadingInfo.grossWeight,
+                                                            value: hideLeadingZeros(loadingInfo.grossWeight),
                                                             onChange: (e)=>handleMtWeightChange("grossWeight", e),
                                                             onFocus: moveMtWeightCursorToEnd,
                                                             onClick: moveMtWeightCursorToEnd,
@@ -8074,13 +8077,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             className: "w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1880,
+                                                            lineNumber: 1884,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1876,
+                                                    lineNumber: 1880,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8094,20 +8097,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     children: "*"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1894,
+                                                                    lineNumber: 1898,
                                                                     columnNumber: 39
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1893,
+                                                            lineNumber: 1897,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
                                                             type: "text",
                                                             inputMode: "decimal",
                                                             placeholder: "000.000",
-                                                            value: loadingInfo.netWeight,
+                                                            value: hideLeadingZeros(loadingInfo.netWeight),
                                                             onChange: (e)=>handleMtWeightChange("netWeight", e),
                                                             onFocus: moveMtWeightCursorToEnd,
                                                             onClick: moveMtWeightCursorToEnd,
@@ -8115,13 +8118,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             className: "w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-semibold text-emerald-700"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1896,
+                                                            lineNumber: 1900,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1892,
+                                                    lineNumber: 1896,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SimpleTimePicker, {
@@ -8134,7 +8137,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             }))
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1908,
+                                                    lineNumber: 1912,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SimpleTimePicker, {
@@ -8147,19 +8150,19 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             }))
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1914,
+                                                    lineNumber: 1918,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 1847,
+                                            lineNumber: 1851,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 1837,
+                                    lineNumber: 1841,
                                     columnNumber: 15
                                 }, this),
                                 showContainerDetails && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
@@ -8176,7 +8179,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                 className: "h-4 w-4 text-indigo-600"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 1929,
+                                                                lineNumber: 1933,
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8184,7 +8187,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                 children: "3. Container Details (Dynamic)"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 1930,
+                                                                lineNumber: 1934,
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8196,13 +8199,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 1931,
+                                                                lineNumber: 1935,
                                                                 columnNumber: 21
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                        lineNumber: 1928,
+                                                        lineNumber: 1932,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -8214,26 +8217,26 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                 className: "h-3.5 w-3.5"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 1940,
+                                                                lineNumber: 1944,
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                 children: "Add Container"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 1941,
+                                                                lineNumber: 1945,
                                                                 columnNumber: 21
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                        lineNumber: 1935,
+                                                        lineNumber: 1939,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 1927,
+                                                lineNumber: 1931,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8250,7 +8253,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "#"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 1949,
+                                                                        lineNumber: 1953,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8258,7 +8261,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Container No."
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 1950,
+                                                                        lineNumber: 1954,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8266,7 +8269,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Size"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 1951,
+                                                                        lineNumber: 1955,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8274,7 +8277,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Seal No."
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 1952,
+                                                                        lineNumber: 1956,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8282,7 +8285,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Remarks"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 1953,
+                                                                        lineNumber: 1957,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8290,7 +8293,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Tare Wt (MT)"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 1954,
+                                                                        lineNumber: 1958,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8298,7 +8301,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Gross Wt (MT)"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 1955,
+                                                                        lineNumber: 1959,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8306,7 +8309,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Net Wt (MT)"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 1956,
+                                                                        lineNumber: 1960,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8314,18 +8317,18 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Action"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 1957,
+                                                                        lineNumber: 1961,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 1948,
+                                                                lineNumber: 1952,
                                                                 columnNumber: 23
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1947,
+                                                            lineNumber: 1951,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
@@ -8338,7 +8341,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: idx + 1
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1963,
+                                                                            lineNumber: 1967,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8351,12 +8354,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 className: "w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 1965,
+                                                                                lineNumber: 1969,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1964,
+                                                                            lineNumber: 1968,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8371,7 +8374,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                         children: "Select"
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                        lineNumber: 1975,
+                                                                                        lineNumber: 1979,
                                                                                         columnNumber: 31
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -8379,7 +8382,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                         children: "20 FT"
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                        lineNumber: 1975,
+                                                                                        lineNumber: 1979,
                                                                                         columnNumber: 63
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -8387,7 +8390,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                         children: "40 FT"
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                        lineNumber: 1975,
+                                                                                        lineNumber: 1979,
                                                                                         columnNumber: 99
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -8395,18 +8398,18 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                         children: "40 HC"
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                        lineNumber: 1975,
+                                                                                        lineNumber: 1979,
                                                                                         columnNumber: 135
                                                                                     }, this)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 1974,
+                                                                                lineNumber: 1978,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1973,
+                                                                            lineNumber: 1977,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8419,12 +8422,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 className: "w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 1979,
+                                                                                lineNumber: 1983,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1978,
+                                                                            lineNumber: 1982,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8437,12 +8440,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 className: "min-w-28 rounded border border-slate-200 px-2 py-1.5"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 1988,
+                                                                                lineNumber: 1992,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1987,
+                                                                            lineNumber: 1991,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8456,12 +8459,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 className: "w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 1991,
+                                                                                lineNumber: 1995,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 1990,
+                                                                            lineNumber: 1994,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8475,12 +8478,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 className: "w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden font-medium"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2001,
+                                                                                lineNumber: 2005,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 2000,
+                                                                            lineNumber: 2004,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8494,12 +8497,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 className: "w-full px-2.5 py-1.5 bg-emerald-50/50 border border-emerald-200 rounded-md text-xs text-emerald-800 font-bold focus:border-indigo-500 outline-hidden"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2011,
+                                                                                lineNumber: 2015,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 2010,
+                                                                            lineNumber: 2014,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8513,50 +8516,50 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                     className: "h-4 w-4"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 2030,
+                                                                                    lineNumber: 2034,
                                                                                     columnNumber: 31
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2021,
+                                                                                lineNumber: 2025,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 2020,
+                                                                            lineNumber: 2024,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, idx, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 1962,
+                                                                    lineNumber: 1966,
                                                                     columnNumber: 25
                                                                 }, this))
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 1960,
+                                                            lineNumber: 1964,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 1946,
+                                                    lineNumber: 1950,
                                                     columnNumber: 19
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 1945,
+                                                lineNumber: 1949,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 1926,
+                                        lineNumber: 1930,
                                         columnNumber: 19
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 1924,
+                                    lineNumber: 1928,
                                     columnNumber: 17
                                 }, this),
                                 !showContainerDetails && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
@@ -8573,7 +8576,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                 className: "h-4 w-4 text-indigo-600"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2048,
+                                                                lineNumber: 2052,
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8581,7 +8584,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                 children: "4. Truck Details (Dynamic)"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2049,
+                                                                lineNumber: 2053,
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8593,13 +8596,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2050,
+                                                                lineNumber: 2054,
                                                                 columnNumber: 21
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                        lineNumber: 2047,
+                                                        lineNumber: 2051,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -8611,26 +8614,26 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                 className: "h-3.5 w-3.5"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2059,
+                                                                lineNumber: 2063,
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                 children: "Add Truck"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2060,
+                                                                lineNumber: 2064,
                                                                 columnNumber: 21
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                        lineNumber: 2054,
+                                                        lineNumber: 2058,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 2046,
+                                                lineNumber: 2050,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8647,7 +8650,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "#"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2068,
+                                                                        lineNumber: 2072,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8655,7 +8658,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Truck No."
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2069,
+                                                                        lineNumber: 2073,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8663,7 +8666,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Driver Name"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2070,
+                                                                        lineNumber: 2074,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8671,7 +8674,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Mobile No."
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2071,
+                                                                        lineNumber: 2075,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8679,7 +8682,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Remark"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2072,
+                                                                        lineNumber: 2076,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
@@ -8687,18 +8690,18 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Action"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2073,
+                                                                        lineNumber: 2077,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2067,
+                                                                lineNumber: 2071,
                                                                 columnNumber: 23
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 2066,
+                                                            lineNumber: 2070,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
@@ -8711,7 +8714,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             children: idx + 1
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 2079,
+                                                                            lineNumber: 2083,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8724,12 +8727,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 className: "w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2081,
+                                                                                lineNumber: 2085,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 2080,
+                                                                            lineNumber: 2084,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8742,12 +8745,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 className: "w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2090,
+                                                                                lineNumber: 2094,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 2089,
+                                                                            lineNumber: 2093,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8760,7 +8763,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                         children: "+"
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                        lineNumber: 2100,
+                                                                                        lineNumber: 2104,
                                                                                         columnNumber: 31
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -8771,18 +8774,18 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                         className: "w-full min-w-0 px-1.5 py-1.5 bg-transparent text-xs outline-hidden"
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                        lineNumber: 2101,
+                                                                                        lineNumber: 2105,
                                                                                         columnNumber: 31
                                                                                     }, this)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2099,
+                                                                                lineNumber: 2103,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 2098,
+                                                                            lineNumber: 2102,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8795,12 +8798,12 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 className: "w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2117,
+                                                                                lineNumber: 2121,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 2116,
+                                                                            lineNumber: 2120,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -8814,50 +8817,50 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                     className: "h-4 w-4"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 2135,
+                                                                                    lineNumber: 2139,
                                                                                     columnNumber: 31
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2126,
+                                                                                lineNumber: 2130,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 2125,
+                                                                            lineNumber: 2129,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, idx, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 2078,
+                                                                    lineNumber: 2082,
                                                                     columnNumber: 25
                                                                 }, this))
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 2076,
+                                                            lineNumber: 2080,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 2065,
+                                                    lineNumber: 2069,
                                                     columnNumber: 19
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 2064,
+                                                lineNumber: 2068,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 2045,
+                                        lineNumber: 2049,
                                         columnNumber: 19
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 2043,
+                                    lineNumber: 2047,
                                     columnNumber: 17
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8873,7 +8876,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             className: "h-4 w-4 text-indigo-600"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 2151,
+                                                            lineNumber: 2155,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8881,13 +8884,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             children: "5. Shipment Downtime"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 2152,
+                                                            lineNumber: 2156,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 2150,
+                                                    lineNumber: 2154,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -8899,26 +8902,26 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             className: "h-3.5 w-3.5"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 2161,
+                                                            lineNumber: 2165,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                             children: "Add Downtime"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 2162,
+                                                            lineNumber: 2166,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 2156,
+                                                    lineNumber: 2160,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 2149,
+                                            lineNumber: 2153,
                                             columnNumber: 17
                                         }, this),
                                         downtimes.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -8926,7 +8929,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                             children: "No downtime entries added."
                                         }, void 0, false, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 2167,
+                                            lineNumber: 2171,
                                             columnNumber: 19
                                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                             className: "space-y-3",
@@ -8936,7 +8939,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                     children: "Currency master could not be loaded."
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 2173,
+                                                    lineNumber: 2177,
                                                     columnNumber: 23
                                                 }, this),
                                                 downtimes.map((downtime, index)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8950,7 +8953,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Price *"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2183,
+                                                                        lineNumber: 2187,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -8964,13 +8967,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         className: "w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2189,
+                                                                        lineNumber: 2193,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2182,
+                                                                lineNumber: 2186,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8981,7 +8984,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Currency *"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2203,
+                                                                        lineNumber: 2207,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
@@ -8997,7 +9000,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 children: currenciesLoading ? "Loading currencies..." : "Select currency"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2219,
+                                                                                lineNumber: 2223,
                                                                                 columnNumber: 29
                                                                             }, this),
                                                                             currencies.map((currency)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -9009,19 +9012,19 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                     ]
                                                                                 }, currency.code, true, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 2223,
+                                                                                    lineNumber: 2227,
                                                                                     columnNumber: 31
                                                                                 }, this))
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2209,
+                                                                        lineNumber: 2213,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2202,
+                                                                lineNumber: 2206,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9032,7 +9035,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Reason"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2230,
+                                                                        lineNumber: 2234,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
@@ -9046,7 +9049,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 children: "Select reason"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2244,
+                                                                                lineNumber: 2248,
                                                                                 columnNumber: 29
                                                                             }, this),
                                                                             [
@@ -9057,7 +9060,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                     children: reason
                                                                                 }, reason, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 2246,
+                                                                                    lineNumber: 2250,
                                                                                     columnNumber: 31
                                                                                 }, this)),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -9065,13 +9068,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 children: "+ Add Custom..."
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2250,
+                                                                                lineNumber: 2254,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2236,
+                                                                        lineNumber: 2240,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     downtime.reason === CUSTOM_DOWNTIME_REASON && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9093,7 +9096,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                 className: "min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2256,
+                                                                                lineNumber: 2260,
                                                                                 columnNumber: 31
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -9106,24 +9109,24 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                                     className: "h-4 w-4"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                    lineNumber: 2288,
+                                                                                    lineNumber: 2292,
                                                                                     columnNumber: 33
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                                lineNumber: 2279,
+                                                                                lineNumber: 2283,
                                                                                 columnNumber: 31
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2255,
+                                                                        lineNumber: 2259,
                                                                         columnNumber: 29
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2229,
+                                                                lineNumber: 2233,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9134,7 +9137,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "From Date"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2294,
+                                                                        lineNumber: 2298,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -9146,13 +9149,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         className: "w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2300,
+                                                                        lineNumber: 2304,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2293,
+                                                                lineNumber: 2297,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9163,7 +9166,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "To Date"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2312,
+                                                                        lineNumber: 2316,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -9175,13 +9178,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         className: "w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2318,
+                                                                        lineNumber: 2322,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2311,
+                                                                lineNumber: 2315,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9192,7 +9195,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Duration"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2330,
+                                                                        lineNumber: 2334,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -9203,13 +9206,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         className: "w-full rounded-md border border-slate-200 bg-slate-100 px-2.5 py-2 text-xs text-slate-600 outline-hidden"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2336,
+                                                                        lineNumber: 2340,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2329,
+                                                                lineNumber: 2333,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9220,7 +9223,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Remarks (Optional)"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2348,
+                                                                        lineNumber: 2352,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -9231,13 +9234,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         className: "w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2354,
+                                                                        lineNumber: 2358,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2347,
+                                                                lineNumber: 2351,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9248,7 +9251,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                         children: "Action"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2365,
+                                                                        lineNumber: 2369,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -9260,36 +9263,36 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "h-4 w-4"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 2374,
+                                                                            lineNumber: 2378,
                                                                             columnNumber: 29
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                        lineNumber: 2368,
+                                                                        lineNumber: 2372,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                lineNumber: 2364,
+                                                                lineNumber: 2368,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, index, true, {
                                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                        lineNumber: 2178,
+                                                        lineNumber: 2182,
                                                         columnNumber: 23
                                                     }, this))
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 2171,
+                                            lineNumber: 2175,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 2148,
+                                    lineNumber: 2152,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9302,20 +9305,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                     className: "h-4 w-4 text-indigo-600"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 2386,
+                                                    lineNumber: 2390,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                     children: "6. Execution Remarks"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 2387,
+                                                    lineNumber: 2391,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 2385,
+                                            lineNumber: 2389,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
@@ -9326,13 +9329,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                             className: "w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
                                         }, void 0, false, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 2389,
+                                            lineNumber: 2393,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 2384,
+                                    lineNumber: 2388,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9348,7 +9351,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             className: "h-4 w-4 text-indigo-600"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 2404,
+                                                            lineNumber: 2408,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -9356,7 +9359,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             children: "Dynamic Attachments"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 2405,
+                                                            lineNumber: 2409,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -9369,7 +9372,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 2406,
+                                                            lineNumber: 2410,
                                                             columnNumber: 21
                                                         }, this),
                                                         isCad && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -9378,13 +9381,13 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                             children: "CAD Terms Active (+3 Docs)"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 2416,
+                                                            lineNumber: 2420,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 2403,
+                                                    lineNumber: 2407,
                                                     columnNumber: 19
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9417,25 +9420,25 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                             className: "h-3.5 w-3.5"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 2444,
+                                                                            lineNumber: 2448,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             children: label
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                            lineNumber: 2445,
+                                                                            lineNumber: 2449,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, mode, true, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 2434,
+                                                                    lineNumber: 2438,
                                                                     columnNumber: 25
                                                                 }, this))
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 2428,
+                                                            lineNumber: 2432,
                                                             columnNumber: 21
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -9447,32 +9450,32 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                                     className: "h-3.5 w-3.5"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 2456,
+                                                                    lineNumber: 2460,
                                                                     columnNumber: 23
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                     children: "Add Attachment"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                                    lineNumber: 2457,
+                                                                    lineNumber: 2461,
                                                                     columnNumber: 23
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                            lineNumber: 2451,
+                                                            lineNumber: 2455,
                                                             columnNumber: 21
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 2426,
+                                                    lineNumber: 2430,
                                                     columnNumber: 19
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 2401,
+                                            lineNumber: 2405,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9488,29 +9491,29 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                     onChangeField: handleAttachmentChange
                                                 }, att.id || idx, false, {
                                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                    lineNumber: 2465,
+                                                    lineNumber: 2469,
                                                     columnNumber: 21
                                                 }, this))
                                         }, void 0, false, {
                                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                            lineNumber: 2463,
+                                            lineNumber: 2467,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                    lineNumber: 2399,
+                                    lineNumber: 2403,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                            lineNumber: 1491,
+                            lineNumber: 1495,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 1484,
+                        lineNumber: 1488,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9523,20 +9526,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                         className: "h-2 w-2 rounded-full bg-emerald-500"
                                     }, void 0, false, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 2487,
+                                        lineNumber: 2491,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         children: "Industry Standard Flow: Single tab continuous execution with collapsible auto-populated details."
                                     }, void 0, false, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 2488,
+                                        lineNumber: 2492,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 2486,
+                                lineNumber: 2490,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9550,7 +9553,7 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                         children: "Cancel"
                                     }, void 0, false, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 2494,
+                                        lineNumber: 2498,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -9566,20 +9569,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                 className: "h-3.5 w-3.5 text-emerald-600"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 2513,
+                                                lineNumber: 2517,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                 children: "Generate Invoice"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 2514,
+                                                lineNumber: 2518,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 2504,
+                                        lineNumber: 2508,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -9592,20 +9595,20 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                 className: "h-3.5 w-3.5 animate-spin"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 2524,
+                                                lineNumber: 2528,
                                                 columnNumber: 29
                                             }, this) : null,
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                 children: "Save Draft"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 2525,
+                                                lineNumber: 2529,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 2518,
+                                        lineNumber: 2522,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -9618,50 +9621,50 @@ function ShipmentStuffingExecutionModal({ isOpen, shipment, onClose, onSaveSucce
                                                 className: "h-4 w-4 animate-spin"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 2536,
+                                                lineNumber: 2540,
                                                 columnNumber: 17
                                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$rocket$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Rocket$3e$__["Rocket"], {
                                                 className: "h-4 w-4"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 2538,
+                                                lineNumber: 2542,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                 children: "Complete Stuffing"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                                lineNumber: 2540,
+                                                lineNumber: 2544,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                        lineNumber: 2529,
+                                        lineNumber: 2533,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                                lineNumber: 2493,
+                                lineNumber: 2497,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                        lineNumber: 2485,
+                        lineNumber: 2489,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-                lineNumber: 1361,
+                lineNumber: 1365,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/modules/shipments/components/ShipmentStuffingExecutionModal.jsx",
-        lineNumber: 1353,
+        lineNumber: 1357,
         columnNumber: 5
     }, this);
 }
