@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { selectUser } from "@/store/slices/authSlice";
+import usePermissions from "@/hooks/usePermissions";
 import {
   Building2,
   Globe2,
   Plus,
   Search,
-  Filter,
   Eye,
   Edit2,
   Trash2,
@@ -62,31 +62,80 @@ export default function BankManagementPage() {
   };
 
   const user = useSelector(selectUser);
+  const { hasAnyPermission } = usePermissions();
 
-  // Fetch Companies
+  const canView = hasAnyPermission([
+    "bank_management:view",
+    "bank_management:read",
+    "banks:view",
+    "banks:read",
+  ]);
+  const canCreate = hasAnyPermission([
+    "bank_management:create",
+    "banks:create",
+  ]);
+  const canUpdate = hasAnyPermission([
+    "bank_management:update",
+    "bank_management:edit",
+    "banks:update",
+    "banks:edit",
+  ]);
+  const canDelete = hasAnyPermission([
+    "bank_management:delete",
+    "banks:delete",
+  ]);
+
+  const canReadCompanies = hasAnyPermission([
+    "companies:read",
+    "companies:view",
+    "company:read",
+    "company:view",
+  ]);
+
+  // Fetch Companies safely without triggering 403 authorization error
   const loadCompanies = useCallback(async () => {
-    let list = [];
-    try {
-      const res = await axiosInstance.get("/GetCompanies", { params: { limit: 100 } });
-      const raw = res.data;
-      list = Array.isArray(raw)
-        ? raw
-        : Array.isArray(raw?.data)
-        ? raw.data
-        : raw?.rows || raw?.companies || [];
-    } catch {
+    let list = user?.workspaces || [];
+
+    // Only attempt full companies API if user has permission to read companies
+    if (canReadCompanies) {
       try {
-        const res = await axiosInstance.get("/companies", { params: { limit: 100 } });
+        const res = await axiosInstance.get("/GetCompanies", {
+          params: { limit: 100 },
+          suppressToast: true,
+          skipToast: true,
+          suppressErrorLog: true,
+        });
         const raw = res.data;
-        list = Array.isArray(raw)
+        const fetched = Array.isArray(raw)
           ? raw
           : Array.isArray(raw?.data)
           ? raw.data
           : raw?.rows || raw?.companies || [];
+        if (fetched.length > 0) {
+          list = fetched;
+        }
       } catch {
-        // Fallback to user workspaces if API not accessible
-        if (user?.workspaces?.length > 0) {
-          list = user.workspaces;
+        try {
+          const res = await axiosInstance.get("/companies", {
+            params: { limit: 100 },
+            suppressToast: true,
+            skipToast: true,
+            suppressErrorLog: true,
+          });
+          const raw = res.data;
+          const fetched = Array.isArray(raw)
+            ? raw
+            : Array.isArray(raw?.data)
+            ? raw.data
+            : raw?.rows || raw?.companies || [];
+          if (fetched.length > 0) {
+            list = fetched;
+          }
+        } catch {
+          // Fallback to user workspaces if API not accessible
+          if (user?.workspaces?.length > 0) {
+            list = user.workspaces;
+          }
         }
       }
     }
@@ -96,10 +145,11 @@ export default function BankManagementPage() {
     }
 
     setCompanies(list || []);
-  }, [user]);
+  }, [user, canReadCompanies]);
 
   // Fetch Domestic Banks
   const loadDomesticBanks = useCallback(async () => {
+    if (!canView) return;
     try {
       setLoading(true);
       const params = {};
@@ -116,10 +166,11 @@ export default function BankManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCompanyId, search, statusFilter]);
+  }, [canView, selectedCompanyId, search, statusFilter]);
 
   // Fetch Nostro Banks
   const loadNostroBanks = useCallback(async () => {
+    if (!canView) return;
     try {
       const params = {};
       if (selectedCompanyId) params.companyId = selectedCompanyId;
@@ -132,25 +183,33 @@ export default function BankManagementPage() {
     } catch (err) {
       console.error("Failed to load nostro banks", err);
     }
-  }, [selectedCompanyId, search, statusFilter]);
+  }, [canView, selectedCompanyId, search, statusFilter]);
 
   // Initial load
   useEffect(() => {
-    loadCompanies();
-  }, [loadCompanies]);
+    if (canView) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadCompanies();
+    }
+  }, [canView, loadCompanies]);
 
   useEffect(() => {
-    loadDomesticBanks();
-    loadNostroBanks();
-  }, [loadDomesticBanks, loadNostroBanks]);
+    if (canView) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadDomesticBanks();
+      loadNostroBanks();
+    }
+  }, [canView, loadDomesticBanks, loadNostroBanks]);
 
   // ── Domestic Bank Handlers ──
   const handleOpenCreateDomestic = () => {
+    if (!canCreate) return;
     setEditingDomesticBank(null);
     setIsDomesticModalOpen(true);
   };
 
   const handleOpenEditDomestic = (bank) => {
+    if (!canUpdate) return;
     setEditingDomesticBank(bank);
     setIsDomesticModalOpen(true);
   };
@@ -183,6 +242,7 @@ export default function BankManagementPage() {
   };
 
   const handleDeleteDomestic = async (bank) => {
+    if (!canDelete) return;
     const nostroCount = bank.nostroAccounts?.length || 0;
     const msg = nostroCount > 0
       ? `Are you sure you want to delete ${bank.bankName}? This will also delete ${nostroCount} linked Nostro account(s).`
@@ -207,12 +267,14 @@ export default function BankManagementPage() {
 
   // ── Nostro Bank Handlers ──
   const handleOpenCreateNostro = (domesticBankId = null) => {
+    if (!canCreate) return;
     setEditingNostroBank(null);
     setPreselectedDomesticId(domesticBankId);
     setIsNostroModalOpen(true);
   };
 
   const handleOpenEditNostro = (nostro) => {
+    if (!canUpdate) return;
     setEditingNostroBank(nostro);
     setPreselectedDomesticId(nostro.domesticBankId);
     setIsNostroModalOpen(true);
@@ -246,6 +308,7 @@ export default function BankManagementPage() {
   };
 
   const handleDeleteNostro = async (nostro) => {
+    if (!canDelete) return;
     if (!window.confirm(`Delete ${nostro.currency} Nostro account (${nostro.bankName})?`)) return;
 
     try {
@@ -292,6 +355,22 @@ export default function BankManagementPage() {
   const totalDomestic = domesticBanks.length;
   const totalNostro = nostroBanks.length;
 
+  if (!canView) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-md text-center">
+          <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">Access Restricted</h2>
+          <p className="text-sm text-gray-500">
+            You do not have permission to view Bank Management. Please contact your administrator for access.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50/50 p-4 md:p-6 space-y-4">
       {/* Toast Notification */}
@@ -332,13 +411,15 @@ export default function BankManagementPage() {
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin text-blue-600" : ""}`} />
           </button>
 
-          <button
-            onClick={handleOpenCreateDomestic}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20"
-          >
-            <Plus className="h-4 w-4" />
-            + Add Domestic Bank
-          </button>
+          {canCreate && (
+            <button
+              onClick={handleOpenCreateDomestic}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20"
+            >
+              <Plus className="h-4 w-4" />
+              + Add Domestic Bank
+            </button>
+          )}
         </div>
       </div>
 
@@ -374,13 +455,15 @@ export default function BankManagementPage() {
 
           {/* Quick Filters */}
           <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              onClick={() => handleOpenCreateNostro()}
-              className="inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold leading-none text-emerald-800 transition-colors hover:bg-emerald-100"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add Nostro
-            </button>
+            {canCreate && (
+              <button
+                onClick={() => handleOpenCreateNostro()}
+                className="inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold leading-none text-emerald-800 transition-colors hover:bg-emerald-100"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Nostro
+              </button>
+            )}
 
             {/* Company filter */}
             <select
@@ -443,9 +526,15 @@ export default function BankManagementPage() {
                     <td colSpan={8} className="text-center py-12 text-gray-400">
                       <Building2 className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                       <p className="text-xs font-bold text-gray-600">No Domestic Banks Found</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">
-                        Click "+ Add Domestic Bank" above to register your primary settlement bank.
-                      </p>
+                      {canCreate ? (
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          Click &quot;+ Add Domestic Bank&quot; above to register your primary settlement bank.
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          No domestic banks are currently registered.
+                        </p>
+                      )}
                     </td>
                   </tr>
                 ) : (
@@ -464,7 +553,7 @@ export default function BankManagementPage() {
                         <td className="px-4 py-3">
                           <button
                             onClick={() => handleViewDomesticDetails(db)}
-                            className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-left"
+                            className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-left cursor-pointer"
                           >
                             {db.bankName}
                           </button>
@@ -506,13 +595,15 @@ export default function BankManagementPage() {
                                 </span>
                               ))
                             )}
-                            <button
-                              onClick={() => handleOpenCreateNostro(db.id)}
-                              className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 underline ml-1"
-                              title="Link a new Nostro foreign currency account"
-                            >
-                              + Link
-                            </button>
+                            {canCreate && (
+                              <button
+                                onClick={() => handleOpenCreateNostro(db.id)}
+                                className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 underline ml-1 cursor-pointer"
+                                title="Link a new Nostro foreign currency account"
+                              >
+                                + Link
+                              </button>
+                            )}
                           </div>
                         </td>
 
@@ -538,32 +629,36 @@ export default function BankManagementPage() {
                         <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
                           <button
                             onClick={() => handleViewDomesticDetails(db)}
-                            className="p-1.5 rounded-lg text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            className="p-1.5 rounded-lg text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer"
                             title="View Linked Nostro Accounts & Bank Details"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleOpenPreview(db)}
-                            className="p-1.5 rounded-lg text-gray-500 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                            className="p-1.5 rounded-lg text-gray-500 hover:bg-purple-50 hover:text-purple-600 transition-colors cursor-pointer"
                             title="Preview PDF Output Layout"
                           >
                             <FileText className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => handleOpenEditDomestic(db)}
-                            className="p-1.5 rounded-lg text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                            title="Edit Domestic Bank"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteDomestic(db)}
-                            className="p-1.5 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
-                            title="Delete Domestic Bank"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {canUpdate && (
+                            <button
+                              onClick={() => handleOpenEditDomestic(db)}
+                              className="p-1.5 rounded-lg text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer"
+                              title="Edit Domestic Bank"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDeleteDomestic(db)}
+                              className="p-1.5 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+                              title="Delete Domestic Bank"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -663,20 +758,27 @@ export default function BankManagementPage() {
 
                       {/* Actions */}
                       <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
-                        <button
-                          onClick={() => handleOpenEditNostro(n)}
-                          className="p-1.5 rounded-lg text-gray-500 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
-                          title="Edit Nostro Account"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteNostro(n)}
-                          className="p-1.5 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
-                          title="Delete Nostro Account"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {canUpdate && (
+                          <button
+                            onClick={() => handleOpenEditNostro(n)}
+                            className="p-1.5 rounded-lg text-gray-500 hover:bg-emerald-50 hover:text-emerald-700 transition-colors cursor-pointer"
+                            title="Edit Nostro Account"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDeleteNostro(n)}
+                            className="p-1.5 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+                            title="Delete Nostro Account"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                        {!canUpdate && !canDelete && (
+                          <span className="text-gray-400 text-xs">—</span>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -719,6 +821,9 @@ export default function BankManagementPage() {
           setDetailDomesticBank(null);
         }}
         domesticBank={detailDomesticBank}
+        canCreate={canCreate}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
         onEditDomestic={(bank) => {
           setIsDetailModalOpen(false);
           handleOpenEditDomestic(bank);

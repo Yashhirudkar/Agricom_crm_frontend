@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import {
   X,
-  Building2,
   Globe2,
   Plus,
   Edit2,
@@ -25,6 +24,9 @@ export default function DomesticBankDetailDrawer({
   onEditNostro,
   onDeleteNostro,
   onRefresh,
+  canCreate = true,
+  canUpdate = true,
+  canDelete = true,
 }) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
@@ -104,13 +106,15 @@ export default function DomesticBankDetailDrawer({
                 Preview PDF Layout
               </button>
 
-              <button
-                onClick={() => onEditDomestic(domesticBank)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-              >
-                <Edit2 className="h-3.5 w-3.5 text-slate-500" />
-                Edit
-              </button>
+              {canUpdate && (
+                <button
+                  onClick={() => onEditDomestic(domesticBank)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <Edit2 className="h-3.5 w-3.5 text-slate-500" />
+                  Edit
+                </button>
+              )}
 
               <button
                 onClick={onClose}
@@ -187,13 +191,15 @@ export default function DomesticBankDetailDrawer({
                   </p>
                 </div>
 
-                <button
-                  onClick={() => onAddNostro(domesticBank.id)}
-                  className="inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold leading-none text-emerald-700 transition-colors hover:bg-emerald-100 cursor-pointer"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Nostro
-                </button>
+                {canCreate && (
+                  <button
+                    onClick={() => onAddNostro(domesticBank.id)}
+                    className="inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold leading-none text-emerald-700 transition-colors hover:bg-emerald-100 cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Nostro
+                  </button>
+                )}
               </div>
 
               {linkedAccounts.length === 0 ? (
@@ -203,12 +209,14 @@ export default function DomesticBankDetailDrawer({
                   <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-0.5">
                     Link foreign currency accounts (USD, EUR, GBP, AED, etc.) to this domestic bank so export invoices and contracts automatically print correct routing instructions.
                   </p>
-                  <button
-                    onClick={() => onAddNostro(domesticBank.id)}
-                    className="mt-3 px-3.5 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Link First Nostro Account
-                  </button>
+                  {canCreate && (
+                    <button
+                      onClick={() => onAddNostro(domesticBank.id)}
+                      className="mt-3 px-3.5 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Link First Nostro Account
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
@@ -273,20 +281,27 @@ export default function DomesticBankDetailDrawer({
 
                           {/* Actions */}
                           <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
-                            <button
-                              onClick={() => onEditNostro(nostro)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer"
-                              title="Edit Nostro Account"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => onDeleteNostro(nostro)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
-                              title="Delete Nostro Account"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            {canUpdate && (
+                              <button
+                                onClick={() => onEditNostro(nostro)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer"
+                                title="Edit Nostro Account"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button
+                                onClick={() => onDeleteNostro(nostro)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+                                title="Delete Nostro Account"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            {!canUpdate && !canDelete && (
+                              <span className="text-slate-400 text-xs">—</span>
+                            )}
                           </td>
                         </tr>
                       ))}

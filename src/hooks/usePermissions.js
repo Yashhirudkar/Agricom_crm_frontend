@@ -65,6 +65,10 @@ const normalizePermission = (permKey) => {
     resource = 'sales_report';
   }
 
+  if (['bank_management', 'bank-management', 'banks', 'bank'].includes(resource)) {
+    resource = 'bank_management';
+  }
+
   if (action === 'view') {
     action = 'read';
   }

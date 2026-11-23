@@ -168,6 +168,8 @@ axiosClient.interceptors.response.use(
       !isBackgroundPolling &&
       !isHandledBusinessRule &&
       !originalRequest?.suppressErrorLog &&
+      !originalRequest?.suppressToast &&
+      !originalRequest?.skipToast &&
       error.response?.status !== 404;
 
     if (shouldLogConsole) {
@@ -267,7 +269,14 @@ axiosClient.interceptors.response.use(
 
       // Don't toast 404s globally if they are expected (optional), but for enterprise usually we toast 4xx and 5xx
       // Also ignore 401s here to prevent displaying error messages to users when silent refresh is about to occur
-      if (error.response?.status >= 400 && error.response?.status !== 404 && error.response?.status !== 401 && !isConversations403) {
+      if (
+        error.response?.status >= 400 &&
+        error.response?.status !== 404 &&
+        error.response?.status !== 401 &&
+        !isConversations403 &&
+        !originalRequest?.suppressToast &&
+        !originalRequest?.skipToast
+      ) {
         toast.error(message);
       } else if (error.message === "Network Error" && !isBackgroundPolling) {
         toast.error("Network connection lost. Please check your internet connection.");
