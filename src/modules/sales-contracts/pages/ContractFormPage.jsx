@@ -378,12 +378,12 @@ export default function ContractFormPage({ editId, viewId }) {
 
   /**
    * Fetch the next auto-generated contract number from the backend.
-   * Only triggered when: seller is selected, buyer is selected, FY is selected, and we are in CREATE mode.
+   * Only triggered for enquiry-linked creation when seller, buyer, and FY are selected.
    * Prefix = <BuyerInitial><SellerCode> — so both buyer and seller are needed.
    * On edit/view — the contract number is already known and must not change.
    */
   const fetchContractNumberPreview = useCallback(async (sellerId, buyerId, financialYear) => {
-    if (!sellerId || !buyerId || !financialYear || isEdit || isView) {
+    if (!enquiryId || !sellerId || !buyerId || !financialYear || isEdit || isView) {
       setContractNumberPreview(undefined);
       setIsAutoNumber(false);
       return;
@@ -410,15 +410,15 @@ export default function ContractFormPage({ editId, viewId }) {
     } finally {
       setIsLoadingContractNumber(false);
     }
-  }, [isEdit, isView]);
+  }, [enquiryId, isEdit, isView]);
 
-  // When seller, buyer, or financialYear changes in CREATE mode, fetch the next contract number
+  // Preview numbers only for contracts created from a linked enquiry.
   useEffect(() => {
-    if (!isEdit && !isView) {
+    if (enquiryId && !isEdit && !isView) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchContractNumberPreview(form.sellerId, form.buyerId, form.financialYear);
     }
-  }, [form.sellerId, form.buyerId, form.financialYear, isEdit, isView, fetchContractNumberPreview]);
+  }, [enquiryId, form.sellerId, form.buyerId, form.financialYear, isEdit, isView, fetchContractNumberPreview]);
 
   // Auto-fill from Enquiry (Create mode only)
   useEffect(() => {
