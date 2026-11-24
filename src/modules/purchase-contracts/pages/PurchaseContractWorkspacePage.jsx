@@ -520,31 +520,6 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           ratePerMt: form.ratePerMt || null,
         }] : []);
 
-      const formattedAllocations = shipmentAllocations.length > 0
-        ? shipmentAllocations.map((a) => ({
-          shipmentId: Number(a.shipmentId),
-          purchaseContractItemId: a.purchaseContractItemId || null,
-          allocatedQuantity: Number(a.allocatedQuantity || 0),
-        }))
-        : selectedShipmentIds.map((sId) => ({
-          shipmentId: Number(sId),
-          allocatedQuantity: 0,
-        }));
-
-      if (!contract?.salesContractId && Number(form.quantity) > 0) {
-        const scheduledQuantity = formattedAllocations.reduce(
-          (sum, allocation) => sum + (Number(allocation.allocatedQuantity) || 0),
-          0,
-        );
-        if (Math.abs(scheduledQuantity - Number(form.quantity)) > 0.01) {
-          toast.error(
-            `Shipment Schedule total (${scheduledQuantity.toFixed(2)} MT) must equal Purchase Quantity (${Number(form.quantity).toFixed(2)} MT).`,
-          );
-          setSaving(false);
-          return;
-        }
-      }
-
       if (contract?.salesContractId && Number(form.quantity) > 0) {
         const scItems = contract?.salesContract?.items || [];
         const scShipments = contract?.salesContract?.shipments || [];
@@ -659,13 +634,6 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         marking: form.marking || null,
         currencyCode: form.currencyCode || null,
         items: formattedItems,
-        ...(contract?.salesContractId
-          ? {}
-          : {
-            shipmentAllocations: formattedAllocations,
-            shipmentIds: (selectedShipmentIds || []).map(Number).filter((n) => !isNaN(n)),
-            shipmentScheduleData: shipmentScheduleData || {},
-          }),
       };
 
       if (isNew) {
@@ -921,24 +889,26 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           isView={isViewMode}
         />
 
-        {/* 3. Shipment Schedule Table */}
-        <PurchaseShipmentSection
-          shipments={previewShipments}
-          allocationSummary={liveAllocationSummary}
-          shipmentScheduleData={shipmentScheduleData}
-          onUpdateShipmentSchedule={(shipmentId, field, val) => {
-            setShipmentScheduleData((prev) => ({
-              ...prev,
-              [shipmentId]: {
-                ...(prev[shipmentId] || {}),
-                [field]: val,
-              },
-            }));
-          }}
-          loading={loadingShipments}
-          isView={isViewMode || Boolean(contract?.salesContractId)}
-          isPreview={isPreviewingAllocation}
-        />
+        {/* 3. Shipment Schedule Table: only for Sales Contract-linked purchase contracts */}
+        {Boolean(contract?.salesContractId) && (
+          <PurchaseShipmentSection
+            shipments={previewShipments}
+            allocationSummary={liveAllocationSummary}
+            shipmentScheduleData={shipmentScheduleData}
+            onUpdateShipmentSchedule={(shipmentId, field, val) => {
+              setShipmentScheduleData((prev) => ({
+                ...prev,
+                [shipmentId]: {
+                  ...(prev[shipmentId] || {}),
+                  [field]: val,
+                },
+              }));
+            }}
+            loading={loadingShipments}
+            isView={isViewMode || Boolean(contract?.salesContractId)}
+            isPreview={isPreviewingAllocation}
+          />
+        )}
 
         {/* 5. Notes Section */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">

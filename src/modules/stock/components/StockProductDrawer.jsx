@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 import { X } from "lucide-react";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 
@@ -269,6 +269,8 @@ export default function StockProductDrawer({ isOpen, onClose, selectedProduct, c
           user: m.user || m.userName || m.createdByName || null,
           remarks: m.remarks || m.notes || null,
           contractId: m.contractId,
+          salesContractId: m.salesContractId,
+          unsold: m.unsold === true || (!m.salesContractId && m.movement === "Purchase Contract Created"),
         };
       });
     }
@@ -285,7 +287,9 @@ export default function StockProductDrawer({ isOpen, onClose, selectedProduct, c
         id: c.contractId || c.id || i,
         date: c.contractDate,
         movement: c.movement || "Purchase Contract Created",
-        reference: c.businessReference || c.businessTransaction?.businessReference || c.reference || "—",
+        reference: c.salesContractId == null
+          ? "- UNSOLD"
+          : (c.businessReference || c.businessTransaction?.businessReference || c.reference || "—"),
         party: supplierName || "—",
         supplier: supplierName,
         buyer: buyerName,
@@ -296,6 +300,8 @@ export default function StockProductDrawer({ isOpen, onClose, selectedProduct, c
         user: c.user || c.createdByName || c.userName || null,
         remarks: c.remarks || c.notes || null,
         contractId: c.contractId,
+        salesContractId: c.salesContractId,
+        unsold: c.salesContractId == null,
       };
     });
   }, [selectedProduct]);
@@ -437,7 +443,11 @@ export default function StockProductDrawer({ isOpen, onClose, selectedProduct, c
                   movements.map((m, idx) => (
                     <tr
                       key={m.id || idx}
-                      className="cursor-pointer transition-colors hover:bg-[#F0F7FF]"
+                      className={`cursor-pointer transition-colors ${
+                        m.unsold
+                          ? "bg-amber-50/80 hover:bg-amber-100"
+                          : "hover:bg-[#F0F7FF]"
+                      }`}
                     >
                       {/* Date */}
                       <td className="px-3 py-2 whitespace-nowrap border-r border-slate-100">
