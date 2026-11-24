@@ -4,7 +4,7 @@ import { DollarSign, ChevronDown, CreditCard, CalendarDays } from "lucide-react"
 import { mastersApi } from "@/modules/sales-contracts/services/salesContractApi";
 import CountrySelect from "@/components/common/CountrySelect";
 import { getShipmentTypeShortForm } from "@/modules/sales-contracts/utils/formatUtils";
-import { formatPurchaseDate } from "../utils/purchaseDate";
+import { formatDateOnly } from "../utils/dateUtils";
 import { evaluateFreightRequired } from "@/modules/shipments/utils/freightRuleEngine";
 
 export default function PurchaseCommercialInformationSection({
@@ -739,7 +739,7 @@ export default function PurchaseCommercialInformationSection({
                   <span className="ml-1 text-[10px] font-normal text-gray-500">(Tentative)</span>
                 </label>
                 {isView ? (
-                  <div className="text-sm font-semibold text-gray-900 py-1.5">{formatPurchaseDate(form.paymentDueDate) || form.paymentDueDate || "-"}</div>
+                  <div className="text-sm font-semibold text-gray-900 py-1.5">{formatDateOnly(form.paymentDueDate) || form.paymentDueDate || "-"}</div>
                 ) : (
                   <input
                     id="pc-paymentDueDate"

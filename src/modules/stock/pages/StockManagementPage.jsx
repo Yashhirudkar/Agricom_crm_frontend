@@ -138,11 +138,23 @@ export default function StockManagementPage() {
       fetchStockList(filters);
       fetchFxRates();
     };
+    const handlePurchaseContractChanged = () => {
+      fetchDashboard();
+      fetchStockList(filters);
+    };
+    const handleWindowFocus = () => {
+      fetchDashboard();
+      fetchStockList(filters);
+    };
     window.addEventListener("shipment-executed", handleShipmentExecuted);
+    window.addEventListener("purchase-contract-changed", handlePurchaseContractChanged);
+    window.addEventListener("focus", handleWindowFocus);
 
     return () => {
       isMounted = false;
       window.removeEventListener("shipment-executed", handleShipmentExecuted);
+      window.removeEventListener("purchase-contract-changed", handlePurchaseContractChanged);
+      window.removeEventListener("focus", handleWindowFocus);
     };
   }, [fetchDashboard, fetchFxRates, fetchStockList, filters]);
 

@@ -174,13 +174,14 @@ function MovementBadge({ movement }) {
 
 function formatDate(value) {
   if (!value) return <span className="text-slate-400">—</span>;
-  const date = new Date(value);
+  const isDateOnly = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const date = new Date(isDateOnly ? `${value}T00:00:00` : value);
   if (Number.isNaN(date.getTime())) return <span className="text-slate-400">{String(value)}</span>;
 
   const d = date.toLocaleDateString("en-GB", {
     day: "2-digit",
-    month: "short",
-    year: "numeric",
+    month: "2-digit",
+    year: "2-digit",
   });
   const t = date.toLocaleTimeString("en-GB", {
     hour: "2-digit",
@@ -191,7 +192,9 @@ function formatDate(value) {
   return (
     <div className="leading-tight">
       <div className="font-medium text-slate-800">{d}</div>
-      <div className="text-[10px] text-slate-400 tabular-nums">{t}</div>
+      {!isDateOnly && (
+        <div className="text-[10px] text-slate-400 tabular-nums">{t}</div>
+      )}
     </div>
   );
 }
@@ -253,7 +256,7 @@ export default function StockProductDrawer({ isOpen, onClose, selectedProduct, c
         const partyName = resolveParty(m);
         return {
           id: m.id || m._id || idx,
-          date: m.date || m.timestamp || m.contractDate || m.createdAt,
+          date: m.date || m.timestamp || m.createdAt,
           movement: m.movement || m.movementType || "Stock Adjustment",
           reference: m.businessReference || m.businessTransaction?.businessReference || m.reference || m.contractNo || "—",
           party: partyName,
@@ -280,7 +283,7 @@ export default function StockProductDrawer({ isOpen, onClose, selectedProduct, c
       const buyerName = c.buyerName || c.buyer || null;
       return {
         id: c.contractId || c.id || i,
-        date: c.contractDate || c.purchaseDate || c.createdAt,
+        date: c.contractDate,
         movement: c.movement || "Purchase Contract Created",
         reference: c.businessReference || c.businessTransaction?.businessReference || c.reference || "—",
         party: supplierName || "—",

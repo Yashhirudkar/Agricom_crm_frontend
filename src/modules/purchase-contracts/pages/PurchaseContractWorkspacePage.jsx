@@ -16,7 +16,11 @@ import {
 } from "../hooks/usePurchaseContracts";
 import { useSalesMasters } from "@/modules/sales-contracts/hooks/useSalesContracts";
 import { purchaseContractApi } from "../services/purchaseContractApi";
-import { formatPurchaseDate, parsePurchaseDate, calculatePaymentDueDate } from "../utils/purchaseDate";
+import {
+  calculatePaymentDueDate,
+  formatContractDate,
+  parseContractDate,
+} from "../utils/dateUtils";
 
 import PurchaseContractInformationSection from "../components/PurchaseContractInformationSection";
 import PurchaseCommercialInformationSection from "../components/PurchaseCommercialInformationSection";
@@ -68,20 +72,16 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
   const isManual = isNew || contract?.purchaseType === "MTT" || !contract?.salesContractId;
 
   // Form State
-  const initialContractDate = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState({
     purchaseType: isNew ? "MTT" : "SC",
-    contractDate: initialContractDate,
-    purchaseDate: "",
-    purchaseDateInput: "",
+    contractDate: "",
+    contractDateInput: "",
     contractNumber: "",
     buyerId: null,
     buyerName: "",
     sellerId: null,
     supplierName: "",
     sellerContractNo: "",
-    specificationNo: "",
-    specificationDate: "",
     productId: null,
     productName: "",
     quantity: "",
@@ -107,7 +107,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
     advancePercent: "",
     balancePercent: "",
     penaltyPercent: "",
-    paymentDueDate: isNew ? calculatePaymentDueDate(initialContractDate) : "",
+    paymentDueDate: "",
     brokerId: null,
     brokerName: "",
     brokerPartnerRoleId: null,
@@ -167,19 +167,15 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         }
       }
 
-      const rawContractDate = contract.contractDate
-        || salesContract.contractDate
-        || contract.purchaseDate
-        || "";
+      const rawContractDate = contract.contractDate || "";
       const loadedContractDate = rawContractDate ? rawContractDate.split("T")[0] : "";
 
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm((f) => ({
         ...f,
         purchaseType: contract.purchaseType || "SC",
-        contractDate: loadedContractDate || f.contractDate || new Date().toISOString().split("T")[0],
-        purchaseDate: contract.purchaseDate ? contract.purchaseDate.split("T")[0] : "",
-        purchaseDateInput: formatPurchaseDate(contract.purchaseDate),
+        contractDate: loadedContractDate,
+        contractDateInput: formatContractDate(loadedContractDate),
         contractNumber: contract.contractNumber || "",
         buyerId: salesContract.sellerId || contract.buyerId || f.buyerId || null,
         buyerName: salesContract.seller?.entityName || contract.buyer?.entityName || f.buyerName || "",
@@ -190,8 +186,6 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         brokerPartnerRoleId: contract.broker?.partnerRoleId || null,
         brokerCommission: contract.brokerCommission || "",
         sellerContractNo: contract.sellerContractNo || f.sellerContractNo || "",
-        specificationNo: contract.specificationNo || f.specificationNo || "",
-        specificationDate: contract.specificationDate || f.specificationDate || "",
         productId: firstItem.productId || f.productId || null,
         productName: firstItem.product?.name || firstItem.productName || f.productName || "",
         quantity: contract.quantity || f.quantity || (totalQuantity ? String(totalQuantity) : ""),
@@ -445,6 +439,14 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
 
   // Perform Save Draft or Save & Activate
   const handleSaveContract = async (targetStatus = null) => {
+    if (
+      form.contractDateInput
+      && parseContractDate(form.contractDateInput) !== form.contractDate
+    ) {
+      toast.error("Enter Contract Date as DD-MM-YY (for example, 24-11-26)");
+      return;
+    }
+
     if (targetStatus) {
       const requiredFields = [
         ...(!form.contractDate ? ["Contract Date"] : []),
@@ -485,14 +487,6 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         toast.error(`Please complete required fields: ${requiredFields.join(", ")}`);
         return;
       }
-    }
-
-    if (
-      form.purchaseDateInput
-      && parsePurchaseDate(form.purchaseDateInput) !== form.purchaseDate
-    ) {
-      toast.error("Enter Purchase Date as DD-MMM-YYYY (for example, 09-Oct-2026)");
-      return;
     }
 
     setSaving(true);
@@ -638,9 +632,6 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         sellerId: form.sellerId || null,
         sellerContractNo: form.sellerContractNo || null,
         contractDate: form.contractDate || null,
-        purchaseDate: form.purchaseDate || form.contractDate || null,
-        specificationNo: form.specificationNo || null,
-        specificationDate: form.specificationDate || null,
         paymentTermId: form.paymentTermId || null,
         shipmentTypeId: form.shipmentTypeId || null,
         freightRequired: isFreightReq,
@@ -687,6 +678,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         }
 
         await queryClient.invalidateQueries({ queryKey: ["purchase-contracts"] });
+        window.dispatchEvent(new Event("purchase-contract-changed"));
         toast.success(
           targetStatus === "In Progress"
             ? "Purchase Contract saved & activated successfully!"
@@ -707,6 +699,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         );
 
         await queryClient.invalidateQueries({ queryKey: ["purchase-contracts"] });
+        window.dispatchEvent(new Event("purchase-contract-changed"));
         router.push("/sales/purchase-contracts");
       }
     } catch (err) {

@@ -1,6 +1,6 @@
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function formatPurchaseDate(value) {
+export function formatDateOnly(value) {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value || "");
   if (!match) return "";
 
@@ -9,24 +9,32 @@ export function formatPurchaseDate(value) {
   return monthName ? `${day}-${monthName}-${year}` : "";
 }
 
-export function parsePurchaseDate(value) {
-  const match = /^(\d{2})-([A-Za-z]{3})-(\d{4})$/.exec(value || "");
+export function formatContractDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value || "");
+  if (!match) return "";
+
+  const [, year, month, day] = match;
+  return `${day}-${month}-${year.slice(-2)}`;
+}
+
+export function parseContractDate(value) {
+  const match = /^(\d{2})-(\d{2})-(\d{2})$/.exec((value || "").trim());
   if (!match) return null;
 
-  const [, day, monthName, year] = match;
-  const month = MONTHS.findIndex((name) => name.toLowerCase() === monthName.toLowerCase());
-  if (month < 0) return null;
-
-  const date = new Date(Date.UTC(Number(year), month, Number(day)));
+  const [, dayText, monthText, yearText] = match;
+  const day = Number(dayText);
+  const month = Number(monthText) - 1;
+  const year = 2000 + Number(yearText);
+  const date = new Date(Date.UTC(year, month, day));
   if (
-    date.getUTCFullYear() !== Number(year)
-    || date.getUTCMonth() !== month
-    || date.getUTCDate() !== Number(day)
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month ||
+    date.getUTCDate() !== day
   ) {
     return null;
   }
 
-  return `${year}-${String(month + 1).padStart(2, "0")}-${day}`;
+  return `${year}-${monthText}-${dayText}`;
 }
 
 /**

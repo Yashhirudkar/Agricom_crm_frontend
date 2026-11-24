@@ -1,7 +1,11 @@
 "use client";
-import React, { useRef, useState } from "react";
-import { FileText, ChevronDown, Plus, Minus, CalendarDays } from "lucide-react";
-import { formatPurchaseDate, parsePurchaseDate, calculatePaymentDueDate } from "../utils/purchaseDate";
+import React, { useRef } from "react";
+import { CalendarDays, FileText, ChevronDown } from "lucide-react";
+import {
+  calculatePaymentDueDate,
+  formatContractDate,
+  parseContractDate,
+} from "../utils/dateUtils";
 
 export default function PurchaseContractInformationSection({
   contract,
@@ -12,9 +16,7 @@ export default function PurchaseContractInformationSection({
   exporterOptions = [],
   isView = false,
 }) {
-  const [showSpec, setShowSpec] = useState(!!(form?.specificationNo || form?.specificationDate));
-  const purchaseDatePickerRef = useRef(null);
-
+  const contractDatePickerRef = useRef(null);
   const inp = "w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white transition-all disabled:opacity-75 disabled:bg-gray-100";
   const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
 
@@ -26,7 +28,6 @@ export default function PurchaseContractInformationSection({
 
   const buyersOptions = masters?.buyers || masters?.partners || [];
   const sellersOptions = exporterOptions;
-  const purchaseDateDisplay = formatPurchaseDate(form.purchaseDate);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
@@ -41,23 +42,6 @@ export default function PurchaseContractInformationSection({
             <p className="text-[10px] text-gray-400">Basic purchase contract details and counterparty entities</p>
           </div>
         </div>
-        {!isView && (
-          <button
-            type="button"
-            onClick={() => {
-              if (showSpec) {
-                setShowSpec(false);
-                setForm((f) => ({ ...f, specificationNo: "", specificationDate: "" }));
-              } else {
-                setShowSpec(true);
-              }
-            }}
-            className="px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-          >
-            {showSpec ? <Minus className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-            <span>{showSpec ? "Remove Spec" : "Attach Spec"}</span>
-          </button>
-        )}
       </div>
 
       <div className="p-5 space-y-4">
@@ -68,22 +52,67 @@ export default function PurchaseContractInformationSection({
               Contract Date <span className="text-red-500">*</span>
             </label>
             {isView ? (
-              <div className="text-sm font-semibold text-gray-900 py-1.5">{formatPurchaseDate(form.contractDate) || form.contractDate || "\u00A0"}</div>
+              <div className="text-sm font-semibold text-gray-900 py-1.5">{formatContractDate(form.contractDate) || "\u00A0"}</div>
             ) : (
-              <input
-                type="date"
-                value={form.contractDate || ""}
-                onChange={(e) => {
-                  const newDate = e.target.value;
-                  const newDueDate = calculatePaymentDueDate(newDate);
-                  setForm((f) => ({
+              <div className="relative">
+                <input
+                  type="text"
+                  value={form.contractDateInput ?? formatContractDate(form.contractDate)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const parsedDate = parseContractDate(value);
+                    setForm((f) => ({
+                      ...f,
+                      contractDateInput: value,
+                      contractDate: value === "" ? "" : (parsedDate || f.contractDate),
+                      ...(value === "" || parsedDate
+                        ? { paymentDueDate: calculatePaymentDueDate(parsedDate || "") }
+                        : {}),
+                    }));
+                  }}
+                  onBlur={() => {
+                    const parsedDate = parseContractDate(form.contractDateInput);
+                    if (parsedDate) {
+                      setForm((f) => ({
+                        ...f,
+                        contractDateInput: formatContractDate(parsedDate),
+                      }));
+                    }
+                  }}
+                  maxLength={8}
+                  placeholder="DD-MM-YY"
+                  className={`${inp} font-medium pr-9`}
+                  aria-label="CONTRACT DATE (DD-MM-YY)"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (contractDatePickerRef.current?.showPicker) {
+                      contractDatePickerRef.current.showPicker();
+                    } else {
+                      contractDatePickerRef.current?.click();
+                    }
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#007aff]"
+                  aria-label="CHOOSE CONTRACT DATE"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                </button>
+                <input
+                  ref={contractDatePickerRef}
+                  type="date"
+                  value={form.contractDate || ""}
+                  onChange={(e) => setForm((f) => ({
                     ...f,
-                    contractDate: newDate,
-                    paymentDueDate: newDueDate,
-                  }));
-                }}
-                className={`${inp} font-medium`}
-              />
+                    contractDate: e.target.value,
+                    contractDateInput: formatContractDate(e.target.value),
+                    paymentDueDate: calculatePaymentDueDate(e.target.value),
+                  }))}
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                />
+              </div>
             )}
           </div>
 
@@ -195,110 +224,6 @@ export default function PurchaseContractInformationSection({
             )}
           </div>
 
-          <div>
-            <label className={lbl}>
-              Purchase Date <span className="text-red-500">*</span>
-            </label>
-            {isView ? (
-              <div className="text-sm font-semibold text-gray-900 py-1.5">{purchaseDateDisplay || "\u00A0"}</div>
-            ) : (
-              <div className="relative">
-                <input
-                  type="text"
-                  value={form.purchaseDateInput ?? purchaseDateDisplay}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    const parsedDate = parsePurchaseDate(value);
-                    setForm((f) => ({
-                      ...f,
-                      purchaseDateInput: value,
-                      purchaseDate: value === "" ? "" : (parsedDate || f.purchaseDate),
-                      ...(parsedDate && !f.contractDate ? {
-                        contractDate: parsedDate,
-                        paymentDueDate: calculatePaymentDueDate(parsedDate),
-                      } : {}),
-                    }));
-                  }}
-                  onBlur={() => {
-                    if (form.purchaseDate && parsePurchaseDate(form.purchaseDateInput) === form.purchaseDate) {
-                      setForm((f) => ({
-                        ...f,
-                        purchaseDateInput: formatPurchaseDate(f.purchaseDate),
-                      }));
-                    }
-                  }}
-                  maxLength={11}
-                  placeholder="DD-MMM-YYYY"
-                  className={`${inp} font-medium pr-9`}
-                  aria-label="PURCHASE DATE (DD-MMM-YYYY)"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (purchaseDatePickerRef.current?.showPicker) {
-                      purchaseDatePickerRef.current.showPicker();
-                    } else {
-                      purchaseDatePickerRef.current?.click();
-                    }
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#007aff]"
-                  aria-label="CHOOSE PURCHASE DATE"
-                >
-                  <CalendarDays className="h-4 w-4" />
-                </button>
-                <input
-                  ref={purchaseDatePickerRef}
-                  type="date"
-                  value={form.purchaseDate || ""}
-                  onChange={(e) => setForm((f) => ({
-                    ...f,
-                    purchaseDate: e.target.value,
-                    purchaseDateInput: formatPurchaseDate(e.target.value),
-                    ...(e.target.value && !f.contractDate ? {
-                      contractDate: e.target.value,
-                      paymentDueDate: calculatePaymentDueDate(e.target.value),
-                    } : {}),
-                  }))}
-                  className="sr-only"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                />
-              </div>
-            )}
-          </div>
-
-          {showSpec && (
-            <>
-              <div>
-                <label className={lbl}>Specification No</label>
-                {isView ? (
-                  <div className="text-sm font-mono text-gray-900 py-1.5">{form.specificationNo || "\u00A0"}</div>
-                ) : (
-                  <input
-                    type="text"
-                    value={form.specificationNo || ""}
-                    onChange={(e) => setForm((f) => ({ ...f, specificationNo: e.target.value }))}
-                    className={`${inp} font-mono`}
-                    placeholder="e.g. SPEC-2026"
-                  />
-                )}
-              </div>
-
-              <div>
-                <label className={lbl}>Specification Date</label>
-                {isView ? (
-                  <div className="text-sm font-semibold text-gray-900 py-1.5">{form.specificationDate || "\u00A0"}</div>
-                ) : (
-                  <input
-                    type="date"
-                    value={form.specificationDate || ""}
-                    onChange={(e) => setForm((f) => ({ ...f, specificationDate: e.target.value }))}
-                    className={`${inp}`}
-                  />
-                )}
-              </div>
-            </>
-          )}
         </div>
       </div>
     </div>

@@ -42,11 +42,11 @@ export default function DomesticBankModal({
     if (initialData) {
       setForm({
         companyId: initialData.companyId || (companies[0]?.id ? String(companies[0].id) : ""),
-        bankName: initialData.bankName || "",
+        bankName: (initialData.bankName || "").toUpperCase(),
         currency: initialData.currency || "INR",
         accountNumber: initialData.accountNumber || "",
         swiftCode: initialData.swiftCode || "",
-        bankAddress: initialData.bankAddress || "",
+        bankAddress: (initialData.bankAddress || "").toUpperCase(),
         status: initialData.status || "Active",
       });
     } else {
@@ -71,7 +71,11 @@ export default function DomesticBankModal({
     if (!form.bankName?.trim()) errs.bankName = "Bank Name is required";
     if (!form.currency?.trim()) errs.currency = "Currency is required";
     if (!form.accountNumber?.trim()) errs.accountNumber = "Account Number is required";
-    if (!form.swiftCode?.trim()) errs.swiftCode = "SWIFT Code is required";
+    if (!form.swiftCode?.trim()) {
+      errs.swiftCode = "SWIFT Code is required";
+    } else if (form.swiftCode.trim().length !== 11) {
+      errs.swiftCode = "SWIFT Code must be exactly 11 characters";
+    }
     if (!form.bankAddress?.trim()) errs.bankAddress = "Bank Address is required";
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -84,11 +88,11 @@ export default function DomesticBankModal({
     onSubmit({
       ...form,
       companyId: Number(form.companyId),
-      bankName: form.bankName.trim(),
+      bankName: form.bankName.trim().toUpperCase(),
       currency: form.currency.trim().toUpperCase(),
       accountNumber: form.accountNumber.trim(),
       swiftCode: form.swiftCode.trim().toUpperCase(),
-      bankAddress: form.bankAddress.trim(),
+      bankAddress: form.bankAddress.trim().toUpperCase(),
     });
   };
 
@@ -156,8 +160,8 @@ export default function DomesticBankModal({
                 type="text"
                 placeholder="e.g. DBS BANK INDIA LIMITED"
                 value={form.bankName}
-                onChange={(e) => setForm({ ...form, bankName: e.target.value })}
-                className={`w-full rounded-xl border px-3.5 py-2.5 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-hidden ${
+                onChange={(e) => setForm({ ...form, bankName: e.target.value.toUpperCase() })}
+                className={`w-full rounded-xl border px-3.5 py-2.5 text-sm font-medium uppercase focus:ring-2 focus:ring-blue-500 focus:outline-hidden ${
                   errors.bankName ? "border-red-400 bg-red-50/30" : "border-gray-200 bg-white"
                 }`}
               />
@@ -243,7 +247,8 @@ export default function DomesticBankModal({
                 type="text"
                 placeholder="e.g. DBSSINBBXXX"
                 value={form.swiftCode}
-                onChange={(e) => setForm({ ...form, swiftCode: e.target.value.toUpperCase() })}
+                maxLength={11}
+                onChange={(e) => setForm({ ...form, swiftCode: e.target.value.toUpperCase().slice(0, 11) })}
                 className={`w-full rounded-xl border px-3.5 py-2.5 text-sm font-mono font-bold uppercase focus:ring-2 focus:ring-blue-500 focus:outline-hidden ${
                   errors.swiftCode ? "border-red-400 bg-red-50/30" : "border-gray-200 bg-white"
                 }`}
@@ -265,8 +270,8 @@ export default function DomesticBankModal({
               rows={3}
               placeholder="Full address of the domestic bank branch..."
               value={form.bankAddress}
-              onChange={(e) => setForm({ ...form, bankAddress: e.target.value })}
-              className={`w-full rounded-xl border px-3.5 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-hidden ${
+              onChange={(e) => setForm({ ...form, bankAddress: e.target.value.toUpperCase() })}
+              className={`w-full rounded-xl border px-3.5 py-2 text-sm uppercase focus:ring-2 focus:ring-blue-500 focus:outline-hidden ${
                 errors.bankAddress ? "border-red-400 bg-red-50/30" : "border-gray-200 bg-white"
               }`}
             />

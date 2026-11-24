@@ -71,7 +71,7 @@ export function formatBankDetails({
     if (domesticAddrBlock) {
       lines.push(domesticAddrBlock);
     }
-    return lines.join('\n');
+    return lines.join('\n').toUpperCase();
   }
 
   const nostroAddr =
@@ -118,5 +118,5 @@ export function formatBankDetails({
     lines.push(domesticAddrBlock);
   }
 
-  return lines.join('\n');
+  return lines.join('\n').toUpperCase();
 }

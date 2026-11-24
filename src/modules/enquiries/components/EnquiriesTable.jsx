@@ -2,7 +2,7 @@ import React from "react";
 import { MessageCircle, Trash2, FileSignature, Edit2, Eye, Truck, MapPin } from "lucide-react";
 import PriceHistoryTooltip from "./PriceHistoryTooltip";
 
-export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelete, onExecute, onEdit, onView, onOpenTransport, onSortBusinessReference, isOrderMode }) {
+export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelete, onExecute, onEdit, onView, onOpenTransport, onSortBusinessReference, isOrderMode, highlightOverdue = false }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -109,14 +109,15 @@ export default function EnquiriesTable({ enquiries, loading, onFollowUp, onDelet
         </thead>
         <tbody className="divide-y divide-gray-50">
           {enquiries.map((e) => {
-            const rowBackground = e.isOverdue
+            const shouldHighlightOverdue = highlightOverdue && e.isOverdue;
+            const rowBackground = shouldHighlightOverdue
               ? "bg-[#FEF2F2] group-hover:bg-[#FEE2E2]"
               : "bg-white group-hover:bg-gray-50/70";
             return (
               <tr
                 key={e.id}
                 className={`transition-colors group ${
-                  e.isOverdue
+                  shouldHighlightOverdue
                     ? "bg-[#FEF2F2] hover:bg-[#FEE2E2]"
                     : "hover:bg-gray-50/70"
                 }`}

@@ -43,6 +43,7 @@ import axiosClient from "@/lib/axios";
 import { getAllCountryOptions } from "@/lib/countryUtils";
 import usePermissions from "@/hooks/usePermissions";
 import TransportDetailsGrid from "@/modules/common/components/TransportDetailsGrid";
+import { getShipmentTypeShortForm } from "@/modules/sales-contracts/utils/formatUtils";
 
 const SHIPMENT_MODE_OPTIONS = [
   { value: "SHIP", label: "Ship", Icon: Ship },
@@ -98,6 +99,20 @@ function resolveIncotermFromData(data, mastersShipmentTypes = []) {
   }
 
   return "";
+}
+
+function createDefaultTransportDetails(shipmentTypes = []) {
+  const firstShipmentType = shipmentTypes?.[0];
+  const defaultIncoterm = firstShipmentType
+    ? getShipmentTypeShortForm(firstShipmentType) || firstShipmentType.code || firstShipmentType.name || ""
+    : "";
+
+  return [{
+    sequence: 1,
+    origin: "",
+    incoterm: defaultIncoterm,
+    destination: "",
+  }];
 }
 
 export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, onSaveSuccess }) {
@@ -163,7 +178,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     closedBy: "",
     closedByName: "",
     closedAt: "",
-    transportDetails: [],
+    transportDetails: createDefaultTransportDetails(shipmentTypes),
   });
 
   const [initialFormState, setInitialFormState] = useState({});
@@ -397,7 +412,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
           potentialEnquiry: false,
           bidType: "TARGET",
           note: "",
-          transportDetails: [],
+          transportDetails: createDefaultTransportDetails(shipmentTypes),
         };
         setForm(emptyForm);
         setInitialFormState(emptyForm);

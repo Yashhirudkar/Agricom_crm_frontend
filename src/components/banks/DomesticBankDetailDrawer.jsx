@@ -77,7 +77,7 @@ export default function DomesticBankDetailDrawer({
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base font-bold text-slate-900 leading-tight">
-                    {domesticBank.bankName}
+                    {domesticBank.bankName?.toUpperCase()}
                   </h2>
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -172,7 +172,7 @@ export default function DomesticBankDetailDrawer({
                 Bank Branch Address
               </span>
               <p className="text-xs text-slate-700 whitespace-pre-line leading-snug">
-                {domesticBank.bankAddress}
+                {domesticBank.bankAddress?.toUpperCase()}
               </p>
             </div>
 
@@ -243,10 +243,10 @@ export default function DomesticBankDetailDrawer({
 
                           {/* Nostro Bank Name & Account Name */}
                           <td className="px-4 py-3">
-                            <span className="font-bold text-slate-900 block">{nostro.bankName}</span>
+                            <span className="font-bold text-slate-900 block">{nostro.bankName?.toUpperCase()}</span>
                             {nostro.accountName && (
                               <span className="text-[11px] text-slate-500 block">
-                                A/C Name: {nostro.accountName}
+                                A/C Name: {nostro.accountName?.toUpperCase()}
                               </span>
                             )}
                           </td>

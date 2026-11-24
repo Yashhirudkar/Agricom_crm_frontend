@@ -555,10 +555,10 @@ export default function BankManagementPage() {
                             onClick={() => handleViewDomesticDetails(db)}
                             className="font-bold text-blue-600 hover:text-blue-800 hover:underline text-left cursor-pointer"
                           >
-                            {db.bankName}
+                            {db.bankName?.toUpperCase()}
                           </button>
                           <span className="text-[10px] text-gray-400 line-clamp-1 block max-w-xs">
-                            {db.bankAddress}
+                            {db.bankAddress?.toUpperCase()}
                           </span>
                         </td>
 
@@ -589,20 +589,11 @@ export default function BankManagementPage() {
                                 <span
                                   key={n.id}
                                   className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200"
-                                  title={`${n.bankName} (A/C: ${n.accountNumber})`}
+                                  title={`${n.bankName?.toUpperCase()} (A/C: ${n.accountNumber})`}
                                 >
                                   {n.currency}
                                 </span>
                               ))
-                            )}
-                            {canCreate && (
-                              <button
-                                onClick={() => handleOpenCreateNostro(db.id)}
-                                className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 underline ml-1 cursor-pointer"
-                                title="Link a new Nostro foreign currency account"
-                              >
-                                + Link
-                              </button>
                             )}
                           </div>
                         </td>
@@ -707,9 +698,9 @@ export default function BankManagementPage() {
 
                       {/* Nostro Bank Name */}
                       <td className="px-4 py-3">
-                        <span className="font-bold text-gray-900 block">{n.bankName}</span>
+                        <span className="font-bold text-gray-900 block">{n.bankName?.toUpperCase()}</span>
                         <span className="text-[10px] text-gray-400 block line-clamp-1">
-                          {n.bankAddress}
+                          {n.bankAddress?.toUpperCase()}
                         </span>
                       </td>
 
@@ -719,7 +710,7 @@ export default function BankManagementPage() {
                           {n.accountNumber}
                         </span>
                         <span className="text-[10px] text-gray-500 block">
-                          {n.accountName}
+                          {n.accountName?.toUpperCase()}
                         </span>
                       </td>
 
@@ -731,7 +722,7 @@ export default function BankManagementPage() {
                       {/* Parent Domestic Bank */}
                       <td className="px-4 py-3">
                         <span className="font-bold text-gray-900 block">
-                          {n.domesticBank?.bankName || "—"}
+                          {n.domesticBank?.bankName?.toUpperCase() || "—"}
                         </span>
                         <span className="text-[10px] text-gray-500 font-mono block">
                           A/C: {n.domesticBank?.accountNumber} ({n.domesticBank?.currency || "INR"})

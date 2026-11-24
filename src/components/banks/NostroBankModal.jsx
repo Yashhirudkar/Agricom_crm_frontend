@@ -48,11 +48,11 @@ export default function NostroBankModal({
         companyId: initialData.companyId ? String(initialData.companyId) : (companies[0]?.id ? String(companies[0].id) : ""),
         domesticBankId: initialData.domesticBankId ? String(initialData.domesticBankId) : "",
         currency: initialData.currency || "USD",
-        bankName: initialData.bankName || "",
-        accountName: initialData.accountName || "",
+        bankName: (initialData.bankName || "").toUpperCase(),
+        accountName: (initialData.accountName || "").toUpperCase(),
         accountNumber: initialData.accountNumber || "",
         swiftCode: initialData.swiftCode || "",
-        bankAddress: initialData.bankAddress || "",
+        bankAddress: (initialData.bankAddress || "").toUpperCase(),
         status: initialData.status || "Active",
       });
     } else {
@@ -90,7 +90,11 @@ export default function NostroBankModal({
     if (!form.bankName?.trim()) errs.bankName = "Nostro Bank Name is required";
     if (!form.accountName?.trim()) errs.accountName = "Nostro Account Name is required";
     if (!form.accountNumber?.trim()) errs.accountNumber = "Nostro Account Number is required";
-    if (!form.swiftCode?.trim()) errs.swiftCode = "Nostro SWIFT Code is required";
+    if (!form.swiftCode?.trim()) {
+      errs.swiftCode = "Nostro SWIFT Code is required";
+    } else if (form.swiftCode.trim().length !== 11) {
+      errs.swiftCode = "Nostro SWIFT Code must be exactly 11 characters";
+    }
     if (!form.bankAddress?.trim()) errs.bankAddress = "Nostro Bank Address is required";
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -105,11 +109,11 @@ export default function NostroBankModal({
       companyId: Number(form.companyId),
       domesticBankId: Number(form.domesticBankId),
       currency: form.currency.trim().toUpperCase(),
-      bankName: form.bankName.trim(),
-      accountName: form.accountName.trim(),
+      bankName: form.bankName.trim().toUpperCase(),
+      accountName: form.accountName.trim().toUpperCase(),
       accountNumber: form.accountNumber.trim(),
       swiftCode: form.swiftCode.trim().toUpperCase(),
-      bankAddress: form.bankAddress.trim(),
+      bankAddress: form.bankAddress.trim().toUpperCase(),
     });
   };
 
@@ -257,8 +261,8 @@ export default function NostroBankModal({
                 type="text"
                 placeholder="e.g. Barclays Bank, Frankfurt"
                 value={form.bankName}
-                onChange={(e) => setForm({ ...form, bankName: e.target.value })}
-                className={`w-full rounded-xl border px-3.5 py-2 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-hidden ${
+                onChange={(e) => setForm({ ...form, bankName: e.target.value.toUpperCase() })}
+                className={`w-full rounded-xl border px-3.5 py-2 text-sm font-medium uppercase focus:ring-2 focus:ring-emerald-500 focus:outline-hidden ${
                   errors.bankName ? "border-red-400 bg-red-50/30" : "border-gray-200 bg-white"
                 }`}
               />
@@ -280,8 +284,8 @@ export default function NostroBankModal({
                 type="text"
                 placeholder="e.g. DBS Bank India Ltd. - Mumbai Branch"
                 value={form.accountName}
-                onChange={(e) => setForm({ ...form, accountName: e.target.value })}
-                className={`w-full rounded-xl border px-3.5 py-2 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-hidden ${
+                onChange={(e) => setForm({ ...form, accountName: e.target.value.toUpperCase() })}
+                className={`w-full rounded-xl border px-3.5 py-2 text-sm font-medium uppercase focus:ring-2 focus:ring-emerald-500 focus:outline-hidden ${
                   errors.accountName ? "border-red-400 bg-red-50/30" : "border-gray-200 bg-white"
                 }`}
               />
@@ -323,7 +327,8 @@ export default function NostroBankModal({
               type="text"
               placeholder="e.g. BARCDEFF"
               value={form.swiftCode}
-              onChange={(e) => setForm({ ...form, swiftCode: e.target.value.toUpperCase() })}
+              maxLength={11}
+              onChange={(e) => setForm({ ...form, swiftCode: e.target.value.toUpperCase().slice(0, 11) })}
               className={`w-full rounded-xl border px-3.5 py-2 text-sm font-mono font-bold uppercase focus:ring-2 focus:ring-emerald-500 focus:outline-hidden ${
                 errors.swiftCode ? "border-red-400 bg-red-50/30" : "border-gray-200 bg-white"
               }`}
@@ -344,8 +349,8 @@ export default function NostroBankModal({
               rows={2}
               placeholder="e.g. Frankfurt, Germany"
               value={form.bankAddress}
-              onChange={(e) => setForm({ ...form, bankAddress: e.target.value })}
-              className={`w-full rounded-xl border px-3.5 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-hidden ${
+              onChange={(e) => setForm({ ...form, bankAddress: e.target.value.toUpperCase() })}
+              className={`w-full rounded-xl border px-3.5 py-2 text-sm uppercase focus:ring-2 focus:ring-emerald-500 focus:outline-hidden ${
                 errors.bankAddress ? "border-red-400 bg-red-50/30" : "border-gray-200 bg-white"
               }`}
             />

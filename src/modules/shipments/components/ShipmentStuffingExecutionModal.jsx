@@ -676,6 +676,7 @@ export default function ShipmentStuffingExecutionModal({
       containerSize: "",
       sealNo: "",
       remarks: "",
+      dispatch: "",
       tareWeight: "",
       grossWeight: "",
       netWeight: "",
@@ -689,6 +690,7 @@ export default function ShipmentStuffingExecutionModal({
       driver: "",
       mobile: "",
       remark: "",
+      dispatch: "",
     },
   ]);
 
@@ -843,7 +845,12 @@ export default function ShipmentStuffingExecutionModal({
               setFreightData((prev) => ({ ...prev, ...existing.freightOverrides }));
             }
             if (Array.isArray(existing.containers) && existing.containers.length > 0) {
-              setContainers(existing.containers);
+              setContainers(
+                existing.containers.map((container) => ({
+                  ...container,
+                  dispatch: container.dispatch || "",
+                })),
+              );
             }
             if (Array.isArray(existing.trucks) && existing.trucks.length > 0) {
               setTrucks(
@@ -852,6 +859,7 @@ export default function ShipmentStuffingExecutionModal({
                   driver: t.driver || "",
                   mobile: normalizeMobileNumber(t.mobile || t.driverPhone),
                   remark: t.remark || t.remarks || "",
+                  dispatch: t.dispatch || "",
                 }))
               );
             }
@@ -952,7 +960,16 @@ export default function ShipmentStuffingExecutionModal({
     if (isReadOnly) return;
     setContainers((prev) => [
       ...prev,
-      { containerNo: "", containerSize: "", sealNo: "", remarks: "", tareWeight: "", grossWeight: "", netWeight: "" },
+      {
+        containerNo: "",
+        containerSize: "",
+        sealNo: "",
+        remarks: "",
+        dispatch: "",
+        tareWeight: "",
+        grossWeight: "",
+        netWeight: "",
+      },
     ]);
   };
 
@@ -986,7 +1003,7 @@ export default function ShipmentStuffingExecutionModal({
     if (isReadOnly) return;
     setTrucks((prev) => [
       ...prev,
-      { truckNo: "", driver: "", mobile: "", remark: "" },
+      { truckNo: "", driver: "", mobile: "", remark: "", dispatch: "" },
     ]);
   };
 
@@ -1326,6 +1343,18 @@ export default function ShipmentStuffingExecutionModal({
         toast.error(msg);
         return;
       }
+
+      const dispatchRows = showContainerDetails ? containers : trucks;
+      if (
+        dispatchRows.length === 0 ||
+        dispatchRows.some((row) => !["Yes", "No"].includes(row.dispatch))
+      ) {
+        const msg =
+          "Select Dispatch (Yes or No) for every container or truck before completing stuffing.";
+        setErrorMsg(msg);
+        toast.error(msg);
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -1348,7 +1377,10 @@ export default function ShipmentStuffingExecutionModal({
         grossWeight: parseFloat(loadingInfo.grossWeight) || 0,
         netWeight: parseFloat(loadingInfo.netWeight) || 0,
         freightOverrides: { ...freightData, shipmentMode },
-        containers: containers.filter((c) => c.containerNo?.trim()),
+        dispatchMode: showContainerDetails ? "container" : "truck",
+        containers: containers.filter(
+          (c) => c.containerNo?.trim() || c.dispatch,
+        ),
         downtimes: downtimes.map((downtime) => ({
           ...downtime,
           reason:
@@ -1367,7 +1399,8 @@ export default function ShipmentStuffingExecutionModal({
               t.truckNo?.trim() !== "" ||
               t.driver?.trim() !== "" ||
               t.mobile?.trim() !== "" ||
-              t.remark?.trim() !== "",
+              t.remark?.trim() !== "" ||
+              t.dispatch,
           )
           .map((t) => ({
             truckNo: t.truckNo?.trim() || "",
@@ -1375,6 +1408,7 @@ export default function ShipmentStuffingExecutionModal({
             mobile: t.mobile || "",
             remark: t.remark?.trim() || "",
             remarks: t.remark?.trim() || "",
+            dispatch: t.dispatch || "",
           })),
         attachments: attachments.filter((a) => a.documentName || a.fileName),
         remarks: remarks,
@@ -2043,6 +2077,9 @@ export default function ShipmentStuffingExecutionModal({
                         <th className="py-2.5 px-3">Size</th>
                         <th className="py-2.5 px-3">Seal No.</th>
                         <th className="py-2.5 px-3">Remarks</th>
+                        <th className="py-2.5 px-3">
+                          Dispatch <span className="text-red-500">*</span>
+                        </th>
                         <th className="py-2.5 px-3">Tare Wt (MT)</th>
                         <th className="py-2.5 px-3">Gross Wt (MT)</th>
                         <th className="py-2.5 px-3">Net Wt (MT)</th>
@@ -2080,6 +2117,20 @@ export default function ShipmentStuffingExecutionModal({
                           </td>
                           <td className="py-2 px-3">
                             <input type="text" disabled={isReadOnly} value={c.remarks || ""} onChange={(e) => handleContainerChange(idx, "remarks", e.target.value)} placeholder="Remarks" className="min-w-28 rounded border border-slate-200 px-2 py-1.5 disabled:bg-slate-50 disabled:opacity-75" />
+                          </td>
+                          <td className="py-2 px-3">
+                            <select
+                              disabled={isReadOnly}
+                              value={c.dispatch || ""}
+                              onChange={(e) =>
+                                handleContainerChange(idx, "dispatch", e.target.value)
+                              }
+                              className="min-w-20 rounded border border-slate-200 px-2 py-1.5 disabled:bg-slate-50 disabled:opacity-75"
+                            >
+                              <option value="">Select</option>
+                              <option value="Yes">Yes</option>
+                              <option value="No">No</option>
+                            </select>
                           </td>
                           <td className="py-2 px-3">
                             <input
@@ -2171,6 +2222,9 @@ export default function ShipmentStuffingExecutionModal({
                         <th className="py-2.5 px-3">Driver Name</th>
                         <th className="py-2.5 px-3">Mobile No.</th>
                         <th className="py-2.5 px-3">Remark</th>
+                        <th className="py-2.5 px-3">
+                          Dispatch <span className="text-red-500">*</span>
+                        </th>
                         {!isReadOnly && <th className="py-2.5 px-3 text-center">Action</th>}
                       </tr>
                     </thead>
@@ -2226,6 +2280,20 @@ export default function ShipmentStuffingExecutionModal({
                               onChange={(e) => handleTruckChange(idx, "remark", e.target.value)}
                               className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
                             />
+                          </td>
+                          <td className="py-2 px-3">
+                            <select
+                              disabled={isReadOnly}
+                              value={t.dispatch || ""}
+                              onChange={(e) =>
+                                handleTruckChange(idx, "dispatch", e.target.value)
+                              }
+                              className="min-w-20 rounded border border-slate-200 px-2 py-1.5 disabled:bg-slate-50 disabled:opacity-75"
+                            >
+                              <option value="">Select</option>
+                              <option value="Yes">Yes</option>
+                              <option value="No">No</option>
+                            </select>
                           </td>
                           {!isReadOnly && (
                             <td className="py-2 px-3 text-center">

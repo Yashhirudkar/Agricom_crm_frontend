@@ -173,6 +173,7 @@ export default function EnquiriesListPage() {
         <EnquiriesTable
           enquiries={activeQuery.enquiries}
           loading={activeQuery.loading}
+          highlightOverdue={true}
           onSortBusinessReference={activeQuery.toggleBusinessReferenceSort}
           onFollowUp={handleFollowUp}
           onDelete={(e) => setDeleteTarget(e)}

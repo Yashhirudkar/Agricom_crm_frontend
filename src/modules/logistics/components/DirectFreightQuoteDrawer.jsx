@@ -4,6 +4,17 @@ import { X, Save, AlertCircle, PackageOpen, Plus, Trash2 } from "lucide-react";
 import SearchablePartnerSelect from "@/components/common/SearchablePartnerSelect";
 import axiosClient from "@/lib/axios";
 import Select from "react-select";
+import CreatableSelect from "react-select/creatable";
+import {
+  getCountryOptions,
+  getCityOptions,
+  getPlaceOptions,
+  getZipCodeOptions,
+  parseRouteLocation,
+  formatOriginLocation,
+  formatDestinationLocation,
+  addCustomLocationItem,
+} from "@/constants/routeLocationsData";
 import { useCurrencyMaster } from "@/modules/enquiries/hooks/useCurrencyMaster";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import useFinalizationLock from "@/hooks/useFinalizationLock";
@@ -30,6 +41,13 @@ export default function DirectFreightQuoteDrawer({
     {
       origin: "",
       destination: "",
+      originCountry: "",
+      originCity: "",
+      originPlace: "",
+      destCountry: "",
+      destCity: "",
+      destPlace: "",
+      destZip: "",
       rates: [
         {
           partnerId: "",
@@ -97,6 +115,60 @@ export default function DirectFreightQuoteDrawer({
     menuPortal: (base) => ({ ...base, zIndex: 9999 }),
   };
 
+  const [customLocsVersion, setCustomLocsVersion] = useState(0);
+  const countryOptions = useMemo(() => getCountryOptions(), [customLocsVersion]);
+
+  const locationSelectStyles = {
+    ...reactSelectStyles,
+    control: (base, state) => ({
+      ...reactSelectStyles.control(base, state),
+      minHeight: "34px",
+      height: "34px",
+      borderRadius: "0.5rem",
+      backgroundColor: isReadOnly ? "#f8fafc" : "white",
+    }),
+    valueContainer: (base) => ({
+      ...base,
+      padding: "0 8px",
+    }),
+    singleValue: (base) => ({
+      ...base,
+      color: "#0f172a",
+      fontSize: "0.75rem",
+      fontWeight: "700",
+      textTransform: "uppercase",
+    }),
+    input: (base) => ({
+      ...base,
+      margin: 0,
+      padding: 0,
+      fontSize: "0.75rem",
+      fontWeight: "600",
+      textTransform: "uppercase",
+    }),
+    placeholder: (base) => ({
+      ...base,
+      fontSize: "0.75rem",
+      color: "#94a3b8",
+      textTransform: "uppercase",
+      fontWeight: "500",
+    }),
+    option: (base, state) => ({
+      ...reactSelectStyles.option(base, state),
+      fontSize: "0.75rem",
+      fontWeight: "600",
+      textTransform: "uppercase",
+      padding: "6px 10px",
+    }),
+    noOptionsMessage: (base) => ({
+      ...base,
+      fontSize: "0.75rem",
+      color: "#64748b",
+      fontWeight: "600",
+      padding: "8px",
+    }),
+  };
+
   useEffect(() => {
     if (isOpen) {
       axiosClient.get("/masters/products/options", { params: { limit: 100, isActive: true } })
@@ -110,26 +182,48 @@ export default function DirectFreightQuoteDrawer({
       if (quote && quote.id) {
         setProductId(quote.productId || "");
         if (quote.freightRoutes && quote.freightRoutes.length > 0) {
-          setRoutes(quote.freightRoutes.map(r => ({
-            origin: r.origin || "",
-            destination: r.destination || "",
-            rates: r.rates && r.rates.length > 0 ? r.rates.map(rate => ({
-              partnerId: rate.partnerId || "",
-              equipment: rate.equipment || "",
-              transitDays: rate.transitDays || "",
-              currency: rate.currency || "INR",
-              amount: rate.amount || "",
-              validTill: rate.validTill ? rate.validTill.split("T")[0] : "",
-              status: rate.status || "Active"
-            })) : [
-              { partnerId: "", equipment: "", transitDays: "", currency: "INR", amount: "", validTill: "", status: "Active" }
-            ]
-          })));
+          setRoutes(quote.freightRoutes.map(r => {
+            const origParsed = parseRouteLocation(r.origin || "");
+            const destParsed = parseRouteLocation(r.destination || "");
+            return {
+              origin: r.origin || "",
+              destination: r.destination || "",
+              originCountry: origParsed.country || "",
+              originCity: origParsed.city || "",
+              originPlace: origParsed.place || "",
+              destCountry: destParsed.country || "",
+              destCity: destParsed.city || "",
+              destPlace: destParsed.place || "",
+              destZip: destParsed.zipCode || "",
+              rates: r.rates && r.rates.length > 0 ? r.rates.map(rate => ({
+                partnerId: rate.partnerId || "",
+                equipment: rate.equipment || "",
+                transitDays: rate.transitDays || "",
+                currency: rate.currency || "INR",
+                amount: rate.amount || "",
+                validTill: rate.validTill ? rate.validTill.split("T")[0] : "",
+                status: rate.status || "Active"
+              })) : [
+                { partnerId: "", equipment: "", transitDays: "", currency: "INR", amount: "", validTill: "", status: "Active" }
+              ]
+            };
+          }));
         } else {
           // Legacy mapping
+          const orig = quote.origin || quote.loadingPoint || "";
+          const dest = quote.destination || "";
+          const origParsed = parseRouteLocation(orig);
+          const destParsed = parseRouteLocation(dest);
           setRoutes([{
-            origin: quote.origin || quote.loadingPoint || "",
-            destination: quote.destination || "",
+            origin: orig,
+            destination: dest,
+            originCountry: origParsed.country || "",
+            originCity: origParsed.city || "",
+            originPlace: origParsed.place || "",
+            destCountry: destParsed.country || "",
+            destCity: destParsed.city || "",
+            destPlace: destParsed.place || "",
+            destZip: destParsed.zipCode || "",
             rates: [{
               partnerId: quote.sellerId || "",
               equipment: quote.vehicleType || "",
@@ -147,6 +241,13 @@ export default function DirectFreightQuoteDrawer({
           {
             origin: "",
             destination: "",
+            originCountry: "",
+            originCity: "",
+            originPlace: "",
+            destCountry: "",
+            destCity: "",
+            destPlace: "",
+            destZip: "",
             rates: [
               {
                 partnerId: "",
@@ -169,6 +270,13 @@ export default function DirectFreightQuoteDrawer({
     setRoutes([...routes, {
       origin: "",
       destination: "",
+      originCountry: "",
+      originCity: "",
+      originPlace: "",
+      destCountry: "",
+      destCity: "",
+      destPlace: "",
+      destZip: "",
       rates: [{ partnerId: "", equipment: "", transitDays: "", currency: "INR", amount: "", validTill: "", status: "Active" }]
     }]);
   };
@@ -193,10 +301,84 @@ export default function DirectFreightQuoteDrawer({
     setRoutes(newRoutes);
   };
 
-  const updateRoute = (index, field, value) => {
+  const updateOriginField = (routeIndex, field, value) => {
     const newRoutes = [...routes];
-    newRoutes[index][field] = value;
+    const targetRoute = { ...newRoutes[routeIndex] };
+    const upperVal = (value || "").trim().toUpperCase();
+
+    if (field === "originCountry") {
+      targetRoute.originCountry = upperVal;
+      targetRoute.originCity = "";
+      targetRoute.originPlace = "";
+    } else if (field === "originCity") {
+      targetRoute.originCity = upperVal;
+      targetRoute.originPlace = "";
+    } else if (field === "originPlace") {
+      targetRoute.originPlace = upperVal;
+    }
+
+    if (targetRoute.originCountry || targetRoute.originCity || targetRoute.originPlace) {
+      addCustomLocationItem({
+        country: targetRoute.originCountry,
+        city: targetRoute.originCity,
+        place: targetRoute.originPlace,
+      });
+    }
+
+    targetRoute.origin = formatOriginLocation({
+      country: targetRoute.originCountry,
+      city: targetRoute.originCity,
+      place: targetRoute.originPlace,
+    });
+
+    newRoutes[routeIndex] = targetRoute;
     setRoutes(newRoutes);
+    setCustomLocsVersion((v) => v + 1);
+  };
+
+  const updateDestField = (routeIndex, field, value) => {
+    const newRoutes = [...routes];
+    const targetRoute = { ...newRoutes[routeIndex] };
+    const upperVal = (value || "").trim().toUpperCase();
+
+    if (field === "destCountry") {
+      targetRoute.destCountry = upperVal;
+      targetRoute.destCity = "";
+      targetRoute.destPlace = "";
+      targetRoute.destZip = "";
+    } else if (field === "destCity") {
+      targetRoute.destCity = upperVal;
+      targetRoute.destPlace = "";
+      targetRoute.destZip = "";
+    } else if (field === "destPlace") {
+      targetRoute.destPlace = upperVal;
+      const zips = getZipCodeOptions(targetRoute.destCountry, targetRoute.destCity, upperVal);
+      if (zips.length === 1 && !targetRoute.destZip) {
+        targetRoute.destZip = zips[0].value;
+      }
+    } else if (field === "destZip") {
+      targetRoute.destZip = (value || "").toUpperCase();
+    }
+
+    if (targetRoute.destCountry || targetRoute.destCity || targetRoute.destPlace || targetRoute.destZip) {
+      addCustomLocationItem({
+        country: targetRoute.destCountry,
+        city: targetRoute.destCity,
+        place: targetRoute.destPlace,
+        zipCode: targetRoute.destZip,
+      });
+    }
+
+    targetRoute.destination = formatDestinationLocation({
+      country: targetRoute.destCountry,
+      city: targetRoute.destCity,
+      place: targetRoute.destPlace,
+      zipCode: targetRoute.destZip,
+    });
+
+    newRoutes[routeIndex] = targetRoute;
+    setRoutes(newRoutes);
+    setCustomLocsVersion((v) => v + 1);
   };
 
   const updateRate = (routeIndex, rateIndex, field, value) => {
@@ -214,7 +396,24 @@ export default function DirectFreightQuoteDrawer({
       if (routes.length === 0) throw new Error("At least one route is required.");
       
       const payloadRoutes = routes.map(route => {
-        if (!route.origin || !route.destination) throw new Error("Origin and Destination are required for all routes.");
+        const originVal = (
+          formatOriginLocation({
+            country: route.originCountry,
+            city: route.originCity,
+            place: route.originPlace,
+          }) || route.origin || ""
+        ).trim().toUpperCase();
+
+        const destVal = (
+          formatDestinationLocation({
+            country: route.destCountry,
+            city: route.destCity,
+            place: route.destPlace,
+            zipCode: route.destZip,
+          }) || route.destination || ""
+        ).trim().toUpperCase();
+
+        if (!originVal || !destVal) throw new Error("Origin and Destination are required for all routes.");
         if (route.rates.length === 0) throw new Error("At least one quote is required for each route.");
         
         const mappedRates = route.rates.map(rate => {
@@ -233,8 +432,8 @@ export default function DirectFreightQuoteDrawer({
         });
         
         return {
-          origin: route.origin.trim(),
-          destination: route.destination.trim(),
+          origin: originVal,
+          destination: destVal,
           rates: mappedRates
         };
       });
@@ -339,28 +538,151 @@ export default function DirectFreightQuoteDrawer({
                     )}
                   </div>
                   <div className="p-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1.5">Origin *</label>
-                        <input
-                          type="text"
-                          value={route.origin}
-                          onChange={(e) => updateRoute(routeIdx, "origin", e.target.value)}
-                          placeholder="e.g. Mundra Port"
-                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 bg-white focus:outline-none focus:border-indigo-500"
-                          required
-                        />
+                    <div className="space-y-4">
+                      {/* ─── Origin Section: 3 Dependent Fields ────────────────────── */}
+                      <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500"></span> Origin (Country → City → Place) *
+                          </label>
+                          {route.origin && (
+                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded uppercase tracking-tight truncate max-w-[320px]">
+                              {route.origin}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Country *</label>
+                            <CreatableSelect
+                              isDisabled={isReadOnly}
+                              isClearable
+                              options={countryOptions}
+                              value={route.originCountry ? { value: route.originCountry, label: route.originCountry } : null}
+                              onChange={(sel) => updateOriginField(routeIdx, "originCountry", sel ? sel.value : "")}
+                              onCreateOption={(val) => updateOriginField(routeIdx, "originCountry", val)}
+                              placeholder="SELECT COUNTRY..."
+                              noOptionsMessage={() => "No locations found"}
+                              formatCreateLabel={(val) => `ADD "${val.toUpperCase()}"`}
+                              styles={locationSelectStyles}
+                              menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">City *</label>
+                            <CreatableSelect
+                              isDisabled={isReadOnly}
+                              isClearable
+                              options={getCityOptions(route.originCountry, route.originCity)}
+                              value={route.originCity ? { value: route.originCity, label: route.originCity } : null}
+                              onChange={(sel) => updateOriginField(routeIdx, "originCity", sel ? sel.value : "")}
+                              onCreateOption={(val) => updateOriginField(routeIdx, "originCity", val)}
+                              placeholder={route.originCountry ? "SELECT CITY..." : "SELECT COUNTRY FIRST"}
+                              noOptionsMessage={() => "No locations found"}
+                              formatCreateLabel={(val) => `ADD "${val.toUpperCase()}"`}
+                              styles={locationSelectStyles}
+                              menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Place / Port *</label>
+                            <CreatableSelect
+                              isDisabled={isReadOnly}
+                              isClearable
+                              options={getPlaceOptions(route.originCountry, route.originCity, route.originPlace)}
+                              value={route.originPlace ? { value: route.originPlace, label: route.originPlace } : null}
+                              onChange={(sel) => updateOriginField(routeIdx, "originPlace", sel ? sel.value : "")}
+                              onCreateOption={(val) => updateOriginField(routeIdx, "originPlace", val)}
+                              placeholder={route.originCity ? "SELECT PLACE / PORT..." : "SELECT CITY FIRST"}
+                              noOptionsMessage={() => "No locations found"}
+                              formatCreateLabel={(val) => `ADD "${val.toUpperCase()}"`}
+                              styles={locationSelectStyles}
+                              menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1.5">Destination *</label>
-                        <input
-                          type="text"
-                          value={route.destination}
-                          onChange={(e) => updateRoute(routeIdx, "destination", e.target.value)}
-                          placeholder="e.g. Dubai"
-                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 bg-white focus:outline-none focus:border-indigo-500"
-                          required
-                        />
+
+                      {/* ─── Destination Section: 4 Dependent Fields ────────────────── */}
+                      <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-indigo-500"></span> Destination (Country → City → Place → ZIP) *
+                          </label>
+                          {route.destination && (
+                            <span className="text-[10px] font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded uppercase tracking-tight truncate max-w-[320px]">
+                              {route.destination}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Country *</label>
+                            <CreatableSelect
+                              isDisabled={isReadOnly}
+                              isClearable
+                              options={countryOptions}
+                              value={route.destCountry ? { value: route.destCountry, label: route.destCountry } : null}
+                              onChange={(sel) => updateDestField(routeIdx, "destCountry", sel ? sel.value : "")}
+                              onCreateOption={(val) => updateDestField(routeIdx, "destCountry", val)}
+                              placeholder="SELECT COUNTRY..."
+                              noOptionsMessage={() => "No locations found"}
+                              formatCreateLabel={(val) => `ADD "${val.toUpperCase()}"`}
+                              styles={locationSelectStyles}
+                              menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">City *</label>
+                            <CreatableSelect
+                              isDisabled={isReadOnly}
+                              isClearable
+                              options={getCityOptions(route.destCountry, route.destCity)}
+                              value={route.destCity ? { value: route.destCity, label: route.destCity } : null}
+                              onChange={(sel) => updateDestField(routeIdx, "destCity", sel ? sel.value : "")}
+                              onCreateOption={(val) => updateDestField(routeIdx, "destCity", val)}
+                              placeholder={route.destCountry ? "SELECT CITY..." : "SELECT COUNTRY FIRST"}
+                              noOptionsMessage={() => "No locations found"}
+                              formatCreateLabel={(val) => `ADD "${val.toUpperCase()}"`}
+                              styles={locationSelectStyles}
+                              menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Place / Port *</label>
+                            <CreatableSelect
+                              isDisabled={isReadOnly}
+                              isClearable
+                              options={getPlaceOptions(route.destCountry, route.destCity, route.destPlace)}
+                              value={route.destPlace ? { value: route.destPlace, label: route.destPlace } : null}
+                              onChange={(sel) => updateDestField(routeIdx, "destPlace", sel ? sel.value : "")}
+                              onCreateOption={(val) => updateDestField(routeIdx, "destPlace", val)}
+                              placeholder={route.destCity ? "SELECT PLACE / PORT..." : "SELECT CITY FIRST"}
+                              noOptionsMessage={() => "No locations found"}
+                              formatCreateLabel={(val) => `ADD "${val.toUpperCase()}"`}
+                              styles={locationSelectStyles}
+                              menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">ZIP Code</label>
+                            <input
+                              type="text"
+                              disabled={isReadOnly}
+                              value={route.destZip || ""}
+                              onChange={(e) => updateDestField(routeIdx, "destZip", e.target.value.toUpperCase())}
+                              placeholder="ZIP CODE (E.G. 1234)..."
+                              className="w-full h-[34px] px-2.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 bg-white placeholder:text-slate-400 placeholder:font-normal uppercase focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:cursor-not-allowed transition-colors"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
 

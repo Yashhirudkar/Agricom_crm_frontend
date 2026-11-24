@@ -194,8 +194,8 @@ export default function LogisticsQueueTable({
                   </div>
                 </td>
                 <td className="h-[44px] px-3 py-2 text-center text-gray-600 whitespace-nowrap">
-                  {(e.purchaseContract?.purchaseDate || e.purchaseDate || e.enquiryDate)
-                    ? new Date(e.purchaseContract?.purchaseDate || e.purchaseDate || e.enquiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+                  {e.enquiryDate
+                    ? new Date(e.enquiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                     : "—"}
                 </td>
                 <td className="h-[44px] px-2 py-2 text-gray-600 truncate" title={e.purchaseContract?.productName || e.product?.name || ""}>
