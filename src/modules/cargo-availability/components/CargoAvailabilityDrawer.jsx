@@ -6,6 +6,8 @@ import MttReadinessFormModal from "./MttReadinessFormModal";
 import ExporterLoadingTab from "./ExporterLoadingTab";
 import ExporterLoadingDrawer from "./ExporterLoadingDrawer";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import useFinalizationLock from "@/hooks/useFinalizationLock";
+import CompletedBadge from "@/components/badges/CompletedBadge";
 import {
   X,
   Truck,
@@ -13,6 +15,7 @@ import {
   FileCheck2,
   Clock,
   CheckCircle2,
+  Eye,
 } from "lucide-react";
 
 export default function CargoAvailabilityDrawer({ shipment, onClose }) {
@@ -52,14 +55,39 @@ export default function CargoAvailabilityDrawer({ shipment, onClose }) {
     }
   }, [shipment?.id, fetchCargoData]);
 
+  const cargoRecords = cargoData?.cargoAvailabilityRecords || [];
+  const loadingEntries = cargoData?.loadingEntries || [];
+  const targetCargoRecord = selectedCargoRecord || cargoRecords[0];
+
+  const hasExistingReadiness = Boolean(
+    targetCargoRecord?.hasExistingReadiness ||
+    targetCargoRecord?.existingReadiness ||
+    (targetCargoRecord?.readinessEntries && targetCargoRecord.readinessEntries.length > 0) ||
+    targetCargoRecord?.noOfReadinessEntries > 0 ||
+    targetCargoRecord?.readyDate ||
+    targetCargoRecord?.isReady ||
+    targetCargoRecord?.status === "Ready" ||
+    targetCargoRecord?.status === "Completed" ||
+    shipment?.cargoReady
+  );
+
+  const isCompletedCargo =
+    hasExistingReadiness ||
+    targetCargoRecord?.status === "Completed" ||
+    shipment?.status === "Executed" ||
+    (Number(targetCargoRecord?.allocatedQty || 0) >= Number(targetCargoRecord?.purchaseQty || 0) &&
+      Number(targetCargoRecord?.purchaseQty || 0) > 0);
+
+  const { isReadOnly, isOneTimeAllowed, canOverride } = useFinalizationLock({
+    isCompleted: isCompletedCargo,
+    resource: "cargo_allocation",
+    allowOneTimeEdit: false,
+  });
+
   if (!shipment) return null;
 
   const contract = shipment.salesContract || {};
   const buyer = contract.buyer || {};
-
-  const cargoRecords = cargoData?.cargoAvailabilityRecords || [];
-  const loadingEntries = cargoData?.loadingEntries || [];
-  const targetCargoRecord = selectedCargoRecord || cargoRecords[0];
 
   return (
     <>
@@ -94,6 +122,13 @@ export default function CargoAvailabilityDrawer({ shipment, onClose }) {
               <span className="text-slate-600 font-medium">
                 Product: <strong className="text-slate-900 font-semibold">{shipment.products?.[0]?.name || "—"}</strong> ({shipment.quantity || 0} MT)
               </span>
+              {isCompletedCargo && (
+                <CompletedBadge
+                  isReadOnly={isReadOnly}
+                  isOneTimeAllowed={isOneTimeAllowed}
+                  canOverride={canOverride}
+                />
+              )}
             </div>
           </div>
 
@@ -144,7 +179,7 @@ export default function CargoAvailabilityDrawer({ shipment, onClose }) {
 
           {/* Quick Action Button based on active tab */}
           <div>
-            {activeTab === "loading" && (
+            {!isReadOnly && activeTab === "loading" && (
               <button
                 onClick={() => {
                   setActiveLoadingRecord(null);
@@ -159,11 +194,20 @@ export default function CargoAvailabilityDrawer({ shipment, onClose }) {
             {activeTab === "readiness" && (
               <button
                 onClick={() => setOpenReadinessModal(true)}
-                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                className={`px-3 py-1 rounded-md text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer ${
+                  isReadOnly
+                    ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300"
+                    : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                }`}
               >
-                <Plus className="h-3.5 w-3.5" />
-                <span>+ Add Readiness</span>
+                {isReadOnly ? <Eye className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                <span>{isReadOnly ? "View Readiness" : hasExistingReadiness ? "Edit Readiness" : "+ Add Readiness"}</span>
               </button>
+            )}
+            {isReadOnly && activeTab !== "readiness" && (
+              <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                View Mode
+              </span>
             )}
           </div>
         </div>
@@ -175,11 +219,13 @@ export default function CargoAvailabilityDrawer({ shipment, onClose }) {
           {activeTab === "loading" && (
             <ExporterLoadingTab
               loadingEntries={loadingEntries}
+              isReadOnly={isReadOnly}
               onOpenDrawer={(rec) => {
                 setActiveLoadingRecord(rec);
                 setOpenLoadingDrawer(true);
               }}
               onNewLoading={() => {
+                if (isReadOnly) return;
                 setActiveLoadingRecord(null);
                 setOpenLoadingDrawer(true);
               }}

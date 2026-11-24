@@ -1,7 +1,9 @@
 "use client";
 import React, { useState } from "react";
-import { CheckCircle2, Clock, FileText, AlertCircle, Edit3 } from "lucide-react";
+import { CheckCircle2, Clock, FileText, AlertCircle, Edit3, Eye } from "lucide-react";
 import MttReadinessFormModal from "./MttReadinessFormModal";
+import { useFinalizationLock } from "@/hooks/useFinalizationLock";
+import CompletedBadge from "@/components/badges/CompletedBadge";
 
 export default function MttReadinessTab({ cargoRecord, onRefresh }) {
   const [openModal, setOpenModal] = useState(false);
@@ -29,6 +31,23 @@ export default function MttReadinessTab({ cargoRecord, onRefresh }) {
   const readyDate = cargoRecord?.readyDate || cargoRecord?.readinessEntries?.[0]?.readyDate;
   const remarks = cargoRecord?.remarks || cargoRecord?.readinessEntries?.[0]?.remarks;
 
+  const hasExistingReadiness = Boolean(
+    cargoRecord?.hasExistingReadiness ||
+    cargoRecord?.existingReadiness ||
+    (cargoRecord?.readinessEntries && cargoRecord.readinessEntries.length > 0) ||
+    cargoRecord?.noOfReadinessEntries > 0 ||
+    cargoRecord?.readyDate ||
+    cargoRecord?.isReady ||
+    cargoRecord?.status === "Ready" ||
+    cargoRecord?.status === "Completed"
+  );
+
+  const { canOverride, isReadOnly, viewMode } = useFinalizationLock({
+    isCompleted: hasExistingReadiness,
+    resource: "cargo_allocation",
+    allowOneTimeEdit: false,
+  });
+
   return (
     <div className="space-y-4 font-sans">
       {/* Main Readiness Status Card */}
@@ -50,9 +69,18 @@ export default function MttReadinessTab({ cargoRecord, onRefresh }) {
               )}
             </div>
             <div>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                MTT Cargo Readiness Status
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  MTT Cargo Readiness Status
+                </h3>
+                {hasExistingReadiness && (
+                  <CompletedBadge
+                    isReadOnly={isReadOnly}
+                    canOverride={canOverride}
+                    size="xs"
+                  />
+                )}
+              </div>
               <p className="text-[11px] text-slate-500 font-medium">
                 Procurement readiness confirmation for outbound allocation & loading
               </p>
@@ -61,10 +89,20 @@ export default function MttReadinessTab({ cargoRecord, onRefresh }) {
 
           <button
             onClick={() => setOpenModal(true)}
-            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer ${
+              isReadOnly
+                ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300"
+                : "bg-emerald-600 hover:bg-emerald-700 text-white"
+            }`}
           >
-            <Edit3 className="h-3.5 w-3.5" />
-            <span>Update Readiness</span>
+            {isReadOnly ? <Eye className="h-3.5 w-3.5" /> : <Edit3 className="h-3.5 w-3.5" />}
+            <span>
+              {isReadOnly
+                ? "View Readiness"
+                : hasExistingReadiness
+                ? "Update Readiness"
+                : "Add Readiness"}
+            </span>
           </button>
         </div>
 

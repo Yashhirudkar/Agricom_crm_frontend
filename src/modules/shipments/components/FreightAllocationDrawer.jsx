@@ -15,6 +15,8 @@ import {
   isFreightRequiredForShipment,
 } from "../utils/freightRuleEngine";
 import { normalizeTruckCapacity } from "@/modules/logistics/utils/truckCapacity";
+import useFinalizationLock from "@/hooks/useFinalizationLock";
+import CompletedBadge from "@/components/badges/CompletedBadge";
 
 export default function FreightAllocationDrawer({
   shipment,
@@ -26,6 +28,13 @@ export default function FreightAllocationDrawer({
 
   const isFreightRequired = isFreightRequiredForShipment(shipment);
   const isFreightAllocated = isFreightAllocatedForShipment(shipment);
+  const targetQuote = shipment?.preferredQuote || logisticsDetails?.logistics?.selectedFreight;
+
+  const { isReadOnly, isOneTimeAllowed, canOverride } = useFinalizationLock({
+    status: isFreightAllocated ? "Completed" : "Draft",
+    module: "freight_allocation",
+    oneTimeEditUsed: targetQuote?.oneTimeCompletedEditUsed,
+  });
 
   useEffect(() => {
     if (!shipment || !isFreightRequired || !isFreightAllocated) return;
@@ -108,10 +117,11 @@ export default function FreightAllocationDrawer({
                 <h2 className="text-sm font-bold text-slate-900">
                   Freight Allocation Details
                 </h2>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Allocated
-                </span>
+                <CompletedBadge
+                  isReadOnly={isReadOnly}
+                  isOneTimeAllowed={isOneTimeAllowed}
+                  canOverride={canOverride}
+                />
               </div>
               <p className="text-[11px] text-slate-400 font-mono tracking-tight mt-0.5">
                 Shipment Ref:{" "}

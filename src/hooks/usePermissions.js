@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useSelector } from "react-redux";
-import { selectUserPermissions, selectUserType } from "@/store/slices/authSlice";
+import { selectUserPermissions } from "@/store/slices/authSlice";
 import { canUserPost } from "@/modules/chat/utils/channelPosting";
 
 const normalizePermission = (permKey) => {
@@ -73,8 +73,18 @@ const normalizePermission = (permKey) => {
     action = 'read';
   }
 
-  if (action === 'edit') {
+  if (action === 'edit_completed' || action === 'edit-completed') {
+    action = 'edit_completed';
+  } else if (action === 'edit') {
     action = 'update';
+  }
+
+  if (['cargo-availability', 'cargo_availability', 'cargo-allocation', 'cargo_allocation'].includes(resource)) {
+    resource = 'cargo_allocation';
+  }
+
+  if (['freight-allocation', 'freight_allocation', 'logistics'].includes(resource)) {
+    resource = 'freight_allocation';
   }
 
   if (resource === 'sales_contracts' || resource === 'sales_contract') {
@@ -270,11 +280,21 @@ export function usePermissions() {
     return canUserPost(conversation, user, hasPermission);
   };
 
+  /**
+   * Check if user has permission to edit completed records for a resource
+   */
+  const canEditCompleted = (resource) => {
+    if (!resource) return false;
+    if (checkIsAdmin()) return true;
+    return hasPermission(`${resource}:edit_completed`);
+  };
+
   return {
     permissions,
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
+    canEditCompleted,
     checkGroupPermission,
     checkChannelPostPermission,
   };

@@ -10,6 +10,7 @@ export default function ExporterLoadingTab({
   metrics = {},
   filters = {},
   error = "",
+  isReadOnly = false,
   onFilterChange,
   onResetFilters,
   onOpenDrawer,
@@ -129,13 +130,15 @@ export default function ExporterLoadingTab({
           <Truck className="h-4 w-4 text-indigo-600" />
           <h3 className="text-xs font-bold text-gray-800">Exporter Loading Execution & Dispatch Records</h3>
         </div>
-        <button
-          onClick={onNewLoading}
-          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span>New Truck Loading</span>
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={onNewLoading}
+            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>New Truck Loading</span>
+          </button>
+        )}
       </div>
 
       {!loadingEntries || loadingEntries.length === 0 ? (
@@ -271,7 +274,7 @@ export default function ExporterLoadingTab({
                         onClick={() => onOpenDrawer(row)}
                         className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded text-[11px] font-bold flex items-center gap-1 ml-auto transition-colors cursor-pointer border border-indigo-200/60"
                       >
-                        <span>View / Edit</span>
+                        <span>{isReadOnly ? "View Details" : "View / Edit"}</span>
                         <ChevronRight className="h-3.5 w-3.5" />
                       </button>
                     </td>

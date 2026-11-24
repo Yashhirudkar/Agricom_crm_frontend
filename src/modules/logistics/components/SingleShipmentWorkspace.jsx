@@ -11,7 +11,10 @@ import {
   Edit2,
   Trash2,
   AlertTriangle,
+  Lock,
 } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
+import CompletedBadge from "@/components/badges/CompletedBadge";
 
 export default function SingleShipmentWorkspace({
   shipment,
@@ -24,10 +27,23 @@ export default function SingleShipmentWorkspace({
   expiringSoonIds = [],
   getPartnerInitials,
 }) {
+  const { canEditCompleted } = usePermissions();
+  const canOverrideFreight = canEditCompleted("freight_allocation");
+
   if (!shipment) return null;
 
   const sQuotes = shipment.quotes || [];
   const prefQuote = shipment.preferredQuote || sQuotes.find((q) => q.isPreferred);
+
+  const isFreightFinalized =
+    Boolean(prefQuote) ||
+    ["Transport Assigned", "Ready For Shipment", "Shipment Created", "In Transit", "Delivered", "Closed"].includes(
+      details?.transport?.status || shipment.transportStatus || shipment.status
+    );
+  const isShipmentOneTimeAllowed =
+    isFreightFinalized && !canOverrideFreight && prefQuote && !prefQuote.oneTimeCompletedEditUsed;
+  const isQuotesLocked =
+    isFreightFinalized && !canOverrideFreight && (!prefQuote || Boolean(prefQuote.oneTimeCompletedEditUsed));
 
   return (
     <div className="space-y-5">
@@ -53,6 +69,13 @@ export default function SingleShipmentWorkspace({
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
                     {shipment.status}
                   </span>
+                )}
+                {isFreightFinalized && (
+                  <CompletedBadge
+                    isReadOnly={isQuotesLocked}
+                    isOneTimeAllowed={isShipmentOneTimeAllowed}
+                    canOverride={canOverrideFreight}
+                  />
                 )}
               </div>
               <div className="flex items-center gap-3 text-xs text-slate-600 font-medium mt-1 flex-wrap">
@@ -247,6 +270,9 @@ export default function SingleShipmentWorkspace({
                         const isPreferred = q.isPreferred || (prefQuote && prefQuote.id === q.id);
                         const isExpiring = expiringSoonIds.includes(q.id);
                         const initials = getPartnerInitials ? getPartnerInitials(q.seller?.entityName) : "TP";
+                        const isQuoteFinalized = Boolean(q.isPreferred) || isFreightFinalized;
+                        const quoteOneTimeAllowed = isQuoteFinalized && !canOverrideFreight && !q.oneTimeCompletedEditUsed;
+                        const quoteLocked = isQuoteFinalized && !canOverrideFreight && Boolean(q.oneTimeCompletedEditUsed);
 
                         return (
                           <tr
@@ -335,12 +361,21 @@ export default function SingleShipmentWorkspace({
                             <td className="px-3 py-2 text-center">
                               <button
                                 type="button"
-                                onClick={() => !isReadOnly && onSetPreferred(q.id)}
-                                disabled={isReadOnly}
+                                onClick={() => !isReadOnly && !quoteLocked && onSetPreferred(q.id)}
+                                disabled={isReadOnly || quoteLocked}
+                                title={
+                                  quoteLocked
+                                    ? "Freight allocation is finalized. Changing preferred quote requires freight_allocation:edit_completed permission."
+                                    : isPreferred
+                                    ? "Preferred Quote"
+                                    : "Select as Preferred"
+                                }
                                 className={`px-2.5 py-1 rounded-lg font-extrabold text-[10px] transition-all inline-flex items-center gap-1.5 ${
                                   isPreferred
                                     ? "bg-purple-600 text-white shadow-xs"
-                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 border border-slate-200"
+                                    : quoteLocked
+                                    ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 border border-slate-200 cursor-pointer"
                                 }`}
                               >
                                 <Star className={`h-3 w-3 ${isPreferred ? "fill-white" : ""}`} />
@@ -350,25 +385,36 @@ export default function SingleShipmentWorkspace({
 
                             {/* Actions */}
                             <td className="px-3 py-2 text-right">
-                              {!isReadOnly ? (
+                              {!isReadOnly && !quoteLocked ? (
                                 <div className="flex items-center justify-end gap-1">
                                   <button
                                     type="button"
                                     onClick={() => onEditQuote(q, shipment)}
-                                    className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                                    title="Revise Quote"
+                                    className={`p-1 rounded-md transition-colors cursor-pointer ${
+                                      quoteOneTimeAllowed
+                                        ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                        : "text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                                    }`}
+                                    title={quoteOneTimeAllowed ? "1 Correction Remaining: Edit Quote" : "Revise Quote"}
                                   >
                                     <Edit2 className="h-3.5 w-3.5" />
                                   </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => onDeleteQuote(q.id)}
-                                    className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                                    title="Delete Quote"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
+                                  {!quoteOneTimeAllowed && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onDeleteQuote(q.id)}
+                                      className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                      title="Delete Quote"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
                                 </div>
+                              ) : quoteLocked ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-slate-400 font-medium" title="Finalized quote locked (Read Only)">
+                                  <Lock className="h-3 w-3 text-slate-400 inline" />
+                                  <span>Locked</span>
+                                </span>
                               ) : (
                                 <span className="text-[10px] text-slate-400 font-mono">—</span>
                               )}

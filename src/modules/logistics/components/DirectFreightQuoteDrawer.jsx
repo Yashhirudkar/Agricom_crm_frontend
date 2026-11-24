@@ -6,6 +6,8 @@ import axiosClient from "@/lib/axios";
 import Select from "react-select";
 import { useCurrencyMaster } from "@/modules/enquiries/hooks/useCurrencyMaster";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import useFinalizationLock from "@/hooks/useFinalizationLock";
+import CompletedBadge from "@/components/badges/CompletedBadge";
 
 export default function DirectFreightQuoteDrawer({
   isOpen,
@@ -14,6 +16,13 @@ export default function DirectFreightQuoteDrawer({
   quote = null,
 }) {
   useEscapeKey(onClose, isOpen);
+
+  const isFinalized = quote?.status === "Finalized" || quote?.status === "Completed" || Boolean(quote?.isPreferred);
+  const { isReadOnly, isOneTimeAllowed, canOverride } = useFinalizationLock({
+    status: isFinalized ? "Completed" : quote?.status,
+    module: "freight_allocation",
+    oneTimeEditUsed: quote?.oneTimeCompletedEditUsed,
+  });
 
   const [productId, setProductId] = useState("");
   
@@ -198,6 +207,7 @@ export default function DirectFreightQuoteDrawer({
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (isReadOnly) return;
     setLoading(true);
     setError("");
     try {
@@ -261,9 +271,18 @@ export default function DirectFreightQuoteDrawer({
               <PackageOpen className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-[13px] font-extrabold text-slate-900 uppercase tracking-tight">
-                {isEditing ? `Revise Direct Quote (${quote.quoteNumber})` : "New Direct Quote"}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-[13px] font-extrabold text-slate-900 uppercase tracking-tight">
+                  {isReadOnly ? `View Direct Quote (${quote?.quoteNumber || ""})` : isEditing ? `Revise Direct Quote (${quote.quoteNumber})` : "New Direct Quote"}
+                </h3>
+                {isFinalized && (
+                  <CompletedBadge
+                    isReadOnly={isReadOnly}
+                    isOneTimeAllowed={isOneTimeAllowed}
+                    canOverride={canOverride}
+                  />
+                )}
+              </div>
               <p className="text-[10px] font-semibold text-slate-500 mt-0.5">Enterprise freight quotation</p>
             </div>
           </div>
@@ -274,8 +293,16 @@ export default function DirectFreightQuoteDrawer({
 
         {/* Form */}
         <form onSubmit={handleSave} className="flex-1 flex flex-col overflow-hidden bg-slate-50">
+          <fieldset disabled={isReadOnly} className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto p-5 space-y-6">
             
+            {isOneTimeAllowed && (
+              <div className="flex items-center gap-2.5 p-3 bg-amber-50 border border-amber-300 rounded-xl text-amber-800 text-xs font-bold">
+                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                <span>You have 1 correction remaining. Saving changes will permanently lock this direct freight quote.</span>
+              </div>
+            )}
+
             {error && (
               <div className="flex items-center gap-2.5 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-800 text-xs font-bold">
                 <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
@@ -454,11 +481,14 @@ export default function DirectFreightQuoteDrawer({
               ))}
             </div>
 
-            <button type="button" onClick={handleAddRoute} className="w-full py-3 border-2 border-dashed border-slate-300 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all cursor-pointer">
-              <Plus className="h-4 w-4" /> Add New Route
-            </button>
+            {!isReadOnly && (
+              <button type="button" onClick={handleAddRoute} className="w-full py-3 border-2 border-dashed border-slate-300 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all cursor-pointer">
+                <Plus className="h-4 w-4" /> Add New Route
+              </button>
+            )}
             
           </div>
+          </fieldset>
 
           <div className="p-4 border-t border-slate-200 bg-white flex items-center justify-end gap-3 shrink-0">
             <button
@@ -466,20 +496,22 @@ export default function DirectFreightQuoteDrawer({
               onClick={onClose}
               className="px-4 py-2 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
             >
-              Cancel
+              {isReadOnly ? "Close" : "Cancel"}
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 shadow-sm shadow-indigo-500/30 cursor-pointer"
-            >
-              {loading ? (
-                <div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-              ) : (
-                <Save className="h-3.5 w-3.5" />
-              )}
-              {loading ? "Saving..." : isEditing ? "Update Quotes" : "Save Quotes"}
-            </button>
+            {!isReadOnly && (
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 shadow-sm shadow-indigo-500/30 cursor-pointer"
+              >
+                {loading ? (
+                  <div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                ) : (
+                  <Save className="h-3.5 w-3.5" />
+                )}
+                {loading ? "Saving..." : isOneTimeAllowed ? "Save Final Correction" : isEditing ? "Update Quotes" : "Save Quotes"}
+              </button>
+            )}
           </div>
         </form>
       </div>

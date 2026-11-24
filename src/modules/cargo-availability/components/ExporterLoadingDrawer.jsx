@@ -18,6 +18,8 @@ import {
 import { cargoAvailabilityApi } from "../services/cargoAvailabilityApi";
 import axiosClient from "@/lib/axios";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import useFinalizationLock from "@/hooks/useFinalizationLock";
+import CompletedBadge from "@/components/badges/CompletedBadge";
 
 const STAGES = [
   "Draft",
@@ -54,6 +56,14 @@ export default function ExporterLoadingDrawer({
   const [autoShipmentInfo, setAutoShipmentInfo] = useState(null);
 
   const isEdit = Boolean(loadingRecord?.id);
+
+  const isCompletedRecord =
+    loadingRecord?.status === "Completed" || cargoRecord?.status === "Completed";
+  const { isReadOnly, isOneTimeAllowed, canOverride } = useFinalizationLock({
+    status: isCompletedRecord ? "Completed" : loadingRecord?.status || cargoRecord?.status,
+    module: "cargo_allocation",
+    oneTimeEditUsed: loadingRecord?.oneTimeCompletedEditUsed || cargoRecord?.oneTimeCompletedEditUsed,
+  });
 
   const [formData, setFormData] = useState({
     cargoAvailabilityId: loadingRecord?.cargoAvailabilityId || cargoRecord?.id,
@@ -132,6 +142,7 @@ export default function ExporterLoadingDrawer({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isReadOnly) return;
     setError("");
 
     if (!formData.shipmentId) {
@@ -200,6 +211,13 @@ export default function ExporterLoadingDrawer({
                 <h2 className="text-sm font-bold text-slate-900">
                   {isEdit ? `Truck Loading Execution (#${loadingRecord.id})` : "New Truck Loading & Dispatch"}
                 </h2>
+                {isCompletedRecord && (
+                  <CompletedBadge
+                    isReadOnly={isReadOnly}
+                    isOneTimeAllowed={isOneTimeAllowed}
+                    canOverride={canOverride}
+                  />
+                )}
                 <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono font-medium">
                   {formData.truckNo || "Vehicle Entry"}
                 </span>
@@ -220,6 +238,14 @@ export default function ExporterLoadingDrawer({
 
         {/* Scrollable Form Body */}
         <form id="loading-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50/60">
+          <fieldset disabled={isReadOnly} className="space-y-5">
+          {isOneTimeAllowed && (
+            <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-800 font-semibold flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+              <span>You have 1 correction remaining for this loading record. Saving changes will permanently lock it.</span>
+            </div>
+          )}
+
           {error && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
@@ -788,6 +814,7 @@ export default function ExporterLoadingDrawer({
             </div>
 
           </div>
+          </fieldset>
         </form>
 
         {/* Sticky Solid Footer */}
@@ -797,16 +824,18 @@ export default function ExporterLoadingDrawer({
             onClick={onClose}
             className="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            Cancel
+            {isReadOnly ? "Close" : "Cancel"}
           </button>
-          <button
-            type="submit"
-            form="loading-form"
-            disabled={loading}
-            className="px-5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
-          >
-            {loading ? "Saving..." : isEdit ? "Update Execution" : "Submit Loading Record"}
-          </button>
+          {!isReadOnly && (
+            <button
+              type="submit"
+              form="loading-form"
+              disabled={loading}
+              className="px-5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? "Saving..." : isOneTimeAllowed ? "Save Final Correction" : isEdit ? "Update Execution" : "Submit Loading Record"}
+            </button>
+          )}
         </div>
       </div>
     </div>

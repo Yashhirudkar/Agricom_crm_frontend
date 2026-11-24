@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Ship, AlertCircle, RefreshCw, Rocket, ChevronRight, Boxes, FileSpreadsheet } from "lucide-react";
+import { Ship, AlertCircle, RefreshCw, ChevronRight, Boxes, FileSpreadsheet } from "lucide-react";
 import Link from "next/link";
 import { shipmentsApi } from "../services/shipmentsApi";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
@@ -13,7 +13,6 @@ import ContractViewModal from "@/modules/sales-contracts/components/ContractView
 import DocumentUploadDrawer from "@/modules/sales-contracts/components/DocumentUploadDrawer";
 import Pagination from "@/components/common/Pagination";
 import CargoAvailabilityDrawer from "@/modules/cargo-availability/components/CargoAvailabilityDrawer";
-import ShipmentAllocationModal from "@/modules/cargo-availability/components/ShipmentAllocationModal";
 import MttReadinessFormModal from "@/modules/cargo-availability/components/MttReadinessFormModal";
 import { cargoAvailabilityApi } from "@/modules/cargo-availability/services/cargoAvailabilityApi";
 import FreightAllocationDrawer from "../components/FreightAllocationDrawer";
@@ -127,15 +126,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
   };
 
   const handleOpenCargoAllocation = async (s) => {
-    console.log("[ShipmentListPage] handleOpenCargoAllocation invoked for shipment:", {
-      id: s.id,
-      ref: s.shipmentReference,
-      cargoReady: s.cargoReady,
-      contractType: s.salesContract?.contractType,
-    });
-
     try {
-      setLoadingAllocation(true);
       const res = await cargoAvailabilityApi.getByShipmentId(s.id);
       const data = res?.data || res || {};
       const cargoRecords = data.cargoAvailabilityRecords || [];
@@ -143,7 +134,6 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
 
       const targetCargo = cargoRecords[0] || allocations[0]?.cargoAvailability || null;
       const isMtt = isMttShipment(s, targetCargo);
-      console.log("[ShipmentListPage] isMtt evaluation:", isMtt, "for shipment:", s.id);
 
       if (isMtt) {
         // MTT WORKFLOW: Open MTT Cargo Readiness Modal directly on current page (/sales/shipments)
@@ -183,23 +173,33 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
           };
         }
 
-        console.log("[ShipmentListPage] Opening MttReadinessFormModal with cargo:", mttCargo.id || "provisioned");
+        const hasReadiness = Boolean(
+          s.cargoReady ||
+          mttCargo.hasExistingReadiness ||
+          mttCargo.existingReadiness ||
+          mttCargo.isReady ||
+          mttCargo.readyDate ||
+          (mttCargo.readinessEntries && mttCargo.readinessEntries.length > 0) ||
+          mttCargo.noOfReadinessEntries > 0 ||
+          mttCargo.status === "Ready" ||
+          mttCargo.status === "Completed"
+        );
+
         setMttReadinessCargoRecord({
           ...mttCargo,
-          isReady: s.cargoReady,
-          status: s.cargoReady ? "Ready" : mttCargo.status || "Not Ready",
+          readinessResponse: targetCargo,
+          hasExistingReadiness: hasReadiness,
+          isReady: Boolean(s.cargoReady || mttCargo.isReady),
+          status: mttCargo.status || (s.cargoReady ? "Ready" : "Not Ready"),
           currentShipment: s,
         });
       } else {
         // Export Cargo: Keep separate and independent. Open Cargo Availability Drawer on the current page
-        console.log("[ShipmentListPage] Opening Export Cargo Execution Workspace for shipment:", s.id);
         setCargoShipment(s);
       }
     } catch (err) {
       console.error("[ShipmentListPage] Error preparing cargo readiness:", err);
       showToast("Failed to load cargo readiness details.", "error");
-    } finally {
-      setLoadingAllocation(false);
     }
   };
 
@@ -239,10 +239,7 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
   const [selectedShipments, setSelectedShipments] = useState([]); // Bulk actions checkbox tracker
 
   // MTT Cargo Allocation & Readiness Workflow State
-  const [allocationCargoRecord, setAllocationCargoRecord] = useState(null);
-  const [allocationTargetShipment, setAllocationTargetShipment] = useState(null);
   const [mttReadinessCargoRecord, setMttReadinessCargoRecord] = useState(null);
-  const [loadingAllocation, setLoadingAllocation] = useState(false);
 
 
   // Tab change handler
@@ -845,20 +842,6 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
             fetchShipments();
             fetchStats();
           }}
-        />
-      )}
-
-      {/* Allocate Cargo Modal (Direct MTT Workflow) */}
-      {allocationCargoRecord && (
-        <ShipmentAllocationModal
-          cargoRecord={allocationCargoRecord}
-          targetShipment={allocationTargetShipment}
-          defaultShipmentId={allocationTargetShipment?.id}
-          onClose={() => {
-            setAllocationCargoRecord(null);
-            setAllocationTargetShipment(null);
-          }}
-          onSuccess={handleAllocationSuccess}
         />
       )}
 

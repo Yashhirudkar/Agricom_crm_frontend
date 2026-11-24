@@ -42,6 +42,7 @@ import {
   Eye,
   RefreshCw,
   TrainTrack,
+  Lock,
 } from "lucide-react";
 import { shipmentsApi } from "../services/shipmentsApi";
 import { useCurrencyMaster } from "@/modules/enquiries/hooks/useCurrencyMaster";
@@ -50,6 +51,8 @@ import {
   formatMtWeightInput,
 } from "../utils/mtWeight";
 import axiosClient from "@/lib/axios";
+import useFinalizationLock from "@/hooks/useFinalizationLock";
+import CompletedBadge from "@/components/badges/CompletedBadge";
 
 // Document Lists by Shipment Mode
 const TRUCK_DOCUMENTS = [
@@ -245,18 +248,20 @@ function DocumentCard({
   onView,
   onDownload,
   onChangeField,
+  isReadOnly = false,
 }) {
   const fileInputRef = React.useRef(null);
   const isUploaded = Boolean(att.fileName && String(att.fileName).trim() !== "");
   const isUploading = Boolean(att.isUploading);
 
   const handleCardClick = () => {
-    if (!isUploaded && !isUploading) {
+    if (!isReadOnly && !isUploaded && !isUploading) {
       fileInputRef.current?.click();
     }
   };
 
   const handleFileChange = (e) => {
+    if (isReadOnly) return;
     const file = e.target.files?.[0];
     if (file) {
       onUpload(index, file);
@@ -377,28 +382,32 @@ function DocumentCard({
             >
               <Download className="h-3 w-3" />
             </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                fileInputRef.current?.click();
-              }}
-              className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-emerald-100/60 transition-colors cursor-pointer"
-              title="Replace File"
-            >
-              <RefreshCw className="h-3 w-3" />
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(index);
-              }}
-              className="p-1 rounded text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-              title="Delete File"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
+            {!isReadOnly && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                  className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-emerald-100/60 transition-colors cursor-pointer"
+                  title="Replace File"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(index);
+                  }}
+                  className="p-1 rounded text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  title="Delete File"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </>
+            )}
           </div>
         </div>
       ) : (
@@ -408,15 +417,21 @@ function DocumentCard({
               <Loader2 className="h-3 w-3 animate-spin text-red-500" />
               Uploading...
             </span>
+          ) : isReadOnly ? (
+            <span className="flex items-center gap-1 text-slate-400 font-medium">
+              <span>Not Uploaded</span>
+            </span>
           ) : (
             <span className="flex items-center gap-1 text-red-600 font-semibold group-hover:text-red-700">
               <Upload className="h-3 w-3" />
               <span>Upload Required</span>
             </span>
           )}
-          <span className="text-[9.5px] text-slate-400 font-medium group-hover:text-red-500 transition-colors">
-            Browse ↗
-          </span>
+          {!isReadOnly && (
+            <span className="text-[9.5px] text-slate-400 font-medium group-hover:text-red-500 transition-colors">
+              Browse ↗
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -428,12 +443,13 @@ const normalizeMobileNumber = (value) => {
   return digits ? `+${digits}` : "";
 };
 
-function SimpleTimePicker({ label, value, onChange, required = false }) {
+function SimpleTimePicker({ label, value, onChange, required = false, disabled = false }) {
   const parsedValue = /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value || "")
     ? parseTime(value)
     : null;
 
   const setNow = () => {
+    if (disabled) return;
     const now = new Date();
     onChange(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
   };
@@ -441,6 +457,7 @@ function SimpleTimePicker({ label, value, onChange, required = false }) {
   return (
     <TimeField
       value={parsedValue}
+      isDisabled={disabled}
       onChange={(time) =>
         onChange(
           time
@@ -457,13 +474,15 @@ function SimpleTimePicker({ label, value, onChange, required = false }) {
         <Label className="block text-slate-600 font-semibold text-xs">
           {label} {required && <span className="text-red-500">*</span>}
         </Label>
-        <button
-          type="button"
-          onClick={setNow}
-          className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
-        >
-          Now
-        </button>
+        {!disabled && (
+          <button
+            type="button"
+            onClick={setNow}
+            className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
+          >
+            Now
+          </button>
+        )}
       </div>
       <div className="flex h-[34px] items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-slate-900 transition-all focus-within:border-indigo-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500/15">
         <Clock className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
@@ -689,6 +708,20 @@ export default function ShipmentStuffingExecutionModal({
   const [stuffingStatus, setStuffingStatus] = useState("Draft");
   const [executionStatus, setExecutionStatus] = useState("Draft");
 
+  const existingStuffingRecord = autoData?.existingStuffing || shipment?.stuffingExecution || null;
+  const isExecutionCompleted =
+    stuffingStatus === "Completed" ||
+    executionStatus === "Stuffed" ||
+    shipment?.status === "Executed" ||
+    existingStuffingRecord?.status === "Completed" ||
+    existingStuffingRecord?.status === "Stuffed";
+
+  const { isReadOnly, isOneTimeAllowed, canOverride } = useFinalizationLock({
+    status: isExecutionCompleted ? "Completed" : "Draft",
+    module: "shipment_stuffing_execution",
+    oneTimeEditUsed: existingStuffingRecord?.oneTimeCompletedEditUsed,
+  });
+
   // Fetch Auto-Populated Data and Trade Documents Master
   useEffect(() => {
     if (!isOpen || !shipment?.id) return;
@@ -898,6 +931,7 @@ export default function ShipmentStuffingExecutionModal({
 
   // Container Handlers
   const handleAddContainer = () => {
+    if (isReadOnly) return;
     setContainers((prev) => [
       ...prev,
       { containerNo: "", containerSize: "", sealNo: "", remarks: "", tareWeight: "", grossWeight: "", netWeight: "" },
@@ -905,11 +939,12 @@ export default function ShipmentStuffingExecutionModal({
   };
 
   const handleRemoveContainer = (index) => {
-    if (containers.length <= 1) return;
+    if (isReadOnly || containers.length <= 1) return;
     setContainers((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleContainerChange = (index, field, value) => {
+    if (isReadOnly) return;
     setContainers((prev) => {
       const updated = [...prev];
       const row = { ...updated[index], [field]: value };
@@ -930,6 +965,7 @@ export default function ShipmentStuffingExecutionModal({
 
   // Truck Handlers
   const handleAddTruck = () => {
+    if (isReadOnly) return;
     setTrucks((prev) => [
       ...prev,
       { truckNo: "", driver: "", mobile: "", remark: "" },
@@ -937,11 +973,12 @@ export default function ShipmentStuffingExecutionModal({
   };
 
   const handleRemoveTruck = (index) => {
-    if (trucks.length <= 1) return;
+    if (isReadOnly || trucks.length <= 1) return;
     setTrucks((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleTruckChange = (index, field, value) => {
+    if (isReadOnly) return;
     setTrucks((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -950,6 +987,7 @@ export default function ShipmentStuffingExecutionModal({
   };
 
   const handleAddDowntime = () => {
+    if (isReadOnly) return;
     setDowntimes((prev) => [
       ...prev,
       {
@@ -996,18 +1034,20 @@ export default function ShipmentStuffingExecutionModal({
   };
 
   const handleRemoveDowntime = (index) => {
+    if (isReadOnly) return;
     setDowntimes((prev) => prev.filter((_, rowIndex) => rowIndex !== index));
   };
 
   // Attachment Handlers
   const handleModeChange = (newMode) => {
-    if (newMode === shipmentMode) return;
+    if (isReadOnly || newMode === shipmentMode) return;
     setShipmentMode(newMode);
     setAttachments((prev) => buildAttachmentsForMode(newMode, isCad, prev));
     toast.info(`Switched to ${newMode} document checklist`);
   };
 
   const handleAddManualAttachment = () => {
+    if (isReadOnly) return;
     setAttachments((prev) => [
       ...prev,
       {
@@ -1024,6 +1064,7 @@ export default function ShipmentStuffingExecutionModal({
   };
 
   const handleDeleteFile = (index) => {
+    if (isReadOnly) return;
     setAttachments((prev) => {
       const updated = [...prev];
       const target = updated[index];
@@ -1135,7 +1176,7 @@ export default function ShipmentStuffingExecutionModal({
   };
 
   const handleFileUpload = async (index, file) => {
-    if (!file) return;
+    if (isReadOnly || !file) return;
 
     setAttachments((prev) => {
       const updated = [...prev];
@@ -1189,6 +1230,7 @@ export default function ShipmentStuffingExecutionModal({
 
   // Submit Handler
   const handleSave = async (action = "draft") => {
+    if (isReadOnly) return;
     setErrorMsg("");
     setSuccessToast("");
 
@@ -1376,22 +1418,23 @@ export default function ShipmentStuffingExecutionModal({
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                  Shipment Stuffing Execution Form
+                  {isReadOnly ? "Shipment Stuffing Execution (View Details)" : "Shipment Stuffing Execution Form"}
                 </h2>
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
                   85% Auto-Populated
                 </span>
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase border ${executionStatus === "Stuffed" || stuffingStatus === "Completed"
-                    ? "bg-purple-50 text-purple-700 border-purple-200"
-                    : "bg-amber-50 text-amber-700 border-amber-200"
-                    }`}
-                >
-                  {executionStatus === "Stuffed" || stuffingStatus === "Completed"
-                    ? "Completed / Stuffed"
-                    : "Draft Execution"}
-                </span>
+                {isExecutionCompleted ? (
+                  <CompletedBadge
+                    isReadOnly={isReadOnly}
+                    isOneTimeAllowed={isOneTimeAllowed}
+                    canOverride={canOverride}
+                  />
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase border bg-amber-50 text-amber-700 border-amber-200">
+                    Draft Execution
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
                 <span>
@@ -1486,6 +1529,23 @@ export default function ShipmentStuffingExecutionModal({
 
         {/* DRAWER BODY (SINGLE UNIFIED WORKFLOW) */}
         <div className="flex-1 overflow-y-auto px-6 lg:px-8 py-5 space-y-6 bg-slate-50/40">
+          {isOneTimeAllowed && (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-800 font-semibold flex items-center gap-2.5 shadow-2xs">
+              <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+              <span>
+                You have 1 correction remaining for this completed stuffing execution. Saving changes will permanently lock this record.
+              </span>
+            </div>
+          )}
+
+          {isReadOnly && (
+            <div className="p-3.5 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-700 font-semibold flex items-center gap-2.5 shadow-2xs">
+              <Lock className="h-4 w-4 text-slate-500 shrink-0" />
+              <span>
+                This stuffing execution is completed and locked in View Mode. Modifying requires the <code>shipment_stuffing_execution:edit_completed</code> permission.
+              </span>
+            </div>
+          )}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">
               <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
@@ -1855,10 +1915,11 @@ export default function ShipmentStuffingExecutionModal({
                     </label>
                     <input
                       type="date"
+                      disabled={isReadOnly}
                       value={loadingInfo.loadingDate}
                       onChange={(e) => setLoadingInfo((prev) => ({ ...prev, loadingDate: e.target.value }))}
                       aria-required="true"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium hover:cursor-pointer"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium hover:cursor-pointer disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                     />
                   </div>
                   <div>
@@ -1868,13 +1929,14 @@ export default function ShipmentStuffingExecutionModal({
                     <input
                       type="text"
                       inputMode="decimal"
+                      disabled={isReadOnly}
                       placeholder="000.000"
                       value={hideLeadingZeros(loadingInfo.actualLoadingWeight)}
                       onChange={(e) => handleMtWeightChange("actualLoadingWeight", e)}
                       onFocus={moveMtWeightCursorToEnd}
                       onClick={moveMtWeightCursorToEnd}
                       aria-required="true"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-bold text-indigo-700"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-bold text-indigo-700 disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                     />
                   </div>
                   <div>
@@ -1884,13 +1946,14 @@ export default function ShipmentStuffingExecutionModal({
                     <input
                       type="text"
                       inputMode="decimal"
+                      disabled={isReadOnly}
                       placeholder="000.000"
                       value={hideLeadingZeros(loadingInfo.grossWeight)}
                       onChange={(e) => handleMtWeightChange("grossWeight", e)}
                       onFocus={moveMtWeightCursorToEnd}
                       onClick={moveMtWeightCursorToEnd}
                       aria-required="true"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                     />
                   </div>
                   <div>
@@ -1900,24 +1963,27 @@ export default function ShipmentStuffingExecutionModal({
                     <input
                       type="text"
                       inputMode="decimal"
+                      disabled={isReadOnly}
                       placeholder="000.000"
                       value={hideLeadingZeros(loadingInfo.netWeight)}
                       onChange={(e) => handleMtWeightChange("netWeight", e)}
                       onFocus={moveMtWeightCursorToEnd}
                       onClick={moveMtWeightCursorToEnd}
                       aria-required="true"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-semibold text-emerald-700"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-semibold text-emerald-700 disabled:opacity-75 disabled:bg-slate-100 disabled:cursor-not-allowed"
                     />
                   </div>
                   <SimpleTimePicker
                     label="Loading Start Time"
                     required
+                    disabled={isReadOnly}
                     value={loadingInfo.loadingStartTime}
                     onChange={(val) => setLoadingInfo((prev) => ({ ...prev, loadingStartTime: val }))}
                   />
                   <SimpleTimePicker
                     label="Loading End Time"
                     required
+                    disabled={isReadOnly}
                     value={loadingInfo.loadingEndTime}
                     onChange={(val) => setLoadingInfo((prev) => ({ ...prev, loadingEndTime: val }))}
                   />
@@ -1936,14 +2002,16 @@ export default function ShipmentStuffingExecutionModal({
                       {containers.length} {containers.length === 1 ? "Container" : "Containers"}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddContainer}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Add Container</span>
-                  </button>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={handleAddContainer}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add Container</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="overflow-x-auto">
@@ -1958,7 +2026,7 @@ export default function ShipmentStuffingExecutionModal({
                         <th className="py-2.5 px-3">Tare Wt (MT)</th>
                         <th className="py-2.5 px-3">Gross Wt (MT)</th>
                         <th className="py-2.5 px-3">Net Wt (MT)</th>
-                        <th className="py-2.5 px-3 text-center">Action</th>
+                        {!isReadOnly && <th className="py-2.5 px-3 text-center">Action</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1968,72 +2036,79 @@ export default function ShipmentStuffingExecutionModal({
                           <td className="py-2 px-3">
                             <input
                               type="text"
+                              disabled={isReadOnly}
                               placeholder="e.g. MSKU1234567"
                               value={c.containerNo}
                               onChange={(e) => handleContainerChange(idx, "containerNo", e.target.value.toUpperCase())}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium disabled:bg-slate-50 disabled:opacity-75"
                             />
                           </td>
                           <td className="py-2 px-3">
-                            <select value={c.containerSize || ""} onChange={(e) => handleContainerChange(idx, "containerSize", e.target.value)} className="min-w-20 rounded border border-slate-200 px-2 py-1.5">
+                            <select disabled={isReadOnly} value={c.containerSize || ""} onChange={(e) => handleContainerChange(idx, "containerSize", e.target.value)} className="min-w-20 rounded border border-slate-200 px-2 py-1.5 disabled:bg-slate-50 disabled:opacity-75">
                               <option value="">Select</option><option value="20 FT">20 FT</option><option value="40 FT">40 FT</option><option value="40 HC">40 HC</option>
                             </select>
                           </td>
                           <td className="py-2 px-3">
                             <input
                               type="text"
+                              disabled={isReadOnly}
                               placeholder="e.g. SL987654"
                               value={c.sealNo}
                               onChange={(e) => handleContainerChange(idx, "sealNo", e.target.value.toUpperCase())}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium disabled:bg-slate-50 disabled:opacity-75"
                             />
                           </td>
                           <td className="py-2 px-3">
-                            <input type="text" value={c.remarks || ""} onChange={(e) => handleContainerChange(idx, "remarks", e.target.value)} placeholder="Remarks" className="min-w-28 rounded border border-slate-200 px-2 py-1.5" />
+                            <input type="text" disabled={isReadOnly} value={c.remarks || ""} onChange={(e) => handleContainerChange(idx, "remarks", e.target.value)} placeholder="Remarks" className="min-w-28 rounded border border-slate-200 px-2 py-1.5 disabled:bg-slate-50 disabled:opacity-75" />
                           </td>
                           <td className="py-2 px-3">
                             <input
                               type="number"
                               step="0.01"
+                              disabled={isReadOnly}
                               placeholder="e.g. 2.30"
                               value={c.tareWeight}
                               onChange={(e) => handleContainerChange(idx, "tareWeight", e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
                             />
                           </td>
                           <td className="py-2 px-3">
                             <input
                               type="number"
                               step="0.01"
+                              disabled={isReadOnly}
                               placeholder="e.g. 28.80"
                               value={c.grossWeight}
                               onChange={(e) => handleContainerChange(idx, "grossWeight", e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden font-medium"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden font-medium disabled:bg-slate-50 disabled:opacity-75"
                             />
                           </td>
                           <td className="py-2 px-3">
                             <input
                               type="number"
                               step="0.01"
+                              disabled={isReadOnly}
                               placeholder="Auto: Gross - Tare"
                               value={c.netWeight}
                               onChange={(e) => handleContainerChange(idx, "netWeight", e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-emerald-50/50 border border-emerald-200 rounded-md text-xs text-emerald-800 font-bold focus:border-indigo-500 outline-hidden"
+                              className="w-full px-2.5 py-1.5 bg-emerald-50/50 border border-emerald-200 rounded-md text-xs text-emerald-800 font-bold focus:border-indigo-500 outline-hidden disabled:opacity-75"
                             />
                           </td>
-                          <td className="py-2 px-3 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveContainer(idx)}
-                              disabled={containers.length === 1}
-                              className={`p-1.5 rounded-md transition-colors ${containers.length === 1
-                                ? "text-slate-300 cursor-not-allowed"
-                                : "text-red-500 hover:bg-red-50 cursor-pointer"
-                                }`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </td>
+                          {!isReadOnly && (
+                            <td className="py-2 px-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveContainer(idx)}
+                                disabled={containers.length === 1}
+                                className={`p-1.5 rounded-md transition-colors ${containers.length === 1
+                                  ? "text-slate-300 cursor-not-allowed"
+                                  : "text-red-500 hover:bg-red-50 cursor-pointer"
+                                  }`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -2055,14 +2130,16 @@ export default function ShipmentStuffingExecutionModal({
                       {trucks.length} {trucks.length === 1 ? "Truck" : "Trucks"}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddTruck}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Add Truck</span>
-                  </button>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={handleAddTruck}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add Truck</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="overflow-x-auto">
@@ -2074,7 +2151,7 @@ export default function ShipmentStuffingExecutionModal({
                         <th className="py-2.5 px-3">Driver Name</th>
                         <th className="py-2.5 px-3">Mobile No.</th>
                         <th className="py-2.5 px-3">Remark</th>
-                        <th className="py-2.5 px-3 text-center">Action</th>
+                        {!isReadOnly && <th className="py-2.5 px-3 text-center">Action</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -2084,19 +2161,21 @@ export default function ShipmentStuffingExecutionModal({
                           <td className="py-2 px-3">
                             <input
                               type="text"
+                              disabled={isReadOnly}
                               placeholder="e.g. MH-04-AB-1234"
                               value={t.truckNo}
                               onChange={(e) => handleTruckChange(idx, "truckNo", e.target.value.toUpperCase())}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium disabled:bg-slate-50 disabled:opacity-75"
                             />
                           </td>
                           <td className="py-2 px-3">
                             <input
                               type="text"
+                              disabled={isReadOnly}
                               placeholder="e.g. Ramesh Kumar"
                               value={t.driver}
                               onChange={(e) => handleTruckChange(idx, "driver", e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
                             />
                           </td>
                           <td className="py-2 px-3">
@@ -2104,6 +2183,7 @@ export default function ShipmentStuffingExecutionModal({
                               <span className="pl-2.5 text-xs text-slate-500">+</span>
                               <input
                                 type="tel"
+                                disabled={isReadOnly}
                                 placeholder="91 9876543210"
                                 value={String(t.mobile || "").replace(/^\+/, "")}
                                 onChange={(e) =>
@@ -2113,32 +2193,35 @@ export default function ShipmentStuffingExecutionModal({
                                     normalizeMobileNumber(e.target.value.replace(/^\+/, "")),
                                   )
                                 }
-                                className="w-full min-w-0 px-1.5 py-1.5 bg-transparent text-xs outline-hidden"
+                                className="w-full min-w-0 px-1.5 py-1.5 bg-transparent text-xs outline-hidden disabled:opacity-75"
                               />
                             </div>
                           </td>
                           <td className="py-2 px-3">
                             <input
                               type="text"
+                              disabled={isReadOnly}
                               placeholder="Remark"
                               value={t.remark || ""}
                               onChange={(e) => handleTruckChange(idx, "remark", e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
                             />
                           </td>
-                          <td className="py-2 px-3 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveTruck(idx)}
-                              disabled={trucks.length === 1}
-                              className={`p-1.5 rounded-md transition-colors ${trucks.length === 1
-                                ? "text-slate-300 cursor-not-allowed"
-                                : "text-red-500 hover:bg-red-50 cursor-pointer"
-                                }`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </td>
+                          {!isReadOnly && (
+                            <td className="py-2 px-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveTruck(idx)}
+                                disabled={trucks.length === 1}
+                                className={`p-1.5 rounded-md transition-colors ${trucks.length === 1
+                                  ? "text-slate-300 cursor-not-allowed"
+                                  : "text-red-500 hover:bg-red-50 cursor-pointer"
+                                  }`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -2157,14 +2240,16 @@ export default function ShipmentStuffingExecutionModal({
                       5. Shipment Downtime
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddDowntime}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Add Downtime</span>
-                  </button>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={handleAddDowntime}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add Downtime</span>
+                    </button>
+                  )}
                 </div>
 
                 {downtimes.length === 0 ? (
@@ -2196,11 +2281,12 @@ export default function ShipmentStuffingExecutionModal({
                             min="0.01"
                             step="any"
                             required
+                            disabled={isReadOnly}
                             value={downtime.price ?? ""}
                             onChange={(event) =>
                               handleDowntimeChange(index, "price", event.target.value)
                             }
-                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
+                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
                           />
                         </div>
                         <div>
@@ -2214,11 +2300,11 @@ export default function ShipmentStuffingExecutionModal({
                             id={`downtime-currency-${index}`}
                             value={downtime.currency || ""}
                             required
-                            disabled={currenciesLoading || currenciesError}
+                            disabled={isReadOnly || currenciesLoading || currenciesError}
                             onChange={(event) =>
                               handleDowntimeChange(index, "currency", event.target.value)
                             }
-                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden disabled:cursor-not-allowed disabled:bg-slate-100"
+                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-75"
                           >
                             <option value="">
                               {currenciesLoading ? "Loading currencies..." : "Select currency"}
@@ -2240,10 +2326,11 @@ export default function ShipmentStuffingExecutionModal({
                           <select
                             id={`downtime-reason-${index}`}
                             value={downtime.reason || ""}
+                            disabled={isReadOnly}
                             onChange={(event) =>
                               handleDowntimeChange(index, "reason", event.target.value)
                             }
-                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
+                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
                           >
                             <option value="">Select reason</option>
                             {[...DOWNTIME_REASONS, ...customDowntimeReasons].map((reason) => (
@@ -2251,11 +2338,13 @@ export default function ShipmentStuffingExecutionModal({
                                 {reason}
                               </option>
                             ))}
-                            <option value={CUSTOM_DOWNTIME_REASON}>
-                              + Add Custom...
-                            </option>
+                            {!isReadOnly && (
+                              <option value={CUSTOM_DOWNTIME_REASON}>
+                                + Add Custom...
+                              </option>
+                            )}
                           </select>
-                          {downtime.reason === CUSTOM_DOWNTIME_REASON && (
+                          {!isReadOnly && downtime.reason === CUSTOM_DOWNTIME_REASON && (
                             <div className="mt-2 flex gap-1.5">
                               <input
                                 type="text"
@@ -2304,12 +2393,13 @@ export default function ShipmentStuffingExecutionModal({
                           <input
                             id={`downtime-from-${index}`}
                             type="date"
+                            disabled={isReadOnly}
                             max={downtime.toDate || undefined}
                             value={downtime.fromDate || ""}
                             onChange={(event) =>
                               handleDowntimeChange(index, "fromDate", event.target.value)
                             }
-                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
+                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
                           />
                         </div>
                         <div>
@@ -2322,12 +2412,13 @@ export default function ShipmentStuffingExecutionModal({
                           <input
                             id={`downtime-to-${index}`}
                             type="date"
+                            disabled={isReadOnly}
                             min={downtime.fromDate || undefined}
                             value={downtime.toDate || ""}
                             onChange={(event) =>
                               handleDowntimeChange(index, "toDate", event.target.value)
                             }
-                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
+                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
                           />
                         </div>
                         <div>
@@ -2358,26 +2449,29 @@ export default function ShipmentStuffingExecutionModal({
                           <input
                             id={`downtime-remarks-${index}`}
                             type="text"
+                            disabled={isReadOnly}
                             value={downtime.remarks || ""}
                             onChange={(event) =>
                               handleDowntimeChange(index, "remarks", event.target.value)
                             }
-                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden"
+                            className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-2 text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
                           />
                         </div>
-                        <div className="flex flex-col justify-end">
-                          <span className="mb-1 text-xs font-medium text-slate-600">
-                            Action
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveDowntime(index)}
-                            aria-label={`Remove downtime entry ${index + 1}`}
-                            className="rounded-md p-2 text-red-500 transition-colors hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
+                        {!isReadOnly && (
+                          <div className="flex flex-col justify-end">
+                            <span className="mb-1 text-xs font-medium text-slate-600">
+                              Action
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDowntime(index)}
+                              aria-label={`Remove downtime entry ${index + 1}`}
+                              className="rounded-md p-2 text-red-500 transition-colors hover:bg-red-50 cursor-pointer"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2392,10 +2486,11 @@ export default function ShipmentStuffingExecutionModal({
                 </div>
                 <textarea
                   rows={4}
+                  disabled={isReadOnly}
                   placeholder="Enter overall stuffing / loading remarks, inspection notes, seal verification comments..."
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:border-indigo-500 outline-hidden font-medium disabled:opacity-75 disabled:bg-slate-100"
                 />
               </div>
 
@@ -2438,8 +2533,9 @@ export default function ShipmentStuffingExecutionModal({
                         <button
                           key={mode}
                           type="button"
+                          disabled={isReadOnly}
                           onClick={() => handleModeChange(mode)}
-                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold text-xs transition-all cursor-pointer ${
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold text-xs transition-all cursor-pointer disabled:cursor-not-allowed ${
                             shipmentMode === mode
                               ? "bg-white text-indigo-700 shadow-xs"
                               : "text-slate-600 hover:text-slate-900"
@@ -2452,14 +2548,16 @@ export default function ShipmentStuffingExecutionModal({
                     </div>
 
                     {/* Add Attachment Button */}
-                    <button
-                      type="button"
-                      onClick={handleAddManualAttachment}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>Add Attachment</span>
-                    </button>
+                    {!isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={handleAddManualAttachment}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Add Attachment</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -2476,6 +2574,7 @@ export default function ShipmentStuffingExecutionModal({
                       onView={handleView}
                       onDownload={handleDownload}
                       onChangeField={handleAttachmentChange}
+                      isReadOnly={isReadOnly}
                     />
                   ))}
                 </div>
@@ -2501,7 +2600,7 @@ export default function ShipmentStuffingExecutionModal({
               disabled={submitting}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             >
-              Cancel
+              {isReadOnly ? "Close" : "Cancel"}
             </button>
 
             {/* GENERATE INVOICE */}
@@ -2519,30 +2618,34 @@ export default function ShipmentStuffingExecutionModal({
             </button>
 
             {/* SAVE AS DRAFT */}
-            <button
-              type="button"
-              onClick={() => handleSave("draft")}
-              disabled={submitting}
-              className="px-4.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-            >
-              {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-              <span>Save Draft</span>
-            </button>
+            {!isReadOnly && (
+              <button
+                type="button"
+                onClick={() => handleSave("draft")}
+                disabled={submitting}
+                className="px-4.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                <span>{isOneTimeAllowed ? "Save Correction (Draft)" : "Save Draft"}</span>
+              </button>
+            )}
 
             {/* COMPLETE STUFFING */}
-            <button
-              type="button"
-              onClick={() => handleSave("complete")}
-              disabled={submitting}
-              className="px-5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-sm hover:shadow-indigo-500/20 flex items-center gap-2 cursor-pointer"
-            >
-              {submitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Rocket className="h-4 w-4" />
-              )}
-              <span>Complete Stuffing</span>
-            </button>
+            {!isReadOnly && (
+              <button
+                type="button"
+                onClick={() => handleSave("complete")}
+                disabled={submitting}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-sm hover:shadow-indigo-500/20 flex items-center gap-2 cursor-pointer"
+              >
+                {submitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Rocket className="h-4 w-4" />
+                )}
+                <span>{isOneTimeAllowed ? "Save Final Correction" : "Complete Stuffing"}</span>
+              </button>
+            )}
           </div>
         </div>
 

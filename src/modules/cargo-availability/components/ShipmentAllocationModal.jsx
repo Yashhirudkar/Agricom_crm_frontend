@@ -1,9 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { X, Layers, ArrowRight } from "lucide-react";
+import { X, Layers, ArrowRight, Lock } from "lucide-react";
 import { cargoAvailabilityApi } from "../services/cargoAvailabilityApi";
 import axiosClient from "@/lib/axios";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import useFinalizationLock from "@/hooks/useFinalizationLock";
+import CompletedBadge from "@/components/badges/CompletedBadge";
 
 export default function ShipmentAllocationModal({
   cargoRecord,
@@ -13,6 +15,17 @@ export default function ShipmentAllocationModal({
   onSuccess,
 }) {
   useEscapeKey(onClose, Boolean(cargoRecord));
+
+  const isCargoCompleted =
+    cargoRecord?.status === "Completed" ||
+    (Number(cargoRecord?.allocatedQty || 0) >= Number(cargoRecord?.purchaseQty || 0) &&
+      Number(cargoRecord?.purchaseQty || 0) > 0);
+
+  const { isReadOnly, isOneTimeAllowed, canOverride } = useFinalizationLock({
+    status: isCargoCompleted ? "Completed" : cargoRecord?.status,
+    module: "cargo_allocation",
+    oneTimeEditUsed: cargoRecord?.oneTimeCompletedEditUsed,
+  });
 
   const [loading, setLoading] = useState(false);
   const [shipments, setShipments] = useState([]);
@@ -56,6 +69,7 @@ export default function ShipmentAllocationModal({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isReadOnly) return;
     setError("");
 
     if (!shipmentId) {
@@ -120,11 +134,24 @@ export default function ShipmentAllocationModal({
                 <Layers className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-gray-900">
-                  Allocate Cargo to Sales Shipment
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-gray-900">
+                    {isReadOnly ? "View Cargo Allocation" : "Allocate Cargo to Sales Shipment"}
+                  </h2>
+                  {isCargoCompleted && (
+                    <CompletedBadge
+                      isReadOnly={isReadOnly}
+                      isOneTimeAllowed={isOneTimeAllowed}
+                      canOverride={canOverride}
+                    />
+                  )}
+                </div>
                 <p className="text-xs text-gray-500 font-medium">
-                  Reserve cargo for customer export delivery
+                  {isReadOnly
+                    ? "Finalized record locked in read-only mode"
+                    : isOneTimeAllowed
+                    ? "1 Correction remaining: Saving will permanently lock this record"
+                    : "Reserve cargo for customer export delivery"}
                 </p>
               </div>
             </div>
@@ -138,6 +165,20 @@ export default function ShipmentAllocationModal({
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {isOneTimeAllowed && (
+              <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-800 font-semibold flex items-center gap-2">
+                <Lock className="h-4 w-4 text-amber-600 shrink-0" />
+                <span>You have 1 correction remaining. Saving this allocation will permanently lock this record.</span>
+              </div>
+            )}
+
+            {isReadOnly && (
+              <div className="p-3 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-700 font-semibold flex items-center gap-2">
+                <Lock className="h-4 w-4 text-slate-500 shrink-0" />
+                <span>This cargo allocation is completed. Modifying requires the <code>cargo_allocation:edit_completed</code> permission.</span>
+              </div>
+            )}
+
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-semibold">
                 {error}
@@ -168,36 +209,49 @@ export default function ShipmentAllocationModal({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Target Sales Shipment <span className="text-red-500">*</span>
               </label>
-              <select
-                required
-                value={shipmentId}
-                onChange={(e) => setShipmentId(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-medium text-slate-800"
-              >
-                <option value="">Select a Sales Contract Shipment...</option>
-                {displayShipments.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.shipmentReference || `Shipment #${s.id}`} &bull;{" "}
-                    {s.salesContract?.contractNumber || "SC"} ({Number(s.quantity || 0).toLocaleString()} MT)
-                  </option>
-                ))}
-              </select>
+              {isReadOnly ? (
+                <div className="w-full px-3 py-2 text-xs bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-700 select-none">
+                  {displayShipments.find((s) => String(s.id) === String(shipmentId))?.shipmentReference ||
+                    (shipmentId ? `Shipment #${shipmentId}` : "—")}
+                </div>
+              ) : (
+                <select
+                  required
+                  value={shipmentId}
+                  onChange={(e) => setShipmentId(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-medium text-slate-800"
+                >
+                  <option value="">Select a Sales Contract Shipment...</option>
+                  {displayShipments.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.shipmentReference || `Shipment #${s.id}`} &bull;{" "}
+                      {s.salesContract?.contractNumber || "SC"} ({Number(s.quantity || 0).toLocaleString()} MT)
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Quantity to Allocate (MT) <span className="text-red-500">*</span>
               </label>
-              <input
-                type="number"
-                step="0.01"
-                required
-                max={cargoRecord.availableQty}
-                placeholder={`Max available: ${Number(cargoRecord.availableQty || 0).toLocaleString()} MT`}
-                value={allocatedQty}
-                onChange={(e) => setAllocatedQty(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-bold text-slate-900"
-              />
+              {isReadOnly ? (
+                <div className="w-full px-3 py-2 text-xs bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-900 font-mono select-none">
+                  {allocatedQty ? `${Number(allocatedQty).toLocaleString()} MT` : "— MT"}
+                </div>
+              ) : (
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  max={cargoRecord.availableQty}
+                  placeholder={`Max available: ${Number(cargoRecord.availableQty || 0).toLocaleString()} MT`}
+                  value={allocatedQty}
+                  onChange={(e) => setAllocatedQty(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 font-bold text-slate-900"
+                />
+              )}
             </div>
 
             <div className="text-[11px] text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200/80 flex items-center gap-2">
@@ -214,15 +268,17 @@ export default function ShipmentAllocationModal({
                 onClick={onClose}
                 className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
               >
-                Cancel
+                {isReadOnly ? "Close" : "Cancel"}
               </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-              >
-                {loading ? "Allocating..." : "Allocate Cargo"}
-              </button>
+              {!isReadOnly && (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  {loading ? "Allocating..." : isOneTimeAllowed ? "Save Final Allocation" : "Allocate Cargo"}
+                </button>
+              )}
             </div>
           </form>
 

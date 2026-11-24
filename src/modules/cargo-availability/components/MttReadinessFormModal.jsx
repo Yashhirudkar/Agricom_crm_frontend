@@ -4,6 +4,8 @@ import { X, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { cargoAvailabilityApi } from "../services/cargoAvailabilityApi";
 import { toast } from "sonner";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { useFinalizationLock } from "@/hooks/useFinalizationLock";
+import CompletedBadge from "@/components/badges/CompletedBadge";
 
 export default function MttReadinessFormModal({
   cargoRecord,
@@ -36,6 +38,25 @@ export default function MttReadinessFormModal({
   const hasAllocations = allocatedQty > 0;
   const hasBlockingAllocations = hasAllocations && !isLinkedToCurrentShipment;
 
+  // Existing readiness detection
+  const hasExistingReadiness = Boolean(
+    cargoRecord?.hasExistingReadiness ||
+    cargoRecord?.existingReadiness ||
+    (cargoRecord?.readinessEntries && cargoRecord.readinessEntries.length > 0) ||
+    cargoRecord?.noOfReadinessEntries > 0 ||
+    cargoRecord?.readyDate ||
+    cargoRecord?.isReady ||
+    cargoRecord?.status === "Ready" ||
+    cargoRecord?.status === "Completed" ||
+    targetShipment?.cargoReady
+  );
+
+  const { canOverride, isReadOnly } = useFinalizationLock({
+    isCompleted: hasExistingReadiness,
+    resource: "cargo_allocation",
+    allowOneTimeEdit: false,
+  });
+
   // Initial status correctly recognizing active readiness and shipment allocation state
   const isAlreadyReady =
     (isLinkedToCurrentShipment && Boolean(targetShipment.cargoReady)) ||
@@ -48,16 +69,37 @@ export default function MttReadinessFormModal({
     cargoRecord?.status === "Dispatched" ||
     cargoRecord?.status === "Completed";
 
-  const initialStatus = isAlreadyReady ? "Ready" : "Not Ready";
+  const savedReadinessStatus =
+    cargoRecord?.existingReadiness?.status ||
+    cargoRecord?.readinessEntries?.[0]?.status;
+  const initialStatus = savedReadinessStatus
+    ? ["Ready", "Approved"].includes(savedReadinessStatus)
+      ? "Ready"
+      : "Not Ready"
+    : isAlreadyReady
+      ? "Ready"
+      : "Not Ready";
 
   const [status, setStatus] = useState(initialStatus);
   const [readyDate, setReadyDate] = useState(
-    cargoRecord?.readyDate || new Date().toISOString().split("T")[0]
+    cargoRecord?.readyDate ||
+    cargoRecord?.existingReadiness?.readyDate ||
+    cargoRecord?.readinessEntries?.[0]?.readyDate ||
+    new Date().toISOString().split("T")[0]
   );
-  const [remarks, setRemarks] = useState(cargoRecord?.remarks || "");
+  const [remarks, setRemarks] = useState(
+    cargoRecord?.remarks ||
+    cargoRecord?.existingReadiness?.remarks ||
+    cargoRecord?.readinessEntries?.[0]?.remarks ||
+    ""
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isReadOnly) {
+      toast.error("Record is read-only. Editing is locked.");
+      return;
+    }
     setError("");
 
     if (status === "Not Ready" && hasBlockingAllocations) {
@@ -111,7 +153,7 @@ export default function MttReadinessFormModal({
       {/* Modal Dialog */}
       <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-slate-100">
-          
+
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 bg-emerald-50/70 border-b border-emerald-100 flex-shrink-0">
             <div className="flex items-center gap-3">
@@ -119,9 +161,22 @@ export default function MttReadinessFormModal({
                 <CheckCircle2 className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-gray-900">MTT Cargo Readiness</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-gray-900">
+                    {isReadOnly ? "View Cargo Readiness" : "MTT Cargo Readiness"}
+                  </h2>
+                  {hasExistingReadiness && (
+                    <CompletedBadge
+                      isReadOnly={isReadOnly}
+                      canOverride={canOverride}
+                      size="xs"
+                    />
+                  )}
+                </div>
                 <p className="text-xs text-gray-500 font-medium">
-                  Confirm cargo readiness for allocation and loading
+                  {isReadOnly
+                    ? "View-only mode: Cargo Readiness record exists and is locked"
+                    : "Confirm cargo readiness for allocation and loading sadsadada"}
                 </p>
               </div>
             </div>
@@ -192,72 +247,83 @@ export default function MttReadinessFormModal({
               </div>
             </div>
 
-            {/* Ready Status (Clean Toggle Selection) */}
+            {/* Ready Status */}
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Ready Status <span className="text-red-500">*</span>
+                Ready Status {!isReadOnly && <span className="text-red-500">*</span>}
               </label>
-              <div className="grid grid-cols-2 gap-3">
-                {/* Ready Option */}
-                <label
-                  onClick={() => setStatus("Ready")}
-                  className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    status === "Ready"
+
+              {isReadOnly ? (
+                /* Non-interactive static display in read-only mode */
+                <div className="p-3.5 bg-slate-100 rounded-xl border border-slate-200 select-none">
+                  <div className="flex items-center gap-2">
+                    {status === "Ready" ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        <span>Ready</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs">
+                        <Clock className="h-4 w-4 text-amber-600" />
+                        <span>Not Ready</span>
+                      </span>
+                    )}
+                    <span className="text-[11px] text-slate-500 font-medium ml-2">
+                      (Record finalized — status locked)
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                /* Interactive toggle buttons when editing is allowed */
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Ready Option */}
+                  <button
+                    type="button"
+                    onClick={() => setStatus("Ready")}
+                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 transition-all cursor-pointer ${status === "Ready"
                       ? "bg-emerald-50 border-emerald-500 text-emerald-900 font-bold shadow-xs"
                       : "bg-white border-slate-200 text-slate-600 font-medium hover:border-slate-300"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="readyStatus"
-                    value="Ready"
-                    checked={status === "Ready"}
-                    onChange={() => setStatus("Ready")}
-                    className="text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                  />
-                  <CheckCircle2
-                    className={`h-4 w-4 ${status === "Ready" ? "text-emerald-600" : "text-slate-400"}`}
-                  />
-                  <span className="text-xs">Ready</span>
-                </label>
+                      }`}
+                  >
+                    <CheckCircle2
+                      className={`h-4 w-4 ${status === "Ready" ? "text-emerald-600" : "text-slate-400"}`}
+                    />
+                    <span className="text-xs">Ready</span>
+                  </button>
 
-                {/* Not Ready Option */}
-                <label
-                  onClick={() => {
-                    if (hasBlockingAllocations) {
-                      toast.error(`Cannot mark as Not Ready: ${allocatedQty.toLocaleString()} MT is actively allocated to other shipments.`);
-                      return;
-                    }
-                    setStatus("Not Ready");
-                  }}
-                  className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 transition-all ${
-                    hasBlockingAllocations
+                  {/* Not Ready Option */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (hasBlockingAllocations) {
+                        toast.error(
+                          `Cannot mark as Not Ready: ${allocatedQty.toLocaleString()} MT is actively allocated to other shipments.`
+                        );
+                        return;
+                      }
+                      setStatus("Not Ready");
+                    }}
+                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 transition-all ${hasBlockingAllocations
                       ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
                       : status === "Not Ready"
                         ? "bg-amber-50 border-amber-500 text-amber-900 font-bold shadow-xs cursor-pointer"
                         : "bg-white border-slate-200 text-slate-600 font-medium hover:border-slate-300 cursor-pointer"
-                  }`}
-                  title={hasBlockingAllocations ? `Cannot mark as Not Ready: ${allocatedQty.toLocaleString()} MT is actively allocated to other shipments.` : ""}
-                >
-                  <input
-                    type="radio"
-                    name="readyStatus"
-                    value="Not Ready"
-                    disabled={hasBlockingAllocations}
-                    checked={status === "Not Ready"}
-                    onChange={() => {
-                      if (!hasBlockingAllocations) setStatus("Not Ready");
-                    }}
-                    className="text-amber-600 focus:ring-amber-500 cursor-pointer disabled:cursor-not-allowed"
-                  />
-                  <Clock
-                    className={`h-4 w-4 ${status === "Not Ready" ? "text-amber-600" : "text-slate-400"}`}
-                  />
-                  <span className="text-xs">Not Ready</span>
-                </label>
-              </div>
+                      }`}
+                    title={
+                      hasBlockingAllocations
+                        ? `Cannot mark as Not Ready: ${allocatedQty.toLocaleString()} MT is actively allocated to other shipments.`
+                        : ""
+                    }
+                  >
+                    <Clock
+                      className={`h-4 w-4 ${status === "Not Ready" ? "text-amber-600" : "text-slate-400"}`}
+                    />
+                    <span className="text-xs">Not Ready</span>
+                  </button>
+                </div>
+              )}
 
-              {hasBlockingAllocations && (
+              {hasBlockingAllocations && !isReadOnly && (
                 <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800 flex items-start gap-2">
                   <AlertCircle className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
                   <span>
@@ -268,18 +334,24 @@ export default function MttReadinessFormModal({
             </div>
 
             {/* Date Input (Shown when Ready) */}
-            {status === "Ready" && (
+            {(status === "Ready" || isReadOnly) && (
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Ready Date <span className="text-red-500">*</span>
+                  Ready Date {!isReadOnly && <span className="text-red-500">*</span>}
                 </label>
-                <input
-                  type="date"
-                  required
-                  value={readyDate}
-                  onChange={(e) => setReadyDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-medium text-slate-800"
-                />
+                {isReadOnly ? (
+                  <div className="w-full px-3 py-2 text-xs bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-700 select-none">
+                    {readyDate || "—"}
+                  </div>
+                ) : (
+                  <input
+                    type="date"
+                    required
+                    value={readyDate}
+                    onChange={(e) => setReadyDate(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 font-medium text-slate-800"
+                  />
+                )}
               </div>
             )}
 
@@ -288,31 +360,49 @@ export default function MttReadinessFormModal({
               <label className="block text-xs font-bold text-slate-700 mb-1">
                 Remarks <span className="text-slate-400 font-normal">(Optional)</span>
               </label>
-              <textarea
-                rows={3}
-                placeholder="Enter readiness notes, warehouse confirmation, inspection notes..."
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-800 font-medium placeholder-slate-400"
-              />
+              {isReadOnly ? (
+                <div className="w-full px-3 py-2 text-xs bg-slate-100 border border-slate-200 rounded-xl font-medium text-slate-700 select-none whitespace-pre-wrap min-h-[48px]">
+                  {remarks || "No remarks entered."}
+                </div>
+              ) : (
+                <textarea
+                  rows={3}
+                  placeholder="Enter readiness notes, warehouse confirmation, inspection notes..."
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 text-slate-800 font-medium placeholder-slate-400"
+                />
+              )}
             </div>
 
             {/* Action Buttons */}
             <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-              >
-                {loading ? "Saving..." : "Save Readiness"}
-              </button>
+              {isReadOnly ? (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  >
+                    {loading ? "Saving..." : "Save Readiness"}
+                  </button>
+                </>
+              )}
             </div>
           </form>
 

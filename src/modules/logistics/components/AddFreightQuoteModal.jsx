@@ -29,6 +29,8 @@ import SearchablePartnerSelect from "@/components/common/SearchablePartnerSelect
 import { useCurrencyMaster } from "@/modules/enquiries/hooks/useCurrencyMaster";
 import axiosClient from "@/lib/axios";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
+import { usePermissions } from "@/hooks/usePermissions";
+import CompletedBadge from "@/components/badges/CompletedBadge";
 import {
   DEFAULT_TRUCK_CAPACITIES,
   normalizeTruckCapacity,
@@ -67,12 +69,27 @@ export default function AddFreightQuoteModal({
   onOpenCreatePartner,
   onOpenAddContact,
   autoSelectPartner = null,
-  isReadOnly = false,
+  isReadOnly: propReadOnly = false,
   selectedRoute = null,
   targetShipment = null,
   purchaseContractId = null,
 }) {
   useEscapeKey(onClose, isOpen);
+
+  const { canEditCompleted } = usePermissions();
+  const canOverrideFreight = canEditCompleted("freight_allocation");
+  const isQuoteFinalized =
+    Boolean(quote?.id) &&
+    (quote.isPreferred ||
+      quote.status === "Finalized" ||
+      quote.status === "Selected" ||
+      targetShipment?.freightReady ||
+      targetShipment?.status === "Executed");
+  const isOneTimeAllowed =
+    isQuoteFinalized && !canOverrideFreight && !quote?.oneTimeCompletedEditUsed;
+  const isReadOnly =
+    propReadOnly ||
+    (isQuoteFinalized && !canOverrideFreight && Boolean(quote?.oneTimeCompletedEditUsed));
 
   // Form State
   const [sellerId, setSellerId] = useState("");
@@ -1101,11 +1118,17 @@ export default function AddFreightQuoteModal({
               <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
                 {isReadOnly ? quote ? `Freight Quotation (${quote.quoteNumber})` : "Freight Quotation Details"
                   : quote ? `Revise Freight Quote (${quote.quoteNumber})` : "Add New Freight Quotation"}
-                {isReadOnly && (
+                {isQuoteFinalized ? (
+                  <CompletedBadge
+                    isReadOnly={isReadOnly}
+                    isOneTimeAllowed={isOneTimeAllowed}
+                    canOverride={canOverrideFreight}
+                  />
+                ) : isReadOnly ? (
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-slate-100 text-slate-600 border border-slate-200 tracking-wider">
                     Read Only
                   </span>
-                )}
+                ) : null}
               </h3>
               <p className="text-sm text-slate-500 font-medium mt-0.5">
                 Mode: <span className="text-indigo-600 font-semibold">{mode}</span> ({transportMode} Logistics)
@@ -1124,6 +1147,13 @@ export default function AddFreightQuoteModal({
         {/* Scrollable Form Body */}
         <form onSubmit={handleSave} className="flex-1 flex flex-col overflow-hidden">
           <div className="p-6 space-y-6 overflow-y-auto flex-1 bg-slate-50/30">
+
+            {isOneTimeAllowed && (
+              <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-300 rounded-xl text-amber-800 font-medium text-sm">
+                <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" />
+                <span>You have 1 correction remaining for this finalized quote. Saving changes will permanently lock it.</span>
+              </div>
+            )}
 
             {/* Error Alert */}
             {error && (
@@ -1771,7 +1801,7 @@ export default function AddFreightQuoteModal({
                 </button>
                 <button type="submit" disabled={loading} className="px-5 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-lg hover:bg-indigo-700 shadow-sm transition-all flex items-center gap-2 disabled:opacity-70 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                   {loading ? <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Save className="h-4 w-4" />}
-                  {quote ? "Update Quote" : "Save Quote"}
+                  {quote ? (isOneTimeAllowed ? "Save Final Correction" : "Update Quote") : "Save Quote"}
                 </button>
               </>
             )}

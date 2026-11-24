@@ -35,6 +35,7 @@ import {
   FolderPlus,
   ChevronDown,
   ChevronRight,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logisticsApi } from "../services/logisticsApi";
@@ -49,6 +50,8 @@ import { selectActiveCompany } from "@/store/slices/companyContextSlice";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { isFreightRequiredForShipment } from "@/modules/shipments/utils/freightRuleEngine";
 import { shipmentsApi } from "@/modules/shipments/services/shipmentsApi";
+import { usePermissions } from "@/hooks/usePermissions";
+import CompletedBadge from "@/components/badges/CompletedBadge";
 
 const STATUS_STEPS = [
   "Pending",
@@ -87,6 +90,9 @@ export default function TransportDrawer({
 
   const company = useSelector(selectActiveCompany);
   const companyCountry = company?.country;
+
+  const { canEditCompleted } = usePermissions();
+  const canOverrideFreight = canEditCompleted("freight_allocation");
 
   const [activeTab, setActiveTab] = useState("quotes");
   const [details, setDetails] = useState(null);
@@ -1073,6 +1079,9 @@ export default function TransportDrawer({
                         const isCollapsed = isSingleShipmentView ? false : (collapsedShipments.has(s.id) && !isTargeted);
                         const sQuotes = s.quotes || [];
                         const prefQuote = s.preferredQuote || sQuotes.find(q => q.isPreferred);
+                        const isShipmentFreightFinalized = Boolean(prefQuote) || ["Transport Assigned", "Ready For Shipment", "Shipment Created", "In Transit", "Delivered", "Closed"].includes(details?.transport?.status || s.status);
+                        const isShipmentOneTimeAllowed = isShipmentFreightFinalized && !canOverrideFreight && prefQuote && !prefQuote.oneTimeCompletedEditUsed;
+                        const isQuotesLocked = isShipmentFreightFinalized && !canOverrideFreight && (!prefQuote || Boolean(prefQuote.oneTimeCompletedEditUsed));
 
                         return (
                           <div
@@ -1147,6 +1156,14 @@ export default function TransportDrawer({
                                         year: "numeric",
                                       })}
                                     </span>
+                                  )}
+
+                                  {isShipmentFreightFinalized && (
+                                    <CompletedBadge
+                                      isReadOnly={isQuotesLocked}
+                                      isOneTimeAllowed={isShipmentOneTimeAllowed}
+                                      canOverride={canOverrideFreight}
+                                    />
                                   )}
                                 </div>
                               </div>
@@ -1258,6 +1275,9 @@ export default function TransportDrawer({
                                             const isPreferred = q.isPreferred || (prefQuote && prefQuote.id === q.id);
                                             const isExpiring = expiringSoonIds.includes(q.id);
                                             const initials = getPartnerInitials(q.seller?.entityName);
+                                            const isQuoteFinalized = Boolean(q.isPreferred) || isShipmentFreightFinalized;
+                                            const quoteOneTimeAllowed = isQuoteFinalized && !canOverrideFreight && !q.oneTimeCompletedEditUsed;
+                                            const quoteLocked = isQuoteFinalized && !canOverrideFreight && Boolean(q.oneTimeCompletedEditUsed);
 
                                             return (
                                               <tr
@@ -1364,12 +1384,19 @@ export default function TransportDrawer({
                                                 <td className="px-3 py-2 text-center">
                                                   <button
                                                     type="button"
-                                                    onClick={() => !isReadOnly && handleSetPreferred(q.id)}
-                                                    disabled={isReadOnly}
+                                                    onClick={() => !isReadOnly && !quoteLocked && handleSetPreferred(q.id)}
+                                                    disabled={isReadOnly || quoteLocked}
+                                                    title={
+                                                      quoteLocked
+                                                        ? "Freight allocation is finalized. Changing preferred quote requires freight_allocation:edit_completed permission."
+                                                        : isPreferred
+                                                        ? "Preferred Quote"
+                                                        : "Select as Preferred"
+                                                    }
                                                     className={`px-2.5 py-1 rounded-lg font-extrabold text-[10px] transition-all inline-flex items-center gap-1.5 ${
                                                       isPreferred
                                                         ? "bg-purple-600 text-white shadow-xs"
-                                                        : isReadOnly
+                                                        : isReadOnly || quoteLocked
                                                         ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
                                                         : "bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 cursor-pointer"
                                                     }`}
@@ -1382,12 +1409,12 @@ export default function TransportDrawer({
                                                 {/* Edit / Delete */}
                                                 <td className="px-3 py-2 text-right">
                                                   <div className="flex items-center justify-end gap-1">
-                                                    {isReadOnly ? (
+                                                    {isReadOnly || quoteLocked ? (
                                                       <button
                                                         type="button"
                                                         onClick={() => handleOpenEditQuoteForShipment(q, s)}
                                                         className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                                                        title="View Quote Details"
+                                                        title={quoteLocked ? "View Finalized Quote (Read Only)" : "View Quote Details"}
                                                       >
                                                         <Eye className="h-3.5 w-3.5" />
                                                       </button>
@@ -1396,24 +1423,30 @@ export default function TransportDrawer({
                                                         <button
                                                           type="button"
                                                           onClick={() => handleOpenEditQuoteForShipment(q, s)}
-                                                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                                                          title="Revise Quote"
+                                                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                                            quoteOneTimeAllowed
+                                                              ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                                              : "text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                                          }`}
+                                                          title={quoteOneTimeAllowed ? "1 Correction Remaining: Edit Quote" : "Revise Quote"}
                                                         >
                                                           <Edit2 className="h-3.5 w-3.5" />
                                                         </button>
-                                                        <button
-                                                          type="button"
-                                                          disabled={isPreferred}
-                                                          onClick={() => handleDeleteQuote(q.id)}
-                                                          className={`p-1.5 rounded-lg transition-colors ${
-                                                            isPreferred
-                                                              ? "text-slate-300 cursor-not-allowed"
-                                                              : "text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                                                          }`}
-                                                          title={isPreferred ? "Cannot delete preferred quote" : "Delete"}
-                                                        >
-                                                          <Trash2 className="h-3.5 w-3.5" />
-                                                        </button>
+                                                        {!quoteOneTimeAllowed && (
+                                                          <button
+                                                            type="button"
+                                                            disabled={isPreferred}
+                                                            onClick={() => handleDeleteQuote(q.id)}
+                                                            className={`p-1.5 rounded-lg transition-colors ${
+                                                              isPreferred
+                                                                ? "text-slate-300 cursor-not-allowed"
+                                                                : "text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                                            }`}
+                                                            title={isPreferred ? "Cannot delete preferred quote" : "Delete"}
+                                                          >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                          </button>
+                                                        )}
                                                       </>
                                                     )}
                                                   </div>
