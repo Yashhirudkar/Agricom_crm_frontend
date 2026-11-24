@@ -198,10 +198,23 @@ const buildAttachmentsForMode = (mode, isCadActive, currentAttachments = []) => 
   const predefinedNames = getPredefinedDocumentNames(mode, isCadActive);
   const existingByName = new Map();
   const manualDocs = [];
+  const isAttachmentUploaded = (att) =>
+    Boolean(
+      (att?.fileName && String(att.fileName).trim() !== "") ||
+        att?.attachmentId ||
+        att?.downloadUrl ||
+        att?.fileUrl
+    );
 
   (currentAttachments || []).forEach((att) => {
-    if (att && att.documentName && !existingByName.has(att.documentName)) {
-      existingByName.set(att.documentName, att);
+    if (att && att.documentName) {
+      const existing = existingByName.get(att.documentName);
+      const attIsUploaded = isAttachmentUploaded(att);
+      const existingIsUploaded = isAttachmentUploaded(existing);
+
+      if (!existing || (attIsUploaded && !existingIsUploaded)) {
+        existingByName.set(att.documentName, att);
+      }
     }
     // Retain manual documents or previously uploaded documents not in predefined list
     if (
@@ -251,7 +264,12 @@ function DocumentCard({
   isReadOnly = false,
 }) {
   const fileInputRef = React.useRef(null);
-  const isUploaded = Boolean(att.fileName && String(att.fileName).trim() !== "");
+  const isUploaded = Boolean(
+    (att.fileName && String(att.fileName).trim() !== "") ||
+      att.attachmentId ||
+      att.downloadUrl ||
+      att.fileUrl
+  );
   const isUploading = Boolean(att.isUploading);
 
   const handleCardClick = () => {
@@ -351,11 +369,11 @@ function DocumentCard({
         <div className="flex items-center justify-between mt-1 pt-1 border-t border-emerald-100/80 gap-1 text-[11px]">
           <div
             className="flex items-center gap-1 min-w-0 flex-1 text-slate-700"
-            title={att.fileName}
+            title={att.fileName || att.documentName}
           >
             <FileCheck className="h-3 w-3 text-emerald-600 shrink-0" />
             <span className="truncate text-[10px] font-semibold text-slate-700 max-w-[110px]">
-              {att.fileName}
+              {att.fileName || "Attached file"}
             </span>
           </div>
 
@@ -1075,6 +1093,8 @@ export default function ShipmentStuffingExecutionModal({
           ...target,
           fileName: "",
           fileUrl: "",
+          downloadUrl: "",
+          attachmentId: null,
           fileSize: 0,
           mimeType: "",
         };
