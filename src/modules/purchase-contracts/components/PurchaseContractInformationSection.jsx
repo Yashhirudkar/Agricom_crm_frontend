@@ -9,6 +9,7 @@ export default function PurchaseContractInformationSection({
   form,
   setForm,
   masters = {},
+  exporterOptions = [],
   isView = false,
 }) {
   const [showSpec, setShowSpec] = useState(!!(form?.specificationNo || form?.specificationDate));
@@ -24,7 +25,7 @@ export default function PurchaseContractInformationSection({
   const contractTypeDisplay = isManual ? "MTT (Manual Trade)" : (contract?.salesContract?.contractType || "SC (Sales Contract)");
 
   const buyersOptions = masters?.buyers || masters?.partners || [];
-  const sellersOptions = masters?.purchaseSuppliers || [];
+  const sellersOptions = exporterOptions;
   const purchaseDateDisplay = formatPurchaseDate(form.purchaseDate);
 
   return (
@@ -145,10 +146,10 @@ export default function PurchaseContractInformationSection({
             )}
           </div>
 
-          {/* Seller / Supplier Entity */}
+          {/* Seller / Supplier / EXPORTER Entity */}
           <div>
             <label className={lbl}>
-              Seller / Supplier {!isView && <span className="text-red-500">*</span>}
+              Seller / Supplier / EXPORTER {!isView && <span className="text-red-500">*</span>}
             </label>
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{form.supplierName || "\u00A0"}</div>
@@ -167,7 +168,7 @@ export default function PurchaseContractInformationSection({
                   }}
                   className={`${inp} appearance-none pr-8 font-semibold text-gray-900`}
                 >
-                  <option value="">Select Supplier Entity</option>
+                  <option value="">Select Exporter Entity</option>
                   {sellersOptions.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.entityName || s.name}

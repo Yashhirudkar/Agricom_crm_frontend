@@ -53,5 +53,8 @@ export const purchaseContractApi = {
     }),
   deleteAttachment: (id, attachmentId) =>
     axiosClient.delete(`/purchase-contracts/${id}/attachments/${attachmentId}`),
+
+  getPartnersOptions: (params) =>
+    axiosClient.get("/masters/partners/options", { params }),
 };
 

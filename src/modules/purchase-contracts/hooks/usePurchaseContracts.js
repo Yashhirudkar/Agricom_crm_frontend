@@ -271,3 +271,18 @@ export function useDeletePurchaseContractAttachment(id) {
     },
   });
 }
+
+export function usePurchaseContractExporters() {
+  return useQuery({
+    queryKey: ["purchase-contracts", "exporters"],
+    queryFn: async () => {
+      const res = await purchaseContractApi.getPartnersOptions({
+        roleName: "exporter",
+        limit: 1000,
+        isActive: true,
+      });
+      return Array.isArray(res.data) ? res.data : (res.data?.data || []);
+    },
+    staleTime: 60000,
+  });
+}

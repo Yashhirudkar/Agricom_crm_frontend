@@ -12,6 +12,7 @@ import {
   usePurchaseContractAttachments,
   useUploadPurchaseContractAttachment,
   useDeletePurchaseContractAttachment,
+  usePurchaseContractExporters,
 } from "../hooks/usePurchaseContracts";
 import { useSalesMasters } from "@/modules/sales-contracts/hooks/useSalesContracts";
 import { purchaseContractApi } from "../services/purchaseContractApi";
@@ -56,6 +57,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
   } = usePurchaseContractAttachments(isNew ? null : id);
 
   const { masters } = useSalesMasters({ includeBrokers: false, includePartners: false });
+  const { data: exporterOptions = [] } = usePurchaseContractExporters();
 
   // Mutations
   const { mutate: updateStatus } = useUpdatePurchaseContractStatus(id);
@@ -448,7 +450,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         ...(!form.contractDate ? ["Contract Date"] : []),
         ...(!(isManual || contract?.salesContract?.contractType) ? ["Contract Type"] : []),
         ...(isManual && !form.buyerId ? ["Buyer Entity"] : []),
-        ...(!form.sellerId ? ["Seller / Supplier"] : []),
+        ...(!form.sellerId ? ["Seller / Supplier / EXPORTER"] : []),
         ...(!(form.productId || form.productName?.trim()) ? ["Product"] : []),
         ...(!(Number(form.quantity) > 0) ? ["Qty (MT)"] : []),
         ...(!(Number(form.ratePerMt) > 0) ? ["Price"] : []),
@@ -912,6 +914,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           form={form}
           setForm={setForm}
           masters={masters}
+          exporterOptions={exporterOptions}
           isView={isViewMode}
         />
 
