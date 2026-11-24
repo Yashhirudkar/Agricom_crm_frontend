@@ -142,7 +142,7 @@ export function useSalesMasters({ includeBrokers = true, includePartners = true 
         const internationalBrokerRole = roles.find((r) => r.name?.toLowerCase() === "international broker");
 
         const [buyersRes, sellersRes, suppliersRes, brokersRes, partnersRes, purchaseSuppliersRes] = await Promise.all([
-          buyerRole ? mastersApi.getPartnersOptions({ partnerRoleId: buyerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
+          buyerRole ? mastersApi.getPartnersOptions({ partnerRoleId: buyerRole.id, limit: 50, page: 1, isActive: true }) : Promise.resolve({ data: [] }),
           sellerRole ? mastersApi.getPartnersOptions({ partnerRoleId: sellerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
           supplierRole ? mastersApi.getPartnersOptions({ partnerRoleId: supplierRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),
           includeBrokers && brokerRole ? mastersApi.getPartnersOptions({ partnerRoleId: brokerRole.id, limit: 1000, isActive: true }) : Promise.resolve({ data: [] }),

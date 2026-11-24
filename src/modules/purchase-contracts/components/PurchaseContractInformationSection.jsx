@@ -1,11 +1,41 @@
 "use client";
 import React, { useRef } from "react";
 import { CalendarDays, FileText, ChevronDown } from "lucide-react";
+import AsyncSelect from "react-select/async";
+import { toast } from "sonner";
+import { purchaseContractApi } from "../services/purchaseContractApi";
 import {
   calculatePaymentDueDate,
   formatContractDate,
   parseContractDate,
 } from "../utils/dateUtils";
+
+const buyerSelectStyles = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: "36px",
+    borderRadius: "12px",
+    borderColor: state.isFocused ? "#007aff" : "#e5e7eb",
+    boxShadow: state.isFocused ? "0 0 0 2px rgba(0,122,255,0.2)" : "none",
+    "&:hover": { borderColor: state.isFocused ? "#007aff" : "#d1d5db" },
+    fontSize: "12px",
+  }),
+  valueContainer: (base) => ({ ...base, padding: "0 12px" }),
+  input: (base) => ({ ...base, margin: 0, padding: 0 }),
+  indicatorsContainer: (base) => ({ ...base, height: "34px" }),
+  indicatorSeparator: () => ({ display: "none" }),
+  dropdownIndicator: (base) => ({ ...base, padding: "0 8px", color: "#9ca3af" }),
+  clearIndicator: (base) => ({ ...base, padding: "0 4px", color: "#9ca3af" }),
+  option: (base, state) => ({
+    ...base,
+    fontSize: "12px",
+    backgroundColor: state.isSelected ? "#007aff" : state.isFocused ? "#eff6ff" : "#fff",
+    color: state.isSelected ? "#fff" : "#111827",
+  }),
+  menu: (base) => ({ ...base, zIndex: 10000, fontSize: "12px" }),
+  menuPortal: (base) => ({ ...base, zIndex: 10000 }),
+  noOptionsMessage: (base) => ({ ...base, fontSize: "12px" }),
+};
 
 export default function PurchaseContractInformationSection({
   contract,
@@ -27,7 +57,50 @@ export default function PurchaseContractInformationSection({
   const contractTypeDisplay = isManual ? "MTT (Manual Trade)" : (contract?.salesContract?.contractType || "SC (Sales Contract)");
 
   const buyersOptions = masters?.buyers || masters?.partners || [];
+  const buyerSelectOptions = buyersOptions.map((buyer) => ({
+    value: buyer.id,
+    label: buyer.entityName || buyer.name,
+  }));
+  const selectedBuyerOption = buyerSelectOptions.find(
+    (option) => Number(option.value) === Number(form.buyerId)
+  ) || (form.buyerId && form.buyerName
+    ? { value: form.buyerId, label: form.buyerName }
+    : null);
   const sellersOptions = exporterOptions;
+
+  const loadBuyerOptions = async (inputValue) => {
+    const search = inputValue.trim();
+    if (search.length < 2) {
+      const normalizedSearch = search.toLowerCase();
+      return buyerSelectOptions.filter((option) =>
+        option.label.toLowerCase().includes(normalizedSearch)
+      );
+    }
+    if (!masters?.buyerRoleId) {
+      return [];
+    }
+
+    try {
+      const response = await purchaseContractApi.getPartnersOptions({
+        partnerRoleId: masters.buyerRoleId,
+        search,
+        limit: 50,
+        page: 1,
+        isActive: true,
+      });
+      const data = response.data?.data || response.data || [];
+      return Array.isArray(data)
+        ? data.map((buyer) => ({
+          value: buyer.id,
+          label: buyer.entityName || buyer.name,
+        }))
+        : [];
+    } catch (error) {
+      console.error("Failed to search buyer entities", error);
+      toast.error("Buyer search is temporarily unavailable. Please try again.");
+      return [];
+    }
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
@@ -140,29 +213,31 @@ export default function PurchaseContractInformationSection({
             {isView ? (
               <div className="text-sm font-semibold text-gray-900 py-1.5">{form.buyerName || defaultBuyer || "\u00A0"}</div>
             ) : isManual && buyersOptions.length > 0 ? (
-              <div className="relative">
-                <select
-                  value={form.buyerId || ""}
-                  onChange={(e) => {
-                    const bId = Number(e.target.value);
-                    const bObj = buyersOptions.find((b) => b.id === bId);
-                    setForm((f) => ({
-                      ...f,
-                      buyerId: bId || null,
-                      buyerName: bObj?.entityName || bObj?.name || "",
-                    }));
-                  }}
-                  className={`${inp} appearance-none pr-8 font-semibold text-gray-900`}
-                >
-                  <option value="">Select Buyer Entity</option>
-                  {buyersOptions.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.entityName || b.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-              </div>
+              <AsyncSelect
+                inputId="purchase-contract-buyer"
+                aria-label="Buyer Entity"
+                value={selectedBuyerOption}
+                defaultOptions={buyerSelectOptions}
+                cacheOptions
+                loadOptions={loadBuyerOptions}
+                onChange={(option) => {
+                  const bId = option ? Number(option.value) : null;
+                  setForm((f) => ({
+                    ...f,
+                    buyerId: bId,
+                    buyerName: option?.label || "",
+                  }));
+                }}
+                placeholder="Select Buyer Entity"
+                isSearchable
+                isClearable
+                styles={buyerSelectStyles}
+                filterOption={null}
+                menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                menuPosition="fixed"
+                menuPlacement="auto"
+                noOptionsMessage={() => "No buyer entities found"}
+              />
             ) : (
               <input
                 type="text"
