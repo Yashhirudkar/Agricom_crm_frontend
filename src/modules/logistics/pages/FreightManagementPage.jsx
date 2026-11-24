@@ -188,6 +188,7 @@ export default function FreightManagementPage() {
   const [search, setSearch] = useState("");
   const [businessReference, setBusinessReference] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedBusinessReference, setDebouncedBusinessReference] = useState("");
   const [productFilter, setProductFilter] = useState("all");
   const [originFilter, setOriginFilter] = useState("all");
   const [destinationFilter, setDestinationFilter] = useState("all");
@@ -219,10 +220,18 @@ export default function FreightManagementPage() {
     return () => clearTimeout(t);
   }, [search]);
 
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedBusinessReference(businessReference);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [businessReference]);
+
   // Reset page on filter change
   useEffect(() => {
     setPage(1);
-  }, [transportMode, statusFilter, productFilter, originFilter, destinationFilter, dateFrom, dateTo]);
+  }, [transportMode, statusFilter, productFilter, originFilter, destinationFilter, dateFrom, dateTo, debouncedBusinessReference]);
 
   const [expandedQuotes, setExpandedQuotes] = useState(new Set());
 
@@ -403,7 +412,7 @@ export default function FreightManagementPage() {
         sortBy,
         sortDir,
         ...(debouncedSearch && { search: debouncedSearch }),
-        ...(businessReference && { businessReference }),
+        ...(debouncedBusinessReference && { businessReference: debouncedBusinessReference }),
         ...(productFilter !== "all" && { product: productFilter }),
         ...(originFilter !== "all" && { origin: originFilter }),
         ...(destinationFilter !== "all" && { destination: destinationFilter }),
@@ -426,7 +435,7 @@ export default function FreightManagementPage() {
     activeCompanyId,
     page,
     debouncedSearch,
-    businessReference,
+    debouncedBusinessReference,
     productFilter,
     originFilter,
     destinationFilter,
@@ -457,6 +466,7 @@ export default function FreightManagementPage() {
     setSearch("");
     setBusinessReference("");
     setDebouncedSearch("");
+    setDebouncedBusinessReference("");
     setProductFilter("all");
     setOriginFilter("all");
     setDestinationFilter("all");
@@ -472,7 +482,7 @@ export default function FreightManagementPage() {
 
   const hasActiveFilters =
     Boolean(debouncedSearch) ||
-    Boolean(businessReference) ||
+    Boolean(debouncedBusinessReference) ||
     productFilter !== "all" ||
     originFilter !== "all" ||
     destinationFilter !== "all" ||
@@ -594,7 +604,7 @@ export default function FreightManagementPage() {
               placeholder="Business Ref No."
               value={businessReference}
               onChange={(e) => { setBusinessReference(e.target.value); setPage(1); }}
-              className="w-full sm:w-40 px-3 py-2 bg-gray-50/80 border border-gray-200/80 rounded-xl text-xs font-mono placeholder-gray-400 focus:outline-none focus:border-[#007aff] focus:bg-white focus:ring-2 focus:ring-[#007aff]/10"
+              className="w-full sm:w-44 px-3 py-2 bg-gray-50/80 border border-gray-200/80 rounded-xl text-xs font-mono placeholder-gray-400 focus:outline-none focus:border-[#007aff] focus:bg-white focus:ring-2 focus:ring-[#007aff]/10"
             />
 
             {/* Origin Dropdown */}
@@ -635,7 +645,12 @@ export default function FreightManagementPage() {
               <input
                 type="date"
                 value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setDateFrom(value);
+                  if (value && dateTo && value > dateTo) setDateTo("");
+                }}
+                max={dateTo || undefined}
                 title="Start Date"
                 className="bg-transparent text-xs font-semibold text-gray-700 outline-none w-[105px] cursor-pointer"
               />
@@ -644,6 +659,7 @@ export default function FreightManagementPage() {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
+                min={dateFrom || undefined}
                 title="End Date"
                 className="bg-transparent text-xs font-semibold text-gray-700 outline-none w-[105px] cursor-pointer"
               />
