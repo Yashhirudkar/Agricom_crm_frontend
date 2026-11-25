@@ -6,6 +6,7 @@ export const shipmentsApi = {
   getStats: (params) => axiosClient.get("/sales-contracts/shipments/stats", { params }),
   updateShipment: (id, data) => axiosClient.patch(`/sales-contracts/shipments/${id}`, data),
   updateManualReadiness: (id, data) => axiosClient.patch(`/sales-contracts/shipments/${id}/manual-readiness`, data),
+  updateCargoReadiness: (id, data) => axiosClient.patch(`/sales-contracts/shipments/${id}/cargo-readiness`, data),
   getExportExcelUrl: (params) => {
     const query = new URLSearchParams(params).toString();
     const baseURL = axiosClient.defaults.baseURL || "";

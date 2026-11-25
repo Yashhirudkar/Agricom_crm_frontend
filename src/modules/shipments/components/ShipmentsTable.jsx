@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { usePermissions } from "@/hooks/usePermissions";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 import { shipmentsApi } from "../services/shipmentsApi";
 
@@ -29,7 +30,8 @@ const getTimelineDisplay = (timeline = {}) => {
   const days = Number.isFinite(parsedDays)
     ? parsedDays
     : Number(timeline.daysRemaining);
-  const isOverdue = timeline.type === "overdue" || (Number.isFinite(days) && days < 0);
+  const isOverdue =
+    timeline.type === "overdue" || (Number.isFinite(days) && days < 0);
   const dayCount = Number.isFinite(days)
     ? Math.abs(days)
     : Math.abs(Number(timeline.label?.match(/\d+/)?.[0] || 0));
@@ -109,6 +111,13 @@ export default function ShipmentsTable({
   setSelectedShipments,
 }) {
   const router = useRouter();
+  const { hasAnyPermission } = usePermissions();
+  const canAccessCargoAllocation = hasAnyPermission([
+    "cargo_allocation:view",
+    "cargo_allocation:create",
+    "cargo_allocation:update",
+    "cargo_allocation:edit_completed",
+  ]);
   const [manualReadinessShipment, setManualReadinessShipment] = useState(null);
   const [stuffingShipment, setStuffingShipment] = useState(null);
   const [executingId, setExecutingId] = useState(null);
@@ -174,7 +183,9 @@ export default function ShipmentsTable({
     return (
       <div className="flex flex-col items-center justify-center py-24 text-gray-500 gap-3 bg-white">
         <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-        <span className="text-sm font-medium">Loading shipments registry...</span>
+        <span className="text-sm font-medium">
+          Loading shipments registry...
+        </span>
       </div>
     );
   }
@@ -205,321 +216,395 @@ export default function ShipmentsTable({
           className="shipment-table-wrapper min-h-0 flex-1 w-full min-w-0 overflow-x-auto overflow-y-auto overscroll-contain"
           style={{ WebkitOverflowScrolling: "touch", scrollbarWidth: "thin" }}
         >
-        <table className="shipment-table w-full table-auto whitespace-nowrap text-sm text-left border-collapse">
-          <colgroup>
-            <col style={{ width: "40px" }} />
-            <col style={{ width: "130px" }} />
-            <col style={{ width: "80px" }} />
-            <col style={{ width: "120px" }} />
-            <col style={{ width: "160px" }} />
-            <col style={{ width: "180px" }} />
-            <col style={{ width: "160px" }} />
-            <col style={{ width: "70px" }} />
-            <col style={{ width: "120px" }} />
-            <col style={{ width: "120px" }} />
-            <col style={{ width: "120px" }} />
-          </colgroup>
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
-              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 w-12 text-center">
-                <input
-                  type="checkbox"
-                  onChange={handleSelectAll}
-                  checked={shipments.length > 0 && selectedShipments.length === shipments.length}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
-                />
-              </th>
-              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">
-                {onSortBusinessReference ? (
-                  <button type="button" onClick={onSortBusinessReference} className="hover:text-blue-600 font-medium">
-                    Business Ref No.
-                  </button>
-                ) : (
-                  "Business Ref No."
-                )}
-              </th>
-              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-center whitespace-nowrap">Timeline (Days)</th>
-              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">Shipment Date</th>
-              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">Buyer</th>
-              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">Supplier</th>
-              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">Commodity</th>
-              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-center whitespace-nowrap">Qty (MT)</th>
-              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-center whitespace-nowrap">Cargo Allocation</th>
-              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-center whitespace-nowrap">Freight Allocation</th>
-              <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-right whitespace-nowrap">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {shipments.map((s) => {
-              const contract = s.salesContract || {};
-              const buyer = contract.buyer || {};
-              const seller = contract.seller || {};
-              const timelineObj = s.timeline || {};
-              const timelineDisplay = getTimelineDisplay(timelineObj);
-
-              const productsList = s.products || [];
-              const primaryProduct = productsList[0]?.name || "â€”";
-              const productDisplay =
-                productsList.length > 1
-                  ? `${primaryProduct} + ${productsList.length - 1} more`
-                  : primaryProduct;
-
-              const isSelected = selectedShipments.includes(s.id);
-              const isExecuted =
-                activeTab === "executed" ||
-                s.stuffingCompleted === true ||
-                s.isExecuted === true ||
-                ["Executed", "Dispatched", "Completed"].includes(s.status) ||
-                ["Executed", "Loading Completed", "Dispatched", "Completed"].includes(s.executionStatus) ||
-                executedShipmentIds.has(s.id);
-              const canExecute = s.canExecute === true || s.readyForShipment === true;
-
-              return (
-                <tr
-                  key={s.id}
-                  onClick={() => onRowClick(s)}
-                  className={`hover:bg-gray-50 transition-colors cursor-pointer ${isSelected ? "bg-blue-50/50" : ""
-                    }`}
-                >
-                  {/* Checkbox */}
-                  <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={(e) => handleSelectOne(e, s.id)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
-                    />
-                  </td>
-
-                  {/* Business Ref */}
-                  <td className="px-3 py-3 font-medium text-blue-600 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <ShipmentRefTooltip shipment={s}>
-                        <span className="hover:underline cursor-pointer">
-                          {s.businessReference || s.businessTransaction?.businessReference || "—"}
-                        </span>
-                      </ShipmentRefTooltip>
-                      {(s.businessReference || s.businessTransaction?.businessReference) && (
-                        <button
-                          type="button"
-                          onClick={(e) => handleCopyBusinessReference(
-                            e,
-                            s.businessReference || s.businessTransaction?.businessReference,
-                          )}
-                          className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-                          title="Copy business reference"
-                          aria-label="Copy business reference"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Timeline */}
-                  <td className="px-3 py-3 text-center whitespace-nowrap">
-                    <div className="flex flex-col items-center gap-1">
-                      <span
-                        title={timelineDisplay.title}
-                        className={`text-sm font-semibold ${timelineDisplay.className}`}
-                      >
-                        {timelineDisplay.value}
-                      </span>
-                      {s.executionStatus && (
-                        <span className="text-[10px] font-semibold text-indigo-700">
-                          {s.executionStatus}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Shipment Date */}
-                  <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
-                    {s.shipmentDate
-                      ? new Date(s.shipmentDate).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })
-                      : "â€”"}
-                  </td>
-
-                  {/* Buyer */}
-                  <td className="px-3 py-3 whitespace-nowrap text-gray-900 font-medium" onClick={(e) => e.stopPropagation()}>
-                    {buyer.entityName ? (
-                      buyer.id ? (
-                        <button
-                          onClick={() => router.push(`/masters/partners?partnerId=${buyer.id}`)}
-                          className="group relative max-w-full hover:text-blue-600 hover:underline flex items-center gap-1.5"
-                        >
-                          <User className="h-4 w-4 text-gray-400 shrink-0" />
-                          <span className="min-w-0 max-w-[112px] truncate">{buyer.entityName}</span>
-                          <span className="pointer-events-none invisible absolute left-0 top-full z-30 mt-1 max-w-xs whitespace-normal rounded-md bg-white px-2.5 py-1.5 text-xs font-normal text-gray-700 opacity-0 shadow-lg ring-1 ring-gray-200 transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 [transition-delay:200ms]">
-                            {buyer.entityName}
-                          </span>
-                        </button>
-                      ) : (
-                        <span className="group relative flex max-w-full items-center gap-1.5 text-gray-900">
-                          <User className="h-4 w-4 text-gray-400 shrink-0" />
-                          <span className="min-w-0 max-w-[112px] truncate">{buyer.entityName}</span>
-                          <span className="pointer-events-none invisible absolute left-0 top-full z-30 mt-1 max-w-xs whitespace-normal rounded-md bg-white px-2.5 py-1.5 text-xs font-normal text-gray-700 opacity-0 shadow-lg ring-1 ring-gray-200 transition-opacity group-hover:visible group-hover:opacity-100 [transition-delay:200ms]">
-                            {buyer.entityName}
-                          </span>
-                        </span>
-                      )
-                    ) : (
-                      "â€”"
-                    )}
-                  </td>
-
-                  {/* Seller */}
-                  <td className="group relative px-3 py-3 whitespace-nowrap text-gray-600">
-                    <span className="block max-w-[124px] truncate">
-                      {seller.entityName || "â€”"}
-                    </span>
-                    {seller.entityName && (
-                      <span className="pointer-events-none invisible absolute left-3 top-full z-30 mt-1 max-w-xs whitespace-normal rounded-md bg-white px-2.5 py-1.5 text-xs text-gray-700 opacity-0 shadow-lg ring-1 ring-gray-200 transition-opacity group-hover:visible group-hover:opacity-100 [transition-delay:200ms]">
-                        {seller.entityName}
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Product */}
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    {productsList.length > 0 ? (
-                      <div className="flex items-center gap-2 text-gray-700" title={primaryProduct}>
-                        <Package className="h-4 w-4 text-gray-400" />
-                        <span>{productDisplay}</span>
-                      </div>
-                    ) : (
-                      "â€”"
-                    )}
-                  </td>
-
-                  {/* Qty (MT) */}
-                  <td className="px-3 py-3 text-center font-medium text-gray-900 whitespace-nowrap">
-                    {s.quantity
-                      ? (Number.isInteger(Number(s.quantity)) ? Number(s.quantity).toLocaleString("en-US") : Number(s.quantity).toLocaleString("en-US", { minimumFractionDigits: 2 }))
-                      : "0"}
-                  </td>
-
-                  {/* Cargo Allocation Column */}
-                  <td className="px-3 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
+          <table className="shipment-table w-full table-auto whitespace-nowrap text-sm text-left border-collapse">
+            <colgroup>
+              <col style={{ width: "40px" }} />
+              <col style={{ width: "130px" }} />
+              <col style={{ width: "80px" }} />
+              <col style={{ width: "120px" }} />
+              <col style={{ width: "160px" }} />
+              <col style={{ width: "180px" }} />
+              <col style={{ width: "160px" }} />
+              <col style={{ width: "70px" }} />
+              <col style={{ width: "120px" }} />
+              <col style={{ width: "120px" }} />
+              <col style={{ width: "120px" }} />
+            </colgroup>
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 font-medium">
+                <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 w-12 text-center">
+                  <input
+                    type="checkbox"
+                    onChange={handleSelectAll}
+                    checked={
+                      shipments.length > 0 &&
+                      selectedShipments.length === shipments.length
+                    }
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                  />
+                </th>
+                <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">
+                  {onSortBusinessReference ? (
                     <button
                       type="button"
-                      onClick={(e) => handleCargoClick(e, s)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all cursor-pointer shadow-2xs hover:shadow-xs hover:scale-105 active:scale-95 ${s.cargoReady
-                        ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300"
-                        : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300"
-                        }`}
-                      title={
-                        s.cargoReady
-                          ? "Cargo Allocated. Click to view Cargo Allocation details."
-                          : "Cargo Not Allocated. Click to allocate cargo."
-                      }
+                      onClick={onSortBusinessReference}
+                      className="hover:text-blue-600 font-medium"
                     >
-                      {s.cargoReady ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                      ) : (
-                        <XCircle className="h-3.5 w-3.5 text-red-600" />
-                      )}
-                      <span>{s.cargoReady ? "Yes" : "No"}</span>
+                      Business Ref No.
                     </button>
-                  </td>
+                  ) : (
+                    "Business Ref No."
+                  )}
+                </th>
+                <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-center whitespace-nowrap">
+                  Timeline (Days)
+                </th>
+                <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">
+                  Shipment Date
+                </th>
+                <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">
+                  Buyer
+                </th>
+                <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">
+                  Supplier
+                </th>
+                <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 whitespace-nowrap">
+                  Commodity
+                </th>
+                <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-center whitespace-nowrap">
+                  Qty (MT)
+                </th>
+                <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-center whitespace-nowrap">
+                  Cargo Allocation
+                </th>
+                <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-center whitespace-nowrap">
+                  Freight Allocation
+                </th>
+                <th className="sticky top-0 z-10 bg-gray-50 px-3 py-3 text-right whitespace-nowrap">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {shipments.map((s) => {
+                const contract = s.salesContract || {};
+                const buyer = contract.buyer || {};
+                const seller = contract.seller || {};
+                const timelineObj = s.timeline || {};
+                const timelineDisplay = getTimelineDisplay(timelineObj);
 
-                  {/* Freight Allocation Column */}
-                  <td className="px-3 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
-                    {(() => {
-                      const isFreightRequired = isFreightRequiredForShipment(s);
+                const productsList = s.products || [];
+                const primaryProduct = productsList[0]?.name || "â€”";
+                const productDisplay =
+                  productsList.length > 1
+                    ? `${primaryProduct} + ${productsList.length - 1} more`
+                    : primaryProduct;
 
-                      if (!isFreightRequired) {
-                        return (
-                          <span
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold bg-green-50 text-green-700 border-green-200 select-none shadow-2xs"
-                            title="Freight is not required; no freight activity is pending."
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                            <span>YES</span>
+                const isSelected = selectedShipments.includes(s.id);
+                const isExecuted =
+                  activeTab === "executed" ||
+                  s.stuffingCompleted === true ||
+                  s.isExecuted === true ||
+                  ["Executed", "Dispatched", "Completed"].includes(s.status) ||
+                  [
+                    "Executed",
+                    "Loading Completed",
+                    "Dispatched",
+                    "Completed",
+                  ].includes(s.executionStatus) ||
+                  executedShipmentIds.has(s.id);
+                const canExecute =
+                  s.canExecute === true || s.readyForShipment === true;
+
+                return (
+                  <tr
+                    key={s.id}
+                    onClick={() => onRowClick(s)}
+                    className={`hover:bg-gray-50 transition-colors cursor-pointer ${
+                      isSelected ? "bg-blue-50/50" : ""
+                    }`}
+                  >
+                    {/* Checkbox */}
+                    <td
+                      className="px-3 py-3 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => handleSelectOne(e, s.id)}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                      />
+                    </td>
+
+                    {/* Business Ref */}
+                    <td className="px-3 py-3 font-medium text-blue-600 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <ShipmentRefTooltip shipment={s}>
+                          <span className="hover:underline cursor-pointer">
+                            {s.businessReference ||
+                              s.businessTransaction?.businessReference ||
+                              "—"}
                           </span>
-                        );
-                      }
+                        </ShipmentRefTooltip>
+                        {(s.businessReference ||
+                          s.businessTransaction?.businessReference) && (
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              handleCopyBusinessReference(
+                                e,
+                                s.businessReference ||
+                                  s.businessTransaction?.businessReference,
+                              )
+                            }
+                            className="text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                            title="Copy business reference"
+                            aria-label="Copy business reference"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
 
-                      const isAllocated =
-                        String(s.freightAllocationStatus || "")
-                          .trim()
-                          .toLowerCase() === "yes";
+                    {/* Timeline */}
+                    <td className="px-3 py-3 text-center whitespace-nowrap">
+                      <div className="flex flex-col items-center gap-1">
+                        <span
+                          title={timelineDisplay.title}
+                          className={`text-sm font-semibold ${timelineDisplay.className}`}
+                        >
+                          {timelineDisplay.value}
+                        </span>
+                        {s.executionStatus && (
+                          <span className="text-[10px] font-semibold text-indigo-700">
+                            {s.executionStatus}
+                          </span>
+                        )}
+                      </div>
+                    </td>
 
-                      return (
+                    {/* Shipment Date */}
+                    <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
+                      {s.shipmentDate
+                        ? new Date(s.shipmentDate).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "â€”"}
+                    </td>
+
+                    {/* Buyer */}
+                    <td
+                      className="px-3 py-3 whitespace-nowrap text-gray-900 font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {buyer.entityName ? (
+                        buyer.id ? (
+                          <button
+                            onClick={() =>
+                              router.push(
+                                `/masters/partners?partnerId=${buyer.id}`,
+                              )
+                            }
+                            className="group relative max-w-full hover:text-blue-600 hover:underline flex items-center gap-1.5"
+                          >
+                            <User className="h-4 w-4 text-gray-400 shrink-0" />
+                            <span className="min-w-0 max-w-[112px] truncate">
+                              {buyer.entityName}
+                            </span>
+                            <span className="pointer-events-none invisible absolute left-0 top-full z-30 mt-1 max-w-xs whitespace-normal rounded-md bg-white px-2.5 py-1.5 text-xs font-normal text-gray-700 opacity-0 shadow-lg ring-1 ring-gray-200 transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 [transition-delay:200ms]">
+                              {buyer.entityName}
+                            </span>
+                          </button>
+                        ) : (
+                          <span className="group relative flex max-w-full items-center gap-1.5 text-gray-900">
+                            <User className="h-4 w-4 text-gray-400 shrink-0" />
+                            <span className="min-w-0 max-w-[112px] truncate">
+                              {buyer.entityName}
+                            </span>
+                            <span className="pointer-events-none invisible absolute left-0 top-full z-30 mt-1 max-w-xs whitespace-normal rounded-md bg-white px-2.5 py-1.5 text-xs font-normal text-gray-700 opacity-0 shadow-lg ring-1 ring-gray-200 transition-opacity group-hover:visible group-hover:opacity-100 [transition-delay:200ms]">
+                              {buyer.entityName}
+                            </span>
+                          </span>
+                        )
+                      ) : (
+                        "â€”"
+                      )}
+                    </td>
+
+                    {/* Seller */}
+                    <td className="group relative px-3 py-3 whitespace-nowrap text-gray-600">
+                      <span className="block max-w-[124px] truncate">
+                        {seller.entityName || "â€”"}
+                      </span>
+                      {seller.entityName && (
+                        <span className="pointer-events-none invisible absolute left-3 top-full z-30 mt-1 max-w-xs whitespace-normal rounded-md bg-white px-2.5 py-1.5 text-xs text-gray-700 opacity-0 shadow-lg ring-1 ring-gray-200 transition-opacity group-hover:visible group-hover:opacity-100 [transition-delay:200ms]">
+                          {seller.entityName}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Product */}
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      {productsList.length > 0 ? (
+                        <div
+                          className="flex items-center gap-2 text-gray-700"
+                          title={primaryProduct}
+                        >
+                          <Package className="h-4 w-4 text-gray-400" />
+                          <span>{productDisplay}</span>
+                        </div>
+                      ) : (
+                        "â€”"
+                      )}
+                    </td>
+
+                    {/* Qty (MT) */}
+                    <td className="px-3 py-3 text-center font-medium text-gray-900 whitespace-nowrap">
+                      {s.quantity
+                        ? Number.isInteger(Number(s.quantity))
+                          ? Number(s.quantity).toLocaleString("en-US")
+                          : Number(s.quantity).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                            })
+                        : "0"}
+                    </td>
+
+                    {/* Cargo Allocation Column */}
+                    <td
+                      className="px-3 py-3 whitespace-nowrap text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {canAccessCargoAllocation ? (
                         <button
                           type="button"
-                          onClick={(e) => handleFreightClick(e, s)}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold transition-all cursor-pointer shadow-2xs hover:shadow-xs hover:scale-105 active:scale-95 ${
-                            isAllocated
+                          onClick={(e) => handleCargoClick(e, s)}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all cursor-pointer shadow-2xs hover:shadow-xs hover:scale-105 active:scale-95 ${
+                            s.cargoReady
                               ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300"
                               : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300"
                           }`}
                           title={
-                            isAllocated
-                              ? "Freight Allocated. Click to open Transport Workspace."
-                              : "Freight Required. Click to open Transport Workspace."
+                            s.cargoReady
+                              ? "Cargo Allocated. Click to view Cargo Allocation details."
+                              : "Cargo Not Allocated. Click to view Cargo Allocation details."
                           }
                         >
-                          {isAllocated ? (
+                          {s.cargoReady ? (
                             <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                           ) : (
                             <XCircle className="h-3.5 w-3.5 text-red-600" />
                           )}
-                          <span>{isAllocated ? "YES" : "NO"}</span>
-                        </button>
-                      );
-                    })()}
-                  </td>
-
-                  {/* Actions - Execute Stuffing Form & Readiness Control */}
-                  <td className="px-3 py-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-end gap-1.5">
-                      {/* Execute Button */}
-                      {isExecuted ? (
-                        <button
-                          type="button"
-                          title="Shipment executed. Click to view or edit Stuffing Execution."
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setStuffingShipment(s);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-xs transition-colors cursor-pointer"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                          <span>Stuffed / Executed</span>
+                          <span>{s.cargoReady ? "Yes" : "No"}</span>
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          disabled={!canExecute}
-                          title={
-                            !canExecute
-                              ? getExecuteDisabledTooltip(s)
-                              : "Execute Shipment Stuffing"
-                          }
-                          onClick={(e) => handleExecuteShipment(e, s)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-xs ${
-                            canExecute
-                              ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer"
-                              : "bg-gray-100 text-gray-400 border border-gray-200 opacity-60 cursor-not-allowed"
-                          }`}
-                        >
-                          <Rocket className="h-3.5 w-3.5" />
-                          <span>Execute</span>
-                        </button>
+                        <span className="text-gray-400">—</span>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-      </table>
-      </div>
+                    </td>
+
+                    {/* Freight Allocation Column */}
+                    <td
+                      className="px-3 py-3 whitespace-nowrap text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {(() => {
+                        const isFreightRequired =
+                          isFreightRequiredForShipment(s);
+
+                        if (!isFreightRequired) {
+                          return (
+                            <span
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold bg-green-50 text-green-700 border-green-200 select-none shadow-2xs"
+                              title="Freight is not required; no freight activity is pending."
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                              <span>YES</span>
+                            </span>
+                          );
+                        }
+
+                        const isAllocated =
+                          String(s.freightAllocationStatus || "")
+                            .trim()
+                            .toLowerCase() === "yes";
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={(e) => handleFreightClick(e, s)}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold transition-all cursor-pointer shadow-2xs hover:shadow-xs hover:scale-105 active:scale-95 ${
+                              isAllocated
+                                ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300"
+                                : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300"
+                            }`}
+                            title={
+                              isAllocated
+                                ? "Freight Allocated. Click to open Transport Workspace."
+                                : "Freight Required. Click to open Transport Workspace."
+                            }
+                          >
+                            {isAllocated ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                            ) : (
+                              <XCircle className="h-3.5 w-3.5 text-red-600" />
+                            )}
+                            <span>{isAllocated ? "YES" : "NO"}</span>
+                          </button>
+                        );
+                      })()}
+                    </td>
+
+                    {/* Actions - Execute Stuffing Form & Readiness Control */}
+                    <td
+                      className="px-3 py-3 whitespace-nowrap text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* Execute Button */}
+                        {isExecuted ? (
+                          <button
+                            type="button"
+                            title="Shipment executed. Click to view or edit Stuffing Execution."
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStuffingShipment(s);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-xs transition-colors cursor-pointer"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            <span>Stuffed / Executed</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={!canExecute}
+                            title={
+                              !canExecute
+                                ? getExecuteDisabledTooltip(s)
+                                : "Execute Shipment Stuffing"
+                            }
+                            onClick={(e) => handleExecuteShipment(e, s)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-xs ${
+                              canExecute
+                                ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer"
+                                : "bg-gray-100 text-gray-400 border border-gray-200 opacity-60 cursor-not-allowed"
+                            }`}
+                          >
+                            <Rocket className="h-3.5 w-3.5" />
+                            <span>Execute</span>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <ManualReadinessModal
@@ -546,9 +631,12 @@ export default function ShipmentsTable({
               stuffingCompleted: true,
               isExecuted: true,
               ...(data?.shipment || {}),
-              stuffingExecution: data?.record || stuffingShipment.stuffingExecution,
+              stuffingExecution:
+                data?.record || stuffingShipment.stuffingExecution,
             };
-            setExecutedShipmentIds((prev) => new Set([...prev, stuffingShipment.id]));
+            setExecutedShipmentIds(
+              (prev) => new Set([...prev, stuffingShipment.id]),
+            );
             setStuffingShipment(null);
             if (onShipmentExecuted) onShipmentExecuted(executedShipment);
             if (onRefresh) onRefresh();

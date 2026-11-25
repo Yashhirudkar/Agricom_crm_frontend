@@ -1,8 +1,14 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Ship, AlertCircle, RefreshCw, ChevronRight, Boxes, FileSpreadsheet } from "lucide-react";
-import Link from "next/link";
+import {
+  Ship,
+  AlertCircle,
+  RefreshCw,
+  ChevronRight,
+  Boxes,
+  FileSpreadsheet,
+} from "lucide-react";
 import { shipmentsApi } from "../services/shipmentsApi";
 import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 import ShipmentsFilter from "../components/ShipmentsFilter";
@@ -12,9 +18,7 @@ import ShipmentEditModal from "../components/ShipmentEditModal";
 import ContractViewModal from "@/modules/sales-contracts/components/ContractViewModal";
 import DocumentUploadDrawer from "@/modules/sales-contracts/components/DocumentUploadDrawer";
 import Pagination from "@/components/common/Pagination";
-import CargoAvailabilityDrawer from "@/modules/cargo-availability/components/CargoAvailabilityDrawer";
-import MttReadinessFormModal from "@/modules/cargo-availability/components/MttReadinessFormModal";
-import { cargoAvailabilityApi } from "@/modules/cargo-availability/services/cargoAvailabilityApi";
+import ShipmentCargoReadinessModal from "../components/ShipmentCargoReadinessModal";
 import FreightAllocationDrawer from "../components/FreightAllocationDrawer";
 import {
   isFreightAllocatedForShipment,
@@ -22,7 +26,12 @@ import {
   openShipmentFreightWorkflow,
 } from "../utils/freightRuleEngine";
 
-export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, preOpenFreight, contextContractNo }) {
+export default function ShipmentListPage({
+  preSelectedShipmentId,
+  preOpenCargo,
+  preOpenFreight,
+  contextContractNo,
+}) {
   const router = useRouter();
   // Active Tab: "pending" | "executed"
   const [activeTab, setActiveTab] = useState("pending");
@@ -95,119 +104,15 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-    const isMttShipment = (s, targetCargo = null) => {
-    const contract = s?.salesContract || {};
-    const contractType = String(contract.contractType || s?.contractType || "").trim().toUpperCase();
-    const shipmentType = String(contract.shipmentType?.name || contract.shipmentType || s?.shipmentType || "").trim().toUpperCase();
-    const purchaseType = String(s?.purchaseContract?.purchaseType || s?.purchaseType || "").trim().toUpperCase();
-    
-    // Explicit MTT markings
-    if (contractType === "MTT" || shipmentType === "MTT" || purchaseType === "MTT") return true;
-    if (Array.isArray(s?.purchaseContracts) && s.purchaseContracts.some(pc => String(pc.purchaseType || "").toUpperCase() === "MTT")) return true;
-    if (targetCargo?.cargoType === "MTT" || String(targetCargo?.purchaseContract?.purchaseType || "").toUpperCase() === "MTT") return true;
-
-    // Non-export contract types are MTT domestic workflows
-    if (contractType && contractType !== "EXPORT" && contractType !== "IMPORT") return true;
-
-    // Even if contractType is "Export", if there are NO sea ports and NO containers, or transport is truck/road, it is MTT (Domestic Truck Loading)
-    const hasSeaPorts = Boolean(
-      contract.portOfLoading || contract.port_of_loading ||
-      contract.portOfDischarge || contract.port_of_discharge ||
-      s?.originPortId || s?.destinationPortId
-    );
-    const hasContainers = Boolean(Number(s?.noOfContainers || s?.no_of_containers || 0) > 0);
-    const isTruckTransport = String(contract.originTransportMode || contract.origin_transport_mode || "").toLowerCase() === "truck" ||
-      String(contract.originTransportMode || contract.origin_transport_mode || "").toLowerCase() === "road";
-
-    if (!hasSeaPorts && !hasContainers) return true;
-    if (isTruckTransport) return true;
-
-    return false;
-  };
-
-  const handleOpenCargoAllocation = async (s) => {
-    try {
-      const res = await cargoAvailabilityApi.getByShipmentId(s.id);
-      const data = res?.data || res || {};
-      const cargoRecords = data.cargoAvailabilityRecords || [];
-      const allocations = data.allocations || [];
-
-      const targetCargo = cargoRecords[0] || allocations[0]?.cargoAvailability || null;
-      const isMtt = isMttShipment(s, targetCargo);
-
-      if (isMtt) {
-        // MTT WORKFLOW: Open MTT Cargo Readiness Modal directly on current page (/sales/shipments)
-        // DO NOT open Cargo Execution Workspace!
-        // DO NOT mount CargoAvailabilityDrawer!
-        // DO NOT navigate away or change URL!
-        let mttCargo = targetCargo;
-        if (!mttCargo) {
-          const listRes = await cargoAvailabilityApi.getCargoAvailabilityList({
-            limit: 20,
-            productId: s.products?.[0]?.id || s.salesContract?.items?.[0]?.productId,
-          });
-          const listData = listRes?.data?.data || listRes?.data || [];
-          mttCargo = listData.find(
-            (c) =>
-              c.purchaseContract?.purchaseType === "MTT" ||
-              c.purchaseContract?.salesContract?.contractType === "MTT" ||
-              c.cargoType === "MTT"
-          ) || listData[0];
-        }
-
-        if (!mttCargo) {
-          mttCargo = {
-            id: null,
-            purchaseContractId: s.purchaseContract?.id || null,
-            purchaseContract: s.purchaseContract || {
-              contractNumber: s.salesContract?.contractNumber || `SHIP-${s.id}`,
-              seller: s.salesContract?.seller || { entityName: "Vendor / Warehouse" },
-              businessReference: s.businessReference || s.businessTransaction?.businessReference,
-            },
-            product: s.products?.[0] || { name: "Product" },
-            purchaseQty: s.quantity || 0,
-            availableQty: s.quantity || 0,
-            allocatedQty: s.cargoReady ? (s.quantity || 0) : 0,
-            status: s.cargoReady ? "Ready" : "Not Ready",
-            isReady: s.cargoReady,
-          };
-        }
-
-        const hasReadiness = Boolean(
-          s.cargoReady ||
-          mttCargo.hasExistingReadiness ||
-          mttCargo.existingReadiness ||
-          mttCargo.isReady ||
-          mttCargo.readyDate ||
-          (mttCargo.readinessEntries && mttCargo.readinessEntries.length > 0) ||
-          mttCargo.noOfReadinessEntries > 0 ||
-          mttCargo.status === "Ready" ||
-          mttCargo.status === "Completed"
-        );
-
-        setMttReadinessCargoRecord({
-          ...mttCargo,
-          readinessResponse: targetCargo,
-          hasExistingReadiness: hasReadiness,
-          isReady: Boolean(s.cargoReady || mttCargo.isReady),
-          status: mttCargo.status || (s.cargoReady ? "Ready" : "Not Ready"),
-          currentShipment: s,
-        });
-      } else {
-        // Export Cargo: Keep separate and independent. Open Cargo Availability Drawer on the current page
-        setCargoShipment(s);
-      }
-    } catch (err) {
-      console.error("[ShipmentListPage] Error preparing cargo readiness:", err);
-      showToast("Failed to load cargo readiness details.", "error");
-    }
+  const handleOpenCargoAllocation = (shipment) => {
+    setCargoShipment(shipment);
   };
 
   const handleReadinessSuccess = () => {
-    setMttReadinessCargoRecord(null);
+    setCargoShipment(null);
     fetchShipments();
     fetchStats();
-    showToast("Cargo readiness updated successfully.", "success");
+    showToast("Cargo Allocation updated successfully.", "success");
   };
 
   // Data States
@@ -226,21 +131,17 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
     inTransit: 0,
     pendingDocuments: 0,
     totalContainers: 0,
-    totalQuantity: 0
+    totalQuantity: 0,
   });
 
   // Modal / Drawer Active States
   const [activeShipment, setActiveShipment] = useState(null); // Detail drawer target
-  const [cargoShipment, setCargoShipment] = useState(null);   // Cargo availability drawer target
+  const [cargoShipment, setCargoShipment] = useState(null);
   const [freightShipment, setFreightShipment] = useState(null); // Freight allocation drawer target
-  const [editShipment, setEditShipment] = useState(null);     // Edit modal target
+  const [editShipment, setEditShipment] = useState(null); // Edit modal target
   const [viewContractId, setViewContractId] = useState(null); // Contract modal target
-  const [docContract, setDocContract] = useState(null);       // Document drawer target
+  const [docContract, setDocContract] = useState(null); // Document drawer target
   const [selectedShipments, setSelectedShipments] = useState([]); // Bulk actions checkbox tracker
-
-  // MTT Cargo Allocation & Readiness Workflow State
-  const [mttReadinessCargoRecord, setMttReadinessCargoRecord] = useState(null);
-
 
   // Tab change handler
   const handleTabChange = (newTab) => {
@@ -250,101 +151,114 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
   };
 
   // Filter update handler preserving tab pagination & shared filters
-  const handleSetFilters = useCallback((updater) => {
-    const currentTabParams = tabParams[activeTab] || {
-      page: 1,
-      limit: 10,
-      sortBy: "shipmentDate",
-      sortOrder: "ASC",
-    };
-    const currentCombined = {
-      ...commonFilters,
-      page: currentTabParams.page,
-      limit: currentTabParams.limit,
-      sortBy: currentTabParams.sortBy,
-      sortOrder: currentTabParams.sortOrder,
-      tab: activeTab,
-    };
-    const next = typeof updater === "function" ? updater(currentCombined) : updater;
-
-    const nextCommon = { ...commonFilters };
-    const nextTabParams = { ...tabParams };
-    let tabParamChanged = false;
-
-    ["page", "limit", "sortBy", "sortOrder"].forEach((field) => {
-      if (next[field] !== undefined && next[field] !== currentTabParams[field]) {
-        nextTabParams[activeTab] = {
-          ...nextTabParams[activeTab],
-          [field]: next[field],
-        };
-        tabParamChanged = true;
-      }
-    });
-
-    let commonChanged = false;
-    Object.keys(next).forEach((key) => {
-      if (!["page", "limit", "sortBy", "sortOrder", "tab"].includes(key)) {
-        if (next[key] !== nextCommon[key]) {
-          nextCommon[key] = next[key];
-          commonChanged = true;
-        }
-      }
-    });
-
-    if (commonChanged) {
-      nextTabParams[activeTab] = {
-        ...nextTabParams[activeTab],
-        page: 1,
-      };
-      setCommonFilters(nextCommon);
-      setTabParams(nextTabParams);
-    } else if (tabParamChanged) {
-      setTabParams(nextTabParams);
-    }
-  }, [activeTab, commonFilters, tabParams]);
-
-  // API Fetches
-  const fetchShipments = useCallback(async (opts = {}) => {
-    if (!opts?.silent) {
-      setLoading(true);
-    }
-    try {
+  const handleSetFilters = useCallback(
+    (updater) => {
       const currentTabParams = tabParams[activeTab] || {
         page: 1,
         limit: 10,
         sortBy: "shipmentDate",
         sortOrder: "ASC",
       };
-      const queryParams = {
+      const currentCombined = {
         ...commonFilters,
         page: currentTabParams.page,
         limit: currentTabParams.limit,
         sortBy: currentTabParams.sortBy,
         sortOrder: currentTabParams.sortOrder,
         tab: activeTab,
-        status: commonFilters.status || activeTab,
       };
-      const res = await shipmentsApi.getShipments(queryParams);
-      if (res?.data) {
-        setShipments(res.data.data || []);
-        setTotal(res.data.total || 0);
-        setTotalPages(res.data.totalPages || 0);
-        if (res.data.pendingCount !== undefined && res.data.executedCount !== undefined) {
-          setTabCounts({
-            pending: res.data.pendingCount,
-            executed: res.data.executedCount,
-          });
+      const next =
+        typeof updater === "function" ? updater(currentCombined) : updater;
+
+      const nextCommon = { ...commonFilters };
+      const nextTabParams = { ...tabParams };
+      let tabParamChanged = false;
+
+      ["page", "limit", "sortBy", "sortOrder"].forEach((field) => {
+        if (
+          next[field] !== undefined &&
+          next[field] !== currentTabParams[field]
+        ) {
+          nextTabParams[activeTab] = {
+            ...nextTabParams[activeTab],
+            [field]: next[field],
+          };
+          tabParamChanged = true;
+        }
+      });
+
+      let commonChanged = false;
+      Object.keys(next).forEach((key) => {
+        if (!["page", "limit", "sortBy", "sortOrder", "tab"].includes(key)) {
+          if (next[key] !== nextCommon[key]) {
+            nextCommon[key] = next[key];
+            commonChanged = true;
+          }
+        }
+      });
+
+      if (commonChanged) {
+        nextTabParams[activeTab] = {
+          ...nextTabParams[activeTab],
+          page: 1,
+        };
+        setCommonFilters(nextCommon);
+        setTabParams(nextTabParams);
+      } else if (tabParamChanged) {
+        setTabParams(nextTabParams);
+      }
+    },
+    [activeTab, commonFilters, tabParams],
+  );
+
+  // API Fetches
+  const fetchShipments = useCallback(
+    async (opts = {}) => {
+      if (!opts?.silent) {
+        setLoading(true);
+      }
+      try {
+        const currentTabParams = tabParams[activeTab] || {
+          page: 1,
+          limit: 10,
+          sortBy: "shipmentDate",
+          sortOrder: "ASC",
+        };
+        const queryParams = {
+          ...commonFilters,
+          page: currentTabParams.page,
+          limit: currentTabParams.limit,
+          sortBy: currentTabParams.sortBy,
+          sortOrder: currentTabParams.sortOrder,
+          tab: activeTab,
+          status: commonFilters.status || activeTab,
+        };
+        const res = await shipmentsApi.getShipments(queryParams);
+        if (res?.data) {
+          setShipments(res.data.data || []);
+          setTotal(res.data.total || 0);
+          setTotalPages(res.data.totalPages || 0);
+          if (
+            res.data.pendingCount !== undefined &&
+            res.data.executedCount !== undefined
+          ) {
+            setTabCounts({
+              pending: res.data.pendingCount,
+              executed: res.data.executedCount,
+            });
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        showToast("Failed to load shipments registry", "error");
+      } finally {
+        if (!opts?.silent) {
+          setLoading(false);
         }
       }
-    } catch (err) {
-      console.error(err);
-      showToast("Failed to load shipments registry", "error");
-    } finally {
-      if (!opts?.silent) {
-        setLoading(false);
-      }
-    }
-  }, [activeTab, tabParams, commonFilters]);
+    },
+    [activeTab, tabParams, commonFilters],
+  );
 
   const handleExportExcel = async () => {
     setExporting(true);
@@ -381,7 +295,10 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
       const res = await shipmentsApi.getStats(commonFilters);
       if (res?.data) {
         setStats(res.data);
-        if (res.data.pendingCount !== undefined && res.data.executedCount !== undefined) {
+        if (
+          res.data.pendingCount !== undefined &&
+          res.data.executedCount !== undefined
+        ) {
           setTabCounts((prev) => ({
             pending: res.data.pendingCount ?? prev.pending,
             executed: res.data.executedCount ?? prev.executed,
@@ -447,11 +364,20 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
     if (preSelectedShipmentId) {
       const loadPreselected = async () => {
         try {
-          const res = await shipmentsApi.getShipments({ limit: 100, page: 1, tab: "all" });
+          const res = await shipmentsApi.getShipments({
+            limit: 100,
+            page: 1,
+            tab: "all",
+          });
           if (res?.data?.data) {
-            const match = res.data.data.find(s => String(s.id) === String(preSelectedShipmentId));
+            const match = res.data.data.find(
+              (s) => String(s.id) === String(preSelectedShipmentId),
+            );
             if (match) {
-              const timelineRes = await shipmentsApi.getShipments({ search: match.shipmentReference, tab: "all" });
+              const timelineRes = await shipmentsApi.getShipments({
+                search: match.shipmentReference,
+                tab: "all",
+              });
               const resolved = timelineRes?.data?.data?.[0] || match;
               if (preOpenCargo) {
                 // Delegate to handleOpenCargoAllocation to ensure MTT opens modal, not workspace
@@ -494,12 +420,16 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
     });
     setTabParams({
       pending: { page: 1, limit: 10, sortBy: "shipmentDate", sortOrder: "ASC" },
-      executed: { page: 1, limit: 10, sortBy: "shipmentDate", sortOrder: "DESC" },
+      executed: {
+        page: 1,
+        limit: 10,
+        sortBy: "shipmentDate",
+        sortOrder: "DESC",
+      },
     });
     setSelectedShipments([]);
     showToast("Filters cleared successfully");
   };
-
 
   const handlePrintSingleShipment = (shipment) => {
     showToast(`Preparing print layout for ${shipment.shipmentReference}...`);
@@ -549,20 +479,28 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
 
   // Stat Card Display Setup
   const statsConfig = [
-    { label: "Total Shipments", value: stats.total, badgeColor: "bg-[#007aff]" },
-    { label: "Delayed", value: stats.delayed, badgeColor: "bg-red-500" }
+    {
+      label: "Total Shipments",
+      value: stats.total,
+      badgeColor: "bg-[#007aff]",
+    },
+    { label: "Delayed", value: stats.delayed, badgeColor: "bg-red-500" },
   ];
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden p-3 sm:p-4 lg:p-5 xl:p-6 max-w-[1700px] mx-auto space-y-2 lg:space-y-3 print:p-0 print:shadow-none">
-
       {/* Toast Notification */}
       {toastMsg && (
-        <div className={`fixed top-5 right-5 z-[500] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${toastMsg.type === "error" ? "bg-red-500" : "bg-green-500"
-          }`}>
-          {toastMsg.type === "error"
-            ? <AlertCircle className="h-4 w-4" />
-            : <AlertCircle className="h-4 w-4 hidden" />}
+        <div
+          className={`fixed top-5 right-5 z-[500] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
+            toastMsg.type === "error" ? "bg-red-500" : "bg-green-500"
+          }`}
+        >
+          {toastMsg.type === "error" ? (
+            <AlertCircle className="h-4 w-4" />
+          ) : (
+            <AlertCircle className="h-4 w-4 hidden" />
+          )}
           {toastMsg.msg}
         </div>
       )}
@@ -571,17 +509,19 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
       {(preSelectedShipmentId || contextContractNo) && (
         <div className="flex flex-wrap items-center gap-2 px-3 sm:px-4 py-2.5 bg-indigo-50/80 border border-indigo-100 rounded-xl text-xs font-semibold text-indigo-700 print:hidden">
           <Boxes className="h-3.5 w-3.5 text-indigo-500 flex-shrink-0" />
-          <Link href="/sales/cargo-availability" className="hover:underline text-indigo-600">Cargo Availability</Link>
-          <ChevronRight className="h-3 w-3 text-indigo-400" />
           <span className="text-indigo-800">Shipments Registry</span>
           {contextContractNo && (
             <>
               <ChevronRight className="h-3 w-3 text-indigo-400" />
-              <span className="text-indigo-900 font-bold">{contextContractNo}</span>
+              <span className="text-indigo-900 font-bold">
+                {contextContractNo}
+              </span>
             </>
           )}
           {preOpenCargo && (
-            <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-100 text-cyan-800 border border-cyan-200">🚚 Auto-Opening Cargo</span>
+            <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-100 text-cyan-800 border border-cyan-200">
+              Auto-Opening Cargo Allocation
+            </span>
           )}
         </div>
       )}
@@ -594,7 +534,8 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
             Shipments Management
           </h1>
           <p className="text-xs text-gray-400 font-medium mt-0.5 max-w-3xl">
-            Track and monitor shipment timeline states, documentation completeness, and operational workflow statuses.
+            Track and monitor shipment timeline states, documentation
+            completeness, and operational workflow statuses.
           </p>
         </div>
         <div className="flex w-full lg:w-auto items-center gap-2">
@@ -604,7 +545,9 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
             className="flex-1 lg:flex-none max-sm:flex-none max-sm:w-8 max-sm:px-0 justify-center px-3 py-1.5 min-h-[32px] sm:min-h-[36px] border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-lg lg:rounded-xl flex items-center gap-1.5 text-[12px] sm:text-xs font-semibold cursor-pointer transition-colors disabled:opacity-50"
           >
             <FileSpreadsheet className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{exporting ? "Exporting..." : "Export Excel"}</span>
+            <span className="hidden sm:inline">
+              {exporting ? "Exporting..." : "Export Excel"}
+            </span>
           </button>
           <button
             onClick={() => fetchShipments()}
@@ -683,24 +626,41 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
             onDeselect={() => setSelectedShipments([])}
             onExecuteBulk={async () => {
               try {
-                const selectedObjs = shipments.filter((s) => selectedShipments.includes(s.id));
-                const unreadyShipments = selectedObjs.filter((s) => !s.readyForShipment);
+                const selectedObjs = shipments.filter((s) =>
+                  selectedShipments.includes(s.id),
+                );
+                const unreadyShipments = selectedObjs.filter(
+                  (s) => !s.readyForShipment,
+                );
                 if (unreadyShipments.length > 0) {
-                  showToast("Cannot execute: Selected shipment(s) pending Cargo or Freight allocation.", "error");
+                  showToast(
+                    "Cannot execute: Selected shipment(s) pending Cargo or Freight allocation.",
+                    "error",
+                  );
                   return;
                 }
-                const salesContractId = selectedObjs[0]?.salesContractId || selectedObjs[0]?.salesContract?.id;
+                const salesContractId =
+                  selectedObjs[0]?.salesContractId ||
+                  selectedObjs[0]?.salesContract?.id;
                 if (!salesContractId) {
-                  showToast("Could not determine Sales Contract for selected shipments", "error");
+                  showToast(
+                    "Could not determine Sales Contract for selected shipments",
+                    "error",
+                  );
                   return;
                 }
                 const selectedContractIds = new Set(
                   selectedObjs.map((shipment) =>
-                    Number(shipment.salesContractId || shipment.salesContract?.id),
+                    Number(
+                      shipment.salesContractId || shipment.salesContract?.id,
+                    ),
                   ),
                 );
                 if (selectedContractIds.size !== 1) {
-                  showToast("Execute Workspace can only include shipments from one Sales Contract.", "error");
+                  showToast(
+                    "Execute Workspace can only include shipments from one Sales Contract.",
+                    "error",
+                  );
                   return;
                 }
                 const targetIds = selectedShipments.map(Number);
@@ -709,12 +669,16 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
                   shipmentIds: targetIds,
                 });
                 await Promise.all(
-                  targetIds.map((id) => shipmentsApi.updateShipment(id, { status: "Executed" }))
+                  targetIds.map((id) =>
+                    shipmentsApi.updateShipment(id, { status: "Executed" }),
+                  ),
                 );
                 showToast("Shipments executed successfully", "success");
 
                 // Immediately remove executed rows from Pending view
-                setShipments((prev) => prev.filter((s) => !targetIds.includes(s.id)));
+                setShipments((prev) =>
+                  prev.filter((s) => !targetIds.includes(s.id)),
+                );
                 setTotal((prev) => Math.max(0, prev - targetIds.length));
                 setTabCounts((prev) => ({
                   pending: Math.max(0, prev.pending - targetIds.length),
@@ -735,15 +699,18 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
           onShipmentExecuted={handleShipmentExecuted}
           activeTab={activeTab}
           shipments={shipments}
-          onSortBusinessReference={() => setTabParams((current) => ({
-            ...current,
-            [activeTab]: {
-              ...current[activeTab],
-              sortBy: "businessReference",
-              sortOrder: current[activeTab]?.sortOrder === "ASC" ? "DESC" : "ASC",
-              page: 1,
-            },
-          }))}
+          onSortBusinessReference={() =>
+            setTabParams((current) => ({
+              ...current,
+              [activeTab]: {
+                ...current[activeTab],
+                sortBy: "businessReference",
+                sortOrder:
+                  current[activeTab]?.sortOrder === "ASC" ? "DESC" : "ASC",
+                page: 1,
+              },
+            }))
+          }
           loading={loading}
           selectedShipments={selectedShipments}
           setSelectedShipments={setSelectedShipments}
@@ -754,7 +721,10 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
           onPrintShipment={handlePrintSingleShipment}
           onOpenCargoDrawer={handleOpenCargoAllocation}
           onOpenFreightDrawer={(s) => {
-            if (isFreightRequiredForShipment(s) && isFreightAllocatedForShipment(s)) {
+            if (
+              isFreightRequiredForShipment(s) &&
+              isFreightAllocatedForShipment(s)
+            ) {
               setFreightShipment(s);
             }
           }}
@@ -764,16 +734,20 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
           <Pagination
             currentPage={tabParams[activeTab]?.page || 1}
             totalPages={totalPages}
-            onPageChange={(p) => setTabParams((prev) => ({
-              ...prev,
-              [activeTab]: { ...prev[activeTab], page: p },
-            }))}
+            onPageChange={(p) =>
+              setTabParams((prev) => ({
+                ...prev,
+                [activeTab]: { ...prev[activeTab], page: p },
+              }))
+            }
             totalItems={total}
             itemsPerPage={tabParams[activeTab]?.limit || 10}
-            onLimitChange={(newLimit) => setTabParams((prev) => ({
-              ...prev,
-              [activeTab]: { ...prev[activeTab], limit: newLimit, page: 1 },
-            }))}
+            onLimitChange={(newLimit) =>
+              setTabParams((prev) => ({
+                ...prev,
+                [activeTab]: { ...prev[activeTab], limit: newLimit, page: 1 },
+              }))
+            }
             itemName="shipments"
           />
         </div>
@@ -787,17 +761,23 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
           onViewContract={(id) => setViewContractId(id)}
           onOpenCargoDrawer={handleOpenCargoAllocation}
           onOpenFreightDrawer={(s) => {
-            if (!isFreightRequiredForShipment(s) || !isFreightAllocatedForShipment(s)) return;
+            if (
+              !isFreightRequiredForShipment(s) ||
+              !isFreightAllocatedForShipment(s)
+            )
+              return;
             setFreightShipment(s);
           }}
         />
       )}
 
-      {/* Cargo Availability Dedicated Drawer (Operational Execution Workspace) */}
+      {/* Shipment-level Cargo Allocation status and Ready Date */}
       {cargoShipment && (
-        <CargoAvailabilityDrawer
+        <ShipmentCargoReadinessModal
+          key={cargoShipment.id}
           shipment={cargoShipment}
           onClose={() => setCargoShipment(null)}
+          onSuccess={handleReadinessSuccess}
         />
       )}
 
@@ -805,12 +785,12 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
       {freightShipment &&
         isFreightRequiredForShipment(freightShipment) &&
         isFreightAllocatedForShipment(freightShipment) && (
-        <FreightAllocationDrawer
-          shipment={freightShipment}
-          onClose={() => setFreightShipment(null)}
-          onEditShipment={(s) => setEditShipment(s)}
-        />
-      )}
+          <FreightAllocationDrawer
+            shipment={freightShipment}
+            onClose={() => setFreightShipment(null)}
+            onEditShipment={(s) => setEditShipment(s)}
+          />
+        )}
 
       {/* Shipment Independent Edit Modal */}
       {editShipment && (
@@ -842,16 +822,6 @@ export default function ShipmentListPage({ preSelectedShipmentId, preOpenCargo, 
             fetchShipments();
             fetchStats();
           }}
-        />
-      )}
-
-      {/* MTT Cargo Readiness Modal (Triggered automatically if not already confirmed) */}
-      {mttReadinessCargoRecord && (
-        <MttReadinessFormModal
-          cargoRecord={mttReadinessCargoRecord}
-          shipment={mttReadinessCargoRecord.currentShipment}
-          onClose={() => setMttReadinessCargoRecord(null)}
-          onSuccess={handleReadinessSuccess}
         />
       )}
     </div>

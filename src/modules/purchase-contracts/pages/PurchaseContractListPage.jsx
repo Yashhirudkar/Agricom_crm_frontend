@@ -9,7 +9,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Truck,
   Pencil,
   Trash2,
   Copy,
@@ -347,14 +346,6 @@ export default function PurchaseContractListPage() {
 
                       <td className="px-3.5 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => router.push(`/sales/cargo-availability?purchaseContractId=${pc.id}`)}
-                            className="px-2 py-1 text-[10px] font-bold text-cyan-700 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-colors inline-flex items-center gap-1 border border-cyan-200/60"
-                            title="OPEN CARGO AVAILABILITY"
-                          >
-                            <Truck className="h-3 w-3" />
-                            <span>Cargo</span>
-                          </button>
                           <button
                             onClick={() => router.push(`/sales/purchase-contracts/${pc.id}?mode=view`)}
                             className="p-1.5 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors inline-flex items-center border border-purple-200/50"

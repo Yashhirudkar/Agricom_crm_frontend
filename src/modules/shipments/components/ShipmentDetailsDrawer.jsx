@@ -1,24 +1,17 @@
 "use client";
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { purchaseContractApi } from "@/modules/purchase-contracts/services/purchaseContractApi";
 import BusinessReference from "@/components/common/BusinessReference";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import {
   X,
   Ship,
-  Calendar,
   FileText,
   User,
   Package,
-  Layers,
   FileCheck2,
   Clock,
   ExternalLink,
   Rocket,
-  Boxes,
-  ArrowUpRight,
-  AlertCircle,
   Check,
   ShieldCheck,
   CheckCircle2,
@@ -53,10 +46,9 @@ const getExecuteDisabledTooltip = (shipment) => {
   return "Shipment is not ready for execution.";
 };
 
-export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContract, onOpenCargoDrawer, onOpenFreightDrawer }) {
+export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContract, onOpenCargoDrawer }) {
   useEscapeKey(onClose, Boolean(shipment));
 
-  const router = useRouter();
   const [openStuffingModal, setOpenStuffingModal] = useState(false);
   const [openManualReadinessModal, setOpenManualReadinessModal] = useState(false);
 
@@ -282,8 +274,6 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                     console.log("[ShipmentDetailsDrawer] Cargo Allocation clicked for shipment:", shipment.id);
                     if (onOpenCargoDrawer) {
                       onOpenCargoDrawer(shipment);
-                    } else {
-                      router.push(`/sales/cargo-availability?shipmentId=${shipment.id}&shipmentNo=${encodeURIComponent(shipment.shipmentReference || "")}`);
                     }
                   }}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium transition-all cursor-pointer hover:scale-105 ${shipment.cargoReady
@@ -292,8 +282,8 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                     }`}
                   title={
                     shipment.cargoReady
-                      ? "Cargo Allocated. Click to view Cargo details."
-                      : "Cargo Not Allocated. Click to allocate cargo."
+                      ? "Cargo Allocation is Yes. Click to update status or Ready Date."
+                      : "Cargo Allocation is No. Click to update status."
                   }
                 >
                   {shipment.cargoReady ? (

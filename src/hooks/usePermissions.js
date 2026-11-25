@@ -79,10 +79,6 @@ const normalizePermission = (permKey) => {
     action = 'update';
   }
 
-  if (['cargo-availability', 'cargo_availability', 'cargo-allocation', 'cargo_allocation'].includes(resource)) {
-    resource = 'cargo_allocation';
-  }
-
   if (['freight-allocation', 'freight_allocation', 'logistics'].includes(resource)) {
     resource = 'freight_allocation';
   }
