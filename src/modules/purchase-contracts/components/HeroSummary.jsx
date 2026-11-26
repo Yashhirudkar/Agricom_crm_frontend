@@ -51,7 +51,7 @@ export default function HeroSummary({
 
   const buyer = summary?.commercialInfo?.buyer?.entityName || contract?.salesContract?.buyer?.entityName || "—";
   const seller = summary?.commercialInfo?.seller?.entityName || contract?.salesContract?.seller?.entityName || "—";
-  const currency = summary?.contractInfo?.currency || contract?.salesContract?.currencyCode || "USD";
+  const currency = contract?.currencyCode || summary?.contractInfo?.currency || contract?.salesContract?.currencyCode || "USD";
   const origin = contract?.loadingCountry || contract?.salesContract?.originCountry || "—";
   const dest = contract?.salesContract?.destinationCountry || "—";
   const totalQty = summary?.financialSummary?.totalQuantity || 0;

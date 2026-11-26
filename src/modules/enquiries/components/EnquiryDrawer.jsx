@@ -32,7 +32,11 @@ import {
   User,
   Ship,
   Truck,
-  Train
+  Train,
+  DollarSign,
+  Route,
+  Briefcase,
+  Check
 } from "lucide-react";
 import { enquiriesApi } from "../services/enquiriesApi";
 import { useEnquiriesMasters } from "../hooks/useEnquiries";
@@ -44,6 +48,7 @@ import { getAllCountryOptions } from "@/lib/countryUtils";
 import usePermissions from "@/hooks/usePermissions";
 import TransportDetailsGrid from "@/modules/common/components/TransportDetailsGrid";
 import { getShipmentTypeShortForm } from "@/modules/sales-contracts/utils/formatUtils";
+import { parseRouteLocation } from "@/constants/routeLocationsData";
 
 const SHIPMENT_MODE_OPTIONS = [
   { value: "SHIP", label: "Ship", Icon: Ship },
@@ -112,6 +117,10 @@ function createDefaultTransportDetails(shipmentTypes = []) {
     origin: "",
     incoterm: defaultIncoterm,
     destination: "",
+    destinationCountry: "",
+    destinationCity: "",
+    destinationPlace: "",
+    destinationZipCode: "",
   }];
 }
 
@@ -172,12 +181,6 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     closedBy: "",
     closedByName: "",
     closedAt: "",
-    status: "",
-    closureReason: "",
-    closureRemark: "",
-    closedBy: "",
-    closedByName: "",
-    closedAt: "",
     transportDetails: createDefaultTransportDetails(shipmentTypes),
   });
 
@@ -202,10 +205,15 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
   const [selectedBrokerName, setSelectedBrokerName] = useState("");
   const brokerDropdownRef = useRef(null);
 
-  // Reusable classes
-  const inp = "w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#007aff]/20 focus:border-[#007aff] bg-white text-gray-800 transition-all";
-  const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5";
-  const err = "text-[10px] text-red-500 mt-1";
+  // Consistent enterprise UI tokens
+  const inp =
+    "w-full h-[38px] px-3 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#007aff]/15 focus:border-[#007aff] bg-white text-gray-800 placeholder:text-gray-400 transition-all";
+  const readonlyInp =
+    "w-full h-[38px] px-3 text-xs border border-gray-200/80 rounded-lg bg-slate-50/90 text-gray-600 font-medium flex items-center";
+  const lbl = "block text-[11px] font-semibold text-gray-600 mb-1.5 leading-none";
+  const err = "text-[10px] font-medium text-red-500 mt-1";
+  const card = "bg-white rounded-xl border border-gray-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)] overflow-hidden";
+  const cardHeader = "px-5 py-3 border-b border-gray-100 flex items-center gap-2.5 bg-slate-50/60";
 
   // Watch form changes to set isDirty
   useEffect(() => {
@@ -222,12 +230,19 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
         const existingDest = editData.destinationCountry || editData.destinationPort || editData.destinationCity || "";
         const existingIncoterm = resolveIncotermFromData(editData, shipmentTypes);
         let resolvedTransportDetails = (editData.transportDetails && editData.transportDetails.length > 0)
-          ? editData.transportDetails.map((r, i) => ({
+          ? editData.transportDetails.map((r, i) => {
+            const parsedDestination = parseRouteLocation(r.destination || existingDest);
+            return {
               sequence: r.sequence || i + 1,
               origin: r.origin || editData.originPort || editData.originCity || editData.originCountryId || "",
               incoterm: r.incoterm || existingIncoterm || "",
               destination: r.destination || existingDest,
-            }))
+              destinationCountry: r.destinationCountry || parsedDestination.country || "",
+              destinationCity: r.destinationCity || parsedDestination.city || "",
+              destinationPlace: r.destinationPlace || parsedDestination.place || "",
+              destinationZipCode: r.destinationZipCode || parsedDestination.zipCode || "",
+            };
+          })
           : [];
 
         if (resolvedTransportDetails.length === 0 && (existingDest || existingIncoterm)) {
@@ -302,12 +317,19 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
               const freshDest = fresh.destinationCountry || fresh.destinationPort || fresh.destinationCity || existingDest;
               const freshIncoterm = resolveIncotermFromData(fresh, shipmentTypes) || existingIncoterm;
               let freshTransportDetails = (fresh.transportDetails && fresh.transportDetails.length > 0)
-                ? fresh.transportDetails.map((r, i) => ({
+                ? fresh.transportDetails.map((r, i) => {
+                  const parsedDestination = parseRouteLocation(r.destination || freshDest);
+                  return {
                     sequence: r.sequence || i + 1,
                     origin: r.origin || fresh.originPort || fresh.originCity || fresh.originCountryId || "",
                     incoterm: r.incoterm || freshIncoterm || "",
                     destination: r.destination || freshDest,
-                  }))
+                    destinationCountry: r.destinationCountry || parsedDestination.country || "",
+                    destinationCity: r.destinationCity || parsedDestination.city || "",
+                    destinationPlace: r.destinationPlace || parsedDestination.place || "",
+                    destinationZipCode: r.destinationZipCode || parsedDestination.zipCode || "",
+                  };
+                })
                 : [];
 
               if (freshTransportDetails.length === 0 && (freshDest || freshIncoterm)) {
@@ -584,7 +606,6 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     return filtered;
   }, [partnerRoles, form.brokerRoleId]);
 
-
   // Country options for SHIP mode
   const countryOptions = useMemo(() => {
     return getAllCountryOptions().map((c) => ({
@@ -625,14 +646,19 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
   const selectStyles = {
     control: (base, state) => ({
       ...base,
-      borderColor: errors.bidCurrency ? "#ef4444" : state.isFocused ? "#007aff" : "#e2e8f0",
-      borderRadius: "0.75rem",
+      borderColor: errors.bidCurrency ? "#ef4444" : state.isFocused ? "#007aff" : "#e5e7eb",
+      borderRadius: "0.5rem",
       fontSize: "12px",
-      boxShadow: "none",
+      boxShadow: state.isFocused ? "0 0 0 2px rgba(0, 122, 255, 0.15)" : "none",
       minHeight: "38px",
+      height: "38px",
       backgroundColor: "white",
-      "&:hover": { borderColor: errors.bidCurrency ? "#ef4444" : state.isFocused ? "#007aff" : "#cbd5e1" },
+      "&:hover": { borderColor: errors.bidCurrency ? "#ef4444" : state.isFocused ? "#007aff" : "#d1d5db" },
     }),
+    valueContainer: (base) => ({ ...base, padding: "0 0.75rem" }),
+    indicatorsContainer: (base) => ({ ...base, height: "36px" }),
+    dropdownIndicator: (base) => ({ ...base, padding: "0 0.5rem" }),
+    clearIndicator: (base) => ({ ...base, padding: "0 0.25rem" }),
     option: (base, state) => ({
       ...base,
       backgroundColor: state.isSelected ? "#007aff" : state.isFocused ? "#f8fafc" : "white",
@@ -649,15 +675,16 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
   const shipmentModeSelectStyles = {
     control: (base, state) => ({
       ...base,
-      borderColor: errors.shipmentMode ? "#ef4444" : state.isFocused ? "#007aff" : "#e2e8f0",
-      borderRadius: "0.75rem",
+      borderColor: errors.shipmentMode ? "#ef4444" : state.isFocused ? "#007aff" : "#e5e7eb",
+      borderRadius: "0.5rem",
       fontSize: "12px",
-      boxShadow: "none",
+      boxShadow: state.isFocused ? "0 0 0 2px rgba(0, 122, 255, 0.15)" : "none",
       minHeight: "38px",
+      height: "38px",
       backgroundColor: "white",
-      "&:hover": { borderColor: errors.shipmentMode ? "#ef4444" : state.isFocused ? "#007aff" : "#cbd5e1" },
+      "&:hover": { borderColor: errors.shipmentMode ? "#ef4444" : state.isFocused ? "#007aff" : "#d1d5db" },
     }),
-    valueContainer: (base) => ({ ...base, padding: "0 0.5rem" }),
+    valueContainer: (base) => ({ ...base, padding: "0 0.75rem" }),
     indicatorsContainer: (base) => ({ ...base, height: "36px" }),
     dropdownIndicator: (base) => ({ ...base, padding: "0 0.5rem" }),
     clearIndicator: (base) => ({ ...base, padding: "0 0.25rem" }),
@@ -675,7 +702,6 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     setForm((f) => {
       const updated = { ...f, shipmentMode: val };
       if (val === "SHIP") {
-        // Clear state, city, zip, station fields
         updated.originState = "";
         updated.originCity = "";
         updated.originZipCode = "";
@@ -746,8 +772,10 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     if (form.transportDetails && Array.isArray(form.transportDetails) && form.transportDetails.length > 0) {
       for (let i = 0; i < form.transportDetails.length; i++) {
         const r = form.transportDetails[i];
-        if (!r.origin?.trim() || !r.incoterm?.trim() || !r.destination?.trim()) {
-          newErrors.transportDetails = `Route #${i + 1} is incomplete. Place of Loading (POL), Incoterm, and Destination are all required.`;
+        const parsedDestination = parseRouteLocation(r.destination || "");
+        const destinationCountry = (r.destinationCountry || parsedDestination.country || "").trim();
+        if (!r.origin?.trim() || !r.incoterm?.trim() || !destinationCountry) {
+          newErrors.transportDetails = `Route #${i + 1} is incomplete. Place of Loading (POL), Incoterm, and Destination Country are required.`;
           break;
         }
       }
@@ -761,7 +789,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
     if (isViewMode) return;
     if (!validate()) return;
 
-    setSavingType(notifyGroup ? 'SAVE_NOTIFY' : 'SAVE');
+    setSavingType(notifyGroup ? "SAVE_NOTIFY" : "SAVE");
     setError(null);
     setSuccessMsg(null);
 
@@ -781,18 +809,14 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
         offerAmount: form.offerAmount !== "" && form.offerAmount != null ? parseInt(String(form.offerAmount), 10) : null,
       };
 
-      // clean up empty strings and UI-only fields
       if (!payload.podPort) delete payload.podPort;
       if (!payload.purity) delete payload.purity;
       if (!payload.shipmentType) delete payload.shipmentType;
       if (!payload.shipmentDate) delete payload.shipmentDate;
-      if (!payload.shipmentMode) delete payload.shipmentMode; // empty string fails enum validation
+      if (!payload.shipmentMode) delete payload.shipmentMode;
       delete payload.enquiryNo;
       delete payload.closedByName;
 
-      // Optional DTO fields must be omitted when the form stores them as empty
-      // strings. Sending "" makes class-validator reject fields such as status,
-      // closedBy, or bidType with a 400 response.
       [
         "status",
         "originCountryId",
@@ -851,16 +875,24 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       if (form.transportDetails && Array.isArray(form.transportDetails)) {
         payload.transportDetails = form.transportDetails
           .filter((r) => (r.origin && r.origin.trim()) || (r.incoterm && r.incoterm.trim()) || (r.destination && r.destination.trim()))
-          .map((r, i) => ({
-            sequence: i + 1,
-            origin: (r.origin || "").trim(),
-            incoterm: (r.incoterm || "").trim(),
-            destination: (r.destination || "").trim(),
-          }));
+          .map((r, i) => {
+            const parsedDestination = parseRouteLocation(r.destination || "");
+            return {
+              sequence: i + 1,
+              origin: (r.origin || "").trim(),
+              incoterm: (r.incoterm || "").trim(),
+              destination: (r.destination || "").trim(),
+              destinationCountry: (r.destinationCountry || parsedDestination.country || "").trim(),
+              destinationCity: (r.destinationCity || parsedDestination.city || "").trim(),
+              destinationPlace: (r.destinationPlace || parsedDestination.place || "").trim(),
+              destinationZipCode: (r.destinationZipCode || parsedDestination.zipCode || "").trim(),
+            };
+          });
 
         const firstDest = payload.transportDetails.find((r) => r.destination)?.destination;
         if (firstDest) {
-          payload.destinationCountry = firstDest;
+          const parsedFirstDest = parseRouteLocation(firstDest);
+          payload.destinationCountry = parsedFirstDest.country || firstDest;
         }
       }
 
@@ -875,11 +907,10 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       }
 
       if (notifyGroup) {
-        setSavingType('SENDING'); // 'Sending WhatsApp...'
-        // Simulate a tiny delay for UX so user sees "Sending WhatsApp..."
-        await new Promise(r => setTimeout(r, 500));
-        setSuccessMsg("âœ… Enquiry updated and notification sent.");
-        await new Promise(r => setTimeout(r, 1500));
+        setSavingType("SENDING");
+        await new Promise((r) => setTimeout(r, 500));
+        setSuccessMsg("Enquiry updated and notification sent.");
+        await new Promise((r) => setTimeout(r, 1500));
       }
 
       onSaveSuccess?.();
@@ -897,7 +928,6 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       }
 
       if (notifyGroup && err.response?.status === 200) {
-        // Since fire-and-forget in backend, this block might be rarely hit for 200 + error, but just in case
         setError("Enquiry updated successfully. WhatsApp notification failed.");
       } else {
         setError(errMsg);
@@ -927,149 +957,161 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
         isOpen={isOpen}
         onClose={handleClose}
         title={titleText}
-        widthClass="w-full md:w-[750px] lg:w-[850px]"
+        widthClass="w-full md:w-[64vw] md:min-w-[780px] lg:min-w-[900px]"
       >
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto bg-slate-50/70 p-5 sm:p-6 space-y-5">
+          {/* Error Banner */}
           {error && (
-            <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+            <div className="p-3.5 bg-red-50 border border-red-200/80 rounded-xl flex items-start gap-3">
+              <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-sm font-bold text-red-800">Error saving enquiry</h3>
-                <p className="text-xs text-red-600 mt-1">{error}</p>
+                <h3 className="text-xs font-bold text-red-800">Error saving enquiry</h3>
+                <p className="text-xs text-red-600 mt-0.5">{error}</p>
               </div>
             </div>
           )}
 
+          {/* Success Banner */}
           {successMsg && (
-            <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-start gap-3">
-              <div className="h-5 w-5 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 mt-0.5 text-[10px]">âœ“</div>
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-start gap-3">
+              <div className="h-4 w-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+                <Check className="h-3 w-3" />
+              </div>
               <div>
-                <h3 className="text-sm font-bold text-green-800">Success</h3>
-                <p className="text-xs text-green-600 mt-1">{successMsg}</p>
+                <h3 className="text-xs font-bold text-emerald-800">Success</h3>
+                <p className="text-xs text-emerald-700 mt-0.5">{successMsg}</p>
               </div>
             </div>
           )}
 
           {mastersLoading || currenciesLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="h-7 w-7 text-[#007aff] animate-spin" />
-              <p className="text-xs text-gray-400 font-semibold">Loading dropdown options...</p>
+            <div className="flex flex-col items-center justify-center py-24 gap-3 bg-white rounded-xl border border-gray-200/80">
+              <Loader2 className="h-6 w-6 text-[#007aff] animate-spin" />
+              <p className="text-xs text-gray-400 font-medium">Loading dropdown options...</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-5">
               {/* Closed enquiry summary */}
-              {(String(form.status || editData?.status || "").toUpperCase() === "CLOSED") && (
-                <div className="flex h-9 items-center rounded-md border-l-[3px] border-red-600 bg-red-50 px-3 text-xs text-gray-600">
-                  <span className="mr-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-red-600" />
-                  <span className="font-medium">Reason for Closure:</span>
-                  <span className="ml-1 font-bold text-gray-800">
+              {String(form.status || editData?.status || "").toUpperCase() === "CLOSED" && (
+                <div className="flex flex-wrap items-center gap-y-1 rounded-lg border border-red-200/80 border-l-[3px] border-l-red-600 bg-red-50/90 px-3.5 py-2 text-xs text-gray-700">
+                  <span className="mr-2 inline-block h-2 w-2 shrink-0 rounded-full bg-red-600" />
+                  <span className="font-medium text-gray-600">Reason for Closure:</span>
+                  <span className="ml-1.5 font-semibold text-gray-900">
                     {form.closureReason || editData?.closureReason || "N/A"}
                   </span>
-                  <span className="mx-2 text-gray-400">|</span>
-                  <span className="font-medium text-gray-800">
+                  <span className="mx-2.5 text-gray-300">|</span>
+                  <span className="font-medium text-gray-700">
                     {formatClosedDate(form.closedAt || editData?.closedAt)}
                   </span>
                 </div>
               )}
 
               {/* SECTION 1: Basic Information */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-                <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2.5 bg-gray-50/50">
-                  <div className="h-6 w-6 rounded-lg bg-blue-50 flex items-center justify-center">
+              <div className={card}>
+                <div className={cardHeader}>
+                  <div className="h-6 w-6 rounded-md bg-blue-50 border border-blue-100 flex items-center justify-center">
                     <FileText className="h-3.5 w-3.5 text-blue-600" />
                   </div>
-                  <h3 className="text-xs font-bold text-gray-800">Basic Information</h3>
+                  <h3 className="text-xs font-bold text-gray-800 tracking-tight">Basic Information</h3>
                 </div>
-                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {editData && (
-                    <div>
-                      <label className={lbl}>Enquiry No.</label>
-                      <input
-                        type="text"
-                        value={form.enquiryNo}
-                        disabled
-                        className={`${inp} bg-gray-50 text-gray-500 font-medium`}
-                      />
-                    </div>
-                  )}
 
+                <div className="p-5 space-y-4">
+                  {/* Metadata Row (Edit / View Mode) */}
                   {(editData || isViewMode) && (
-                    <div>
-                      <label className={lbl}>Business Ref No.</label>
-                      <input
-                        type="text"
-                        value={editData?.businessReference || editData?.businessTransaction?.businessReference || "—"}
-                        readOnly
-                        className={`${inp} bg-gray-50 text-gray-500 font-mono font-semibold`}
-                      />
-                    </div>
-                  )}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-4 border-b border-gray-100">
+                      {editData && (
+                        <div>
+                          <label className={lbl}>Enquiry No.</label>
+                          <input
+                            type="text"
+                            value={form.enquiryNo}
+                            disabled
+                            className={`${readonlyInp} font-semibold text-gray-800`}
+                          />
+                        </div>
+                      )}
 
-                  {(editData || isViewMode) && (
-                    <div>
-                      <label className={lbl}>Created By</label>
-                      <div className={`${inp} bg-gray-50 text-gray-700 font-semibold flex items-center gap-1.5`}>
-                        <User className="h-3.5 w-3.5 text-gray-400" />
-                        <span>{createdByName || editData?.createdByName || editData?.creator?.name || "—"}</span>
+                      <div>
+                        <label className={lbl}>Business Ref No.</label>
+                        <input
+                          type="text"
+                          value={editData?.businessReference || editData?.businessTransaction?.businessReference || "—"}
+                          readOnly
+                          className={`${readonlyInp} font-mono`}
+                        />
+                      </div>
+
+                      <div>
+                        <label className={lbl}>Created By</label>
+                        <div className={`${readonlyInp} gap-2 text-gray-700`}>
+                          <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                          <span className="truncate">
+                            {createdByName || editData?.createdByName || editData?.creator?.name || "—"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  <div>
-                    <label className={lbl}>Enquiry Date <span className="text-red-500">*</span></label>
-                    <input
-                      type="date"
-                      value={form.enquiryDate}
-                      onChange={(e) => setForm((f) => ({ ...f, enquiryDate: e.target.value }))}
-                      disabled={isViewMode}
-                      className={`${inp} ${errors.enquiryDate ? "border-red-300" : ""}`}
-                    />
-                    {errors.enquiryDate && <p className={err}>{errors.enquiryDate}</p>}
-                  </div>
+                  {/* Editable Basic Fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className={lbl}>
+                        Enquiry Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={form.enquiryDate}
+                        onChange={(e) => setForm((f) => ({ ...f, enquiryDate: e.target.value }))}
+                        disabled={isViewMode}
+                        className={`${inp} ${errors.enquiryDate ? "border-red-400" : ""}`}
+                      />
+                      {errors.enquiryDate && <p className={err}>{errors.enquiryDate}</p>}
+                    </div>
 
-                  <div>
-                    <label className={lbl}>Shipment Mode</label>
-                    <Select
-                      options={SHIPMENT_MODE_OPTIONS}
-                      value={SHIPMENT_MODE_OPTIONS.find((option) => option.value === form.shipmentMode) || null}
-                      onChange={(option) => handleShipmentModeChange(option?.value || "")}
-                      isDisabled={isViewMode}
-                      isClearable
-                      formatOptionLabel={(option) => (
-                        <span className="flex items-center gap-2">
-                          <option.Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                          <span>{option.label}</span>
-                        </span>
-                      )}
-                      styles={shipmentModeSelectStyles}
-                      placeholder="Select Shipment Mode"
-                      menuPortalTarget={typeof document !== "undefined" ? document.body : null}
-                      menuPosition="fixed"
-                      className="text-xs"
-                    />
-                    {errors.shipmentMode && <p className={err}>{errors.shipmentMode}</p>}
+                    <div>
+                      <label className={lbl}>Shipment Mode</label>
+                      <Select
+                        options={SHIPMENT_MODE_OPTIONS}
+                        value={SHIPMENT_MODE_OPTIONS.find((option) => option.value === form.shipmentMode) || null}
+                        onChange={(option) => handleShipmentModeChange(option?.value || "")}
+                        isDisabled={isViewMode}
+                        isClearable
+                        formatOptionLabel={(option) => (
+                          <span className="flex items-center gap-2">
+                            <option.Icon className="h-3.5 w-3.5 text-gray-500 shrink-0" aria-hidden="true" />
+                            <span>{option.label}</span>
+                          </span>
+                        )}
+                        styles={shipmentModeSelectStyles}
+                        placeholder="Select Shipment Mode"
+                        menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                        menuPosition="fixed"
+                        className="text-xs"
+                      />
+                      {errors.shipmentMode && <p className={err}>{errors.shipmentMode}</p>}
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* SECTION 2: Logistics & Locations — hidden temporarily */}
               {false && (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-                  <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2.5 bg-gray-50/50">
-                    <div className="h-6 w-6 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <div className={card}>
+                  <div className={cardHeader}>
+                    <div className="h-6 w-6 rounded-md bg-emerald-50 border border-emerald-100 flex items-center justify-center">
                       <MapPin className="h-3.5 w-3.5 text-emerald-600" />
                     </div>
-                    <h3 className="text-xs font-bold text-gray-800">Logistics & Locations</h3>
+                    <h3 className="text-xs font-bold text-gray-800 tracking-tight">Logistics & Locations</h3>
                   </div>
 
                   <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     {form.shipmentMode === "SHIP" && (
                       <>
-                        {/* Origin Country */}
                         <div>
                           <label className={lbl}>Origin Country</label>
                           {isViewMode ? (
-                            <div className={inp}>{form.originCountryId || "—"}</div>
+                            <div className={readonlyInp}>{form.originCountryId || "—"}</div>
                           ) : (
                             <Select
                               isClearable
@@ -1092,7 +1134,6 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                           {errors.originCountryId && <p className={err}>{errors.originCountryId}</p>}
                         </div>
 
-                        {/* Origin Port */}
                         <PortSelector
                           value={form.originPort}
                           onChange={(val) => setForm((f) => ({ ...f, originPort: val }))}
@@ -1103,13 +1144,12 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                           countryName={form.originCountryId}
                         />
 
-                        <div className="col-span-full border-t border-dashed border-gray-100 my-2" />
+                        <div className="col-span-full border-t border-dashed border-gray-100 my-1" />
 
-                        {/* Destination Country */}
                         <div>
                           <label className={lbl}>Destination Country</label>
                           {isViewMode ? (
-                            <div className={inp}>{form.destinationCountry || "—"}</div>
+                            <div className={readonlyInp}>{form.destinationCountry || "—"}</div>
                           ) : (
                             <Select
                               isClearable
@@ -1132,7 +1172,6 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                           {errors.destinationCountry && <p className={err}>{errors.destinationCountry}</p>}
                         </div>
 
-                        {/* Destination Port */}
                         <PortSelector
                           value={form.destinationPort}
                           onChange={(val) => setForm((f) => ({ ...f, destinationPort: val }))}
@@ -1147,7 +1186,6 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
 
                     {(form.shipmentMode === "ROAD" || form.shipmentMode === "RAIL") && (
                       <>
-                        {/* Origin Land Selector */}
                         <LocationHierarchy
                           prefix="origin"
                           form={form}
@@ -1157,10 +1195,8 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                           shipmentMode={form.shipmentMode}
                         />
 
-                        {/* Spacer to separate origin and destination visually in 3-column grid */}
-                        <div className="col-span-full border-t border-dashed border-gray-100 my-2" />
+                        <div className="col-span-full border-t border-dashed border-gray-100 my-1" />
 
-                        {/* Destination Land Selector */}
                         <LocationHierarchy
                           prefix="destination"
                           form={form}
@@ -1173,7 +1209,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                     )}
 
                     {!form.shipmentMode && (
-                      <div className="col-span-full flex items-center justify-center py-6 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
+                      <div className="col-span-full flex items-center justify-center py-6 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
                         Select Shipment Mode above to configure origin and destination locations.
                       </div>
                     )}
@@ -1181,133 +1217,147 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                 </div>
               )}
 
-              {/* SECTION 3: Product, Packaging & Commercials */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
-                <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2.5 bg-gray-50/50">
-                  <div className="h-6 w-6 rounded-lg bg-orange-50 flex items-center justify-center">
+              {/* SECTION 3: Commercial Specifications */}
+              <div className={card}>
+                <div className={cardHeader}>
+                  <div className="h-6 w-6 rounded-md bg-orange-50 border border-orange-100 flex items-center justify-center">
                     <Package className="h-3.5 w-3.5 text-orange-600" />
                   </div>
-                  <h3 className="text-xs font-bold text-gray-800">Commercial Specifications</h3>
+                  <h3 className="text-xs font-bold text-gray-800 tracking-tight">Commercial Specifications</h3>
                 </div>
 
-                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Partner Role */}
-                  <div>
-                    <label className={lbl}>Partner Role <span className="text-red-500">*</span></label>
-                    <div className="relative">
-                      <select
-                        value={form.partnerRoleId || ""}
-                        onChange={(e) => {
-                          const newRoleId = e.target.value ? Number(e.target.value) : "";
-                          setForm((f) => ({ ...f, partnerRoleId: newRoleId, partnerId: "", ...(!editData ? { partnerAnnualTurnover: null } : {}) }));
-                          setSelectedPartnerName("");
-                          setPartnerTurnoverHasMasterValue(false);
-                          setPartnerSearch("");
-                        }}
-                        disabled={isViewMode}
-                        className={`${inp} appearance-none pr-8 ${errors.partnerRoleId ? "border-red-300" : ""}`}
-                      >
-                        <option value="">Select Role</option>
-                        {partnerRoles.map((r) => (
-                          <option key={r.id} value={r.id}>{r.name}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-                    </div>
-                    {errors.partnerRoleId && <p className={err}>{errors.partnerRoleId}</p>}
-                  </div>
-
-                  {/* Partner Custom Searchable Select */}
-                  <div className="relative" ref={partnerDropdownRef}>
-                    <label className={lbl}>Partner <span className="text-red-500">*</span></label>
-                    {isViewMode ? (
-                      <div className={`${inp} bg-gray-50 text-gray-700 font-medium`}>
-                        {selectedPartnerName || "—"}
-                      </div>
-                    ) : (
+                <div className="p-5 space-y-5">
+                  {/* Row 1: Partner Info (3 equal columns) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Partner Role */}
+                    <div>
+                      <label className={lbl}>
+                        Partner Role <span className="text-red-500">*</span>
+                      </label>
                       <div className="relative">
-                        <button
-                          type="button"
-                          disabled={!form.partnerRoleId}
-                          onClick={() => setIsPartnerOpen((prev) => !prev)}
-                          className={`${inp} text-left flex items-center justify-between gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${errors.partnerId ? "border-red-300" : ""}`}
+                        <select
+                          value={form.partnerRoleId || ""}
+                          onChange={(e) => {
+                            const newRoleId = e.target.value ? Number(e.target.value) : "";
+                            setForm((f) => ({
+                              ...f,
+                              partnerRoleId: newRoleId,
+                              partnerId: "",
+                              ...(!editData ? { partnerAnnualTurnover: null } : {}),
+                            }));
+                            setSelectedPartnerName("");
+                            setPartnerTurnoverHasMasterValue(false);
+                            setPartnerSearch("");
+                          }}
+                          disabled={isViewMode}
+                          className={`${inp} appearance-none pr-8 ${errors.partnerRoleId ? "border-red-400" : ""}`}
                         >
-                          <span className={`truncate ${selectedPartnerName ? "text-gray-900 font-medium" : "text-gray-400"}`}>
-                            {!form.partnerRoleId
-                              ? "Select Role first"
-                              : selectedPartnerName || "Select Partner"}
-                          </span>
-                          <div className="flex items-center gap-1 shrink-0 text-gray-400">
-                            {partnerLoading && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
-                            <ChevronDown className="h-3 w-3" />
-                          </div>
-                        </button>
-
-                        {isPartnerOpen && form.partnerRoleId && (
-                          <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg p-2 space-y-2">
-                            <div className="relative flex items-center">
-                              <Search className="absolute left-2.5 h-3.5 w-3.5 text-gray-400" />
-                              <input
-                                type="text"
-                                placeholder="Search partner..."
-                                value={partnerSearch}
-                                onChange={(e) => setPartnerSearch(e.target.value)}
-                                className="w-full pl-8 pr-7 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#007aff]"
-                                autoFocus
-                              />
-                              {partnerSearch && (
-                                <button
-                                  type="button"
-                                  onClick={() => setPartnerSearch("")}
-                                  className="absolute right-2 text-gray-400 hover:text-gray-600"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              )}
-                            </div>
-
-                            <div className="max-h-40 overflow-y-auto space-y-0.5">
-                              {partnerLoading && partnerOptions.length === 0 ? (
-                                <div className="p-3 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
-                                  Loading...
-                                </div>
-                              ) : partnerOptions.length === 0 ? (
-                                <div className="p-3 text-center text-xs text-gray-400 font-medium">
-                                  No partners found
-                                </div>
-                              ) : (
-                                partnerOptions.map((p) => (
-                                  <button
-                                    key={p.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setForm((f) => ({ ...f, partnerId: p.id, ...(!editData ? { partnerAnnualTurnover: p.annualTurnover ?? null } : {}) }));
-                                      setSelectedPartnerName(p.entityName);
-                                      setPartnerTurnoverHasMasterValue(Number(p.annualTurnover) > 0);
-                                      setIsPartnerOpen(false);
-                                    }}
-                                    className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${form.partnerId === p.id
-                                      ? "bg-blue-50 text-blue-600 font-semibold"
-                                      : "hover:bg-gray-50 text-gray-700"
-                                      }`}
-                                  >
-                                    <span className="truncate">{p.entityName}</span>
-                                  </button>
-                                ))
-                              )}
-                            </div>
-                          </div>
-                        )}
+                          <option value="">Select Role</option>
+                          {partnerRoles.map((r) => (
+                            <option key={r.id} value={r.id}>{r.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                       </div>
-                    )}
-                    {errors.partnerId && <p className={err}>{errors.partnerId}</p>}
-                  </div>
+                      {errors.partnerRoleId && <p className={err}>{errors.partnerRoleId}</p>}
+                    </div>
 
-                  {/* Annual Sales (Turnover) */}
-                  <div>
-                    <label className={lbl}>Annual Sales (Turnover)</label>
-                    <div className="relative">
+                    {/* Partner Custom Searchable Select */}
+                    <div className="relative" ref={partnerDropdownRef}>
+                      <label className={lbl}>
+                        Partner <span className="text-red-500">*</span>
+                      </label>
+                      {isViewMode ? (
+                        <div className={readonlyInp}>
+                          <span className="truncate">{selectedPartnerName || "—"}</span>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <button
+                            type="button"
+                            disabled={!form.partnerRoleId}
+                            onClick={() => setIsPartnerOpen((prev) => !prev)}
+                            className={`${inp} text-left flex items-center justify-between gap-2 cursor-pointer disabled:opacity-60 disabled:bg-slate-50 disabled:cursor-not-allowed ${errors.partnerId ? "border-red-400" : ""}`}
+                          >
+                            <span className={`truncate ${selectedPartnerName ? "text-gray-900 font-medium" : "text-gray-400"}`}>
+                              {!form.partnerRoleId
+                                ? "Select Role first"
+                                : selectedPartnerName || "Select Partner"}
+                            </span>
+                            <div className="flex items-center gap-1 shrink-0 text-gray-400">
+                              {partnerLoading && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            </div>
+                          </button>
+
+                          {isPartnerOpen && form.partnerRoleId && (
+                            <div className="absolute z-50 mt-1.5 w-full bg-white border border-gray-200 rounded-xl shadow-lg p-2 space-y-2">
+                              <div className="relative flex items-center">
+                                <Search className="absolute left-2.5 h-3.5 w-3.5 text-gray-400" />
+                                <input
+                                  type="text"
+                                  placeholder="Search partner..."
+                                  value={partnerSearch}
+                                  onChange={(e) => setPartnerSearch(e.target.value)}
+                                  className="w-full pl-8 pr-7 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#007aff]"
+                                  autoFocus
+                                />
+                                {partnerSearch && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setPartnerSearch("")}
+                                    className="absolute right-2 text-gray-400 hover:text-gray-600"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="max-h-44 overflow-y-auto space-y-0.5">
+                                {partnerLoading && partnerOptions.length === 0 ? (
+                                  <div className="p-3 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                                    Loading...
+                                  </div>
+                                ) : partnerOptions.length === 0 ? (
+                                  <div className="p-3 text-center text-xs text-gray-400 font-medium">
+                                    No partners found
+                                  </div>
+                                ) : (
+                                  partnerOptions.map((p) => (
+                                    <button
+                                      key={p.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setForm((f) => ({
+                                          ...f,
+                                          partnerId: p.id,
+                                          ...(!editData ? { partnerAnnualTurnover: p.annualTurnover ?? null } : {}),
+                                        }));
+                                        setSelectedPartnerName(p.entityName);
+                                        setPartnerTurnoverHasMasterValue(Number(p.annualTurnover) > 0);
+                                        setIsPartnerOpen(false);
+                                      }}
+                                      className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${form.partnerId === p.id
+                                          ? "bg-blue-50 text-blue-600 font-semibold"
+                                          : "hover:bg-gray-50 text-gray-700"
+                                        }`}
+                                    >
+                                      <span className="truncate">{p.entityName}</span>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {errors.partnerId && <p className={err}>{errors.partnerId}</p>}
+                    </div>
+
+                    {/* Annual Sales (Turnover) */}
+                    <div>
+                      <label className={lbl}>Annual Sales (Turnover)</label>
                       <input
                         type={partnerTurnoverHasMasterValue || editData || isViewMode ? "text" : "number"}
                         min="0"
@@ -1334,99 +1384,112 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                             partnerAnnualTurnover: e.target.value,
                           }))
                         }
-                        className={`${inp} ${partnerTurnoverHasMasterValue || editData || isViewMode ? "bg-gray-100 text-gray-700 cursor-not-allowed select-none" : "bg-white"} font-medium`}
+                        className={`${inp} ${partnerTurnoverHasMasterValue || editData || isViewMode
+                            ? "bg-slate-50/90 text-gray-600 cursor-not-allowed select-none"
+                            : "bg-white"
+                          } font-medium`}
                         placeholder="Enter turnover"
                       />
                     </div>
                   </div>
 
-                  {/* Product */}
-                  <div>
-                    <label className={lbl}>Product <span className="text-red-500">*</span></label>
-                    <div className="relative">
-                      <select
-                        value={form.productId || ""}
-                        onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value ? Number(e.target.value) : "" }))}
-                        disabled={isViewMode}
-                        className={`${inp} appearance-none pr-8 ${errors.productId ? "border-red-300" : ""}`}
-                      >
-                        <option value="">Select Product</option>
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                  {/* Row 2 & 3: Product & Cargo Specs (3 equal columns x 2 rows) */}
+                  <div className="pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Product */}
+                    <div>
+                      <label className={lbl}>
+                        Product <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={form.productId || ""}
+                          onChange={(e) =>
+                            setForm((f) => ({ ...f, productId: e.target.value ? Number(e.target.value) : "" }))
+                          }
+                          disabled={isViewMode}
+                          className={`${inp} appearance-none pr-8 ${errors.productId ? "border-red-400" : ""}`}
+                        >
+                          <option value="">Select Product</option>
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                      </div>
+                      {errors.productId && <p className={err}>{errors.productId}</p>}
                     </div>
-                    {errors.productId && <p className={err}>{errors.productId}</p>}
-                  </div>
-                  {/* Purity */}
-                  <div>
-                    <label className={lbl}>Purity</label>
-                    <div className="relative">
-                      <select
-                        value={form.purity || ""}
-                        onChange={(e) => setForm((f) => ({ ...f, purity: e.target.value }))}
-                        disabled={isViewMode}
-                        className={`${inp} appearance-none pr-8`}
-                      >
-                        <option value="">Select Purity</option>
-                        <option value="99.99%">99.99%</option>
-                        <option value="99%">99%</option>
-                        <option value="98%">98%</option>
-                        <option value="97%">97%</option>
-                        <option value="96%">96%</option>
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-                    </div>
-                  </div>
 
-                  {/* Packing Type */}
-                  <div>
-                    <label className={lbl}>Packing Type</label>
-                    <div className="relative">
-                      <select
-                        value={form.packingTypeId || ""}
-                        onChange={(e) => setForm((f) => ({ ...f, packingTypeId: e.target.value ? Number(e.target.value) : "" }))}
-                        disabled={isViewMode}
-                        className={`${inp} appearance-none pr-8`}
-                      >
-                        <option value="">Select Packing Type</option>
-                        {packingTypes.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                    {/* Purity */}
+                    <div>
+                      <label className={lbl}>Purity</label>
+                      <div className="relative">
+                        <select
+                          value={form.purity || ""}
+                          onChange={(e) => setForm((f) => ({ ...f, purity: e.target.value }))}
+                          disabled={isViewMode}
+                          className={`${inp} appearance-none pr-8`}
+                        >
+                          <option value="">Select Purity</option>
+                          <option value="99.99%">99.99%</option>
+                          <option value="99%">99%</option>
+                          <option value="98%">98%</option>
+                          <option value="97%">97%</option>
+                          <option value="96%">96%</option>
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Shipment Type */}
-                  <div>
-                    <label className={lbl}>Shipment Type</label>
-                    <div className="relative">
-                      <select
-                        value={form.shipmentType || ""}
-                        onChange={(e) => setForm((f) => ({ ...f, shipmentType: e.target.value }))}
-                        disabled={isViewMode}
-                        className={`${inp} appearance-none pr-8`}
-                      >
-                        <option value="">Select Shipment Type</option>
-                        <option value="FCL">FCL</option>
-                        <option value="VESSEL">Vessel</option>
-                        <option value="TRUCK">Truck</option>
-                        <option value="WAGON">Wagon</option>
-                        <option value="TRUCK_WAGON">Truck + Wagon</option>
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                    {/* Packing Type */}
+                    <div>
+                      <label className={lbl}>Packing Type</label>
+                      <div className="relative">
+                        <select
+                          value={form.packingTypeId || ""}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              packingTypeId: e.target.value ? Number(e.target.value) : "",
+                            }))
+                          }
+                          disabled={isViewMode}
+                          className={`${inp} appearance-none pr-8`}
+                        >
+                          <option value="">Select Packing Type</option>
+                          {packingTypes.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Commercial Specifications: Quantity, Offer, Currency, Bid */}
-                  <div className="col-span-full grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Shipment Type */}
+                    <div>
+                      <label className={lbl}>Shipment Type</label>
+                      <div className="relative">
+                        <select
+                          value={form.shipmentType || ""}
+                          onChange={(e) => setForm((f) => ({ ...f, shipmentType: e.target.value }))}
+                          disabled={isViewMode}
+                          className={`${inp} appearance-none pr-8`}
+                        >
+                          <option value="">Select Shipment Type</option>
+                          <option value="FCL">FCL</option>
+                          <option value="VESSEL">Vessel</option>
+                          <option value="TRUCK">Truck</option>
+                          <option value="WAGON">Wagon</option>
+                          <option value="TRUCK_WAGON">Truck + Wagon</option>
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                      </div>
+                    </div>
+
                     {/* Quantity */}
                     <div>
                       <label className={lbl}>Quantity (MT)</label>
                       {isViewMode ? (
-                        <div className={inp}>
+                        <div className={readonlyInp}>
                           {form.quantity !== "" && form.quantity != null
                             ? Number(form.quantity).toLocaleString("en-IN")
                             : "—"}
@@ -1437,13 +1500,16 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                           min="0"
                           step="any"
                           value={form.quantity !== "" && form.quantity != null ? parseFloat(String(form.quantity)) : ""}
-                          onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value ? parseFloat(e.target.value) : "" }))}
+                          onChange={(e) =>
+                            setForm((f) => ({ ...f, quantity: e.target.value ? parseFloat(e.target.value) : "" }))
+                          }
                           disabled={isViewMode}
                           placeholder="0"
                           className={inp}
                         />
                       )}
                     </div>
+
                     {/* Expected Shipment Date */}
                     <div>
                       <label className={lbl}>Expected Shipment Date</label>
@@ -1455,297 +1521,316 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                         className={inp}
                       />
                     </div>
-
-
-                    {/* Price Details */}
-                    <div className="col-span-full pt-3 pb-0.5">
-                      <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                        <span>Price Details</span>
-                        <div className="h-px bg-gray-100 flex-1" />
-                      </div>
-                    </div>
-
-                    {/* Offer */}
-                    <div>
-                      <label className={lbl}>Offer Price</label>
-                      {isViewMode ? (
-                        <div className={inp}>
-                          {form.offerAmount !== "" && form.offerAmount != null
-                            ? `${Number(form.offerAmount).toLocaleString("en-US")} ${form.bidCurrency || "USD"}`
-                            : "—"}
-                        </div>
-                      ) : (
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={form.offerAmount !== "" && form.offerAmount != null ? form.offerAmount : ""}
-                          onChange={(e) => {
-                            const val = e.target.value.trim();
-                            if (val === "" || /^\d+$/.test(val)) {
-                              setForm((f) => ({ ...f, offerAmount: val }));
-                              if (errors.offerAmount) {
-                                setErrors((prev) => ({ ...prev, offerAmount: undefined }));
-                              }
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (["e", "E", "+", "-", "."].includes(e.key)) {
-                              e.preventDefault();
-                            }
-                          }}
-                          placeholder="0"
-                          disabled={isViewMode}
-                          className={`${inp} ${errors.offerAmount ? "border-red-300" : ""}`}
-                        />
-                      )}
-                      {errors.offerAmount && <p className={err}>{errors.offerAmount}</p>}
-                    </div>
-
-                    {/* Bid Amount with Target / Bid Amount toggle */}
-                    <div>
-                      {/* Toggle label pill */}
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <div className="flex rounded-lg border border-gray-200 overflow-hidden text-[10px] font-bold">
-                          <button
-                            type="button"
-                            disabled={isViewMode}
-                            onClick={() => setForm((f) => ({ ...f, bidType: "TARGET" }))}
-                            className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${form.bidType === "TARGET" || !form.bidType
-                              ? "bg-[#007aff] text-white"
-                              : "bg-white text-gray-500 hover:bg-gray-50"
-                              }`}
-                          >
-                            Target
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isViewMode}
-                            onClick={() => setForm((f) => ({ ...f, bidType: "BID" }))}
-                            className={`px-2.5 py-1 transition-colors cursor-pointer disabled:cursor-default ${form.bidType === "BID"
-                              ? "bg-[#007aff] text-white"
-                              : "bg-white text-gray-500 hover:bg-gray-50"
-                              }`}
-                          >
-                            Bid Amount
-                          </button>
-                        </div>
-                      </div>
-                      {isViewMode ? (
-                        <div className={inp}>
-                          {form.buyingInterest !== "" && form.buyingInterest != null
-                            ? `${Math.round(Number(form.buyingInterest)).toLocaleString("en-US")} ${form.bidCurrency || "USD"}`
-                            : "—"}
-                        </div>
-                      ) : (
-                        <input
-                          type="text"
-                          value={
-                            form.buyingInterest !== "" && form.buyingInterest != null
-                              ? (typeof form.buyingInterest === "number"
-                                ? String(parseFloat(form.buyingInterest.toString()))
-                                : form.buyingInterest)
-                              : ""
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === "" || (/^\d*\.?\d{0,4}$/.test(val) && val.length <= 15)) {
-                              setForm((f) => ({ ...f, buyingInterest: val }));
-                            }
-                          }}
-                          placeholder="0.00"
-                          disabled={isViewMode}
-                          className={`${inp} ${errors.buyingInterest ? "border-red-300" : ""}`}
-                        />
-                      )}
-                      {errors.buyingInterest && <p className={err}>{errors.buyingInterest}</p>}
-                    </div>
-
-                    {/* Bid Currency (react-select Searchable Master Caching Select) */}
-                    <div>
-                      <label className={lbl}>Currency</label>
-                      {isViewMode ? (
-                        <div className={inp}>{form.bidCurrency || "—"}</div>
-                      ) : (
-                        <Select
-                          isClearable
-                          options={currencyOptions}
-                          value={selectedCurrencyOption}
-                          onChange={(opt) => setForm((f) => ({ ...f, bidCurrency: opt ? opt.value : "" }))}
-                          styles={selectStyles}
-                          placeholder="Search currency..."
-                          menuPortalTarget={typeof document !== "undefined" ? document.body : null}
-                          menuPosition="fixed"
-                          className="text-xs"
-                        />
-                      )}
-                      {errors.bidCurrency && <p className={err}>{errors.bidCurrency}</p>}
-                    </div>
-
                   </div>
+                </div>
+              </div>
 
-                  {/* Transport Details */}
-                  <div className="col-span-full pt-3 pb-0.5">
-                    <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-2.5">
-                      <span>Transport Details</span>
-                      <div className="h-px bg-gray-100 flex-1" />
-                    </div>
-                    <TransportDetailsGrid
-                      routes={form.transportDetails || []}
-                      onChange={(updated) => {
-                        const firstDest = updated.find((r) => r.destination && r.destination.trim())?.destination || "";
-                        setForm((f) => ({
-                          ...f,
-                          transportDetails: updated,
-                          destinationCountry: firstDest || f.destinationCountry,
-                        }));
-                      }}
-                      shipmentTypes={shipmentTypes}
-                      isView={isViewMode}
-                      error={errors.transportDetails}
-                    />
+              {/* SECTION 4: Price Details */}
+              <div className={card}>
+                <div className={cardHeader}>
+                  <div className="h-6 w-6 rounded-md bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                    <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
                   </div>
+                  <h3 className="text-xs font-bold text-gray-800 tracking-tight">Price Details</h3>
+                </div>
 
-                  {/* Broker Details */}
-                  <div className="col-span-full pt-3 pb-0.5">
-                    <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                      <span>Broker Details</span>
-                      <div className="h-px bg-gray-100 flex-1" />
-                    </div>
-                  </div>
-
-                  {/* Broker Partner Role */}
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+                  {/* Offer Price */}
                   <div>
-                    <label className={lbl}>Partner Role</label>
-                    <div className="relative">
-                      <select
-                        value={form.brokerRoleId || ""}
-                        onChange={(e) => {
-                          const newRoleId = e.target.value ? Number(e.target.value) : "";
-                          setForm((f) => ({ ...f, brokerRoleId: newRoleId, brokerId: "" }));
-                          setSelectedBrokerName("");
-                          setBrokerSearch("");
-                        }}
-                        disabled={isViewMode}
-                        className={`${inp} appearance-none pr-8 ${errors.brokerRoleId ? "border-red-300" : ""}`}
-                      >
-                        <option value="">Select Role</option>
-                        {brokerPartnerRoles.map((r) => (
-                          <option key={r.id} value={r.id}>{r.name}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                    <div className="h-6 flex items-center mb-1.5">
+                      <label className="text-[11px] font-semibold text-gray-600 leading-none">Offer Price</label>
                     </div>
-                    {errors.brokerRoleId && <p className={err}>{errors.brokerRoleId}</p>}
-                  </div>
-
-                  {/* Broker Partner Custom Searchable Select */}
-                  <div className="relative" ref={brokerDropdownRef}>
-                    <label className={lbl}>Partner</label>
                     {isViewMode ? (
-                      <div className={`${inp} bg-gray-50 text-gray-700 font-medium`}>
-                        {selectedBrokerName || "—"}
+                      <div className={readonlyInp}>
+                        {form.offerAmount !== "" && form.offerAmount != null
+                          ? `${Number(form.offerAmount).toLocaleString("en-US")} ${form.bidCurrency || "USD"}`
+                          : "—"}
                       </div>
                     ) : (
-                      <div className="relative">
-                        <button
-                          type="button"
-                          disabled={!form.brokerRoleId}
-                          onClick={() => setIsBrokerOpen((prev) => !prev)}
-                          className={`${inp} text-left flex items-center justify-between gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${errors.brokerId ? "border-red-300" : ""}`}
-                        >
-                          <span className={`truncate ${selectedBrokerName ? "text-gray-900 font-medium" : "text-gray-400"}`}>
-                            {!form.brokerRoleId
-                              ? "Select Role first"
-                              : selectedBrokerName || "Select Partner"}
-                          </span>
-                          <div className="flex items-center gap-1 shrink-0 text-gray-400">
-                            {brokerLoading && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
-                            <ChevronDown className="h-3 w-3" />
-                          </div>
-                        </button>
-
-                        {isBrokerOpen && form.brokerRoleId && (
-                          <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg p-2 space-y-2">
-                            <div className="relative flex items-center">
-                              <Search className="absolute left-2.5 h-3.5 w-3.5 text-gray-400" />
-                              <input
-                                type="text"
-                                placeholder="Search partner..."
-                                value={brokerSearch}
-                                onChange={(e) => setBrokerSearch(e.target.value)}
-                                className="w-full pl-8 pr-7 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#007aff]"
-                                autoFocus
-                              />
-                              {brokerSearch && (
-                                <button
-                                  type="button"
-                                  onClick={() => setBrokerSearch("")}
-                                  className="absolute right-2 text-gray-400 hover:text-gray-600"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              )}
-                            </div>
-
-                            <div className="max-h-40 overflow-y-auto space-y-0.5">
-                              {brokerLoading && brokerOptions.length === 0 ? (
-                                <div className="p-3 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
-                                  Loading...
-                                </div>
-                              ) : brokerOptions.length === 0 ? (
-                                <div className="p-3 text-center text-xs text-gray-400 font-medium">
-                                  No partners found
-                                </div>
-                              ) : (
-                                brokerOptions.map((p) => (
-                                  <button
-                                    key={p.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setForm((f) => ({ ...f, brokerId: p.id }));
-                                      setSelectedBrokerName(p.entityName);
-                                      setIsBrokerOpen(false);
-                                    }}
-                                    className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${form.brokerId === p.id
-                                      ? "bg-blue-50 text-blue-600 font-semibold"
-                                      : "hover:bg-gray-50 text-gray-700"
-                                      }`}
-                                  >
-                                    <span className="truncate">{p.entityName}</span>
-                                  </button>
-                                ))
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={form.offerAmount !== "" && form.offerAmount != null ? form.offerAmount : ""}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val === "" || /^\d+$/.test(val)) {
+                            setForm((f) => ({ ...f, offerAmount: val }));
+                            if (errors.offerAmount) {
+                              setErrors((prev) => ({ ...prev, offerAmount: undefined }));
+                            }
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (["e", "E", "+", "-", "."].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        placeholder="0"
+                        disabled={isViewMode}
+                        className={`${inp} ${errors.offerAmount ? "border-red-400" : ""}`}
+                      />
                     )}
-                    {errors.brokerId && <p className={err}>{errors.brokerId}</p>}
+                    {errors.offerAmount && <p className={err}>{errors.offerAmount}</p>}
                   </div>
 
-                  {/* Empty 3rd column placeholder to balance the 3-column grid cleanly */}
-                  <div className="hidden md:block" />
+                  {/* Target / Bid Amount */}
+                  <div>
+                    <div className="h-6 flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-semibold text-gray-600 leading-none">
+                        {form.bidType === "BID" ? "Bid Amount" : "Target Price"}
+                      </span>
+                      <div className="inline-flex rounded-md border border-gray-200 bg-gray-50 p-0.5 text-[10px] font-semibold">
+                        <button
+                          type="button"
+                          disabled={isViewMode}
+                          onClick={() => setForm((f) => ({ ...f, bidType: "TARGET" }))}
+                          className={`px-2 py-0.5 rounded-[4px] transition-all cursor-pointer disabled:cursor-default ${form.bidType === "TARGET" || !form.bidType
+                              ? "bg-[#007aff] text-white shadow-xs"
+                              : "text-gray-500 hover:text-gray-700"
+                            }`}
+                        >
+                          Target
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isViewMode}
+                          onClick={() => setForm((f) => ({ ...f, bidType: "BID" }))}
+                          className={`px-2 py-0.5 rounded-[4px] transition-all cursor-pointer disabled:cursor-default ${form.bidType === "BID"
+                              ? "bg-[#007aff] text-white shadow-xs"
+                              : "text-gray-500 hover:text-gray-700"
+                            }`}
+                        >
+                          Bid
+                        </button>
+                      </div>
+                    </div>
+                    {isViewMode ? (
+                      <div className={readonlyInp}>
+                        {form.buyingInterest !== "" && form.buyingInterest != null
+                          ? `${Math.round(Number(form.buyingInterest)).toLocaleString("en-US")} ${form.bidCurrency || "USD"}`
+                          : "—"}
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        value={
+                          form.buyingInterest !== "" && form.buyingInterest != null
+                            ? typeof form.buyingInterest === "number"
+                              ? String(parseFloat(form.buyingInterest.toString()))
+                              : form.buyingInterest
+                            : ""
+                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || (/^\d*\.?\d{0,4}$/.test(val) && val.length <= 15)) {
+                            setForm((f) => ({ ...f, buyingInterest: val }));
+                          }
+                        }}
+                        placeholder="0.00"
+                        disabled={isViewMode}
+                        className={`${inp} ${errors.buyingInterest ? "border-red-400" : ""}`}
+                      />
+                    )}
+                    {errors.buyingInterest && <p className={err}>{errors.buyingInterest}</p>}
+                  </div>
+
+                  {/* Bid Currency */}
+                  <div>
+                    <div className="h-6 flex items-center mb-1.5">
+                      <label className="text-[11px] font-semibold text-gray-600 leading-none">Currency</label>
+                    </div>
+                    {isViewMode ? (
+                      <div className={readonlyInp}>{form.bidCurrency || "—"}</div>
+                    ) : (
+                      <Select
+                        isClearable
+                        options={currencyOptions}
+                        value={selectedCurrencyOption}
+                        onChange={(opt) => setForm((f) => ({ ...f, bidCurrency: opt ? opt.value : "" }))}
+                        styles={selectStyles}
+                        placeholder="Search currency..."
+                        menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                        menuPosition="fixed"
+                        className="text-xs"
+                      />
+                    )}
+                    {errors.bidCurrency && <p className={err}>{errors.bidCurrency}</p>}
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 5: Transport Details */}
+              <div className={card}>
+                <div className={cardHeader}>
+                  <div className="h-6 w-6 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                    <Route className="h-3.5 w-3.5 text-indigo-600" />
+                  </div>
+                  <h3 className="text-xs font-bold text-gray-800 tracking-tight">Transport Details</h3>
+                </div>
+                <div className="p-5">
+                  <TransportDetailsGrid
+                    routes={form.transportDetails || []}
+                    onChange={(updated) => {
+                      const firstDest = updated.find((r) => r.destination && r.destination.trim())?.destination || "";
+                      const parsedFirstDest = parseRouteLocation(firstDest);
+                      setForm((f) => ({
+                        ...f,
+                        transportDetails: updated,
+                        destinationCountry: parsedFirstDest.country || f.destinationCountry,
+                      }));
+                    }}
+                    shipmentTypes={shipmentTypes}
+                    isView={isViewMode}
+                    error={errors.transportDetails}
+                  />
+                </div>
+              </div>
+
+              {/* SECTION 6: Broker & Additional Notes */}
+              <div className={card}>
+                <div className={cardHeader}>
+                  <div className="h-6 w-6 rounded-md bg-violet-50 border border-violet-100 flex items-center justify-center">
+                    <Briefcase className="h-3.5 w-3.5 text-violet-600" />
+                  </div>
+                  <h3 className="text-xs font-bold text-gray-800 tracking-tight">Broker & Additional Notes</h3>
+                </div>
+
+                <div className="p-5 space-y-5">
+                  {/* Broker Details */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Broker Partner Role */}
+                    <div>
+                      <label className={lbl}>Broker Role</label>
+                      <div className="relative">
+                        <select
+                          value={form.brokerRoleId || ""}
+                          onChange={(e) => {
+                            const newRoleId = e.target.value ? Number(e.target.value) : "";
+                            setForm((f) => ({ ...f, brokerRoleId: newRoleId, brokerId: "" }));
+                            setSelectedBrokerName("");
+                            setBrokerSearch("");
+                          }}
+                          disabled={isViewMode}
+                          className={`${inp} appearance-none pr-8 ${errors.brokerRoleId ? "border-red-400" : ""}`}
+                        >
+                          <option value="">Select Role</option>
+                          {brokerPartnerRoles.map((r) => (
+                            <option key={r.id} value={r.id}>{r.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                      </div>
+                      {errors.brokerRoleId && <p className={err}>{errors.brokerRoleId}</p>}
+                    </div>
+
+                    {/* Broker Partner Custom Searchable Select */}
+                    <div className="relative" ref={brokerDropdownRef}>
+                      <label className={lbl}>Broker Partner</label>
+                      {isViewMode ? (
+                        <div className={readonlyInp}>
+                          <span className="truncate">{selectedBrokerName || "—"}</span>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <button
+                            type="button"
+                            disabled={!form.brokerRoleId}
+                            onClick={() => setIsBrokerOpen((prev) => !prev)}
+                            className={`${inp} text-left flex items-center justify-between gap-2 cursor-pointer disabled:opacity-60 disabled:bg-slate-50 disabled:cursor-not-allowed ${errors.brokerId ? "border-red-400" : ""}`}
+                          >
+                            <span className={`truncate ${selectedBrokerName ? "text-gray-900 font-medium" : "text-gray-400"}`}>
+                              {!form.brokerRoleId
+                                ? "Select Role first"
+                                : selectedBrokerName || "Select Partner"}
+                            </span>
+                            <div className="flex items-center gap-1 shrink-0 text-gray-400">
+                              {brokerLoading && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            </div>
+                          </button>
+
+                          {isBrokerOpen && form.brokerRoleId && (
+                            <div className="absolute z-50 mt-1.5 w-full bg-white border border-gray-200 rounded-xl shadow-lg p-2 space-y-2">
+                              <div className="relative flex items-center">
+                                <Search className="absolute left-2.5 h-3.5 w-3.5 text-gray-400" />
+                                <input
+                                  type="text"
+                                  placeholder="Search partner..."
+                                  value={brokerSearch}
+                                  onChange={(e) => setBrokerSearch(e.target.value)}
+                                  className="w-full pl-8 pr-7 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#007aff]"
+                                  autoFocus
+                                />
+                                {brokerSearch && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setBrokerSearch("")}
+                                    className="absolute right-2 text-gray-400 hover:text-gray-600"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="max-h-44 overflow-y-auto space-y-0.5">
+                                {brokerLoading && brokerOptions.length === 0 ? (
+                                  <div className="p-3 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                                    Loading...
+                                  </div>
+                                ) : brokerOptions.length === 0 ? (
+                                  <div className="p-3 text-center text-xs text-gray-400 font-medium">
+                                    No partners found
+                                  </div>
+                                ) : (
+                                  brokerOptions.map((p) => (
+                                    <button
+                                      key={p.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setForm((f) => ({ ...f, brokerId: p.id }));
+                                        setSelectedBrokerName(p.entityName);
+                                        setIsBrokerOpen(false);
+                                      }}
+                                      className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex items-center justify-between ${form.brokerId === p.id
+                                          ? "bg-blue-50 text-blue-600 font-semibold"
+                                          : "hover:bg-gray-50 text-gray-700"
+                                        }`}
+                                    >
+                                      <span className="truncate">{p.entityName}</span>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {errors.brokerId && <p className={err}>{errors.brokerId}</p>}
+                    </div>
+                  </div>
 
                   {/* Note */}
-                  <div className="col-span-full">
+                  <div className="pt-4 border-t border-gray-100">
                     <label className={lbl}>Note</label>
                     {isViewMode ? (
-                      <div className={`${inp} min-h-[72px] whitespace-pre-wrap`}>{form.note || "—"}</div>
+                      <div className="w-full px-3 py-2.5 text-xs border border-gray-200/80 rounded-lg bg-slate-50/90 text-gray-700 min-h-[76px] whitespace-pre-wrap">
+                        {form.note || "—"}
+                      </div>
                     ) : (
                       <textarea
                         value={form.note || ""}
                         onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
                         placeholder="Add any relevant notes for this enquiry..."
                         rows={3}
-                        className={`${inp} resize-none`}
+                        className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#007aff]/15 focus:border-[#007aff] bg-white text-gray-800 placeholder:text-gray-400 resize-none transition-all"
                       />
                     )}
                   </div>
 
                   {/* Mark as High Potential */}
-                  <div className="flex items-center col-span-full">
-                    <label className="flex items-center gap-2 cursor-pointer group">
+                  <div className="pt-1">
+                    <label className="inline-flex items-center gap-2.5 cursor-pointer group select-none">
                       <div className="relative flex items-center justify-center">
                         <input
                           type="checkbox"
@@ -1754,56 +1839,75 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                           disabled={isViewMode}
                           className="peer sr-only"
                         />
-                        <div className="w-4 h-4 border-2 border-gray-300 rounded bg-white transition-all peer-checked:bg-[#007aff] peer-checked:border-[#007aff] group-hover:border-[#007aff]"></div>
-                        <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" viewBox="0 0 14 10" fill="none">
-                          <path d="M1 5L4.5 8.5L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <div className="w-4 h-4 border-2 border-gray-300 rounded bg-white transition-all peer-checked:bg-[#007aff] peer-checked:border-[#007aff] group-hover:border-[#007aff]" />
+                        <svg
+                          className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none"
+                          viewBox="0 0 14 10"
+                          fill="none"
+                        >
+                          <path
+                            d="M1 5L4.5 8.5L13 1"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
                         </svg>
                       </div>
-                      <span className="text-[11px] font-semibold text-gray-600 group-hover:text-gray-900 transition-colors">
+                      <span className="text-xs font-semibold text-gray-700 group-hover:text-gray-900 transition-colors">
                         Mark as High Potential
                       </span>
                     </label>
                   </div>
                 </div>
               </div>
-
             </div>
           )}
         </div>
 
         {/* Footer Actions */}
         {!isViewMode && (
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3 shrink-0 rounded-b-2xl">
+          <div className="px-6 py-3.5 border-t border-gray-200/80 bg-white flex items-center justify-end gap-2.5 shrink-0">
             <button
               onClick={handleClose}
               disabled={!!savingType}
-              className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl text-xs hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+              className="h-9 px-4 bg-white border border-gray-200 text-gray-700 font-semibold rounded-lg text-xs hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={() => handleSave(false)}
               disabled={!!savingType || mastersLoading}
-              className="px-4 py-2 bg-[#007aff] hover:bg-blue-600 text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-blue-500/20 cursor-pointer transition-colors disabled:opacity-50"
+              className="h-9 px-4 bg-[#007aff] hover:bg-blue-600 text-white rounded-lg flex items-center gap-2 text-xs font-semibold shadow-xs cursor-pointer transition-colors disabled:opacity-50"
             >
-              {savingType === 'SAVE' ? (
-                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</>
+              {savingType === "SAVE" ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...
+                </>
               ) : (
-                <><Save className="h-3.5 w-3.5" /> Save Enquiry</>
+                <>
+                  <Save className="h-3.5 w-3.5" /> Save Enquiry
+                </>
               )}
             </button>
             {editData && hasPermission("notification:send") && (
               <button
                 onClick={() => handleSave(true)}
                 disabled={!!savingType || mastersLoading}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm shadow-emerald-500/20 cursor-pointer transition-colors disabled:opacity-50"
+                className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center gap-2 text-xs font-semibold shadow-xs cursor-pointer transition-colors disabled:opacity-50"
               >
-                {savingType === 'SAVE_NOTIFY' ? (
-                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</>
-                ) : savingType === 'SENDING' ? (
-                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending WhatsApp...</>
+                {savingType === "SAVE_NOTIFY" ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...
+                  </>
+                ) : savingType === "SENDING" ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending WhatsApp...
+                  </>
                 ) : (
-                  <><Save className="h-3.5 w-3.5" /> Save & Notify</>
+                  <>
+                    <Save className="h-3.5 w-3.5" /> Save & Notify
+                  </>
                 )}
               </button>
             )}
@@ -1814,8 +1918,11 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
       {/* Discard changes dialog */}
       {showDiscardConfirm && (
         <div className="fixed inset-0 z-[110] overflow-hidden flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-xs" onClick={() => setShowDiscardConfirm(false)} />
-          <div className="bg-white rounded-2xl p-6 shadow-2xl relative w-full max-w-sm z-10 space-y-4">
+          <div
+            className="absolute inset-0 bg-gray-900/40 backdrop-blur-xs"
+            onClick={() => setShowDiscardConfirm(false)}
+          />
+          <div className="bg-white rounded-2xl p-6 shadow-2xl border border-gray-100 relative w-full max-w-sm z-10 space-y-4">
             <div className="flex gap-3">
               <div className="h-10 w-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
                 <AlertCircle className="h-5 w-5 text-amber-500" />
@@ -1830,7 +1937,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
             <div className="flex justify-end gap-2 text-xs font-semibold">
               <button
                 onClick={() => setShowDiscardConfirm(false)}
-                className="px-3.5 py-2 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                className="px-3.5 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -1839,7 +1946,7 @@ export default function EnquiryDrawer({ isOpen, onClose, editData, isViewMode, o
                   setShowDiscardConfirm(false);
                   onClose();
                 }}
-                className="px-3.5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors cursor-pointer"
+                className="px-3.5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors cursor-pointer"
               >
                 Discard
               </button>

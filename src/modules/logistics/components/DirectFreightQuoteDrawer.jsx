@@ -413,7 +413,9 @@ export default function DirectFreightQuoteDrawer({
           }) || route.destination || ""
         ).trim().toUpperCase();
 
-        if (!originVal || !destVal) throw new Error("Origin and Destination are required for all routes.");
+        if (!originVal) throw new Error("Origin is required for all routes.");
+        if (!route.destCountry?.trim()) throw new Error("Destination Country is required for all routes.");
+        if (!destVal) throw new Error("Destination is required for all routes.");
         if (route.rates.length === 0) throw new Error("At least one quote is required for each route.");
         
         const mappedRates = route.rates.map(rate => {
@@ -461,7 +463,7 @@ export default function DirectFreightQuoteDrawer({
   return (
     <>
       <div className="fixed inset-0 z-[60] bg-slate-800/40 backdrop-blur-xs transition-opacity" onClick={onClose} />
-      <div className="fixed inset-y-0 right-0 z-[70] w-full max-w-4xl bg-white border-l border-slate-200 shadow-2xl flex flex-col animate-in slide-in-from-right">
+      <div className="fixed inset-y-0 right-0 z-[70] w-full md:w-[60vw] md:min-w-[760px] lg:min-w-[860px] bg-white border-l border-slate-200 shadow-2xl flex flex-col animate-in slide-in-from-right">
         
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0 bg-slate-50/50">
@@ -610,7 +612,7 @@ export default function DirectFreightQuoteDrawer({
                       <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 space-y-2.5">
                         <div className="flex items-center justify-between">
                           <label className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-indigo-500"></span> Destination (Country → City → Place → ZIP) *
+                            <span className="h-2 w-2 rounded-full bg-indigo-500"></span> Destination (Country → City → Place → ZIP)
                           </label>
                           {route.destination && (
                             <span className="text-[10px] font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded uppercase tracking-tight truncate max-w-[320px]">
@@ -621,53 +623,41 @@ export default function DirectFreightQuoteDrawer({
 
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Country *</label>
-                            <CreatableSelect
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Country <span className="text-red-500">*</span></label>
+                            <Select
                               isDisabled={isReadOnly}
                               isClearable
                               options={countryOptions}
                               value={route.destCountry ? { value: route.destCountry, label: route.destCountry } : null}
                               onChange={(sel) => updateDestField(routeIdx, "destCountry", sel ? sel.value : "")}
-                              onCreateOption={(val) => updateDestField(routeIdx, "destCountry", val)}
                               placeholder="SELECT COUNTRY..."
-                              noOptionsMessage={() => "No locations found"}
-                              formatCreateLabel={(val) => `ADD "${val.toUpperCase()}"`}
+                              noOptionsMessage={() => "No countries found"}
                               styles={locationSelectStyles}
                               menuPortalTarget={typeof document !== "undefined" ? document.body : null}
                             />
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">City *</label>
-                            <CreatableSelect
-                              isDisabled={isReadOnly}
-                              isClearable
-                              options={getCityOptions(route.destCountry, route.destCity)}
-                              value={route.destCity ? { value: route.destCity, label: route.destCity } : null}
-                              onChange={(sel) => updateDestField(routeIdx, "destCity", sel ? sel.value : "")}
-                              onCreateOption={(val) => updateDestField(routeIdx, "destCity", val)}
-                              placeholder={route.destCountry ? "SELECT CITY..." : "SELECT COUNTRY FIRST"}
-                              noOptionsMessage={() => "No locations found"}
-                              formatCreateLabel={(val) => `ADD "${val.toUpperCase()}"`}
-                              styles={locationSelectStyles}
-                              menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">City</label>
+                            <input
+                              type="text"
+                              disabled={isReadOnly}
+                              value={route.destCity || ""}
+                              onChange={(e) => updateDestField(routeIdx, "destCity", e.target.value.toUpperCase())}
+                              placeholder="ENTER CITY..."
+                              className="w-full h-[34px] px-2.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 bg-white placeholder:text-slate-400 placeholder:font-normal uppercase focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:cursor-not-allowed transition-colors"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Place / Port *</label>
-                            <CreatableSelect
-                              isDisabled={isReadOnly}
-                              isClearable
-                              options={getPlaceOptions(route.destCountry, route.destCity, route.destPlace)}
-                              value={route.destPlace ? { value: route.destPlace, label: route.destPlace } : null}
-                              onChange={(sel) => updateDestField(routeIdx, "destPlace", sel ? sel.value : "")}
-                              onCreateOption={(val) => updateDestField(routeIdx, "destPlace", val)}
-                              placeholder={route.destCity ? "SELECT PLACE / PORT..." : "SELECT CITY FIRST"}
-                              noOptionsMessage={() => "No locations found"}
-                              formatCreateLabel={(val) => `ADD "${val.toUpperCase()}"`}
-                              styles={locationSelectStyles}
-                              menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                            <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Place / Port</label>
+                            <input
+                              type="text"
+                              disabled={isReadOnly}
+                              value={route.destPlace || ""}
+                              onChange={(e) => updateDestField(routeIdx, "destPlace", e.target.value.toUpperCase())}
+                              placeholder="ENTER PLACE / PORT..."
+                              className="w-full h-[34px] px-2.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 bg-white placeholder:text-slate-400 placeholder:font-normal uppercase focus:outline-none focus:border-indigo-500 disabled:bg-slate-50 disabled:cursor-not-allowed transition-colors"
                             />
                           </div>
 

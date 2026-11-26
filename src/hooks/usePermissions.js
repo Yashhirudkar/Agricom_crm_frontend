@@ -69,6 +69,10 @@ const normalizePermission = (permKey) => {
     resource = 'bank_management';
   }
 
+  if (['currency_accounts', 'currency-accounts', 'currency_account', 'currency-account'].includes(resource)) {
+    resource = 'currency_accounts';
+  }
+
   if (action === 'view') {
     action = 'read';
   }

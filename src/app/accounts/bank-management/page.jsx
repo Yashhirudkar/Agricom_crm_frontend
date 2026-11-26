@@ -455,16 +455,6 @@ export default function BankManagementPage() {
 
           {/* Quick Filters */}
           <div className="flex flex-wrap items-center gap-2.5">
-            {canCreate && (
-              <button
-                onClick={() => handleOpenCreateNostro()}
-                className="inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold leading-none text-emerald-800 transition-colors hover:bg-emerald-100"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add Nostro
-              </button>
-            )}
-
             {/* Company filter */}
             <select
               value={selectedCompanyId}
@@ -804,7 +794,7 @@ export default function BankManagementPage() {
         isSaving={isSaving}
       />
 
-      {/* Domestic Bank Detail Drawer with Linked Nostro Accounts Section */}
+      {/* Domestic Bank Detail Drawer with Linked Nostro Accounts & Currency Accounts */}
       <DomesticBankDetailDrawer
         isOpen={isDetailModalOpen}
         onClose={() => {

@@ -14,6 +14,7 @@ export default function Drawer({
   onTabChange,
   children,
   footer,
+  widthClass = "w-full md:w-[60vw]",
 }) {
   useEscapeKey(onClose, isOpen);
 
@@ -40,7 +41,7 @@ export default function Drawer({
       />
 
       {/* Drawer Panel */}
-      <div className="relative z-10 w-full max-w-2xl bg-white h-full flex flex-col shadow-2xl border-l border-gray-100 animate-in slide-in-from-right duration-300">
+      <div className={`relative z-10 ${widthClass} bg-white h-full flex flex-col shadow-2xl border-l border-gray-100 animate-in slide-in-from-right duration-300`}>
         {/* Header Section */}
         <div className="px-6 py-5 border-b border-gray-100 flex flex-col gap-1.5 flex-shrink-0">
           <div className="flex items-center justify-between">

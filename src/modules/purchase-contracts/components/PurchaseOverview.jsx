@@ -26,7 +26,7 @@ export default function PurchaseOverview({ contract, summary }) {
     typeof contract?.freightRequired === "boolean"
       ? contract.freightRequired
       : evaluateFreightRequired(pcShipmentType, scShipmentType).freightRequired;
-  const currencyCode = salesContract.currencyCode || "USD";
+  const currencyCode = contract?.currencyCode || salesContract.currencyCode || "USD";
   const origin = contract?.loadingCountry || salesContract.originCountry || "—";
   const destination = salesContract.destinationCountry || "—";
   const portLoading = salesContract.portOfLoading || "—";

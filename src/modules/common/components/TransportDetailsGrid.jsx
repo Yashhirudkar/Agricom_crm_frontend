@@ -1,8 +1,13 @@
 "use client";
 import React from "react";
-import { Plus, Trash2, ArrowRight } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { isFreightRequiredForIncoterm } from "@/modules/shipments/utils/incotermFreight";
 import { getShipmentTypeShortForm } from "@/modules/sales-contracts/utils/formatUtils";
+import {
+  getCountryOptions,
+  parseRouteLocation,
+  formatDestinationLocation,
+} from "@/constants/routeLocationsData";
 
 /**
  * Repeatable Transport Details Grid
@@ -28,6 +33,10 @@ export default function TransportDetailsGrid({
         origin: "",
         incoterm: defaultIncoterm,
         destination: "",
+        destinationCountry: "",
+        destinationCity: "",
+        destinationPlace: "",
+        destinationZipCode: "",
       },
     ];
     onChange?.(updated);
@@ -45,10 +54,20 @@ export default function TransportDetailsGrid({
     if (isView) return;
     const updated = (routes || []).map((r, idx) => {
       if (idx !== index) return r;
-      return {
+      const parsedDestination = parseRouteLocation(r.destination || "");
+      const next = {
         ...r,
         [field]: value,
       };
+      if (field.startsWith("destination")) {
+        next.destination = formatDestinationLocation({
+          country: field === "destinationCountry" ? value : (next.destinationCountry || parsedDestination.country),
+          city: field === "destinationCity" ? value : (next.destinationCity || parsedDestination.city),
+          place: field === "destinationPlace" ? value : (next.destinationPlace || parsedDestination.place),
+          zipCode: field === "destinationZipCode" ? value : (next.destinationZipCode || parsedDestination.zipCode),
+        });
+      }
+      return next;
     });
     onChange?.(updated);
   };
@@ -62,14 +81,14 @@ export default function TransportDetailsGrid({
           <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-gray-200">
             <tr>
               <th className="py-2 px-3 w-10 text-center">#</th>
-              <th className="py-2 px-3 min-w-[140px]">
+              <th className="py-2 px-3 min-w-[180px]">
                 Place of Loading <span className="text-red-500">*</span>
               </th>
-              <th className="py-2 px-3 min-w-[160px]">
+              <th className="py-2 px-3 min-w-[130px]">
                 Incoterm <span className="text-red-500">*</span>
               </th>
-              <th className="py-2 px-3 min-w-[140px]">
-                Destination <span className="text-red-500">*</span>
+              <th className="py-2 px-3 min-w-[340px]">
+                Destination
               </th>
               <th className="py-2 px-3 w-36 text-center">
                 Freight Required
@@ -94,6 +113,11 @@ export default function TransportDetailsGrid({
             ) : (
               normalizedRoutes.map((route, idx) => {
                 const freightReq = isFreightRequiredForIncoterm(route.incoterm);
+                const parsedDestination = parseRouteLocation(route.destination || "");
+                const destinationCountry = route.destinationCountry || parsedDestination.country;
+                const destinationCity = route.destinationCity || parsedDestination.city;
+                const destinationPlace = route.destinationPlace || parsedDestination.place;
+                const destinationZipCode = route.destinationZipCode || parsedDestination.zipCode;
                 return (
                   <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
                     <td className="py-2 px-3 text-center text-xs font-mono text-gray-400">
@@ -164,19 +188,64 @@ export default function TransportDetailsGrid({
                     {/* Destination */}
                     <td className="py-2 px-3">
                       {isView ? (
-                        <span className="font-medium text-gray-800">
-                          {route.destination || "—"}
-                        </span>
+                        <div className="grid grid-cols-4 gap-1.5 min-w-[340px]">
+                          <div className="px-2 py-1.5 text-xs font-medium text-gray-800 bg-slate-50 border border-gray-200 rounded-lg truncate">
+                            {destinationCountry || "—"}
+                          </div>
+                          <div className="px-2 py-1.5 text-xs font-medium text-gray-800 bg-slate-50 border border-gray-200 rounded-lg truncate uppercase">
+                            {destinationCity || "—"}
+                          </div>
+                          <div className="px-2 py-1.5 text-xs font-medium text-gray-800 bg-slate-50 border border-gray-200 rounded-lg truncate uppercase">
+                            {destinationPlace || "—"}
+                          </div>
+                          <div className="px-2 py-1.5 text-xs font-medium text-gray-800 bg-slate-50 border border-gray-200 rounded-lg truncate uppercase">
+                            {destinationZipCode || "—"}
+                          </div>
+                        </div>
                       ) : (
-                        <input
-                          type="text"
-                          value={route.destination || ""}
-                          onChange={(e) =>
-                            handleFieldChange(idx, "destination", e.target.value)
-                          }
-                          placeholder="e.g. Qingdao"
-                          className="w-full px-2.5 py-1.5 text-xs text-gray-800 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#007aff] transition-all placeholder:text-gray-300"
-                        />
+                        <div className="grid grid-cols-4 gap-1.5 min-w-[360px]">
+                          <select
+                            value={destinationCountry}
+                            onChange={(e) =>
+                              handleFieldChange(idx, "destinationCountry", e.target.value.toUpperCase())
+                            }
+                            className="w-full px-2 py-1.5 text-xs text-gray-800 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#007aff] transition-all cursor-pointer font-medium"
+                          >
+                            <option value="">Country *</option>
+                            {getCountryOptions(destinationCountry).map((country) => (
+                              <option key={country.value} value={country.value}>
+                                {country.label}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            value={destinationCity}
+                            onChange={(e) =>
+                              handleFieldChange(idx, "destinationCity", e.target.value.toUpperCase())
+                            }
+                            placeholder="City"
+                            className="w-full px-2 py-1.5 text-xs text-gray-800 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#007aff] transition-all placeholder:text-gray-300 uppercase"
+                          />
+                          <input
+                            type="text"
+                            value={destinationPlace}
+                            onChange={(e) =>
+                              handleFieldChange(idx, "destinationPlace", e.target.value.toUpperCase())
+                            }
+                            placeholder="Place"
+                            className="w-full px-2 py-1.5 text-xs text-gray-800 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#007aff] transition-all placeholder:text-gray-300 uppercase"
+                          />
+                          <input
+                            type="text"
+                            value={destinationZipCode}
+                            onChange={(e) =>
+                              handleFieldChange(idx, "destinationZipCode", e.target.value.toUpperCase())
+                            }
+                            placeholder="ZIP Code"
+                            className="w-full px-2 py-1.5 text-xs text-gray-800 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#007aff] transition-all placeholder:text-gray-300 uppercase"
+                          />
+                        </div>
                       )}
                     </td>
 

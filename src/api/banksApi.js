@@ -15,6 +15,20 @@ export const banksApi = {
   updateNostroBank: (id, data) => axiosInstance.patch(`/banks/nostro/${id}`, data),
   deleteNostroBank: (id) => axiosInstance.delete(`/banks/nostro/${id}`),
 
+  // Currency Accounts
+  getCurrencyAccounts: (params = {}) =>
+    axiosInstance.get("/banks/currency-accounts", { params }),
+  getCurrencyAccount: (id) =>
+    axiosInstance.get(`/banks/currency-accounts/${id}`),
+  createCurrencyAccount: (data) =>
+    axiosInstance.post("/banks/currency-accounts", data),
+  updateCurrencyAccount: (id, data) =>
+    axiosInstance.patch(`/banks/currency-accounts/${id}`, data),
+  deleteCurrencyAccount: (id) =>
+    axiosInstance.delete(`/banks/currency-accounts/${id}`),
+  getCurrencyAccountLinkedNostros: (id, params = {}) =>
+    axiosInstance.get(`/banks/currency-accounts/${id}/linked-nostros`, { params }),
+
   // Document Resolution & Options
   resolveBankForDocument: (currency, companyId) =>
     axiosInstance.get("/banks/resolve", { params: { currency, companyId } }),
