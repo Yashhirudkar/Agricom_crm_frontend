@@ -771,7 +771,7 @@ export default function ShipmentStuffingExecutionModal({
   const isExecutionCompleted = isMultiShipmentMode
     ? stuffingStatus === "Completed" ||
       executionStatus === "Stuffed" ||
-      targetShipments.every((s) => s?.status === "Executed") ||
+      targetShipments.every((s) => ["Executed", "Dispatched", "Completed"].includes(s?.status)) ||
       existingStuffingRecord?.status === "Completed" ||
       existingStuffingRecord?.status === "Stuffed"
     : stuffingStatus === "Completed" ||
@@ -1567,19 +1567,43 @@ export default function ShipmentStuffingExecutionModal({
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
-                <span>
-                  Shipment Ref: <strong className="font-semibold text-slate-800">{autoData.shipmentRef || primaryShipment?.shipmentReference || "N/A"}</strong>
-                </span>
-                <span className="text-slate-300">•</span>
-                <span>
-                  Business Ref: <strong className="font-semibold text-slate-800">{autoData.businessRefNo || primaryShipment?.businessReference || "N/A"}</strong>
-                </span>
-                <span className="text-slate-300">•</span>
-                <span>
-                  Sales Contract: <strong className="font-semibold text-slate-800">{autoData.salesContractNo || "N/A"}</strong>
-                </span>
-              </p>
+              {isMultiShipmentMode ? (
+                <div className="mt-1.5 space-y-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {(autoData.selectedShipments || targetShipments).map((sel) => (
+                      <span
+                        key={sel.id}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-800 font-mono font-semibold text-[11px]"
+                      >
+                        {sel.shipmentReference || `SHP-${sel.id}`}
+                        <span className="text-slate-400 font-normal">•</span>
+                        <span className="text-indigo-700">{Number(sel.quantity || 0)} MT</span>
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-500 flex items-center gap-2 flex-wrap">
+                    <span>Business Ref: <strong className="font-semibold text-slate-800">{autoData.businessRefNo || primaryShipment?.businessReference || "N/A"}</strong></span>
+                    <span className="text-slate-300">•</span>
+                    <span>Sales Contract: <strong className="font-semibold text-slate-800">{autoData.salesContractNo || "N/A"}</strong></span>
+                    <span className="text-slate-300">•</span>
+                    <span>Total: <strong className="font-semibold text-indigo-700">{autoData.quantityMt || 0} MT across {(autoData.selectedShipments || targetShipments).length} shipments</strong></span>
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+                  <span>
+                    Shipment Ref: <strong className="font-semibold text-slate-800">{autoData.shipmentRef || primaryShipment?.shipmentReference || "N/A"}</strong>
+                  </span>
+                  <span className="text-slate-300">•</span>
+                  <span>
+                    Business Ref: <strong className="font-semibold text-slate-800">{autoData.businessRefNo || primaryShipment?.businessReference || "N/A"}</strong>
+                  </span>
+                  <span className="text-slate-300">•</span>
+                  <span>
+                    Sales Contract: <strong className="font-semibold text-slate-800">{autoData.salesContractNo || "N/A"}</strong>
+                  </span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -1776,11 +1800,65 @@ export default function ShipmentStuffingExecutionModal({
                         <Package className="h-4 w-4 text-indigo-600" />
                         <span>Shipment & Sales Contract Master</span>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-y-3 gap-x-4 text-xs">
-                        <div>
-                          <span className="text-slate-400 font-medium">Shipment Ref</span>
-                          <p className="font-semibold text-slate-900">{autoData.shipmentRef || "—"}</p>
+                      {/* Shipment References — multi mode shows mini-table; single mode shows one field */}
+                      {isMultiShipmentMode ? (
+                        <div className="mb-4">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <span className="text-slate-400 font-medium text-xs">Selected Shipments</span>
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              {(autoData.selectedShipments || targetShipments).length} Shipments
+                            </span>
+                          </div>
+                          <div className="overflow-x-auto rounded-lg border border-slate-200">
+                            <table className="w-full text-[11px]">
+                              <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200">
+                                  <th className="text-left px-2.5 py-1.5 font-bold text-slate-600">Shipment Ref</th>
+                                  <th className="text-right px-2.5 py-1.5 font-bold text-slate-600">Contracted Qty</th>
+                                  <th className="text-right px-2.5 py-1.5 font-bold text-slate-600">Allocated</th>
+                                  <th className="text-left px-2.5 py-1.5 font-bold text-slate-600">Shipment Date</th>
+                                  <th className="text-left px-2.5 py-1.5 font-bold text-slate-600">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(autoData.selectedShipments || targetShipments).map((sel, idx) => (
+                                  <tr
+                                    key={sel.id}
+                                    className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"}
+                                  >
+                                    <td className="px-2.5 py-1.5 font-mono font-bold text-indigo-800">{sel.shipmentReference || `SHP-${sel.id}`}</td>
+                                    <td className="px-2.5 py-1.5 text-right font-semibold text-slate-900">{Number(sel.quantity || 0)} MT</td>
+                                    <td className="px-2.5 py-1.5 text-right font-semibold text-emerald-700">{Number(sel.allocatedWeight || 0)} MT</td>
+                                    <td className="px-2.5 py-1.5 text-slate-700">{sel.shipmentDate || "—"}</td>
+                                    <td className="px-2.5 py-1.5">
+                                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                        sel.status === "Executed" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        : sel.status === "Pending" ? "bg-amber-50 text-amber-700 border-amber-200"
+                                        : "bg-slate-50 text-slate-600 border-slate-200"
+                                      }`}>
+                                        {sel.executionStatus || sel.status || "Pending"}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                                <tr className="bg-indigo-50/60 border-t border-indigo-200 font-bold text-[11px]">
+                                  <td className="px-2.5 py-1.5 text-indigo-800">Total ({(autoData.selectedShipments || targetShipments).length} Shipments)</td>
+                                  <td className="px-2.5 py-1.5 text-right text-indigo-700">{autoData.quantityMt || 0} MT</td>
+                                  <td className="px-2.5 py-1.5 text-right text-emerald-700">{autoData.allocatedWeight || 0} MT</td>
+                                  <td colSpan={2} />
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
+                      ) : null}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-y-3 gap-x-4 text-xs">
+                        {!isMultiShipmentMode && (
+                          <div>
+                            <span className="text-slate-400 font-medium">Shipment Ref</span>
+                            <p className="font-semibold text-slate-900">{autoData.shipmentRef || "—"}</p>
+                          </div>
+                        )}
                         <div>
                           <span className="text-slate-400 font-medium">Business Ref No.</span>
                           <p className="font-semibold text-slate-900">{autoData.businessRefNo || "—"}</p>
@@ -1862,6 +1940,42 @@ export default function ShipmentStuffingExecutionModal({
                         <Layers className="h-4 w-4 text-emerald-600" />
                         <span>Cargo Allocation Master</span>
                       </div>
+
+                      {/* Per-shipment allocation breakdown — multi mode only */}
+                      {isMultiShipmentMode && (autoData.selectedShipments || targetShipments).length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-[11px] font-bold text-slate-600 mb-1.5">Per-Shipment Cargo Allocation</p>
+                          <div className="space-y-1">
+                            {(autoData.selectedShipments || targetShipments).map((sel) => {
+                              const contracted = Number(sel.quantity || 0);
+                              const allocated = Number(sel.allocatedWeight || 0);
+                              const pct = contracted > 0 ? Math.min(100, Math.round((allocated / contracted) * 100)) : 0;
+                              return (
+                                <div key={sel.id} className="flex items-center gap-2 text-[11px]">
+                                  <span className="font-mono font-bold text-indigo-800 w-44 shrink-0 truncate">
+                                    {sel.shipmentReference || `SHP-${sel.id}`}
+                                  </span>
+                                  <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                    <div
+                                      className="bg-emerald-500 h-1.5 rounded-full transition-all"
+                                      style={{ width: `${pct}%` }}
+                                    />
+                                  </div>
+                                  <span className="font-semibold text-emerald-700 w-16 text-right shrink-0">{allocated} MT</span>
+                                  <span className="text-slate-400 w-20 text-right shrink-0">/ {contracted} MT</span>
+                                </div>
+                              );
+                            })}
+                            <div className="flex items-center gap-2 text-[11px] pt-1.5 mt-1 border-t border-slate-200">
+                              <span className="font-bold text-indigo-800 w-44 shrink-0">Total</span>
+                              <div className="flex-1" />
+                              <span className="font-bold text-emerald-700 w-16 text-right shrink-0">{autoData.allocatedWeight || 0} MT</span>
+                              <span className="font-bold text-indigo-700 w-20 text-right shrink-0">/ {autoData.quantityMt || 0} MT</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-xs">
                         <div>
                           <span className="text-slate-400 font-medium">Allocated Cargo Lots</span>

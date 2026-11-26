@@ -50,6 +50,31 @@ export function getMultiExecutionTransportCategory(shipment) {
   return null;
 }
 
+export function hasLinkedPurchaseContract(shipment) {
+  const salesContract = shipment?.salesContract;
+  if (
+    shipment?.purchaseContract?.id ||
+    shipment?.purchaseContractId ||
+    (Array.isArray(shipment?.purchaseContracts) &&
+      shipment.purchaseContracts.some((contract) => contract?.id)) ||
+    salesContract?.purchaseContract?.id ||
+    (Array.isArray(salesContract?.purchaseContracts) &&
+      salesContract.purchaseContracts.some((contract) => contract?.id))
+  ) {
+    return true;
+  }
+
+  const purchaseContractNo = String(
+    shipment?.purchaseContractNo ||
+      shipment?.purchaseContract?.contractNumber ||
+      salesContract?.purchaseContractNo ||
+      "",
+  )
+    .trim()
+    .toUpperCase();
+  return Boolean(purchaseContractNo && purchaseContractNo !== "-" && purchaseContractNo !== "N/A");
+}
+
 export function isEligibleForMultiShipmentExecution(shipments = []) {
   if (!Array.isArray(shipments) || shipments.length <= 1) return false;
 

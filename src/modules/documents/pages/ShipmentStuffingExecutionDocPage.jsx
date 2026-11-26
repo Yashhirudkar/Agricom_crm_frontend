@@ -25,21 +25,6 @@ export default function ShipmentStuffingExecutionDocPage({ contextContractNo }) 
   // Filter state
   const [commonFilters, setCommonFilters] = useState({
     search: contextContractNo || "",
-    businessReference: "",
-    status: "",
-    timeline: "",
-    buyerId: "",
-    sellerId: "",
-    productId: "",
-    country: "",
-    portOfLoading: "",
-    portOfDischarge: "",
-    currency: "",
-    financialYear: "",
-    shipmentMonth: "",
-    shipmentYear: "",
-    shipmentDateFrom: "",
-    shipmentDateTo: "",
   });
 
   // Combined filters for subcomponents
@@ -51,7 +36,7 @@ export default function ShipmentStuffingExecutionDocPage({ contextContractNo }) 
       sortBy: pagination.sortBy,
       sortOrder: pagination.sortOrder,
       tab: "executed",
-      status: commonFilters.status || "executed",
+      status: "executed",
     };
   }, [commonFilters, pagination]);
 
@@ -121,21 +106,6 @@ export default function ShipmentStuffingExecutionDocPage({ contextContractNo }) 
   const handleResetFilters = () => {
     setCommonFilters({
       search: "",
-      businessReference: "",
-      status: "",
-      timeline: "",
-      buyerId: "",
-      sellerId: "",
-      productId: "",
-      country: "",
-      portOfLoading: "",
-      portOfDischarge: "",
-      currency: "",
-      financialYear: "",
-      shipmentMonth: "",
-      shipmentYear: "",
-      shipmentDateFrom: "",
-      shipmentDateTo: "",
     });
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
@@ -153,7 +123,7 @@ export default function ShipmentStuffingExecutionDocPage({ contextContractNo }) 
         sortBy: pagination.sortBy,
         sortOrder: pagination.sortOrder,
         tab: "executed",
-        status: commonFilters.status || "executed",
+        status: "executed",
       };
       const res = await shipmentsApi.getShipments(queryParams);
       if (res?.data) {
@@ -177,7 +147,7 @@ export default function ShipmentStuffingExecutionDocPage({ contextContractNo }) 
       const response = await shipmentsApi.exportExcel({
         ...commonFilters,
         tab: "executed",
-        status: commonFilters.status || "executed",
+        status: "executed",
         sortBy: pagination.sortBy,
         sortOrder: pagination.sortOrder,
       });

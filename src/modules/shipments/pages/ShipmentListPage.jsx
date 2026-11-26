@@ -29,6 +29,7 @@ import {
   openShipmentFreightWorkflow,
 } from "../utils/freightRuleEngine";
 import {
+  hasLinkedPurchaseContract,
   isEligibleForMultiShipmentExecution,
   resolveRailMultiBulkExecuteAction,
   resolveSelectedShipmentsForExecution,
@@ -98,21 +99,6 @@ export default function ShipmentListPage({
   // Common filters shared across tabs
   const [commonFilters, setCommonFilters] = useState({
     search: contextContractNo || "",
-    businessReference: "",
-    status: "",
-    timeline: "",
-    buyerId: "",
-    sellerId: "",
-    productId: "",
-    country: "",
-    portOfLoading: "",
-    portOfDischarge: "",
-    currency: "",
-    financialYear: "",
-    shipmentMonth: "",
-    shipmentYear: "",
-    shipmentDateFrom: "",
-    shipmentDateTo: "",
   });
 
   // Tab counts from backend
@@ -136,7 +122,7 @@ export default function ShipmentListPage({
       sortBy: currentTabParams.sortBy,
       sortOrder: currentTabParams.sortOrder,
       tab: activeTab,
-      status: commonFilters.status || activeTab,
+      status: activeTab,
     };
   }, [commonFilters, tabParams, activeTab]);
 
@@ -182,6 +168,7 @@ export default function ShipmentListPage({
   const [cargoShipment, setCargoShipment] = useState(null);
   const [freightShipment, setFreightShipment] = useState(null); // Freight allocation drawer target
   const [stuffingShipments, setStuffingShipments] = useState([]); // Shared stuffing execution target(s)
+  const [queuedStuffingShipments, setQueuedStuffingShipments] = useState([]);
   const [editShipment, setEditShipment] = useState(null); // Edit modal target
   const [viewContractId, setViewContractId] = useState(null); // Contract modal target
   const [docContract, setDocContract] = useState(null); // Document drawer target
@@ -331,6 +318,7 @@ export default function ShipmentListPage({
       return;
     }
 
+    setQueuedStuffingShipments([]);
     setStuffingShipments(selectedShipmentObjects);
   };
 
@@ -340,8 +328,52 @@ export default function ShipmentListPage({
       selectedShipmentObjects,
     );
     if (resolved.length > 0) {
+      setQueuedStuffingShipments([]);
       setStuffingShipments(resolved);
     }
+  };
+
+  const openExistingPurchaseContractExecution = (targetShipments) => {
+    const pendingFreightShipments = targetShipments.filter(
+      (shipment) =>
+        isFreightRequiredForShipment(shipment) &&
+        !isFreightAllocatedForShipment(shipment),
+    );
+    if (pendingFreightShipments.length > 0) {
+      const target = pendingFreightShipments[0];
+      openShipmentFreightWorkflow(target, router);
+      if (pendingFreightShipments.length > 1) {
+        showToast(
+          `Freight Allocation is pending for ${pendingFreightShipments.length} shipments. Opening Transport Workspace for ${target.shipmentReference || `SHP-${target.id}`}.`,
+          "success",
+        );
+      }
+      return;
+    }
+
+    const unreadyShipments = targetShipments.filter(
+      (shipment) =>
+        !(shipment.canExecute === true || shipment.readyForShipment === true),
+    );
+    if (unreadyShipments.length > 0) {
+      showToast(
+        "Cannot execute: Selected shipment(s) pending Cargo or Freight allocation.",
+        "error",
+      );
+      return;
+    }
+
+    if (
+      targetShipments.length === 1 ||
+      isEligibleForMultiShipmentExecution(targetShipments)
+    ) {
+      setQueuedStuffingShipments([]);
+      setStuffingShipments(targetShipments);
+      return;
+    }
+
+    setQueuedStuffingShipments(targetShipments.slice(1));
+    setStuffingShipments([targetShipments[0]]);
   };
 
   // Tab change handler
@@ -432,7 +464,7 @@ export default function ShipmentListPage({
           sortBy: currentTabParams.sortBy,
           sortOrder: currentTabParams.sortOrder,
           tab: activeTab,
-          status: commonFilters.status || activeTab,
+          status: activeTab,
         };
         const res = await shipmentsApi.getShipments(queryParams);
         if (res?.data) {
@@ -471,7 +503,7 @@ export default function ShipmentListPage({
       const response = await shipmentsApi.exportExcel({
         ...commonFilters,
         tab: activeTab,
-        status: commonFilters.status || activeTab,
+        status: activeTab,
         sortBy: currentTabConfig.sortBy,
         sortOrder: currentTabConfig.sortOrder,
       });
@@ -603,21 +635,6 @@ export default function ShipmentListPage({
   const handleResetFilters = () => {
     setCommonFilters({
       search: "",
-      status: "",
-      timeline: "",
-      buyerId: "",
-      sellerId: "",
-      productId: "",
-      country: "",
-      portOfLoading: "",
-      portOfDischarge: "",
-      currency: "",
-      financialYear: "",
-      shipmentMonth: "",
-      shipmentYear: "",
-      shipmentDateFrom: "",
-      shipmentDateTo: "",
-      businessReference: "",
     });
     setTabParams({
       pending: { page: 1, limit: 10, sortBy: "shipmentDate", sortOrder: "ASC" },
@@ -693,9 +710,8 @@ export default function ShipmentListPage({
       {/* Toast Notification */}
       {toastMsg && (
         <div
-          className={`fixed top-5 right-5 z-[500] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
-            toastMsg.type === "error" ? "bg-red-500" : "bg-green-500"
-          }`}
+          className={`fixed top-5 right-5 z-[500] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-bold text-white transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${toastMsg.type === "error" ? "bg-red-500" : "bg-green-500"
+            }`}
         >
           {toastMsg.type === "error" ? (
             <AlertCircle className="h-4 w-4" />
@@ -768,19 +784,17 @@ export default function ShipmentListPage({
             <button
               type="button"
               onClick={() => handleTabChange("pending")}
-              className={`relative py-3.5 px-3 sm:px-4 text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all duration-200 cursor-pointer ${
-                activeTab === "pending"
-                  ? "text-[#007aff] font-bold"
-                  : "text-gray-500 hover:text-gray-900"
-              }`}
+              className={`relative py-3.5 px-3 sm:px-4 text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all duration-200 cursor-pointer ${activeTab === "pending"
+                ? "text-[#007aff] font-bold"
+                : "text-gray-500 hover:text-gray-900"
+                }`}
             >
               <span>Pending</span>
               <span
-                className={`px-2 py-0.5 text-[11px] sm:text-xs rounded-full font-bold transition-all duration-200 ${
-                  activeTab === "pending"
-                    ? "bg-blue-50 text-[#007aff] ring-1 ring-blue-500/20"
-                    : "bg-gray-100 text-gray-600"
-                }`}
+                className={`px-2 py-0.5 text-[11px] sm:text-xs rounded-full font-bold transition-all duration-200 ${activeTab === "pending"
+                  ? "bg-blue-50 text-[#007aff] ring-1 ring-blue-500/20"
+                  : "bg-gray-100 text-gray-600"
+                  }`}
               >
                 {tabCounts.pending}
               </span>
@@ -792,19 +806,17 @@ export default function ShipmentListPage({
             <button
               type="button"
               onClick={() => handleTabChange("executed")}
-              className={`relative py-3.5 px-3 sm:px-4 text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all duration-200 cursor-pointer ${
-                activeTab === "executed"
-                  ? "text-[#007aff] font-bold"
-                  : "text-gray-500 hover:text-gray-900"
-              }`}
+              className={`relative py-3.5 px-3 sm:px-4 text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all duration-200 cursor-pointer ${activeTab === "executed"
+                ? "text-[#007aff] font-bold"
+                : "text-gray-500 hover:text-gray-900"
+                }`}
             >
               <span>Stuffed / Executed</span>
               <span
-                className={`px-2 py-0.5 text-[11px] sm:text-xs rounded-full font-bold transition-all duration-200 ${
-                  activeTab === "executed"
-                    ? "bg-blue-50 text-[#007aff] ring-1 ring-blue-500/20"
-                    : "bg-gray-100 text-gray-600"
-                }`}
+                className={`px-2 py-0.5 text-[11px] sm:text-xs rounded-full font-bold transition-all duration-200 ${activeTab === "executed"
+                  ? "bg-blue-50 text-[#007aff] ring-1 ring-blue-500/20"
+                  : "bg-gray-100 text-gray-600"
+                  }`}
               >
                 {tabCounts.executed}
               </span>
@@ -904,28 +916,54 @@ export default function ShipmentListPage({
                         shipmentIds: railBulkAction.shipments.map((s) => s?.id),
                       },
                     );
+                    setQueuedStuffingShipments([]);
                     setStuffingShipments(railBulkAction.shipments);
                     return;
                   }
                 }
-                console.log("[Execute Workspace] Legacy Purchase Contract branch");
-                const unreadyShipments = selectedObjs.filter(
-                  (s) => !s.readyForShipment,
-                );
-                if (unreadyShipments.length > 0) {
-                  showToast(
-                    "Cannot execute: Selected shipment(s) pending Cargo or Freight allocation.",
-                    "error",
+                const hasLinkedPurchaseContractForSelection =
+                  selectedForBulk.length > 0 &&
+                  selectedForBulk.some(hasLinkedPurchaseContract);
+                if (hasLinkedPurchaseContractForSelection) {
+                  const selectedContractIds = new Set(
+                    selectedForBulk.map((shipment) =>
+                      Number(
+                        shipment.salesContractId ||
+                        shipment.salesContract?.id ||
+                        0,
+                      ),
+                    ),
                   );
+                  if (
+                    selectedContractIds.has(0) ||
+                    selectedContractIds.size !== 1
+                  ) {
+                    logMultiShipmentContractValidationError(
+                      "ExecuteWorkspace",
+                      selectedForBulk,
+                      selectedContractIds,
+                      {
+                        selectedShipmentIds: selectedShipments,
+                        reason: "Multiple or mismatched Sales Contracts selected",
+                      },
+                    );
+                    showToast(
+                      "Execute Workspace can only include shipments from one Sales Contract.",
+                      "error",
+                    );
+                    return;
+                  }
+                  openExistingPurchaseContractExecution(selectedForBulk);
                   return;
                 }
+                console.log("[Execute Workspace] Legacy Purchase Contract branch");
                 const salesContractId =
-                  selectedObjs[0]?.salesContractId ||
-                  selectedObjs[0]?.salesContract?.id;
+                  selectedForBulk[0]?.salesContractId ||
+                  selectedForBulk[0]?.salesContract?.id;
                 if (!salesContractId) {
                   logMultiShipmentContractValidationError(
                     "ExecuteWorkspace",
-                    selectedObjs,
+                    selectedForBulk,
                     new Set(),
                     {
                       selectedShipmentIds: selectedShipments,
@@ -939,7 +977,7 @@ export default function ShipmentListPage({
                   return;
                 }
                 const selectedContractIds = new Set(
-                  selectedObjs.map((shipment) =>
+                  selectedForBulk.map((shipment) =>
                     Number(
                       shipment.salesContractId || shipment.salesContract?.id,
                     ),
@@ -948,7 +986,7 @@ export default function ShipmentListPage({
                 if (selectedContractIds.size !== 1) {
                   logMultiShipmentContractValidationError(
                     "ExecuteWorkspace",
-                    selectedObjs,
+                    selectedForBulk,
                     selectedContractIds,
                     {
                       selectedShipmentIds: selectedShipments,
@@ -961,6 +999,40 @@ export default function ShipmentListPage({
                   );
                   return;
                 }
+
+                const existingPurchaseContractsResponse =
+                  await purchaseContractApi.getAll({
+                    salesContractId: Number(salesContractId),
+                    page: 1,
+                    limit: 100,
+                  });
+                const purchaseContractResponseData =
+                  existingPurchaseContractsResponse?.data;
+                const existingPurchaseContracts = Array.isArray(
+                  purchaseContractResponseData?.data,
+                )
+                  ? purchaseContractResponseData.data
+                  : Array.isArray(purchaseContractResponseData)
+                    ? purchaseContractResponseData
+                    : [];
+                if (
+                  existingPurchaseContracts.length > 0
+                ) {
+                  openExistingPurchaseContractExecution(selectedForBulk);
+                  return;
+                }
+
+                const unreadyShipments = selectedForBulk.filter(
+                  (shipment) => !shipment.readyForShipment,
+                );
+                if (unreadyShipments.length > 0) {
+                  showToast(
+                    "Cannot execute: Selected shipment(s) pending Cargo or Freight allocation.",
+                    "error",
+                  );
+                  return;
+                }
+
                 const targetIds = selectedShipments.map(Number);
                 await purchaseContractApi.create({
                   salesContractId: Number(salesContractId),
@@ -1122,7 +1194,10 @@ export default function ShipmentListPage({
           isOpen={stuffingShipments.length > 0}
           shipment={stuffingShipments[0]}
           shipments={stuffingShipments}
-          onClose={() => setStuffingShipments([])}
+          onClose={() => {
+            setStuffingShipments([]);
+            setQueuedStuffingShipments([]);
+          }}
           onSaveSuccess={(data) => {
             const savedIds =
               Array.isArray(data?.shipmentIds) && data.shipmentIds.length > 0
@@ -1130,11 +1205,16 @@ export default function ShipmentListPage({
                 : stuffingShipments.map((s) => Number(s.id));
             const isCompleted = Boolean(
               data?.record?.stuffingStatus === "Completed" ||
-                ["Executed", "Dispatched", "Completed"].includes(
-                  data?.shipmentStatus,
-                ),
+              ["Executed", "Dispatched", "Completed"].includes(
+                data?.shipmentStatus,
+              ),
             );
-            setStuffingShipments([]);
+            const [nextQueuedShipment, ...remainingQueuedShipments] =
+              queuedStuffingShipments;
+            setQueuedStuffingShipments(remainingQueuedShipments);
+            setStuffingShipments(
+              nextQueuedShipment ? [nextQueuedShipment] : [],
+            );
             if (isCompleted && savedIds.length > 0) {
               const savedIdSet = new Set(savedIds);
               if (activeTab === "pending") {

@@ -21,9 +21,11 @@ import ShipmentStuffingExecutionModal from "./ShipmentStuffingExecutionModal";
 import ShipmentRefTooltip from "./ShipmentRefTooltip";
 import { copyToClipboard } from "@/utils/clipboard";
 import {
+  isFreightAllocatedForShipment,
   isFreightRequiredForShipment,
   openShipmentFreightWorkflow,
 } from "../utils/freightRuleEngine";
+import { hasLinkedPurchaseContract } from "../utils/multiShipmentExecution";
 
 const getTimelineDisplay = (timeline = {}) => {
   const parsedDays = Number(timeline.days);
@@ -172,6 +174,18 @@ export default function ShipmentsTable({
   const handleExecuteShipment = (e, s) => {
     e.stopPropagation();
     const canExecute = s.canExecute === true || s.readyForShipment === true;
+    const hasPendingFreight =
+      isFreightRequiredForShipment(s) && !isFreightAllocatedForShipment(s);
+    const canOpenTransportWorkspace =
+      hasLinkedPurchaseContract(s) && hasPendingFreight;
+    if (canOpenTransportWorkspace) {
+      if (onOpenFreightWorkflow) {
+        onOpenFreightWorkflow(s);
+      } else {
+        openShipmentFreightWorkflow(s, router);
+      }
+      return;
+    }
     if (!canExecute) return;
     if (onExecuteStuffing) {
       onExecuteStuffing(s);
@@ -325,6 +339,10 @@ export default function ShipmentsTable({
                   executedShipmentIds.has(s.id);
                 const canExecute =
                   s.canExecute === true || s.readyForShipment === true;
+                const canOpenTransportWorkspace =
+                  hasLinkedPurchaseContract(s) &&
+                  isFreightRequiredForShipment(s) &&
+                  !isFreightAllocatedForShipment(s);
 
                 return (
                   <tr
@@ -590,15 +608,17 @@ export default function ShipmentsTable({
                         ) : (
                           <button
                             type="button"
-                            disabled={!canExecute}
+                            disabled={!canExecute && !canOpenTransportWorkspace}
                             title={
-                              !canExecute
+                              canOpenTransportWorkspace
+                                ? "Freight Allocation pending. Click to open Transport Workspace."
+                                : !canExecute
                                 ? getExecuteDisabledTooltip(s)
                                 : "Execute Shipment Stuffing"
                             }
                             onClick={(e) => handleExecuteShipment(e, s)}
                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-xs ${
-                              canExecute
+                              canExecute || canOpenTransportWorkspace
                                 ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer"
                                 : "bg-gray-100 text-gray-400 border border-gray-200 opacity-60 cursor-not-allowed"
                             }`}
