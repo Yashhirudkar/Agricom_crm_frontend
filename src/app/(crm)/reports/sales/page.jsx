@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import axiosInstance from '@/lib/axios';
 import Pagination from '@/components/common/Pagination';
 import { usePermissions } from "@/hooks/usePermissions";
+import SalesAnalyticsDrawer from './components/SalesAnalyticsDrawer';
 import {
   FileSpreadsheet, Filter, X, Printer,
   TrendingUp, Users, ShoppingCart, BarChart3, Lock
@@ -42,6 +43,9 @@ export default function SalesReportPage() {
     orders: [],
     loading: true
   });
+  const [reportError, setReportError] = useState(null);
+  const [analyticsRetryKey, setAnalyticsRetryKey] = useState(0);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [availableExecutives, setAvailableExecutives] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -79,6 +83,7 @@ export default function SalesReportPage() {
     if (!canView) return;
     const fetchReport = async () => {
       setData(prev => ({ ...prev, loading: true }));
+      setReportError(null);
       try {
         const params = { ...filters };
         if (!params.companyId) params.companyId = companyId;
@@ -112,12 +117,17 @@ export default function SalesReportPage() {
         setAvailableExecutives(Array.from(executiveMap.values()));
       } catch (error) {
         console.error("Failed to fetch report data", error);
+        setReportError(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to load sales report data."
+        );
         setData(prev => ({ ...prev, loading: false }));
       }
     };
 
     fetchReport();
-  }, [filters, companyId]);
+  }, [filters, companyId, analyticsRetryKey]);
 
   const handleFilterChange = (key, value) => {
     setCurrentPage(1);
@@ -237,14 +247,21 @@ export default function SalesReportPage() {
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Monthly Sales Analysis</h1>
             <p className="text-gray-500 text-sm mt-1">Detailed breakdown of confirmed orders and performance.</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {canExport && (
-              <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium">
+              <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium cursor-pointer">
                 <FileSpreadsheet className="w-4 h-4 text-green-600" /> Export CSV
               </button>
             )}
-            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium">
+            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium cursor-pointer">
               <Printer className="w-4 h-4 text-blue-600" /> Print
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAnalyticsOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#007aff] hover:bg-[#0062cc] text-white rounded-lg shadow-sm transition-colors text-sm font-semibold cursor-pointer"
+            >
+              <BarChart3 className="w-4 h-4" /> Analytics
             </button>
           </div>
         </div>
@@ -382,6 +399,19 @@ export default function SalesReportPage() {
           )}
         </div>
       </div>
+
+      <SalesAnalyticsDrawer
+        isOpen={isAnalyticsOpen}
+        onClose={() => setIsAnalyticsOpen(false)}
+        orders={data.orders}
+        loading={data.loading}
+        error={reportError}
+        onRetry={() => setAnalyticsRetryKey(k => k + 1)}
+        filters={filters}
+        options={options}
+        availableExecutives={availableExecutives}
+        canExport={canExport}
+      />
     </div>
   );
 }
