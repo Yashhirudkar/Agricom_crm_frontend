@@ -46,7 +46,14 @@ const getExecuteDisabledTooltip = (shipment) => {
   return "Shipment is not ready for execution.";
 };
 
-export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContract, onOpenCargoDrawer }) {
+export default function ShipmentDetailsDrawer({
+  shipment,
+  onClose,
+  onViewContract,
+  onOpenCargoDrawer,
+  onOpenFreightWorkflow,
+  onExecuteStuffing,
+}) {
   useEscapeKey(onClose, Boolean(shipment));
 
   const [openStuffingModal, setOpenStuffingModal] = useState(false);
@@ -79,6 +86,10 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
   };
 
   const handleExecuteWorkspace = () => {
+    if (onExecuteStuffing && !isExecuted) {
+      onExecuteStuffing(shipment);
+      return;
+    }
     setOpenStuffingModal(true);
   };
 
@@ -310,7 +321,11 @@ export default function ShipmentDetailsDrawer({ shipment, onClose, onViewContrac
                   ) : (
                     <button
                       type="button"
-                      onClick={() => openShipmentFreightWorkflow(shipment, router)}
+                      onClick={() =>
+                        onOpenFreightWorkflow
+                          ? onOpenFreightWorkflow(shipment)
+                          : openShipmentFreightWorkflow(shipment, router)
+                      }
                       className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-semibold transition-all cursor-pointer hover:scale-105 ${
                         isFreightAllocated
                           ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"

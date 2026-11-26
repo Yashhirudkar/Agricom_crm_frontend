@@ -1,20 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import TransportDrawer from "@/modules/logistics/components/TransportDrawer";
 import { logisticsApi } from "@/modules/logistics/services/logisticsApi";
 import { shipmentsApi } from "@/modules/shipments/services/shipmentsApi";
 
-export default function ShipmentTransportWorkspacePage() {
+function ShipmentTransportWorkspaceContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const shipmentId = String(params?.shipmentId || "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [workspace, setWorkspace] = useState(null);
   const [shipment, setShipment] = useState(null);
+
+  const selectedShipmentIds = useMemo(() => {
+    if (searchParams?.get("from") !== "shipments") return [];
+    const raw = searchParams?.get("selectedShipmentIds");
+    if (!raw) return [];
+    const parsed = Array.from(
+      new Set(
+        raw
+          .split(",")
+          .map((value) => Number(value.trim()))
+          .filter((id) => Number.isSafeInteger(id) && id > 0)
+      )
+    );
+    const currentId = Number(shipmentId);
+    if (parsed.length <= 1 || !parsed.includes(currentId)) return [];
+    return parsed;
+  }, [searchParams, shipmentId]);
 
   useEffect(() => {
     if (!shipmentId) return;
@@ -92,6 +110,22 @@ export default function ShipmentTransportWorkspacePage() {
       targetShipmentId={shipmentId}
       fromSource="shipments"
       shipment={shipment}
+      selectedShipmentIds={selectedShipmentIds}
     />
+  );
+}
+
+export default function ShipmentTransportWorkspacePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center gap-3 text-sm font-medium text-gray-500">
+          <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+          Loading Transport Workspace...
+        </div>
+      }
+    >
+      <ShipmentTransportWorkspaceContent />
+    </Suspense>
   );
 }

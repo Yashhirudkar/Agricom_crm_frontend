@@ -163,11 +163,79 @@ export function isFreightAllocatedForShipment(shipment) {
   return String(shipment.freightAllocationStatus || "").trim().toLowerCase() === "yes";
 }
 
-export function openShipmentFreightWorkflow(shipment, router) {
+export function isRailOriginTransportShipment(shipment) {
+  const mode = String(
+    shipment?.salesContract?.originTransportMode ?? shipment?.originTransportMode ?? ""
+  )
+    .trim()
+    .toLowerCase();
+  if (!mode) return false;
+  return mode === "rail" || mode === "wagon" || mode.includes("rail") || mode.includes("wagon");
+}
+
+export function getSelectedRailSiblingIdsForShipment(targetShipment, selectedShipmentObjs = []) {
+  if (!targetShipment?.id) return [];
+  if (!isFreightRequiredForShipment(targetShipment) || !isRailOriginTransportShipment(targetShipment)) {
+    return [];
+  }
+  if (!Array.isArray(selectedShipmentObjs) || selectedShipmentObjs.length <= 1) {
+    return [];
+  }
+
+  const uniqueObjsMap = new Map();
+  for (const s of selectedShipmentObjs) {
+    const id = Number(s?.id);
+    if (Number.isSafeInteger(id) && id > 0 && !uniqueObjsMap.has(id)) {
+      uniqueObjsMap.set(id, s);
+    }
+  }
+  if (uniqueObjsMap.size <= 1 || !uniqueObjsMap.has(Number(targetShipment.id))) {
+    return [];
+  }
+
+  const targetContractId = Number(
+    targetShipment.salesContractId || targetShipment.salesContract?.id || 0
+  );
+  if (!targetContractId) return [];
+
+  const uniqueObjs = Array.from(uniqueObjsMap.values());
+  const allSameRailContractAndFreightRequired = uniqueObjs.every((s) => {
+    const scId = Number(s.salesContractId || s.salesContract?.id || 0);
+    return (
+      scId === targetContractId &&
+      isRailOriginTransportShipment(s) &&
+      isFreightRequiredForShipment(s)
+    );
+  });
+
+  if (!allSameRailContractAndFreightRequired) return [];
+  return uniqueObjs.map((s) => Number(s.id));
+}
+
+export function openShipmentFreightWorkflow(shipment, router, options = {}) {
   if (!shipment?.id || !isFreightRequiredForShipment(shipment)) return;
 
   const params = new URLSearchParams({ from: "shipments" });
   if (shipment.shipmentReference) params.set("shipmentRef", shipment.shipmentReference);
+
+  const selectedIds = Array.isArray(options?.selectedShipmentIds)
+    ? Array.from(
+        new Set(
+          options.selectedShipmentIds
+            .map((id) => Number(id))
+            .filter((id) => Number.isSafeInteger(id) && id > 0)
+        )
+      )
+    : [];
+
+  if (
+    selectedIds.length > 1 &&
+    selectedIds.includes(Number(shipment.id)) &&
+    isRailOriginTransportShipment(shipment)
+  ) {
+    params.set("selectedShipmentIds", selectedIds.join(","));
+  }
+
   router.push(`/logistics/transport-workspace/${String(shipment.id)}?${params.toString()}`);
 }
 

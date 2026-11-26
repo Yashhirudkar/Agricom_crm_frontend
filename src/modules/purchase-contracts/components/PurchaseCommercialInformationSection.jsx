@@ -6,6 +6,7 @@ import CountrySelect from "@/components/common/CountrySelect";
 import { getShipmentTypeShortForm } from "@/modules/sales-contracts/utils/formatUtils";
 import { formatDateOnly } from "../utils/dateUtils";
 import { evaluateFreightRequired } from "@/modules/shipments/utils/freightRuleEngine";
+import { getContractTransportMode } from "@/modules/sales-contracts/utils/quantityUtils";
 
 export default function PurchaseCommercialInformationSection({
   contract,
@@ -23,6 +24,8 @@ export default function PurchaseCommercialInformationSection({
   const [qtyError, setQtyError] = useState("");
 
   const isManual = contract?.purchaseType === "MTT" || !contract?.salesContractId;
+  const isRailFreight =
+    !isManual && getContractTransportMode(contract?.salesContract || {}) === "RAIL";
   const scItems = contract?.salesContract?.items || [];
   const scShipments = contract?.salesContract?.shipments || [];
   const qtyPerCount =
@@ -68,7 +71,7 @@ export default function PurchaseCommercialInformationSection({
     }
     const rem = q % qtyPerCount;
     const isMultiple = Math.abs(rem) < 0.0001 || Math.abs(rem - qtyPerCount) < 0.0001;
-    if (!isMultiple) {
+    if (!isRailFreight && !isMultiple) {
       setQtyError(
         `Must be in multiples of ${qtyPerCount} MT${allowedQuantities.length > 0 ? ` (${allowedQuantities.join(", ")})` : ""}`,
       );
@@ -87,7 +90,7 @@ export default function PurchaseCommercialInformationSection({
     if (form.quantity) {
       validateQty(form.quantity);
     }
-  }, [maxAllowedForThisPc, qtyPerCount, form.quantity]);
+  }, [maxAllowedForThisPc, qtyPerCount, form.quantity, isRailFreight]);
   const contractType = isManual ? "MTT" : (contract?.salesContract?.contractType || "Import");
   const brokerRoleId = contractType.toLowerCase() === "export"
     ? masters?.domesticBrokerRoleId
@@ -287,8 +290,8 @@ export default function PurchaseCommercialInformationSection({
               <>
                 <input
                   type="number"
-                  step={!isManual && qtyPerCount > 0 ? qtyPerCount : "0.01"}
-                  min={!isManual && qtyPerCount > 0 ? qtyPerCount : undefined}
+                  step={!isManual && !isRailFreight && qtyPerCount > 0 ? qtyPerCount : "0.01"}
+                  min={!isManual && !isRailFreight && qtyPerCount > 0 ? qtyPerCount : undefined}
                   max={!isManual && maxAllowedForThisPc > 0 ? maxAllowedForThisPc : undefined}
                   value={form.quantity ?? ""}
                   onChange={(e) => {
@@ -303,12 +306,12 @@ export default function PurchaseCommercialInformationSection({
                     validateQty(val);
                   }}
                   onBlur={(e) => validateQty(e.target.value)}
-                  placeholder={!isManual && qtyPerCount > 0 ? `Multiples of ${qtyPerCount}` : "e.g. 200"}
+                  placeholder={!isManual && !isRailFreight && qtyPerCount > 0 ? `Multiples of ${qtyPerCount}` : "e.g. 200"}
                   className={`${inp} ${qtyError ? "border-rose-400 focus:border-rose-500 focus:ring-rose-200" : ""} font-bold text-gray-900 tabular-nums`}
                 />
                 {qtyError ? (
                   <p className="mt-1 text-[11px] text-rose-600 font-medium">{qtyError}</p>
-                ) : (!isManual && qtyPerCount > 0 && allowedQuantities.length > 0) ? (
+                ) : (!isManual && !isRailFreight && qtyPerCount > 0 && allowedQuantities.length > 0) ? (
                   <p className="mt-1 text-[10px] text-gray-500 font-medium">
                     Multiples of {qtyPerCount} MT (Allowed: {allowedQuantities.join(", ")}{otherAllocated > 0 ? ` · Max Available: ${maxAllowedForThisPc} MT` : ""})
                   </p>

@@ -43,6 +43,7 @@ export default function ItemsTable({ form, setForm, errors, masters, isView }) {
   const inputClass = `${selectClass} disabled:bg-gray-50`;
 
   const modeStr = String(form.originTransportMode || form.destinationTransportMode || form.transportMode || "").toLowerCase();
+  const isRailFreight = getContractTransportMode(form) === "RAIL";
   const isSeaFreight =
     modeStr !== "road" &&
     modeStr !== "truck" &&
@@ -99,7 +100,9 @@ export default function ItemsTable({ form, setForm, errors, masters, isView }) {
       ) : (
         <div className="p-4 space-y-3">
           {items.map((item, idx) => {
-            const invalidQty = parseFloat(item.quantity) > 0 && parseFloat(item.qtyPerCount) > 0 && !isDivisible(item.quantity, item.qtyPerCount);
+            const invalidQty = isRailFreight
+              ? false
+              : parseFloat(item.quantity) > 0 && parseFloat(item.qtyPerCount) > 0 && !isDivisible(item.quantity, item.qtyPerCount);
             return (
               <div key={item.id || idx} className="p-3 border border-gray-100 rounded-xl bg-gray-50/40">
                 <div className="flex items-center justify-between mb-3">

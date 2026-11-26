@@ -20,11 +20,54 @@ import DocumentUploadDrawer from "@/modules/sales-contracts/components/DocumentU
 import Pagination from "@/components/common/Pagination";
 import ShipmentCargoReadinessModal from "../components/ShipmentCargoReadinessModal";
 import FreightAllocationDrawer from "../components/FreightAllocationDrawer";
+import ShipmentStuffingExecutionModal from "../components/ShipmentStuffingExecutionModal";
 import {
+  getSelectedRailSiblingIdsForShipment,
   isFreightAllocatedForShipment,
   isFreightRequiredForShipment,
+  isRailOriginTransportShipment,
   openShipmentFreightWorkflow,
 } from "../utils/freightRuleEngine";
+import {
+  isEligibleForMultiShipmentExecution,
+  resolveRailMultiBulkExecuteAction,
+  resolveSelectedShipmentsForExecution,
+} from "../utils/multiShipmentExecution";
+
+function logMultiShipmentContractValidationError(
+  contextLabel,
+  shipmentList = [],
+  comparedContractIds = new Set(),
+  extra = {},
+) {
+  console.warn(
+    `[${contextLabel}] Multi-shipment Sales Contract validation failed:`,
+    {
+      comparedContractIds: Array.from(comparedContractIds || []),
+      ...extra,
+      shipments: (Array.isArray(shipmentList) ? shipmentList : []).map(
+        (shipment) => ({
+          shipmentId: shipment?.id ?? null,
+          shipmentReference: shipment?.shipmentReference ?? null,
+          salesContractId: shipment?.salesContractId ?? null,
+          salesContractObjId: shipment?.salesContract?.id ?? null,
+          comparedSalesContractId: Number(
+            shipment?.salesContractId || shipment?.salesContract?.id || 0,
+          ),
+          salesContractNo:
+            shipment?.salesContractNo ||
+            shipment?.salesContract?.contractNumber ||
+            null,
+          businessReference:
+            shipment?.businessReference ||
+            shipment?.businessTransaction?.businessReference ||
+            null,
+          purchaseContractNo: shipment?.purchaseContractNo ?? null,
+        }),
+      ),
+    },
+  );
+}
 
 export default function ShipmentListPage({
   preSelectedShipmentId,
@@ -138,10 +181,168 @@ export default function ShipmentListPage({
   const [activeShipment, setActiveShipment] = useState(null); // Detail drawer target
   const [cargoShipment, setCargoShipment] = useState(null);
   const [freightShipment, setFreightShipment] = useState(null); // Freight allocation drawer target
+  const [stuffingShipments, setStuffingShipments] = useState([]); // Shared stuffing execution target(s)
   const [editShipment, setEditShipment] = useState(null); // Edit modal target
   const [viewContractId, setViewContractId] = useState(null); // Contract modal target
   const [docContract, setDocContract] = useState(null); // Document drawer target
   const [selectedShipments, setSelectedShipments] = useState([]); // Bulk actions checkbox tracker
+  const [selectedShipmentDetailsById, setSelectedShipmentDetailsById] = useState({});
+
+  const updateSelectedShipments = (updaterOrNextIds) => {
+    const nextIds =
+      typeof updaterOrNextIds === "function"
+        ? updaterOrNextIds(selectedShipments)
+        : updaterOrNextIds;
+    const normalizedNext = Array.isArray(nextIds) ? nextIds : [];
+    setSelectedShipments(normalizedNext);
+    setSelectedShipmentDetailsById((prevDetails) => {
+      const selectedSet = new Set(normalizedNext.map(Number));
+      if (selectedSet.size === 0) {
+        return Object.keys(prevDetails).length === 0 ? prevDetails : {};
+      }
+      const nextDetails = {};
+      for (const id of selectedSet) {
+        const match = shipments.find((s) => Number(s.id) === id);
+        if (match) {
+          nextDetails[id] = match;
+        } else if (prevDetails[id]) {
+          nextDetails[id] = prevDetails[id];
+        }
+      }
+      return nextDetails;
+    });
+  };
+
+  const selectedShipmentObjects = useMemo(
+    () =>
+      selectedShipments
+        .map(
+          (id) =>
+            selectedShipmentDetailsById[Number(id)] ||
+            shipments.find((s) => Number(s.id) === Number(id)),
+        )
+        .filter(Boolean),
+    [selectedShipments, selectedShipmentDetailsById, shipments],
+  );
+
+  const canOpenRailTransportWorkspace = useMemo(
+    () =>
+      selectedShipments.length > 1 &&
+      selectedShipmentObjects.length === selectedShipments.length &&
+      selectedShipmentObjects.every((s) => isRailOriginTransportShipment(s)),
+    [selectedShipments, selectedShipmentObjects],
+  );
+
+  const handleOpenRailTransportWorkspace = useCallback(() => {
+    if (!canOpenRailTransportWorkspace || selectedShipmentObjects.length <= 1) {
+      return;
+    }
+
+    const selectedContractIds = new Set(
+      selectedShipmentObjects.map((s) =>
+        Number(s.salesContractId || s.salesContract?.id || 0),
+      ),
+    );
+    if (selectedContractIds.has(0) || selectedContractIds.size !== 1) {
+      logMultiShipmentContractValidationError(
+        "RailTransportWorkspace",
+        selectedShipmentObjects,
+        selectedContractIds,
+      );
+      showToast(
+        "Transport Workspace can only include selected Rail shipments from one Sales Contract.",
+        "error",
+      );
+      return;
+    }
+
+    const nonFreightRequired = selectedShipmentObjects.filter(
+      (s) => !isFreightRequiredForShipment(s),
+    );
+    if (nonFreightRequired.length > 0) {
+      showToast(
+        "Transport Workspace is not required for one or more selected shipments.",
+        "error",
+      );
+      return;
+    }
+
+    const selectedIds = selectedShipmentObjects.map((s) => Number(s.id));
+    openShipmentFreightWorkflow(selectedShipmentObjects[0], router, {
+      selectedShipmentIds: selectedIds,
+    });
+  }, [canOpenRailTransportWorkspace, selectedShipmentObjects, router]);
+
+  const handleOpenShipmentFreightWorkflow = useCallback(
+    (targetShipment) => {
+      const selectedRailSiblingIds = getSelectedRailSiblingIdsForShipment(
+        targetShipment,
+        selectedShipmentObjects,
+      );
+      openShipmentFreightWorkflow(targetShipment, router, {
+        selectedShipmentIds: selectedRailSiblingIds,
+      });
+    },
+    [selectedShipmentObjects, router],
+  );
+
+  const canOpenMultiStuffingExecution = useMemo(
+    () =>
+      selectedShipments.length > 1 &&
+      selectedShipmentObjects.length === selectedShipments.length &&
+      isEligibleForMultiShipmentExecution(selectedShipmentObjects),
+    [selectedShipments, selectedShipmentObjects],
+  );
+
+  const handleOpenMultiStuffingExecution = () => {
+    if (!canOpenMultiStuffingExecution || selectedShipmentObjects.length <= 1) {
+      return;
+    }
+
+    const selectedContractIds = new Set(
+      selectedShipmentObjects.map((s) =>
+        Number(s.salesContractId || s.salesContract?.id || 0),
+      ),
+    );
+    if (selectedContractIds.has(0) || selectedContractIds.size !== 1) {
+      logMultiShipmentContractValidationError(
+        "MultiStuffingExecution",
+        selectedShipmentObjects,
+        selectedContractIds,
+      );
+      showToast(
+        "Multi-shipment execution can only include shipments from one Sales Contract.",
+        "error",
+      );
+      return;
+    }
+
+    const unreadyShipments = selectedShipmentObjects.filter(
+      (s) => !(s.canExecute === true || s.readyForShipment === true),
+    );
+    if (unreadyShipments.length > 0) {
+      const refs = unreadyShipments
+        .map((s) => s.shipmentReference || `SHP-${s.id}`)
+        .join(", ");
+      showToast(
+        `Cannot execute: Shipment(s) pending Cargo or Freight allocation (${refs}).`,
+        "error",
+      );
+      return;
+    }
+
+    setStuffingShipments(selectedShipmentObjects);
+  };
+
+  const handleExecuteStuffingFromRowOrDrawer = (clickedShipment) => {
+    const resolved = resolveSelectedShipmentsForExecution(
+      clickedShipment,
+      selectedShipmentObjects,
+    );
+    if (resolved.length > 0) {
+      setStuffingShipments(resolved);
+    }
+  };
 
   // Tab change handler
   const handleTabChange = (newTab) => {
@@ -623,12 +824,91 @@ export default function ShipmentListPage({
             onReset={handleResetFilters}
             total={total}
             selectedShipments={selectedShipments}
+            canOpenRailTransportWorkspace={canOpenRailTransportWorkspace}
+            railTransportCount={selectedShipments.length}
+            onOpenRailTransportWorkspace={handleOpenRailTransportWorkspace}
+            canOpenMultiStuffingExecution={canOpenMultiStuffingExecution}
+            multiStuffingExecutionCount={selectedShipments.length}
+            onOpenMultiStuffingExecution={handleOpenMultiStuffingExecution}
             onDeselect={() => setSelectedShipments([])}
             onExecuteBulk={async () => {
               try {
                 const selectedObjs = shipments.filter((s) =>
                   selectedShipments.includes(s.id),
                 );
+                const selectedForBulk =
+                  selectedShipmentObjects.length === selectedShipments.length
+                    ? selectedShipmentObjects
+                    : selectedObjs;
+                console.log("[Execute Workspace] Checking selected shipments:", {
+                  selectedShipmentIds: selectedShipments,
+                  resolvedShipments: selectedForBulk.map((s) => ({
+                    id: s?.id,
+                    shipmentReference: s?.shipmentReference,
+                    salesContractId: s?.salesContractId || s?.salesContract?.id,
+                    originTransportMode:
+                      s?.salesContract?.originTransportMode ??
+                      s?.originTransportMode,
+                    cargoReady: s?.cargoReady,
+                    freightReady: s?.freightReady,
+                    freightRequired: s?.freightRequired,
+                    readyForShipment: s?.readyForShipment,
+                    canExecute: s?.canExecute,
+                  })),
+                });
+                const railBulkAction =
+                  resolveRailMultiBulkExecuteAction(selectedForBulk);
+                if (railBulkAction.handled) {
+                  console.log("[Execute Workspace] Rail Multi Shipment branch", {
+                    action: railBulkAction.action,
+                    shipmentIds: selectedForBulk.map((s) => s?.id),
+                  });
+                  if (railBulkAction.action === "error") {
+                    console.log(
+                      "[Execute Workspace] Rail Multi Shipment validation blocked",
+                      { message: railBulkAction.message },
+                    );
+                    if (railBulkAction.selectedContractIds) {
+                      logMultiShipmentContractValidationError(
+                        "ExecuteWorkspace",
+                        railBulkAction.shipments,
+                        railBulkAction.selectedContractIds,
+                        {
+                          selectedShipmentIds: selectedShipments,
+                          reason: railBulkAction.reason,
+                        },
+                      );
+                    }
+                    showToast(railBulkAction.message, "error");
+                    return;
+                  }
+                  if (railBulkAction.action === "transport_workspace") {
+                    console.log(
+                      "[Execute Workspace] Opening Transport Workspace",
+                      {
+                        primaryShipmentId: railBulkAction.primaryShipment?.id,
+                        selectedShipmentIds: railBulkAction.selectedShipmentIds,
+                      },
+                    );
+                    openShipmentFreightWorkflow(
+                      railBulkAction.primaryShipment,
+                      router,
+                      { selectedShipmentIds: railBulkAction.selectedShipmentIds },
+                    );
+                    return;
+                  }
+                  if (railBulkAction.action === "stuffing_execution") {
+                    console.log(
+                      "[Execute Workspace] Opening Stuffing Execution",
+                      {
+                        shipmentIds: railBulkAction.shipments.map((s) => s?.id),
+                      },
+                    );
+                    setStuffingShipments(railBulkAction.shipments);
+                    return;
+                  }
+                }
+                console.log("[Execute Workspace] Legacy Purchase Contract branch");
                 const unreadyShipments = selectedObjs.filter(
                   (s) => !s.readyForShipment,
                 );
@@ -643,6 +923,15 @@ export default function ShipmentListPage({
                   selectedObjs[0]?.salesContractId ||
                   selectedObjs[0]?.salesContract?.id;
                 if (!salesContractId) {
+                  logMultiShipmentContractValidationError(
+                    "ExecuteWorkspace",
+                    selectedObjs,
+                    new Set(),
+                    {
+                      selectedShipmentIds: selectedShipments,
+                      reason: "Missing salesContractId on first selected shipment",
+                    },
+                  );
                   showToast(
                     "Could not determine Sales Contract for selected shipments",
                     "error",
@@ -657,6 +946,15 @@ export default function ShipmentListPage({
                   ),
                 );
                 if (selectedContractIds.size !== 1) {
+                  logMultiShipmentContractValidationError(
+                    "ExecuteWorkspace",
+                    selectedObjs,
+                    selectedContractIds,
+                    {
+                      selectedShipmentIds: selectedShipments,
+                      reason: "Multiple or mismatched Sales Contracts selected",
+                    },
+                  );
                   showToast(
                     "Execute Workspace can only include shipments from one Sales Contract.",
                     "error",
@@ -713,13 +1011,15 @@ export default function ShipmentListPage({
           }
           loading={loading}
           selectedShipments={selectedShipments}
-          setSelectedShipments={setSelectedShipments}
+          setSelectedShipments={updateSelectedShipments}
           onRowClick={(s) => setActiveShipment(s)}
           onViewContract={(id) => setViewContractId(id)}
           onEditShipment={(s) => setEditShipment(s)}
           onManageDocuments={(contractObj) => setDocContract(contractObj)}
           onPrintShipment={handlePrintSingleShipment}
           onOpenCargoDrawer={handleOpenCargoAllocation}
+          onOpenFreightWorkflow={handleOpenShipmentFreightWorkflow}
+          onExecuteStuffing={handleExecuteStuffingFromRowOrDrawer}
           onOpenFreightDrawer={(s) => {
             if (
               isFreightRequiredForShipment(s) &&
@@ -760,6 +1060,8 @@ export default function ShipmentListPage({
           onClose={() => setActiveShipment(null)}
           onViewContract={(id) => setViewContractId(id)}
           onOpenCargoDrawer={handleOpenCargoAllocation}
+          onOpenFreightWorkflow={handleOpenShipmentFreightWorkflow}
+          onExecuteStuffing={handleExecuteStuffingFromRowOrDrawer}
           onOpenFreightDrawer={(s) => {
             if (
               !isFreightRequiredForShipment(s) ||
@@ -810,6 +1112,57 @@ export default function ShipmentListPage({
         <ContractViewModal
           contractId={viewContractId}
           onClose={() => setViewContractId(null)}
+        />
+      )}
+
+      {/* Shared / Multi-Shipment Stuffing Execution Modal */}
+      {stuffingShipments.length > 0 && (
+        <ShipmentStuffingExecutionModal
+          key={stuffingShipments.map((s) => s.id).join("-")}
+          isOpen={stuffingShipments.length > 0}
+          shipment={stuffingShipments[0]}
+          shipments={stuffingShipments}
+          onClose={() => setStuffingShipments([])}
+          onSaveSuccess={(data) => {
+            const savedIds =
+              Array.isArray(data?.shipmentIds) && data.shipmentIds.length > 0
+                ? data.shipmentIds.map(Number)
+                : stuffingShipments.map((s) => Number(s.id));
+            const isCompleted = Boolean(
+              data?.record?.stuffingStatus === "Completed" ||
+                ["Executed", "Dispatched", "Completed"].includes(
+                  data?.shipmentStatus,
+                ),
+            );
+            setStuffingShipments([]);
+            if (isCompleted && savedIds.length > 0) {
+              const savedIdSet = new Set(savedIds);
+              if (activeTab === "pending") {
+                setShipments((prev) =>
+                  prev.filter((s) => !savedIdSet.has(Number(s.id))),
+                );
+                setTotal((prev) => Math.max(0, prev - savedIds.length));
+              }
+              setTabCounts((prev) => ({
+                pending: Math.max(0, prev.pending - savedIds.length),
+                executed: prev.executed + savedIds.length,
+              }));
+              setStats((prev) => ({
+                ...prev,
+                pendingCount: Math.max(
+                  0,
+                  (prev.pendingCount || savedIds.length) - savedIds.length,
+                ),
+                executedCount: (prev.executedCount || 0) + savedIds.length,
+              }));
+              setSelectedShipments((prev) =>
+                prev.filter((id) => !savedIdSet.has(Number(id))),
+              );
+              setActiveShipment(null);
+            }
+            fetchShipments({ silent: true });
+            fetchStats();
+          }}
         />
       )}
 

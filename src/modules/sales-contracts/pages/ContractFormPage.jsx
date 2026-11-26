@@ -26,6 +26,7 @@ import DisputeResolutionSection from "../components/DisputeResolutionSection";
 import ForceMajeureSection from "../components/ForceMajeureSection";
 import ContractAcceptanceSection from "../components/ContractAcceptanceSection";
 import BusinessReference from "@/components/common/BusinessReference";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 const defaultForm = () => ({
   enquiryId: null,
@@ -115,7 +116,9 @@ function getEnquiryDestination(enquiry, savedDestinations = []) {
 
 function validate(form, isAutoNumber) {
   const e = {};
-  const isSeaFreight = getContractTransportMode(form) === "SEA";
+  const transportMode = getContractTransportMode(form);
+  const isSeaFreight = transportMode === "SEA";
+  const isRailFreight = transportMode === "RAIL";
   if (!form.financialYear) e.financialYear = "Financial Year is required";
   // For auto-generated sellers, contractNumber is not required from user
   if (!isAutoNumber && !form.contractNumber?.trim()) e.contractNumber = "Contract No. is required";
@@ -136,7 +139,9 @@ function validate(form, isAutoNumber) {
       if (!item.qtyPerCount || parseFloat(item.qtyPerCount) <= 0) rowErrors.push("Qty Per Count");
       if (isSeaFreight && !item.containerType) rowErrors.push("Container Type");
       if (!item.quantity || parseFloat(item.quantity) <= 0) rowErrors.push("Quantity");
-      if (item.quantity && item.qtyPerCount && parseFloat(item.qtyPerCount) > 0 && !isDivisible(item.quantity, item.qtyPerCount)) {
+      if (isRailFreight) {
+        // Skip exact multiple validation for Rail Freight / Wagon
+      } else if (item.quantity && item.qtyPerCount && parseFloat(item.qtyPerCount) > 0 && !isDivisible(item.quantity, item.qtyPerCount)) {
         rowErrors.push(`Product Quantity (${item.quantity} MT) is not divisible by Qty Per Count (${item.qtyPerCount} MT). Product Quantity must be an exact multiple of Qty Per Count.`);
       }
       if (!item.unitPrice || parseFloat(item.unitPrice) <= 0) rowErrors.push("Unit Price");
@@ -147,12 +152,14 @@ function validate(form, isAutoNumber) {
   const totalProductQty = (form.items || []).reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
   const totalShipmentQty = (form.shipments || []).reduce((sum, s) => sum + (parseFloat(s.quantity) || 0), 0);
 
-  const hasDivisibilityError = (form.items || []).some(
-    (item) =>
-      parseFloat(item.quantity) > 0 &&
-      parseFloat(item.qtyPerCount) > 0 &&
-      !isDivisible(item.quantity, item.qtyPerCount)
-  );
+  const hasDivisibilityError = isRailFreight
+    ? false
+    : (form.items || []).some(
+        (item) =>
+          parseFloat(item.quantity) > 0 &&
+          parseFloat(item.qtyPerCount) > 0 &&
+          !isDivisible(item.quantity, item.qtyPerCount)
+      );
 
   // Suppress duplicate shipment errors when divisibility error is active
   if (!hasDivisibilityError) {
@@ -214,6 +221,12 @@ export default function ContractFormPage({ editId, viewId }) {
   const isEdit = !!editId;
   const isView = !!viewId && !editId;
   const contractId = editId || viewId;
+
+  const handleBackToContracts = () => {
+    router.push("/sales-contracts");
+  };
+
+  useEscapeKey(handleBackToContracts, !saving);
 
   // Handle contract date change: update shipment dates if user hasn't manually customized them
   const handleContractDateChange = (newDate) => {
@@ -789,12 +802,15 @@ export default function ContractFormPage({ editId, viewId }) {
   const productItems = form.items || [];
   const totalProductQty = productItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
   const totalShipmentQty = (form.shipments || []).reduce((sum, s) => sum + (parseFloat(s.quantity) || 0), 0);
-  const hasDivisibilityError = productItems.some(
-    (item) =>
-      parseFloat(item.quantity) > 0 &&
-      parseFloat(item.qtyPerCount) > 0 &&
-      !isDivisible(item.quantity, item.qtyPerCount)
-  );
+  const isRailFreight = getContractTransportMode(form) === "RAIL";
+  const hasDivisibilityError = isRailFreight
+    ? false
+    : productItems.some(
+        (item) =>
+          parseFloat(item.quantity) > 0 &&
+          parseFloat(item.qtyPerCount) > 0 &&
+          !isDivisible(item.quantity, item.qtyPerCount)
+      );
   const isTotalMismatched =
     totalProductQty > 0 && Math.abs(totalShipmentQty - totalProductQty) > 0.001;
   const isFormBlocked = loadingContract || mastersLoading || saving || isTotalMismatched || hasDivisibilityError;
@@ -807,7 +823,7 @@ export default function ContractFormPage({ editId, viewId }) {
         <div className="px-6 md:px-8 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => router.push("/sales-contracts")}
+              onClick={handleBackToContracts}
               className="h-8 w-8 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50 text-gray-500 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -839,7 +855,7 @@ export default function ContractFormPage({ editId, viewId }) {
           {!isView && (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => router.push("/sales-contracts")}
+                onClick={handleBackToContracts}
                 className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
               >
                 Cancel
@@ -921,7 +937,7 @@ export default function ContractFormPage({ editId, viewId }) {
           <div className="sticky bottom-4 flex justify-end gap-2.5">
             <div className="cursor-pointer bg-white border border-gray-200 rounded-2xl shadow-lg px-4 py-2.5 flex items-center gap-2.5">
               <button
-                onClick={() => router.push("/sales-contracts")}
+                onClick={handleBackToContracts}
                 className="cursor-pointer px-3 py-1.5 text-xs font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 Cancel

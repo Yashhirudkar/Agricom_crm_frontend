@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Search, X, ChevronDown, Filter, RotateCcw, Rocket } from "lucide-react";
+import { Search, X, ChevronDown, Filter, RotateCcw, Rocket, Train } from "lucide-react";
 import { mastersApi, salesContractApi } from "@/modules/sales-contracts/services/salesContractApi";
 import CountrySelect from "@/components/common/CountrySelect";
 
@@ -48,6 +48,12 @@ export default function ShipmentsFilter({
   statsConfig = [],
   selectedShipments = [],
   onExecuteBulk,
+  canOpenRailTransportWorkspace = false,
+  railTransportCount = 0,
+  onOpenRailTransportWorkspace,
+  canOpenMultiStuffingExecution = false,
+  multiStuffingExecutionCount = 0,
+  onOpenMultiStuffingExecution,
   onDeselect,
   activeTab = "pending",
 }) {
@@ -132,6 +138,28 @@ export default function ShipmentsFilter({
           {/* Bulk Execute Workspace Action */}
           {selectedShipments.length > 0 && activeTab !== "executed" && (
             <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
+              {selectedShipments.length > 1 && canOpenRailTransportWorkspace && onOpenRailTransportWorkspace && (
+                <button
+                  type="button"
+                  onClick={onOpenRailTransportWorkspace}
+                  className="px-2.5 md:px-3 h-8 md:h-9 lg:h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg lg:rounded-xl text-[11px] lg:text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-indigo-500/20 whitespace-nowrap"
+                  title="Open Transport Workspace for selected Rail shipments (Freight Quote auto-applies to all selected shipments)"
+                >
+                  <Train className="h-3.5 w-3.5 text-indigo-100" />
+                  <span>Transport Workspace ({railTransportCount || selectedShipments.length})</span>
+                </button>
+              )}
+              {selectedShipments.length > 1 && canOpenMultiStuffingExecution && onOpenMultiStuffingExecution && (
+                <button
+                  type="button"
+                  onClick={onOpenMultiStuffingExecution}
+                  className="px-2.5 md:px-3 h-8 md:h-9 lg:h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg lg:rounded-xl text-[11px] lg:text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-emerald-500/20 whitespace-nowrap"
+                  title="Execute Stuffing together for selected Truck or Rail shipments"
+                >
+                  <Rocket className="h-3.5 w-3.5 text-emerald-100" />
+                  <span>Execute Stuffing ({multiStuffingExecutionCount || selectedShipments.length})</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onExecuteBulk}

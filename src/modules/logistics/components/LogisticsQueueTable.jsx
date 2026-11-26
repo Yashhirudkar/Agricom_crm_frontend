@@ -98,17 +98,23 @@ export default function LogisticsQueueTable({
     return destinations.length ? destinations : ["—"];
   };
 
+  const formatShortCreatorName = (fullName) => {
+    if (!fullName) return "";
+    const parts = String(fullName).trim().split(/\s+/);
+    return parts[0].length > 10 ? parts[0].slice(0, 10) : parts[0];
+  };
+
   return (
     <div className="w-full overflow-hidden">
       <table className="w-full table-fixed text-xs" style={{ tableLayout: "fixed", width: "100%" }}>
         <colgroup>
-          <col style={{ width: "9%" }} />
+          <col style={{ width: "11%" }} />
           <col style={{ width: "7%" }} />
           <col style={{ width: "13%" }} />
           <col style={{ width: "6%" }} />
           <col style={{ width: "12%" }} />
           <col style={{ width: "12%" }} />
-          <col style={{ width: "16%" }} />
+          <col style={{ width: "14%" }} />
           <col style={{ width: "13%" }} />
           <col style={{ width: "12%" }} />
         </colgroup>
@@ -135,6 +141,8 @@ export default function LogisticsQueueTable({
               e.businessReference ||
               e.businessTransaction?.businessReference ||
               "";
+            const fullCreatorName = e.createdByName || e.creator?.name || "";
+            const shortCreatorName = formatShortCreatorName(fullCreatorName);
 
             return (
               <tr key={e.queueRowId || (e.transportDetailId ? `${e.id}_${e.transportDetailId}` : `${e.id}_${idx}`)} className={`transition-all duration-500 group hover:bg-gray-50/70 ${isHighlighted ? "bg-blue-50/50 shadow-inner" : ""} ${isFreightPendingEnquiry ? "logistics-pending-row" : ""}`}>
@@ -182,14 +190,24 @@ export default function LogisticsQueueTable({
                         </div>
                       </>
                     ) : (
-                      <>
-                        <span className="max-w-full truncate">{e.enquiryNo || ""}</span>
+                      <div className="flex min-w-0 max-w-full items-center gap-1">
+                        <span className="max-w-full truncate" title={e.enquiryNo || ""}>
+                          {e.enquiryNo || ""}
+                        </span>
                         {showNewBadge && (
-                          <span className="mt-0.5 rounded border border-red-200 bg-red-100 px-1 py-0.5 text-[8px] font-extrabold uppercase leading-none text-red-600">
+                          <span className="shrink-0 rounded border border-red-200 bg-red-100 px-1 py-0.5 text-[8px] font-extrabold uppercase leading-none text-red-600">
                             New
                           </span>
                         )}
-                      </>
+                      </div>
+                    )}
+                    {shortCreatorName && (
+                      <span
+                        className="max-w-full truncate font-sans text-[10px] font-medium text-gray-500"
+                        title={`Created By: ${fullCreatorName}`}
+                      >
+                        By: {shortCreatorName}
+                      </span>
                     )}
                   </div>
                 </td>

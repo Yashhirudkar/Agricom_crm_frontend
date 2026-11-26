@@ -26,6 +26,7 @@ export default function SingleShipmentWorkspace({
   onSetPreferred,
   expiringSoonIds = [],
   getPartnerInitials,
+  syncShipmentCount = 0,
 }) {
   const { canEditCompleted } = usePermissions();
   const canOverrideFreight = canEditCompleted("freight_allocation");
@@ -171,6 +172,16 @@ export default function SingleShipmentWorkspace({
         {/* 2. FREIGHT QUOTES SECTION (BELOW SELECTED SHIPMENT)                      */}
         {/* ========================================================================= */}
         <div className="p-4 sm:p-5 space-y-4">
+          {syncShipmentCount > 1 && (
+            <div className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/70 px-3.5 py-2 text-xs text-indigo-900">
+              <CheckCircle className="h-4 w-4 text-indigo-600 shrink-0" />
+              <span>
+                <strong>Rail Multi-Shipment Sync Active:</strong> Creating or editing a freight quote here automatically applies to all{" "}
+                <strong>{syncShipmentCount} selected shipments</strong>.
+              </span>
+            </div>
+          )}
+
           {/* Preferred Carrier Ribbon (if selected) */}
           {prefQuote && (
             <div className="bg-gradient-to-r from-purple-50 via-indigo-50/60 to-purple-50/40 border border-purple-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">

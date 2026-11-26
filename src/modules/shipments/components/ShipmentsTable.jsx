@@ -107,6 +107,8 @@ export default function ShipmentsTable({
   onExecutePurchase,
   onOpenCargoDrawer,
   onOpenFreightDrawer,
+  onOpenFreightWorkflow,
+  onExecuteStuffing,
   selectedShipments = [],
   setSelectedShipments,
 }) {
@@ -171,12 +173,20 @@ export default function ShipmentsTable({
     e.stopPropagation();
     const canExecute = s.canExecute === true || s.readyForShipment === true;
     if (!canExecute) return;
+    if (onExecuteStuffing) {
+      onExecuteStuffing(s);
+      return;
+    }
     setStuffingShipment(s);
   };
 
   const handleFreightClick = (e, s) => {
     e.stopPropagation();
-    openShipmentFreightWorkflow(s, router);
+    if (onOpenFreightWorkflow) {
+      onOpenFreightWorkflow(s);
+    } else {
+      openShipmentFreightWorkflow(s, router);
+    }
   };
 
   if (loading) {

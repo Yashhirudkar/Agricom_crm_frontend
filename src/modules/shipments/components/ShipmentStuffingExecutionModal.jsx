@@ -53,6 +53,7 @@ import {
 import axiosClient from "@/lib/axios";
 import useFinalizationLock from "@/hooks/useFinalizationLock";
 import CompletedBadge from "@/components/badges/CompletedBadge";
+import { getMultiExecutionTransportCategory } from "../utils/multiShipmentExecution";
 
 // Document Lists by Shipment Mode
 const TRUCK_DOCUMENTS = [
@@ -520,10 +521,31 @@ function SimpleTimePicker({ label, value, onChange, required = false, disabled =
 export default function ShipmentStuffingExecutionModal({
   isOpen,
   shipment,
+  shipments = [],
   onClose,
   onSaveSuccess,
 }) {
   useEscapeKey(onClose, isOpen);
+
+  const targetShipments = useMemo(() => {
+    if (Array.isArray(shipments) && shipments.length > 1) return shipments;
+    return shipment ? [shipment] : [];
+  }, [shipments, shipment]);
+
+  const primaryShipment = targetShipments[0] || shipment || null;
+  const targetShipmentIds = useMemo(
+    () =>
+      targetShipments
+        .map((s) => Number(s?.id))
+        .filter((id) => Number.isSafeInteger(id) && id > 0),
+    [targetShipments],
+  );
+  const targetShipmentIdsKey = targetShipmentIds.join(",");
+  const isMultiShipmentMode = targetShipmentIds.length > 1;
+  const multiExecutionCategory = useMemo(
+    () => getMultiExecutionTransportCategory(primaryShipment),
+    [primaryShipment],
+  );
 
   const router = useRouter();
   const {
@@ -544,15 +566,32 @@ export default function ShipmentStuffingExecutionModal({
 
   // Instant fallback auto-population from shipment props
   const fallbackAuto = useMemo(() => {
-    if (!shipment) return {};
-    const contract = shipment.salesContract || {};
+    if (!primaryShipment) return {};
+    const contract = primaryShipment.salesContract || {};
     const item = contract.items?.[0] || {};
-    const product = shipment.products?.[0] || item.product || {};
+    const product = primaryShipment.products?.[0] || item.product || {};
     const bagSizeKg = item.bagSpecification?.size ? Number(item.bagSpecification.size) : 0;
-    const qtyMt = Number(shipment.quantity || 0);
+    const qtyMt = isMultiShipmentMode
+      ? targetShipments.reduce((sum, s) => sum + Number(s.quantity || 0), 0)
+      : Number(primaryShipment.quantity || 0);
+    const refList = isMultiShipmentMode
+      ? targetShipments.map((s) => s.shipmentReference || `SHP-${s.id}`).join(", ")
+      : primaryShipment.shipmentReference || `SHP-${primaryShipment.id}`;
     return {
-      shipmentRef: shipment.shipmentReference || `SHP-${shipment.id}`,
-      businessRefNo: shipment.businessReference || shipment.businessTransaction?.businessReference || "—",
+      isMultiShipment: isMultiShipmentMode,
+      multiShipmentMode: multiExecutionCategory,
+      selectedShipments: targetShipments.map((s) => ({
+        id: s.id,
+        shipmentNo: s.shipmentNo,
+        shipmentReference: s.shipmentReference || `SHP-${s.id}`,
+        quantity: Number(s.quantity || 0),
+        status: s.status,
+      })),
+      shipmentRef: refList,
+      businessRefNo:
+        primaryShipment.businessReference ||
+        primaryShipment.businessTransaction?.businessReference ||
+        "—",
       salesContractNo: contract.contractNumber || "—",
       purchaseContractNo: "—",
       enquiryRef: contract.enquiry?.enquiryReference || "—",
@@ -567,10 +606,10 @@ export default function ShipmentStuffingExecutionModal({
       incoterm: contract.paymentTerm?.name || contract.contractType || "—",
       paymentTerms: contract.paymentTerm?.name || "",
       paymentTerm: contract.paymentTerm?.name || "",
-      shipmentDate: shipment.shipmentDate || "",
+      shipmentDate: primaryShipment.shipmentDate || "",
       transportMode:
-        shipment.logistics?.transportMode ||
-        shipment.transportMode ||
+        primaryShipment.logistics?.transportMode ||
+        primaryShipment.transportMode ||
         contract.transportMode ||
         contract.originTransportMode ||
         "",
@@ -589,9 +628,9 @@ export default function ShipmentStuffingExecutionModal({
       shippingLine: "",
       vessel: "",
       voyage: "",
-      containerType: shipment.noOfContainers ? `${shipment.noOfContainers} container(s)` : "—",
+      containerType: primaryShipment.noOfContainers ? `${primaryShipment.noOfContainers} container(s)` : "—",
       freightForwarder: "",
-      etd: shipment.shipmentDate || "",
+      etd: primaryShipment.shipmentDate || "",
       eta: "",
       pol: contract.portOfLoading || "—",
       pod: contract.portOfDischarge || "—",
@@ -605,17 +644,17 @@ export default function ShipmentStuffingExecutionModal({
       buyerCountry: contract.buyer?.country || "—",
       buyerContactPerson: contract.buyer?.contactEmail || "—",
     };
-  }, [shipment]);
+  }, [primaryShipment, targetShipments, isMultiShipmentMode, multiExecutionCategory]);
 
   // Auto-populated data from backend
   const [autoData, setAutoData] = useState(fallbackAuto);
   const [tradeDocsList, setTradeDocsList] = useState([]);
   const activeTransportMode =
     autoData?.transportMode ||
-    shipment?.logistics?.transportMode ||
-    shipment?.transportMode ||
-    shipment?.salesContract?.transportMode ||
-    shipment?.salesContract?.originTransportMode ||
+    primaryShipment?.logistics?.transportMode ||
+    primaryShipment?.transportMode ||
+    primaryShipment?.salesContract?.transportMode ||
+    primaryShipment?.salesContract?.originTransportMode ||
     "";
   const showContainerDetails =
     isContainerTransportMode(activeTransportMode);
@@ -701,14 +740,14 @@ export default function ShipmentStuffingExecutionModal({
   // CAD Documents (Conditional): Show them ONLY when Sales Contract -> Payment Terms = 100% CASH AGAINST DOC (CAD)
   const isCad = useMemo(() => {
     const rawTerms =
-      shipment?.salesContract?.paymentTerm?.name ||
+      primaryShipment?.salesContract?.paymentTerm?.name ||
       autoData?.paymentTerms ||
       autoData?.paymentTerm ||
       autoData?.incoterm ||
       "";
     return isCadPayment(rawTerms);
   }, [
-    shipment?.salesContract?.paymentTerm?.name,
+    primaryShipment?.salesContract?.paymentTerm?.name,
     autoData?.paymentTerms,
     autoData?.paymentTerm,
     autoData?.incoterm,
@@ -728,13 +767,18 @@ export default function ShipmentStuffingExecutionModal({
   const [stuffingStatus, setStuffingStatus] = useState("Draft");
   const [executionStatus, setExecutionStatus] = useState("Draft");
 
-  const existingStuffingRecord = autoData?.existingStuffing || shipment?.stuffingExecution || null;
-  const isExecutionCompleted =
-    stuffingStatus === "Completed" ||
-    executionStatus === "Stuffed" ||
-    shipment?.status === "Executed" ||
-    existingStuffingRecord?.status === "Completed" ||
-    existingStuffingRecord?.status === "Stuffed";
+  const existingStuffingRecord = autoData?.existingStuffing || primaryShipment?.stuffingExecution || null;
+  const isExecutionCompleted = isMultiShipmentMode
+    ? stuffingStatus === "Completed" ||
+      executionStatus === "Stuffed" ||
+      targetShipments.every((s) => s?.status === "Executed") ||
+      existingStuffingRecord?.status === "Completed" ||
+      existingStuffingRecord?.status === "Stuffed"
+    : stuffingStatus === "Completed" ||
+      executionStatus === "Stuffed" ||
+      primaryShipment?.status === "Executed" ||
+      existingStuffingRecord?.status === "Completed" ||
+      existingStuffingRecord?.status === "Stuffed";
 
   const { isReadOnly, isOneTimeAllowed, canOverride } = useFinalizationLock({
     status: isExecutionCompleted ? "Completed" : "Draft",
@@ -744,7 +788,7 @@ export default function ShipmentStuffingExecutionModal({
 
   // Fetch Auto-Populated Data and Trade Documents Master
   useEffect(() => {
-    if (!isOpen || !shipment?.id) return;
+    if (!isOpen || !primaryShipment?.id) return;
 
     let isMounted = true;
     setAutoData(fallbackAuto);
@@ -755,16 +799,16 @@ export default function ShipmentStuffingExecutionModal({
 
     const initialMode = detectMode(
       fallbackAuto.transportMode ||
-      shipment?.logistics?.transportMode ||
-      shipment?.transportMode ||
-      shipment?.salesContract?.transportMode ||
-      shipment?.salesContract?.originTransportMode ||
+      primaryShipment?.logistics?.transportMode ||
+      primaryShipment?.transportMode ||
+      primaryShipment?.salesContract?.transportMode ||
+      primaryShipment?.salesContract?.originTransportMode ||
       fallbackAuto.freightType ||
       fallbackAuto.shipmentType ||
       "Sea"
     );
     const initialIsCad = isCadPayment(
-      shipment?.salesContract?.paymentTerm?.name ||
+      primaryShipment?.salesContract?.paymentTerm?.name ||
       fallbackAuto.paymentTerms ||
       fallbackAuto.incoterm ||
       ""
@@ -774,13 +818,28 @@ export default function ShipmentStuffingExecutionModal({
 
     const fetchData = async () => {
       try {
-        const res = await shipmentsApi.getStuffingExecution(shipment.id);
+        const res = await shipmentsApi.getStuffingExecution(
+          primaryShipment.id,
+          isMultiShipmentMode ? targetShipmentIds : undefined,
+        );
 
         const data = res?.data || res || {};
         const auto = data.autoPopulated || {};
 
         if (isMounted) {
-          const mergedAuto = { ...fallbackAuto, ...auto };
+          const mergedAuto = {
+            ...fallbackAuto,
+            ...auto,
+            ...(Array.isArray(data.selectedShipments)
+              ? { selectedShipments: data.selectedShipments }
+              : {}),
+            ...(Array.isArray(data.perShipmentFreights)
+              ? { perShipmentFreights: data.perShipmentFreights }
+              : {}),
+            ...(data.multiShipmentMode
+              ? { multiShipmentMode: data.multiShipmentMode }
+              : {}),
+          };
           setAutoData(mergedAuto);
 
           // Populate initial freight data from auto-populated
@@ -801,10 +860,10 @@ export default function ShipmentStuffingExecutionModal({
           const savedMode = existing?.freightOverrides?.shipmentMode;
           const detectedMode = detectMode(
             mergedAuto.transportMode ||
-              shipment?.logistics?.transportMode ||
-              shipment?.transportMode ||
-              shipment?.salesContract?.transportMode ||
-              shipment?.salesContract?.originTransportMode ||
+              primaryShipment?.logistics?.transportMode ||
+              primaryShipment?.transportMode ||
+              primaryShipment?.salesContract?.transportMode ||
+              primaryShipment?.salesContract?.originTransportMode ||
               savedMode ||
               mergedAuto.freightType ||
               mergedAuto.shipmentType ||
@@ -813,7 +872,7 @@ export default function ShipmentStuffingExecutionModal({
           setShipmentMode(detectedMode);
 
           const isCadActive = isCadPayment(
-            shipment?.salesContract?.paymentTerm?.name ||
+            primaryShipment?.salesContract?.paymentTerm?.name ||
             mergedAuto.paymentTerms ||
             mergedAuto.paymentTerm ||
             mergedAuto.incoterm ||
@@ -857,7 +916,10 @@ export default function ShipmentStuffingExecutionModal({
                 existing.trucks.map((t) => ({
                   truckNo: t.truckNo || "",
                   driver: t.driver || "",
-                  mobile: normalizeMobileNumber(t.mobile || t.driverPhone),
+                  mobile:
+                    detectedMode === "Wagon"
+                      ? String(t.mobile || t.wagonNumber || "").trim()
+                      : normalizeMobileNumber(t.mobile || t.driverPhone),
                   remark: t.remark || t.remarks || "",
                   dispatch: t.dispatch || "",
                 }))
@@ -938,7 +1000,7 @@ export default function ShipmentStuffingExecutionModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, shipment?.id, fallbackAuto]);
+  }, [isOpen, primaryShipment, isMultiShipmentMode, targetShipmentIdsKey, targetShipmentIds, fallbackAuto]);
 
   // Combined Document Options (Trade Document Master + Presets)
   const availableDocumentNames = useMemo(() => {
@@ -1227,7 +1289,7 @@ export default function ShipmentStuffingExecutionModal({
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await shipmentsApi.uploadStuffingAttachment(shipment.id, formData);
+      const res = await shipmentsApi.uploadStuffingAttachment(primaryShipment.id, formData);
       const data = res.data || res;
 
       setAttachments((prev) => {
@@ -1329,9 +1391,11 @@ export default function ShipmentStuffingExecutionModal({
         toast.error(msg);
         return;
       }
-      const maxShipmentQty = Number(autoData.quantityMt || shipment?.quantity || 0);
+      const maxShipmentQty = Number(autoData.quantityMt || primaryShipment?.quantity || 0);
       if (maxShipmentQty > 0 && weight > maxShipmentQty) {
-        const msg = `Actual Loading Weight (${weight} MT) exceeds shipment quantity (${maxShipmentQty} MT).`;
+        const msg = isMultiShipmentMode
+          ? `Actual Loading Weight (${weight} MT) exceeds combined selected shipment quantity (${maxShipmentQty} MT).`
+          : `Actual Loading Weight (${weight} MT) exceeds shipment quantity (${maxShipmentQty} MT).`;
         setErrorMsg(msg);
         toast.error(msg);
         return;
@@ -1362,6 +1426,7 @@ export default function ShipmentStuffingExecutionModal({
     try {
       const payload = {
         action: action, // "draft" | "complete"
+        ...(isMultiShipmentMode ? { shipmentIds: targetShipmentIds } : {}),
         stuffingStatus: action === "complete" ? "Completed" : "Draft",
         executionStatus: action === "complete" ? "Loading Completed" : "Pending",
         stuffingDate: stuffingInfo.stuffingDate,
@@ -1415,12 +1480,16 @@ export default function ShipmentStuffingExecutionModal({
         autoPopulated: autoData,
       };
 
-      const res = await shipmentsApi.saveStuffingExecution(shipment.id, payload);
+      const res = await shipmentsApi.saveStuffingExecution(primaryShipment.id, payload);
       const data = res.data || res;
 
       const successMsg = action === "complete"
-        ? "Stuffing Completed! Shipment status set to Executed."
-        : "Stuffing Draft saved successfully.";
+        ? isMultiShipmentMode
+          ? `Stuffing Completed! ${targetShipmentIds.length} selected shipments marked as Executed.`
+          : "Stuffing Completed! Shipment status set to Executed."
+        : isMultiShipmentMode
+          ? `Stuffing Draft saved for ${targetShipmentIds.length} selected shipments.`
+          : "Stuffing Draft saved successfully.";
       setSuccessToast(successMsg);
       toast.success(successMsg);
 
@@ -1428,9 +1497,11 @@ export default function ShipmentStuffingExecutionModal({
         setStuffingStatus("Completed");
         setExecutionStatus("Stuffed");
         if (typeof window !== "undefined") {
-          window.dispatchEvent(
-            new CustomEvent("shipment-executed", { detail: { shipmentId: shipment.id } }),
-          );
+          targetShipmentIds.forEach((id) => {
+            window.dispatchEvent(
+              new CustomEvent("shipment-executed", { detail: { shipmentId: id } }),
+            );
+          });
         }
       }
 
@@ -1474,6 +1545,12 @@ export default function ShipmentStuffingExecutionModal({
                 <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
                   {isReadOnly ? "Shipment Stuffing Execution (View Details)" : "Shipment Stuffing Execution Form"}
                 </h2>
+                {isMultiShipmentMode && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    <Layers className="h-3.5 w-3.5 text-indigo-600" />
+                    {targetShipments.length} Shipments Selected
+                  </span>
+                )}
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
                   85% Auto-Populated
@@ -1492,11 +1569,11 @@ export default function ShipmentStuffingExecutionModal({
               </div>
               <p className="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
                 <span>
-                  Shipment Ref: <strong className="font-semibold text-slate-800">{autoData.shipmentRef || shipment.shipmentReference || "N/A"}</strong>
+                  Shipment Ref: <strong className="font-semibold text-slate-800">{autoData.shipmentRef || primaryShipment?.shipmentReference || "N/A"}</strong>
                 </span>
                 <span className="text-slate-300">•</span>
                 <span>
-                  Business Ref: <strong className="font-semibold text-slate-800">{autoData.businessRefNo || shipment.businessReference || "N/A"}</strong>
+                  Business Ref: <strong className="font-semibold text-slate-800">{autoData.businessRefNo || primaryShipment?.businessReference || "N/A"}</strong>
                 </span>
                 <span className="text-slate-300">•</span>
                 <span>
@@ -1566,6 +1643,29 @@ export default function ShipmentStuffingExecutionModal({
             </span>
           </div>
         </div>
+
+        {isMultiShipmentMode && (
+          <div className="bg-indigo-50/60 border-b border-indigo-100 px-6 py-2 flex flex-wrap items-center justify-between gap-2 text-xs flex-shrink-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-indigo-900">Selected Shipments:</span>
+              {(autoData.selectedShipments || targetShipments).map((sel) => (
+                <span
+                  key={sel.id}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-indigo-800 font-mono font-semibold text-[11px]"
+                >
+                  <span>{sel.shipmentReference || `SHP-${sel.id}`}</span>
+                  <span className="text-slate-400">•</span>
+                  <span className="text-indigo-700">{Number(sel.quantity || 0)} MT</span>
+                </span>
+              ))}
+            </div>
+            <span className="text-[11px] font-semibold text-indigo-700">
+              {shipmentMode === "Wagon" || multiExecutionCategory === "rail"
+                ? "Rail Freight / Wagon: Shared Rail Freight Allocation across selected shipments"
+                : "Truck: Independent Freight Quote per shipment"}
+            </span>
+          </div>
+        )}
 
         {/* TOAST / ALERTS */}
         {errorMsg && (
@@ -1765,7 +1865,12 @@ export default function ShipmentStuffingExecutionModal({
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-xs">
                         <div>
                           <span className="text-slate-400 font-medium">Allocated Cargo Lots</span>
-                          <p className="font-semibold text-slate-900">{autoData.allocatedCargoLots || "LOT-" + shipment.id}</p>
+                          <p className="font-semibold text-slate-900">
+                            {autoData.allocatedCargoLots ||
+                              (isMultiShipmentMode
+                                ? targetShipmentIds.map((id) => "LOT-" + id).join(", ")
+                                : "LOT-" + (primaryShipment?.id || ""))}
+                          </p>
                         </div>
                         <div>
                           <span className="text-slate-400 font-medium">Warehouse</span>
@@ -1794,6 +1899,37 @@ export default function ShipmentStuffingExecutionModal({
                           <span>Freight & Logistics Master (Editable if not available)</span>
                         </div>
                       </div>
+                      {isMultiShipmentMode &&
+                        multiExecutionCategory === "truck" &&
+                        Array.isArray(autoData.perShipmentFreights) &&
+                        autoData.perShipmentFreights.length > 0 && (
+                          <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50/70 p-2.5 text-xs">
+                            <p className="text-[11px] font-bold text-slate-700 mb-1.5">
+                              Independent Freight Quotes per Truck Shipment
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                              {autoData.perShipmentFreights.map((pf) => (
+                                <div
+                                  key={pf.shipmentId}
+                                  className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-[11px]"
+                                >
+                                  <div className="font-mono font-bold text-slate-800">
+                                    {pf.shipmentReference}
+                                  </div>
+                                  <div className="text-slate-500 truncate">
+                                    {pf.freightForwarder || "Freight Quote"}{" "}
+                                    {pf.quoteNumber ? `(${pf.quoteNumber})` : ""}
+                                  </div>
+                                  <div className="font-semibold text-emerald-700">
+                                    {pf.freightAmount != null
+                                      ? `${pf.freightAmount} ${pf.currency || ""}`
+                                      : `Status: ${pf.freightAllocationStatus}`}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
                         <div>
                           <label className="block text-slate-500 font-semibold mb-1">Shipping Line</label>
@@ -2191,131 +2327,155 @@ export default function ShipmentStuffingExecutionModal({
 
               {!showContainerDetails && (
                 <>
-                  {/* 4. TRUCK DETAILS (DYNAMIC) */}
-                  <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
-                  <div className="flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-indigo-600" />
-                    <span className="font-bold text-sm text-indigo-700">4. Truck Details (Dynamic)</span>
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      {trucks.length} {trucks.length === 1 ? "Truck" : "Trucks"}
-                    </span>
-                  </div>
-                  {!isReadOnly && (
-                    <button
-                      type="button"
-                      onClick={handleAddTruck}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>Add Truck</span>
-                    </button>
-                  )}
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left">
-                    <thead>
-                      <tr className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
-                        <th className="py-2.5 px-3">#</th>
-                        <th className="py-2.5 px-3">Truck No.</th>
-                        <th className="py-2.5 px-3">Driver Name</th>
-                        <th className="py-2.5 px-3">Mobile No.</th>
-                        <th className="py-2.5 px-3">Remark</th>
-                        <th className="py-2.5 px-3">
-                          Dispatch <span className="text-red-500">*</span>
-                        </th>
-                        {!isReadOnly && <th className="py-2.5 px-3 text-center">Action</th>}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {trucks.map((t, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/50">
-                          <td className="py-2 px-3 text-slate-400 font-bold">{idx + 1}</td>
-                          <td className="py-2 px-3">
-                            <input
-                              type="text"
-                              disabled={isReadOnly}
-                              placeholder="e.g. MH-04-AB-1234"
-                              value={t.truckNo}
-                              onChange={(e) => handleTruckChange(idx, "truckNo", e.target.value.toUpperCase())}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium disabled:bg-slate-50 disabled:opacity-75"
-                            />
-                          </td>
-                          <td className="py-2 px-3">
-                            <input
-                              type="text"
-                              disabled={isReadOnly}
-                              placeholder="e.g. Ramesh Kumar"
-                              value={t.driver}
-                              onChange={(e) => handleTruckChange(idx, "driver", e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
-                            />
-                          </td>
-                          <td className="py-2 px-3">
-                            <div className="flex items-center w-full bg-white border border-slate-200 rounded-md focus-within:border-indigo-500">
-                              <span className="pl-2.5 text-xs text-slate-500">+</span>
-                              <input
-                                type="tel"
-                                disabled={isReadOnly}
-                                placeholder="91 9876543210"
-                                value={String(t.mobile || "").replace(/^\+/, "")}
-                                onChange={(e) =>
-                                  handleTruckChange(
-                                    idx,
-                                    "mobile",
-                                    normalizeMobileNumber(e.target.value.replace(/^\+/, "")),
-                                  )
-                                }
-                                className="w-full min-w-0 px-1.5 py-1.5 bg-transparent text-xs outline-hidden disabled:opacity-75"
-                              />
-                            </div>
-                          </td>
-                          <td className="py-2 px-3">
-                            <input
-                              type="text"
-                              disabled={isReadOnly}
-                              placeholder="Remark"
-                              value={t.remark || ""}
-                              onChange={(e) => handleTruckChange(idx, "remark", e.target.value)}
-                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
-                            />
-                          </td>
-                          <td className="py-2 px-3">
-                            <select
-                              disabled={isReadOnly}
-                              value={t.dispatch || ""}
-                              onChange={(e) =>
-                                handleTruckChange(idx, "dispatch", e.target.value)
-                              }
-                              className="min-w-20 rounded border border-slate-200 px-2 py-1.5 disabled:bg-slate-50 disabled:opacity-75"
-                            >
-                              <option value="">Select</option>
-                              <option value="Yes">Yes</option>
-                              <option value="No">No</option>
-                            </select>
-                          </td>
+                  {(() => {
+                    const isWagonMode = shipmentMode === "Wagon";
+                    return (
+                      <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-xs">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-3 border-b border-slate-100 gap-2">
+                          <div className="flex items-center gap-2">
+                            {isWagonMode ? (
+                              <TrainTrack className="h-4 w-4 text-indigo-600" />
+                            ) : (
+                              <Truck className="h-4 w-4 text-indigo-600" />
+                            )}
+                            <span className="font-bold text-sm text-indigo-700">
+                              {isWagonMode ? "4. Wagon Details (Dynamic)" : "4. Truck Details (Dynamic)"}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                              {trucks.length}{" "}
+                              {isWagonMode
+                                ? trucks.length === 1 ? "Wagon" : "Wagons"
+                                : trucks.length === 1 ? "Truck" : "Trucks"}
+                            </span>
+                          </div>
                           {!isReadOnly && (
-                            <td className="py-2 px-3 text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveTruck(idx)}
-                                disabled={trucks.length === 1}
-                                className={`p-1.5 rounded-md transition-colors ${trucks.length === 1
-                                  ? "text-slate-300 cursor-not-allowed"
-                                  : "text-red-500 hover:bg-red-50 cursor-pointer"
-                                  }`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </td>
+                            <button
+                              type="button"
+                              onClick={handleAddTruck}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              <span>{isWagonMode ? "Add Wagon" : "Add Truck"}</span>
+                            </button>
                           )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                  </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs text-left">
+                            <thead>
+                              <tr className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                                <th className="py-2.5 px-3">#</th>
+                                <th className="py-2.5 px-3">{isWagonMode ? "Wagon No." : "Truck No."}</th>
+                                <th className="py-2.5 px-3">{isWagonMode ? "Wagon Name" : "Driver Name"}</th>
+                                <th className="py-2.5 px-3">{isWagonMode ? "Wagon Number" : "Mobile No."}</th>
+                                <th className="py-2.5 px-3">Remark</th>
+                                <th className="py-2.5 px-3">
+                                  Dispatch <span className="text-red-500">*</span>
+                                </th>
+                                {!isReadOnly && <th className="py-2.5 px-3 text-center">Action</th>}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {trucks.map((t, idx) => (
+                                <tr key={idx} className="hover:bg-slate-50/50">
+                                  <td className="py-2 px-3 text-slate-400 font-bold">{idx + 1}</td>
+                                  <td className="py-2 px-3">
+                                    <input
+                                      type="text"
+                                      disabled={isReadOnly}
+                                      placeholder={isWagonMode ? "e.g. WGN-01" : "e.g. MH-04-AB-1234"}
+                                      value={t.truckNo}
+                                      onChange={(e) => handleTruckChange(idx, "truckNo", e.target.value.toUpperCase())}
+                                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden font-medium disabled:bg-slate-50 disabled:opacity-75"
+                                    />
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    <input
+                                      type="text"
+                                      disabled={isReadOnly}
+                                      placeholder={isWagonMode ? "e.g. Covered Wagon" : "e.g. Ramesh Kumar"}
+                                      value={t.driver}
+                                      onChange={(e) => handleTruckChange(idx, "driver", e.target.value)}
+                                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
+                                    />
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    {isWagonMode ? (
+                                      <input
+                                        type="text"
+                                        disabled={isReadOnly}
+                                        placeholder="e.g. BOXN-12345"
+                                        value={t.mobile || ""}
+                                        onChange={(e) => handleTruckChange(idx, "mobile", e.target.value.toUpperCase())}
+                                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md font-mono text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
+                                      />
+                                    ) : (
+                                      <div className="flex items-center w-full bg-white border border-slate-200 rounded-md focus-within:border-indigo-500">
+                                        <span className="pl-2.5 text-xs text-slate-500">+</span>
+                                        <input
+                                          type="tel"
+                                          disabled={isReadOnly}
+                                          placeholder="91 9876543210"
+                                          value={String(t.mobile || "").replace(/^\+/, "")}
+                                          onChange={(e) =>
+                                            handleTruckChange(
+                                              idx,
+                                              "mobile",
+                                              normalizeMobileNumber(e.target.value.replace(/^\+/, "")),
+                                            )
+                                          }
+                                          className="w-full min-w-0 px-1.5 py-1.5 bg-transparent text-xs outline-hidden disabled:opacity-75"
+                                        />
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    <input
+                                      type="text"
+                                      disabled={isReadOnly}
+                                      placeholder="Remark"
+                                      value={t.remark || ""}
+                                      onChange={(e) => handleTruckChange(idx, "remark", e.target.value)}
+                                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:border-indigo-500 outline-hidden disabled:bg-slate-50 disabled:opacity-75"
+                                    />
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    <select
+                                      disabled={isReadOnly}
+                                      value={t.dispatch || ""}
+                                      onChange={(e) =>
+                                        handleTruckChange(idx, "dispatch", e.target.value)
+                                      }
+                                      className="min-w-20 rounded border border-slate-200 px-2 py-1.5 disabled:bg-slate-50 disabled:opacity-75"
+                                    >
+                                      <option value="">Select</option>
+                                      <option value="Yes">Yes</option>
+                                      <option value="No">No</option>
+                                    </select>
+                                  </td>
+                                  {!isReadOnly && (
+                                    <td className="py-2 px-3 text-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveTruck(idx)}
+                                        disabled={trucks.length === 1}
+                                        className={`p-1.5 rounded-md transition-colors ${trucks.length === 1
+                                          ? "text-slate-300 cursor-not-allowed"
+                                          : "text-red-500 hover:bg-red-50 cursor-pointer"
+                                          }`}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </td>
+                                  )}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </>
               )}
 

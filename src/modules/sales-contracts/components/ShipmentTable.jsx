@@ -2,8 +2,9 @@
 import React, { useEffect, useRef } from "react";
 import { Ship, CheckCircle2, AlertTriangle } from "lucide-react";
 import { getShipmentReferencePreview } from "../utils/shipmentReference";
-import { generateAutoShipments, isDivisible } from "../utils/scheduleUtils";
+import { distributeShipmentQuantities, generateAutoShipments, isDivisible } from "../utils/scheduleUtils";
 import { cleanNumberValue, formatInputVal, formatNumberDisplay } from "../utils/formatUtils";
+import { getContractTransportMode } from "../utils/quantityUtils";
 
 // Returns the unit label based on transport mode
 function getTransportUnitLabel(mode) {
@@ -35,22 +36,27 @@ export default function ShipmentTable({
     productItems.find((i) => parseFloat(i.qtyPerCount) > 0) || productItems[0];
   const qtyPerCount = parseFloat(activeItem?.qtyPerCount) || 0;
 
-  const isNotDivisible =
-    roundedProductQty > 0 &&
-    qtyPerCount > 0 &&
-    !isDivisible(roundedProductQty, qtyPerCount);
+  const isRailFreight = getContractTransportMode(form) === "RAIL";
 
-  // Shipment Count = Product Qty / Qty Per Count (only when exact multiple)
+  const isNotDivisible = isRailFreight
+    ? false
+    : roundedProductQty > 0 &&
+      qtyPerCount > 0 &&
+      !isDivisible(roundedProductQty, qtyPerCount);
+
+  // Shipment Count = Product Qty / Qty Per Count (or full + remainder rows for Rail Freight / Wagon)
   const calculatedCount =
     roundedProductQty > 0 && qtyPerCount > 0
       ? isNotDivisible
         ? 0
-        : Math.round(roundedProductQty / qtyPerCount)
+        : isRailFreight
+          ? distributeShipmentQuantities(roundedProductQty, qtyPerCount, { allowRemainder: true }).length
+          : Math.round(roundedProductQty / qtyPerCount)
       : Math.max(1, parseInt(form.numShipments, 10) || 1);
 
   const shipments = form.shipments || [];
   const transportUnitLabel = getTransportUnitLabel(
-    form.originTransportMode || form.destinationTransportMode
+    form.originTransportMode || form.destinationTransportMode || form.transportMode
   );
 
   const totalShipmentQty = shipments.reduce(
@@ -62,13 +68,13 @@ export default function ShipmentTable({
     0
   );
 
-  // Trigger signature: ONLY product quantity, qtyPerCount, item count changes trigger regeneration
+  // Trigger signature: ONLY product quantity, qtyPerCount, item count, or Rail exception mode changes trigger regeneration
   const itemsSignature =
     productItems
       .map(
         (i) => `${parseFloat(i.quantity) || 0}_${parseFloat(i.qtyPerCount) || 0}`
       )
-      .join("|") + `_len_${productItems.length}`;
+      .join("|") + `_len_${productItems.length}_rail_${isRailFreight}`;
 
   const prevSignatureRef = useRef(null);
   const isInitialMount = useRef(true);
@@ -85,7 +91,7 @@ export default function ShipmentTable({
         return;
       }
 
-      // If new form and qtyPerCount + totalProductQty exist, auto generate only if divisible
+      // If new form and qtyPerCount + totalProductQty exist, auto generate when allowed
       if (roundedProductQty > 0 && qtyPerCount > 0 && !isNotDivisible) {
         setForm((f) => ({
           ...f,
@@ -97,13 +103,14 @@ export default function ShipmentTable({
             existingShipments: f.shipments || [],
             currencyCode: f.currencyCode,
             defaultShipmentDate: f.contractDate || "",
+            allowRemainder: isRailFreight,
           }),
         }));
       }
       return;
     }
 
-    // Trigger ONLY when Product Items change (quantity, qtyPerCount, added, removed)
+    // Trigger ONLY when Product Items change (quantity, qtyPerCount, added, removed) or Rail mode toggles
     if (prevSignatureRef.current !== itemsSignature) {
       prevSignatureRef.current = itemsSignature;
 
@@ -132,6 +139,7 @@ export default function ShipmentTable({
           existingShipments: f.shipments || [],
           currencyCode: f.currencyCode,
           defaultShipmentDate: f.contractDate || "",
+          allowRemainder: isRailFreight,
         }),
       }));
     }
@@ -141,6 +149,7 @@ export default function ShipmentTable({
     qtyPerCount,
     calculatedCount,
     isNotDivisible,
+    isRailFreight,
     isView,
     setForm,
     form.shipments,

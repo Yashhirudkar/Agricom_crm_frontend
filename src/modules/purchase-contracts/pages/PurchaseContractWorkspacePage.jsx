@@ -30,6 +30,8 @@ import PurchaseAttachmentsSection from "../components/PurchaseAttachmentsSection
 import PurchaseFinancialSummary from "../components/PurchaseFinancialSummary";
 import BusinessReference from "@/components/common/BusinessReference";
 import { evaluateFreightRequired } from "@/modules/shipments/utils/freightRuleEngine";
+import { getContractTransportMode } from "@/modules/sales-contracts/utils/quantityUtils";
+import { useEscapeKey } from "@/hooks/useEscapeKey";
 
 export default function PurchaseContractWorkspacePage({ contractId, isNew = false }) {
   const router = useRouter();
@@ -123,6 +125,12 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
   const [isShipmentsInitialized, setIsShipmentsInitialized] = useState(false);
   const [shipmentScheduleData, setShipmentScheduleData] = useState({});
   const [saving, setSaving] = useState(false);
+
+  const handleBackToContracts = () => {
+    router.push("/sales/purchase-contracts");
+  };
+
+  useEscapeKey(handleBackToContracts, !saving);
 
   const allAvailableShipments = contract?.salesContract?.shipments || [];
 
@@ -557,7 +565,12 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
           return;
         }
 
-        if (qtyPerCount > 0) {
+        const isRailFreight =
+          getContractTransportMode(contract?.salesContract || {}) === "RAIL";
+
+        if (isRailFreight) {
+          // Skip exact multiple validation for Rail Freight / Wagon
+        } else if (qtyPerCount > 0) {
           const rem = q % qtyPerCount;
           const isMultiple = Math.abs(rem) < 0.0001 || Math.abs(rem - qtyPerCount) < 0.0001;
           if (!isMultiple) {
@@ -737,7 +750,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
             The requested contract #{id} does not exist or has been removed.
           </p>
           <button
-            onClick={() => router.push("/sales/purchase-contracts")}
+            onClick={handleBackToContracts}
             className="px-4 py-2 text-xs font-semibold text-white bg-[#007aff] hover:bg-blue-600 rounded-xl transition-colors inline-flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -776,7 +789,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
         <div className="flex items-center justify-between max-w-7xl mx-auto bg-white border border-gray-100 rounded-xl p-2 shadow-xs">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => router.push("/sales/purchase-contracts")}
+              onClick={handleBackToContracts}
               className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -826,7 +839,7 @@ export default function PurchaseContractWorkspacePage({ contractId, isNew = fals
             ) : (
               <>
                 <button
-                  onClick={() => router.push("/sales/purchase-contracts")}
+                  onClick={handleBackToContracts}
                   className="px-3 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel

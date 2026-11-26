@@ -85,6 +85,7 @@ export default function TransportDrawer({
   targetShipmentRef = null,
   fromSource = null,
   shipment = null,
+  selectedShipmentIds = [],
 }) {
   useEscapeKey(onClose, isOpen);
 
@@ -143,9 +144,41 @@ export default function TransportDrawer({
     return null;
   }, [fromSource]);
 
+  const effectiveSelectedShipmentIds = useMemo(() => {
+    const rawIds = Array.isArray(selectedShipmentIds) ? selectedShipmentIds : [];
+    return Array.from(
+      new Set(
+        rawIds
+          .map((id) => Number(id))
+          .filter((id) => Number.isSafeInteger(id) && id > 0)
+      )
+    );
+  }, [selectedShipmentIds]);
+
+  const scOriginTransportMode =
+    details?.salesContract?.originTransportMode ||
+    shipment?.salesContract?.originTransportMode ||
+    enquiry?.salesContract?.originTransportMode ||
+    "";
+
+  const isRailOriginContract = useMemo(() => {
+    const mode = String(scOriginTransportMode || "").trim().toLowerCase();
+    if (!mode) return false;
+    return mode === "rail" || mode === "wagon" || mode.includes("rail") || mode.includes("wagon");
+  }, [scOriginTransportMode]);
+
   const isSingleShipmentMode = Boolean(
     effectiveTargetShipmentId ||
     effectiveFrom === "shipments"
+  );
+
+  const isRailMultiSyncActive = Boolean(
+    effectiveFrom === "shipments" &&
+    isSingleShipmentMode &&
+    isRailOriginContract &&
+    effectiveSelectedShipmentIds.length > 1 &&
+    effectiveTargetShipmentId &&
+    effectiveSelectedShipmentIds.includes(Number(effectiveTargetShipmentId))
   );
 
   const isSingleShipmentView = isSingleShipmentMode;
@@ -593,12 +626,72 @@ export default function TransportDrawer({
   // Add/Edit Quote
   const handleSaveQuote = async (payload) => {
     if (isReadOnly || !details?.logistics?.id) return;
+    const shouldSyncSelectedRail = Boolean(
+      isRailMultiSyncActive &&
+      payload?.shipmentId &&
+      effectiveSelectedShipmentIds.includes(Number(payload.shipmentId))
+    );
+    const requestPayload = shouldSyncSelectedRail
+      ? {
+          ...payload,
+          syncWorkflowSource: "shipments_management",
+          syncShipmentIds: effectiveSelectedShipmentIds,
+        }
+      : payload;
+
     if (selectedQuote) {
-      await logisticsApi.updateFreightQuote(details.logistics.id, selectedQuote.id, payload);
-      toast.success("Freight quote revised (New version created).");
+      const res = await logisticsApi.updateFreightQuote(
+        details.logistics.id,
+        selectedQuote.id,
+        requestPayload
+      );
+      const syncSummary = res?.data?.syncSummary;
+      if (syncSummary && shouldSyncSelectedRail) {
+        if (syncSummary.failedCount > 0) {
+          toast.success(
+            syncSummary.appliedCount > 0
+              ? `Freight quote revised and synced to ${syncSummary.appliedCount + 1} of ${syncSummary.totalSelectedCount} selected Rail shipments.`
+              : "Freight quote revised for current shipment."
+          );
+          toast.error(
+            `Could not update freight quote on ${syncSummary.failedCount} sibling Rail shipment(s).`
+          );
+        } else if (syncSummary.appliedCount > 0) {
+          toast.success(
+            `Freight quote revised and updated across all ${syncSummary.appliedCount + 1} selected Rail shipments.`
+          );
+        } else {
+          toast.success("Freight quote revised (New version created).");
+        }
+      } else {
+        toast.success("Freight quote revised (New version created).");
+      }
     } else {
-      await logisticsApi.addFreightQuote(details.logistics.id, payload);
-      toast.success("Freight quote added to evaluation matrix.");
+      const res = await logisticsApi.addFreightQuote(
+        details.logistics.id,
+        requestPayload
+      );
+      const syncSummary = res?.data?.syncSummary;
+      if (syncSummary && shouldSyncSelectedRail) {
+        if (syncSummary.failedCount > 0) {
+          toast.success(
+            syncSummary.appliedCount > 0
+              ? `Freight quote added and applied to ${syncSummary.appliedCount + 1} of ${syncSummary.totalSelectedCount} selected Rail shipments.`
+              : "Freight quote added for current shipment."
+          );
+          toast.error(
+            `Could not apply freight quote to ${syncSummary.failedCount} sibling Rail shipment(s).`
+          );
+        } else if (syncSummary.appliedCount > 0) {
+          toast.success(
+            `Freight quote added and applied to all ${syncSummary.appliedCount + 1} selected Rail shipments.`
+          );
+        } else {
+          toast.success("Freight quote added to evaluation matrix.");
+        }
+      } else {
+        toast.success("Freight quote added to evaluation matrix.");
+      }
     }
     loadDetails();
   };
@@ -974,6 +1067,9 @@ export default function TransportDrawer({
                       onSetPreferred={handleSetPreferred}
                       expiringSoonIds={expiringSoonIds}
                       getPartnerInitials={getPartnerInitials}
+                      syncShipmentCount={
+                        isRailMultiSyncActive ? effectiveSelectedShipmentIds.length : 0
+                      }
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-white rounded-2xl border-2 border-dashed border-rose-200 m-2">

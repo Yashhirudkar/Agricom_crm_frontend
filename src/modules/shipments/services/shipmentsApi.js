@@ -17,7 +17,13 @@ export const shipmentsApi = {
       params,
       responseType: "blob",
     }),
-  getStuffingExecution: (id) => axiosClient.get(`/sales-contracts/shipments/${id}/stuffing-execution`),
+  getStuffingExecution: (id, shipmentIds) =>
+    axiosClient.get(
+      `/sales-contracts/shipments/${id}/stuffing-execution`,
+      Array.isArray(shipmentIds) && shipmentIds.length > 1
+        ? { params: { shipmentIds: shipmentIds.join(",") } }
+        : undefined,
+    ),
   saveStuffingExecution: (id, data) => axiosClient.post(`/sales-contracts/shipments/${id}/stuffing-execution`, data),
   uploadStuffingAttachment: (id, formData) =>
     axiosClient.post(`/sales-contracts/shipments/${id}/stuffing-execution/attachments`, formData, {
