@@ -75,6 +75,15 @@ export default function NostroBankModal({
     setErrors({});
   }, [initialData, preselectedDomesticBankId, domesticBanks, companies, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   // Filter domestic banks by selected company if company is chosen
