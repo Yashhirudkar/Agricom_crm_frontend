@@ -77,12 +77,28 @@ export function lookupFreightMatrix(scIncoterm, pcIncoterm) {
   return typeof val === "boolean" ? val : false;
 }
 
+export const FREIGHT_INCLUDED_BOTH_CONTRACTS_INCOTERMS = ["CFR", "CNF", "CIF"];
+
 export function evaluateFreightRequired(pcShipmentType, scShipmentType, shipmentId) {
   const scCode = extractIncotermCode(scShipmentType);
   const pcCode = extractIncotermCode(pcShipmentType);
 
   // Scenario A – Contract Flow: Both Sales and Purchase Incoterms exist
   if (scCode && pcCode) {
+    // Isolated rule: if both Purchase and Sales contracts already include freight (CFR/CNF/CIF), freight is not required.
+    if (
+      FREIGHT_INCLUDED_BOTH_CONTRACTS_INCOTERMS.includes(pcCode) &&
+      FREIGHT_INCLUDED_BOTH_CONTRACTS_INCOTERMS.includes(scCode)
+    ) {
+      return {
+        matrixResult: false,
+        freightRequired: false,
+        salesIncoterm: scCode,
+        purchaseIncoterm: pcCode,
+        reason: `Both contracts already include freight: SC ${scCode} x PC ${pcCode} = NO.`,
+      };
+    }
+
     const matrixResult = lookupFreightMatrix(scCode, pcCode);
     const reason = `Compatibility Matrix: SC ${scCode} x PC ${pcCode} = ${matrixResult ? "YES" : "NO"}.`;
 
