@@ -1,32 +1,45 @@
 "use client";
 
 import React from "react";
-import { AlertTriangle, Lock, Loader2 } from "lucide-react";
+import { AlertTriangle, Lock, Loader2, ArrowLeft } from "lucide-react";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 
+/**
+ * Confirmation step before permanently locking the month's target.
+ * Cannot be dismissed to dashboard; only allows going Back to edit or Confirming.
+ */
 export default function ConfirmMonthlyTargetModal({
   isOpen,
-  onClose,
+  onBack,
   onConfirm,
   targetValue,
   monthName,
   year,
   isSubmitting,
 }) {
-  useEscapeKey(onClose, isOpen);
+  // Swallow Escape key so the modal cannot be closed under any circumstance
+  useEscapeKey(() => {}, isOpen);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-monthly-target-title"
+        className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
+      >
         {/* Warning Banner */}
         <div className="bg-amber-50 border-b border-amber-100 px-6 py-4 flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center flex-shrink-0">
             <AlertTriangle className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-gray-900 leading-tight">
+            <h3
+              id="confirm-monthly-target-title"
+              className="text-base font-bold text-gray-900 leading-tight"
+            >
               Confirm Monthly Target
             </h3>
             <p className="text-xs text-amber-700 font-medium mt-0.5">
@@ -63,21 +76,22 @@ export default function ConfirmMonthlyTargetModal({
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          {/* Action buttons — Back returns to edit input, never closes gate */}
+          <div className="flex items-center justify-between gap-3 pt-2">
             <button
               type="button"
               disabled={isSubmitting}
-              onClick={onClose}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50"
+              onClick={onBack}
+              className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer"
             >
-              Cancel
+              <ArrowLeft className="h-4 w-4" />
+              Back
             </button>
             <button
               type="button"
               disabled={isSubmitting}
               onClick={onConfirm}
-              className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm hover:shadow transition-all flex items-center gap-2 disabled:opacity-70"
+              className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm hover:shadow transition-all flex items-center gap-2 disabled:opacity-70 cursor-pointer"
             >
               {isSubmitting ? (
                 <>

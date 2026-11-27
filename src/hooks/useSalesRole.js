@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useSelector } from "react-redux";
 import { selectUser, selectUserType } from "@/store/slices/authSlice";
+import { selectActiveCompanyId } from "@/store/slices/companyContextSlice";
 
 /**
  * Hook to strictly determine if the current logged-in user is a Sales user.
@@ -18,6 +19,7 @@ import { selectUser, selectUserType } from "@/store/slices/authSlice";
 export function useSalesRole() {
   const user = useSelector(selectUser);
   const userType = useSelector(selectUserType);
+  const activeCompanyIdFromStore = useSelector(selectActiveCompanyId);
 
   const isSales = useMemo(() => {
     if (!user) return false;
@@ -34,9 +36,10 @@ export function useSalesRole() {
 
     // 2. Check active workspace role
     const activeCompanyId =
-      typeof window !== "undefined"
+      activeCompanyIdFromStore ||
+      (typeof window !== "undefined"
         ? localStorage.getItem("activeCompanyId")
-        : null;
+        : null);
 
     const workspaces = user.workspaces || [];
     const activeWorkspace =
@@ -69,9 +72,18 @@ export function useSalesRole() {
     });
 
     return hasSalesRole && !hasExcludedRole;
-  }, [user, userType]);
+  }, [user, userType, activeCompanyIdFromStore]);
 
-  return { isSales, user };
+  const activeCompanyId =
+    activeCompanyIdFromStore ||
+    (typeof window !== "undefined"
+      ? localStorage.getItem("activeCompanyId")
+      : null) ||
+    user?.companyId?.toString() ||
+    user?.workspaces?.[0]?.id?.toString() ||
+    null;
+
+  return { isSales, user, activeCompanyId };
 }
 
 export default useSalesRole;

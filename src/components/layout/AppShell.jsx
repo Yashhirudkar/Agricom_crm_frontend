@@ -29,6 +29,8 @@ import { toast } from "sonner";
 import ChatSocketProvider from "@/modules/chat/components/ChatSocketProvider";
 import FloatingChatLauncher from "@/modules/chat/components/Common/FloatingChatLauncher";
 import SalesMonthlyTargetWidget from "@/components/monthly-target/SalesMonthlyTargetWidget";
+import SalesMonthlyTargetGate from "@/components/monthly-target/SalesMonthlyTargetGate";
+import { MonthlySalesTargetProvider } from "@/hooks/useMonthlySalesTarget";
 
 const PUBLIC_ROUTES = ["/login", "/accept-invitation", "/select-company"];
 
@@ -352,23 +354,27 @@ export default function AppShellClient({ children }) {
   return (
     <ChatSocketProvider>
       {isSwitching && (
-        <div className="fixed inset-0 z-[9999] bg-white/70 backdrop-blur-xs flex flex-col items-center justify-center animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[10001] bg-white/70 backdrop-blur-xs flex flex-col items-center justify-center animate-in fade-in duration-200">
           <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
           <p className="text-gray-900 text-sm font-bold tracking-tight">Switching Company Context...</p>
           <p className="text-gray-500 text-xs mt-1">Please wait while we refresh your workspace permissions and data.</p>
         </div>
       )}
-      <Header />
-      <div className="flex-1 min-w-0 flex overflow-hidden h-full">
-        <Sidebar />
-        <main className={`flex-1 min-w-0 max-w-full overflow-x-hidden overflow-y-auto h-full ${isMastersPage ? "" : "app-uppercase-ui"}`}>{children}</main>
-      </div>
-      <div className="print:hidden">
-        <CommandPalette />
-        <FollowUpHeaderDrawer isOpen={isFollowUpsOpen} onClose={() => setIsFollowUpsOpen(false)} />
-        <FloatingChatLauncher />
-        <SalesMonthlyTargetWidget />
-      </div>
+      <MonthlySalesTargetProvider>
+        <SalesMonthlyTargetGate>
+          <Header />
+          <div className="flex-1 min-w-0 flex overflow-hidden h-full">
+            <Sidebar />
+            <main className={`flex-1 min-w-0 max-w-full overflow-x-hidden overflow-y-auto h-full ${isMastersPage ? "" : "app-uppercase-ui"}`}>{children}</main>
+          </div>
+          <div className="print:hidden">
+            <CommandPalette />
+            <FollowUpHeaderDrawer isOpen={isFollowUpsOpen} onClose={() => setIsFollowUpsOpen(false)} />
+            <FloatingChatLauncher />
+            <SalesMonthlyTargetWidget />
+          </div>
+        </SalesMonthlyTargetGate>
+      </MonthlySalesTargetProvider>
     </ChatSocketProvider>
   );
 }

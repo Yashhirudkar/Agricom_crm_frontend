@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import axiosClient from "@/lib/axios";
 import { toast } from "@/lib/toast";
+import DnbReportImportBox from "./dnb-import/DnbReportImportBox";
+import { useDnbAnnualSalesAutoFill } from "./dnb-import/useDnbAnnualSalesAutoFill";
 
 const RISK_FACTOR_STYLES = {
   LOW: {
@@ -162,6 +164,8 @@ export default function PartnerDnbTab({
   isEditMode,
   dnbDraft,
   onDnbDraftChange,
+  onApplyPartnerImport,
+  onSwitchToExistingPartner,
 }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -193,6 +197,58 @@ export default function PartnerDnbTab({
   const watchAllFields = watch();
   const watchFailureScore = watch("failureScore");
   const mappedScore = getFailureScoreMapping(watchFailureScore);
+
+  const handleAutoFillDnbFields = useCallback(
+    (dnbFields) => {
+      if (!dnbFields) return;
+      const apply = (name, val) => {
+        if (val !== null && val !== undefined && String(val).trim() !== "") {
+          setValue(name, String(val), {
+            shouldValidate: true,
+            shouldDirty: true,
+          });
+        }
+      };
+
+      apply("yearOfEstablishment", dnbFields.yearOfEstablishment);
+      apply("establishmentDate", dnbFields.establishmentDate);
+      apply("reportDate", dnbFields.reportDate);
+      apply("dnbRating", dnbFields.dnbRating);
+      apply("annualTurnover", dnbFields.annualTurnover);
+      apply("creditLimit", dnbFields.creditLimit);
+      apply("paydex", dnbFields.paydex);
+      apply("failureScore", dnbFields.failureScore);
+    },
+    [setValue]
+  );
+
+  const {
+    importState,
+    isProcessing: isOcrProcessing,
+    processFile: processDnbImportFile,
+    resetImport: resetDnbImport,
+    syncManualEditCheck,
+    updateExtractedField,
+    acceptSuggestedField,
+    acceptAllSuggestions,
+    dismissDuplicateAsCreateNew,
+    getMappedFieldsForReport,
+  } = useDnbAnnualSalesAutoFill({
+    partnerId,
+    onAutoFillDnbFields: handleAutoFillDnbFields,
+    onAutoFillPartnerFields: onApplyPartnerImport,
+  });
+
+  const hasActiveImportRef = React.useRef(false);
+  useEffect(() => {
+    hasActiveImportRef.current = Boolean(
+      importState.status === "success" && importState.report
+    );
+  }, [importState.status, importState.report]);
+
+  useEffect(() => {
+    syncManualEditCheck(watchAllFields.annualTurnover);
+  }, [watchAllFields.annualTurnover, syncManualEditCheck]);
 
   // Auto-sync derived overall riskFactor (LOW / MODERATE / HIGH) from Failure Score mapping
   useEffect(() => {
@@ -242,7 +298,9 @@ export default function PartnerDnbTab({
         "";
       if (estYear) {
         setPartnerYearOfEst(String(estYear));
-        setValue("yearOfEstablishment", String(estYear));
+        if (!hasActiveImportRef.current) {
+          setValue("yearOfEstablishment", String(estYear));
+        }
       }
 
       const turnover =
@@ -251,10 +309,14 @@ export default function PartnerDnbTab({
         "";
       if (turnover !== "" && turnover !== null && turnover !== undefined) {
         setPartnerAnnualTurnover(String(turnover));
-        setValue("annualTurnover", String(turnover));
+        if (!hasActiveImportRef.current) {
+          setValue("annualTurnover", String(turnover));
+        }
       }
 
-      if (fetchedReports.length === 0) {
+      if (hasActiveImportRef.current) {
+        setIsCreatingNew(true);
+      } else if (fetchedReports.length === 0) {
         setIsCreatingNew(true);
       } else {
         setIsCreatingNew(false);
@@ -311,6 +373,7 @@ export default function PartnerDnbTab({
     });
     setSelectedFile(null);
     setFileError("");
+    resetDnbImport();
     setIsCreatingNew(true);
   };
 
@@ -451,6 +514,7 @@ export default function PartnerDnbTab({
       toast.success("✔ D&B Report Saved Successfully");
       setIsCreatingNew(false);
       setSelectedFile(null);
+      resetDnbImport();
       await loadReports();
     } catch (err) {
       console.error(err);
@@ -522,6 +586,37 @@ export default function PartnerDnbTab({
           </div>
 
           <div className="space-y-6">
+            {/* Isolated AI/OCR D&B Report Import Enhancement */}
+            <DnbReportImportBox
+              importState={importState}
+              isProcessing={isOcrProcessing}
+              onFileSelected={processDnbImportFile}
+              onReset={resetDnbImport}
+              onUpdateField={updateExtractedField}
+              onAcceptSuggestion={acceptSuggestedField}
+              onAcceptAllSuggestions={acceptAllSuggestions}
+              onDuplicateUpdateExisting={(existingPartnerId, extractedReport) => {
+                if (typeof onSwitchToExistingPartner === "function" && extractedReport) {
+                  const mapped = getMappedFieldsForReport(extractedReport);
+                  onSwitchToExistingPartner(existingPartnerId, mapped.partnerFields);
+                }
+              }}
+              onDuplicateCreateNew={dismissDuplicateAsCreateNew}
+              canAttachAsReportFile={Boolean(
+                !selectedFile &&
+                  importState.rawFile &&
+                  ["pdf", "jpg", "jpeg", "png"].includes(
+                    (importState.rawFile.name || "").split(".").pop()?.toLowerCase() || ""
+                  )
+              )}
+              onAttachAsReportFile={(file) => {
+                if (file) {
+                  handleFileChange({ target: { files: [file] } });
+                  toast.success("Attached imported document to D&B Report Upload.");
+                }
+              }}
+            />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* 1. Year of Establishment */}
               <div>

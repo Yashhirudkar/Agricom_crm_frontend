@@ -510,8 +510,10 @@ export default function ContractFormPage({ editId, viewId }) {
         // Currency from Enquiry
         const enquiryCurrency = eq.currency || "";
 
-        // Contract Date: default to today
-        const todayStr = new Date().toISOString().split("T")[0];
+        // Contract Date: default to today in IST
+        const todayStr = new Date().toLocaleDateString("en-CA", {
+          timeZone: "Asia/Kolkata",
+        });
 
         // Map product items from Enquiry
         let mappedItems = [];

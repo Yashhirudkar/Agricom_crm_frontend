@@ -205,6 +205,20 @@ function PartnersContent() {
     setIsModalOpen(true);
   };
 
+  const handleSelectExistingPartner = async (existingPartnerId) => {
+    try {
+      const res = await axiosClient.get(`/masters/partners/${existingPartnerId}`);
+      const partner = res.data?.data ?? res.data;
+      if (!partner) return;
+      setEditData(partner);
+      setIsEditMode(true);
+      setDrawerInitialTab("dnb");
+      setIsModalOpen(true);
+    } catch (err) {
+      showToast("Failed to load existing partner record", "error");
+    }
+  };
+
   const openFollowUpDrawer = (item) => {
     setFollowUpPartner(item);
     setIsFollowUpDrawerOpen(true);
@@ -425,6 +439,7 @@ function PartnersContent() {
         countries={countries}
         partnerRoles={partnerRoles}
         products={products}
+        onSelectExistingPartner={handleSelectExistingPartner}
       />
 
       <PartnerFollowUpDrawer

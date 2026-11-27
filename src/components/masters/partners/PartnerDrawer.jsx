@@ -31,6 +31,7 @@ import DynamicFieldRenderer from "@/components/common/DynamicFieldRenderer";
 import { City } from "country-state-city";
 import CountrySelect from "@/components/common/CountrySelect";
 import PartnerDnbTab from "./PartnerDnbTab";
+import { buildDnbReferenceNotes } from "./dnb-import/dnbImportApi";
 import { getAlpha2Code } from "@/lib/countryUtils";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 
@@ -94,6 +95,7 @@ function PartnerDrawer({
   countries = [],
   partnerRoles = [],
   products = [],
+  onSelectExistingPartner,
 }) {
   const [isEditMode, setIsEditMode] = useState(initialEditMode);
   const [activeTab, setActiveTab] = useState("general");
@@ -116,6 +118,7 @@ function PartnerDrawer({
     handleSubmit,
     reset,
     setValue,
+    getValues,
     formState: { errors, isDirty },
   } = useForm({
     defaultValues: {
@@ -162,6 +165,97 @@ function PartnerDrawer({
   const [dnbDraft, setDnbDraft] = useState(null);
   const [productInfoText, setProductInfoText] = useState("");
   const [savingProductInfo, setSavingProductInfo] = useState(false);
+  const pendingDnbImportRef = React.useRef(null);
+
+  const applyDnbImportToPartnerForm = React.useCallback(
+    (partnerFields) => {
+      if (!partnerFields) return;
+      const setIfPresent = (field, val) => {
+        if (val !== null && val !== undefined && String(val).trim() !== "") {
+          setValue(field, String(val), { shouldDirty: true, shouldValidate: true });
+        }
+      };
+
+      setIfPresent("entityName", partnerFields.entityName);
+      setIfPresent("country", partnerFields.country);
+      setIfPresent("city", partnerFields.city);
+      setIfPresent("address", partnerFields.address);
+      setIfPresent("website", partnerFields.website);
+      setIfPresent("contactEmail", partnerFields.contactEmail);
+      setIfPresent("taxId", partnerFields.taxId);
+      setIfPresent("yearOfEstablishment", partnerFields.yearOfEstablishment);
+      setIfPresent("annualTurnover", partnerFields.annualTurnover);
+
+      if (partnerFields.report) {
+        const nextNotes = buildDnbReferenceNotes(
+          partnerFields.report,
+          getValues("productNotes")
+        );
+        if (nextNotes) {
+          setValue("productNotes", nextNotes, { shouldDirty: true });
+        }
+      }
+
+      const existingContacts = getValues("contacts") || [];
+      const nonEmptyContacts = existingContacts.filter(
+        (c) => c && (c.name?.trim() || c.email?.trim() || c.phone?.trim())
+      );
+
+      const directors = Array.isArray(partnerFields.directors)
+        ? partnerFields.directors
+        : [];
+      const extractedPhone = partnerFields.phone || "";
+      const extractedEmail = partnerFields.contactEmail || "";
+
+      const candidates =
+        directors.length > 0
+          ? directors.map((d, idx) => ({
+              name: d.name,
+              designation: d.role || "Director / Key Principal",
+              phone: idx === 0 ? extractedPhone : "",
+              email: idx === 0 ? extractedEmail : "",
+              communicationType: idx === 0 && extractedPhone ? "Phone" : "",
+              isPrimary: idx === 0 && nonEmptyContacts.length === 0,
+            }))
+          : extractedPhone || extractedEmail
+            ? [
+                {
+                  name: partnerFields.entityName || "Primary Contact",
+                  designation: "Primary Contact",
+                  phone: extractedPhone,
+                  email: extractedEmail,
+                  communicationType: extractedPhone ? "Phone" : "",
+                  isPrimary: nonEmptyContacts.length === 0,
+                },
+              ]
+            : [];
+
+      if (candidates.length > 0) {
+        const merged = [...nonEmptyContacts];
+        for (const cand of candidates) {
+          const dup = merged.some(
+            (ex) =>
+              (cand.name && ex.name?.toLowerCase() === cand.name.toLowerCase()) ||
+              (cand.email && ex.email?.toLowerCase() === cand.email.toLowerCase())
+          );
+          if (!dup) merged.push(cand);
+        }
+        setValue("contacts", merged, { shouldDirty: true });
+      }
+    },
+    [setValue, getValues]
+  );
+
+  const handleDuplicateSwitchToExisting = React.useCallback(
+    async (existingPartnerId, partnerFields) => {
+      if (!existingPartnerId || typeof onSelectExistingPartner !== "function") {
+        return;
+      }
+      pendingDnbImportRef.current = partnerFields || null;
+      await onSelectExistingPartner(existingPartnerId);
+    },
+    [onSelectExistingPartner]
+  );
 
   const handleSaveProductInfo = async () => {
     if (!editData?.id) return;
@@ -357,6 +451,14 @@ function PartnerDrawer({
             : [],
         });
         setProductInfoText(editData.productNotes || "");
+        if (pendingDnbImportRef.current) {
+          const pending = pendingDnbImportRef.current;
+          pendingDnbImportRef.current = null;
+          setTimeout(() => {
+            applyDnbImportToPartnerForm(pending);
+            toast.success("Loaded existing partner and mapped D&B report fields for review.");
+          }, 0);
+        }
       } else {
         reset({
           entityName: "",
@@ -381,7 +483,7 @@ function PartnerDrawer({
         setProductInfoText("");
       }
     }
-  }, [isOpen, editData, reset]);
+  }, [isOpen, editData, reset, applyDnbImportToPartnerForm]);
 
   const onFormSubmit = (data) => {
     const payload = { ...data };
@@ -827,6 +929,8 @@ function PartnerDrawer({
                   isEditMode={isEditMode}
                   dnbDraft={dnbDraft}
                   onDnbDraftChange={setDnbDraft}
+                  onApplyPartnerImport={applyDnbImportToPartnerForm}
+                  onSwitchToExistingPartner={handleDuplicateSwitchToExisting}
                 />
               )}
 
@@ -1195,6 +1299,8 @@ function PartnerDrawer({
                   isEditMode={isEditMode}
                   dnbDraft={dnbDraft}
                   onDnbDraftChange={setDnbDraft}
+                  onApplyPartnerImport={applyDnbImportToPartnerForm}
+                  onSwitchToExistingPartner={handleDuplicateSwitchToExisting}
                 />
               )}
 
