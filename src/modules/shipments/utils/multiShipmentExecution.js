@@ -1,7 +1,7 @@
 /**
- * Multi-shipment execution eligibility helpers strictly for Truck (Road Transport)
- * and Rail Freight / Wagon Sales Contracts.
- * Sea, Air, Bulk, Container, Courier, and all other transport modes remain single-shipment only.
+ * Multi-shipment execution eligibility helpers across all transport modes
+ * (Truck/Road, Rail/Wagon, Sea/Container, Bulk, Air, Courier) for shipments
+ * belonging to the same Sales Contract.
  */
 
 import {
@@ -23,21 +23,7 @@ export function getOriginTransportModeValue(shipment) {
 
 export function getMultiExecutionTransportCategory(shipment) {
   const mode = getOriginTransportModeValue(shipment);
-  if (!mode) return null;
-
-  if (
-    mode.includes("air") ||
-    mode.includes("sea") ||
-    mode.includes("ocean") ||
-    mode.includes("bulk") ||
-    mode.includes("container") ||
-    mode.includes("fcl") ||
-    mode.includes("vessel") ||
-    mode.includes("ship") ||
-    mode.includes("courier")
-  ) {
-    return null;
-  }
+  if (!mode) return "sea";
 
   if (mode.includes("rail") || mode.includes("wagon")) {
     return "rail";
@@ -47,7 +33,30 @@ export function getMultiExecutionTransportCategory(shipment) {
     return "truck";
   }
 
-  return null;
+  if (mode.includes("air")) {
+    return "air";
+  }
+
+  if (mode.includes("bulk")) {
+    return "bulk";
+  }
+
+  if (mode.includes("courier")) {
+    return "courier";
+  }
+
+  if (
+    mode.includes("sea") ||
+    mode.includes("ocean") ||
+    mode.includes("container") ||
+    mode.includes("fcl") ||
+    mode.includes("vessel") ||
+    mode.includes("ship")
+  ) {
+    return "sea";
+  }
+
+  return "other";
 }
 
 export function hasLinkedPurchaseContract(shipment) {
@@ -109,6 +118,12 @@ export function resolveSelectedShipmentsForExecution(
   selectedShipmentObjects = [],
 ) {
   if (!clickedShipment?.id) return [];
+  if (
+    Array.isArray(clickedShipment.stuffingGroupShipments) &&
+    clickedShipment.stuffingGroupShipments.length > 1
+  ) {
+    return clickedShipment.stuffingGroupShipments;
+  }
   if (!isEligibleForMultiShipmentExecution(selectedShipmentObjects)) {
     return [clickedShipment];
   }

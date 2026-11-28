@@ -44,6 +44,27 @@ const resolveBackendUrl = (url) => {
 
 export default function ExportInvoiceForm({ initialData = null, isEdit = false }) {
   const router = useRouter();
+  const isMultiShipment = Boolean(
+    initialData?.isMultiShipment ||
+      initialData?.stuffingGroupId ||
+      initialData?.metadata?.isMultiShipment ||
+      initialData?.metadata?.stuffingGroupId ||
+      (Array.isArray(initialData?.shipmentIds) && initialData.shipmentIds.length > 1) ||
+      (Array.isArray(initialData?.metadata?.shipmentIds) &&
+        initialData.metadata.shipmentIds.length > 1),
+  );
+  const stuffingGroupId =
+    initialData?.stuffingGroupId ?? initialData?.metadata?.stuffingGroupId ?? null;
+  const groupShipmentIds = Array.isArray(initialData?.shipmentIds)
+    ? initialData.shipmentIds
+    : Array.isArray(initialData?.metadata?.shipmentIds)
+      ? initialData.metadata.shipmentIds
+      : [];
+  const groupShipmentRefs = Array.isArray(initialData?.shipmentReferences)
+    ? initialData.shipmentReferences
+    : Array.isArray(initialData?.metadata?.shipmentReferences)
+      ? initialData.metadata.shipmentReferences
+      : [];
 
   // Form State
   const [formData, setFormData] = useState({
@@ -501,8 +522,8 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
         ...prev.goodsItems,
         {
           id: Date.now(),
-          marksAndNos: "AS PER CONTRACT",
-          containerNo: prev.containerNumbers?.join(", ") || "",
+          marksAndNos: isMultiShipment ? "" : "AS PER CONTRACT",
+          containerNo: isMultiShipment ? "" : prev.containerNumbers?.join(", ") || "",
           noAndKindOfPackages: "IN BULK",
           descriptionOfGoods: "",
           quantity: 0,
@@ -665,6 +686,10 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
       companyId: formData.companyId || null,
       salesContractId: formData.salesContractId || null,
       shipmentId: formData.shipmentId || null,
+      ...(isMultiShipment && stuffingGroupId ? { stuffingGroupId } : {}),
+      ...(isMultiShipment && groupShipmentIds.length > 1
+        ? { shipmentIds: groupShipmentIds }
+        : {}),
       purchaseContractId: formData.purchaseContractId || null,
       invoiceNumber: formData.invoiceNumber || null,
       sequenceNumber: Number(formData.sequenceNumber) || 0,
@@ -691,8 +716,13 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
       containerNumbers: Array.isArray(formData.containerNumbers) ? formData.containerNumbers : [],
       goodsItems: (formData.goodsItems || []).map((item) => ({
         id: item.id,
+        ...(item.shipmentId ? { shipmentId: Number(item.shipmentId) } : {}),
+        ...(item.shipmentReference ? { shipmentReference: item.shipmentReference } : {}),
+        ...(Array.isArray(item.shipmentReferences) && item.shipmentReferences.length > 0
+          ? { shipmentReferences: item.shipmentReferences }
+          : {}),
         marksAndNos: item.marksAndNos || "",
-        containerNo: item.containerNo || "",
+        containerNo: isMultiShipment ? "" : item.containerNo || "",
         noAndKindOfPackages: item.noAndKindOfPackages || "",
         descriptionOfGoods: item.descriptionOfGoods || "COMMODITY",
         quantity: Number(item.quantity) || 0,
@@ -755,7 +785,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-xs print:hidden">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <FileText className="h-6 w-6 text-blue-600" />
             <h1 className="text-xl font-bold text-gray-900">
               {isEdit ? "Edit Export Invoice" : "Generate Export Invoice"}
@@ -763,9 +793,16 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
               {formData.invoiceNumber || "EXP-..."}
             </span>
+            {isMultiShipment && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                Combined ({groupShipmentIds.length || formData.goodsItems.length} Shipments)
+              </span>
+            )}
           </div>
           <p className="text-xs text-gray-500 mt-0.5">
-            Auto-mapped from Sales Contract, Purchase Contract &amp; Shipment Stuffing Execution.
+            {isMultiShipment && groupShipmentRefs.length > 0
+              ? `Combined from Stuffing Execution Shipments: ${groupShipmentRefs.join(", ")}`
+              : "Auto-mapped from Sales Contract, Purchase Contract & Shipment Stuffing Execution."}
           </p>
         </div>
 
@@ -883,11 +920,12 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </label>
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 value={formData.exporterRef}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, exporterRef: e.target.value }))
                 }
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800"
+                className={`w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800 ${isMultiShipment ? "bg-gray-100/80 text-gray-700 cursor-not-allowed" : ""}`}
               />
             </div>
 
@@ -898,11 +936,12 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </label>
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 value={formData.sellerOrderNo}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, sellerOrderNo: e.target.value }))
                 }
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800 font-mono"
+                className={`w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800 font-mono ${isMultiShipment ? "bg-gray-100/80 text-gray-700 cursor-not-allowed" : ""}`}
               />
             </div>
 
@@ -913,11 +952,12 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </label>
               <input
                 type="date"
+                readOnly={isMultiShipment}
                 value={formData.sellerOrderDate || ""}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, sellerOrderDate: e.target.value }))
                 }
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800"
+                className={`w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800 ${isMultiShipment ? "bg-gray-100/80 text-gray-700 cursor-not-allowed" : ""}`}
               />
             </div>
 
@@ -956,6 +996,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </span>
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 placeholder="Seller Company Name"
                 value={formData.sellerDetails?.name || ""}
                 onChange={(e) =>
@@ -964,10 +1005,11 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                     sellerDetails: { ...prev.sellerDetails, name: e.target.value },
                   }))
                 }
-                className="w-full px-2.5 py-1 text-xs font-semibold rounded border border-gray-300 bg-white"
+                className={`w-full px-2.5 py-1 text-xs font-semibold rounded border border-gray-300 ${isMultiShipment ? "bg-gray-100 text-gray-700 cursor-not-allowed" : "bg-white"}`}
               />
               <textarea
                 rows={2}
+                readOnly={isMultiShipment}
                 placeholder="Seller Address"
                 value={formData.sellerDetails?.address || ""}
                 onChange={(e) =>
@@ -976,10 +1018,11 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                     sellerDetails: { ...prev.sellerDetails, address: e.target.value },
                   }))
                 }
-                className="w-full px-2.5 py-1 text-xs rounded border border-gray-300 bg-white"
+                className={`w-full px-2.5 py-1 text-xs rounded border border-gray-300 ${isMultiShipment ? "bg-gray-100 text-gray-700 cursor-not-allowed" : "bg-white"}`}
               />
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 placeholder="Country"
                 value={formData.sellerDetails?.country || ""}
                 onChange={(e) =>
@@ -988,7 +1031,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                     sellerDetails: { ...prev.sellerDetails, country: e.target.value },
                   }))
                 }
-                className="w-full px-2.5 py-1 text-xs rounded border border-gray-300 bg-white"
+                className={`w-full px-2.5 py-1 text-xs rounded border border-gray-300 ${isMultiShipment ? "bg-gray-100 text-gray-700 cursor-not-allowed" : "bg-white"}`}
               />
             </div>
 
@@ -999,6 +1042,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </span>
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 placeholder="Buyer / Consignee Name"
                 value={formData.consigneeDetails?.name || ""}
                 onChange={(e) =>
@@ -1010,10 +1054,11 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                     },
                   }))
                 }
-                className="w-full px-2.5 py-1 text-xs font-semibold rounded border border-gray-300 bg-white"
+                className={`w-full px-2.5 py-1 text-xs font-semibold rounded border border-gray-300 ${isMultiShipment ? "bg-gray-100 text-gray-700 cursor-not-allowed" : "bg-white"}`}
               />
               <textarea
                 rows={2}
+                readOnly={isMultiShipment}
                 placeholder="Consignee Address"
                 value={formData.consigneeDetails?.address || ""}
                 onChange={(e) =>
@@ -1025,10 +1070,11 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                     },
                   }))
                 }
-                className="w-full px-2.5 py-1 text-xs rounded border border-gray-300 bg-white"
+                className={`w-full px-2.5 py-1 text-xs rounded border border-gray-300 ${isMultiShipment ? "bg-gray-100 text-gray-700 cursor-not-allowed" : "bg-white"}`}
               />
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 placeholder="Country"
                 value={formData.consigneeDetails?.country || ""}
                 onChange={(e) =>
@@ -1040,7 +1086,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                     },
                   }))
                 }
-                className="w-full px-2.5 py-1 text-xs rounded border border-gray-300 bg-white"
+                className={`w-full px-2.5 py-1 text-xs rounded border border-gray-300 ${isMultiShipment ? "bg-gray-100 text-gray-700 cursor-not-allowed" : "bg-white"}`}
               />
             </div>
 
@@ -1051,6 +1097,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </span>
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 placeholder="Notify Party Name"
                 value={formData.notifyPartyDetails?.name || ""}
                 onChange={(e) =>
@@ -1062,10 +1109,11 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                     },
                   }))
                 }
-                className="w-full px-2.5 py-1 text-xs font-semibold rounded border border-gray-300 bg-white"
+                className={`w-full px-2.5 py-1 text-xs font-semibold rounded border border-gray-300 ${isMultiShipment ? "bg-gray-100 text-gray-700 cursor-not-allowed" : "bg-white"}`}
               />
               <textarea
                 rows={2}
+                readOnly={isMultiShipment}
                 placeholder="Notify Party Address"
                 value={formData.notifyPartyDetails?.address || ""}
                 onChange={(e) =>
@@ -1077,10 +1125,11 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                     },
                   }))
                 }
-                className="w-full px-2.5 py-1 text-xs rounded border border-gray-300 bg-white"
+                className={`w-full px-2.5 py-1 text-xs rounded border border-gray-300 ${isMultiShipment ? "bg-gray-100 text-gray-700 cursor-not-allowed" : "bg-white"}`}
               />
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 placeholder="Country"
                 value={formData.notifyPartyDetails?.country || ""}
                 onChange={(e) =>
@@ -1092,7 +1141,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                     },
                   }))
                 }
-                className="w-full px-2.5 py-1 text-xs rounded border border-gray-300 bg-white"
+                className={`w-full px-2.5 py-1 text-xs rounded border border-gray-300 ${isMultiShipment ? "bg-gray-100 text-gray-700 cursor-not-allowed" : "bg-white"}`}
               />
             </div>
 
@@ -1151,11 +1200,12 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </label>
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 value={formData.countryOfOrigin}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, countryOfOrigin: e.target.value }))
                 }
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800"
+                className={`w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800 ${isMultiShipment ? "bg-gray-100/80 text-gray-700 cursor-not-allowed" : ""}`}
               />
             </div>
 
@@ -1165,6 +1215,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </label>
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 value={formData.countryOfFinalDestination}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -1172,7 +1223,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                     countryOfFinalDestination: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800"
+                className={`w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800 ${isMultiShipment ? "bg-gray-100/80 text-gray-700 cursor-not-allowed" : ""}`}
               />
             </div>
 
@@ -1182,6 +1233,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </label>
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 value={formData.termsOfDeliveryPayment}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -1189,7 +1241,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                     termsOfDeliveryPayment: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800"
+                className={`w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800 ${isMultiShipment ? "bg-gray-100/80 text-gray-700 cursor-not-allowed" : ""}`}
               />
             </div>
           </div>
@@ -1201,11 +1253,12 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </label>
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 value={formData.carriageBy}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, carriageBy: e.target.value }))
                 }
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-bold text-gray-800 uppercase"
+                className={`w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-bold text-gray-800 uppercase ${isMultiShipment ? "bg-gray-100/80 text-gray-700 cursor-not-allowed" : ""}`}
               />
             </div>
 
@@ -1233,11 +1286,12 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </label>
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 value={formData.placeOfLoading}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, placeOfLoading: e.target.value }))
                 }
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800"
+                className={`w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800 ${isMultiShipment ? "bg-gray-100/80 text-gray-700 cursor-not-allowed" : ""}`}
               />
             </div>
 
@@ -1247,11 +1301,12 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </label>
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 value={formData.placeOfUnloading}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, placeOfUnloading: e.target.value }))
                 }
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800"
+                className={`w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800 ${isMultiShipment ? "bg-gray-100/80 text-gray-700 cursor-not-allowed" : ""}`}
               />
             </div>
 
@@ -1261,11 +1316,12 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
               </label>
               <input
                 type="text"
+                readOnly={isMultiShipment}
                 value={formData.finalDestination}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, finalDestination: e.target.value }))
                 }
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800"
+                className={`w-full px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-800 ${isMultiShipment ? "bg-gray-100/80 text-gray-700 cursor-not-allowed" : ""}`}
               />
             </div>
           </div>
@@ -1280,7 +1336,9 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                 Goods Table (Editable Columns)
               </h2>
               <p className="text-[10px] text-gray-400 mt-0.5">
-                Quantity &amp; Rate auto-map from Sales Contract. Marks &amp; Nos, Container No, Packages &amp; Description remain editable.
+                {isMultiShipment
+                  ? "Aggregated from combined Stuffing Execution shipments. Marks & Nos, Packages, Description, Quantity & Rate remain editable."
+                  : "Quantity & Rate auto-map from Sales Contract. Marks & Nos, Container No, Packages & Description remain editable."}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -1314,10 +1372,10 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50 text-[10px] font-bold text-gray-600 uppercase tracking-wider">
-                  <th className="p-2 w-[14%]">Marks &amp; Nos.</th>
-                  <th className="p-2 w-[14%]">Container No.</th>
-                  <th className="p-2 w-[16%]">No. &amp; Kind of Pkgs</th>
-                  <th className="p-2 w-[22%]">Description of Goods</th>
+                  <th className={isMultiShipment ? "p-2 w-[18%]" : "p-2 w-[14%]"}>Marks &amp; Nos.</th>
+                  {!isMultiShipment && <th className="p-2 w-[14%]">Container No.</th>}
+                  <th className={isMultiShipment ? "p-2 w-[20%]" : "p-2 w-[16%]"}>No. &amp; Kind of Pkgs</th>
+                  <th className={isMultiShipment ? "p-2 w-[28%]" : "p-2 w-[22%]"}>Description of Goods</th>
                   <th className="p-2 w-[10%] text-right">Quantity</th>
                   <th className="p-2 w-[10%] text-right">Rate ({formData.currency})</th>
                   <th className="p-2 w-[10%] text-right">Amount ({formData.currency})</th>
@@ -1328,30 +1386,37 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                 {formData.goodsItems.map((item, index) => (
                   <tr key={item.id || index} className="hover:bg-slate-50/50">
                     <td className="p-2 align-top">
+                      {!isMultiShipment && item.shipmentReference && (
+                        <div className="mb-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          {item.shipmentReference}
+                        </div>
+                      )}
                       <textarea
-                        rows={2}
+                        rows={isMultiShipment ? 3 : 2}
                         value={item.marksAndNos || ""}
                         onChange={(e) =>
                           handleItemChange(index, "marksAndNos", e.target.value)
                         }
                         className="w-full px-2 py-1 text-xs rounded border border-gray-200 focus:border-blue-500 font-mono resize-y"
-                        placeholder="Marks & Nos / Truck No."
+                        placeholder={isMultiShipment ? "Enter marking (optional)" : "Marks & Nos / Truck No."}
                       />
                     </td>
-                    <td className="p-2 align-top">
-                      <input
-                        type="text"
-                        value={item.containerNo || ""}
-                        onChange={(e) =>
-                          handleItemChange(index, "containerNo", e.target.value)
-                        }
-                        className="w-full px-2 py-1 text-xs rounded border border-gray-200 focus:border-blue-500 font-mono"
-                        placeholder="Container No."
-                      />
-                    </td>
+                    {!isMultiShipment && (
+                      <td className="p-2 align-top">
+                        <input
+                          type="text"
+                          value={item.containerNo || ""}
+                          onChange={(e) =>
+                            handleItemChange(index, "containerNo", e.target.value)
+                          }
+                          className="w-full px-2 py-1 text-xs rounded border border-gray-200 focus:border-blue-500 font-mono"
+                          placeholder="Container No."
+                        />
+                      </td>
+                    )}
                     <td className="p-2 align-top">
                       <textarea
-                        rows={2}
+                        rows={isMultiShipment ? 4 : 2}
                         value={item.noAndKindOfPackages || ""}
                         onChange={(e) =>
                           handleItemChange(index, "noAndKindOfPackages", e.target.value)
@@ -1362,7 +1427,7 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
                     </td>
                     <td className="p-2 align-top">
                       <textarea
-                        rows={2}
+                        rows={isMultiShipment ? 3 : 2}
                         value={item.descriptionOfGoods || ""}
                         onChange={(e) =>
                           handleItemChange(index, "descriptionOfGoods", e.target.value)
@@ -1896,7 +1961,24 @@ export default function ExportInvoiceForm({ initialData = null, isEdit = false }
       {showPreview && (
         <ExportInvoicePreviewModal
           isOpen={showPreview}
-          invoice={formData}
+          invoice={{
+            ...formData,
+            ...(isMultiShipment
+              ? {
+                  isMultiShipment: true,
+                  stuffingGroupId,
+                  shipmentIds: groupShipmentIds,
+                  metadata: {
+                    ...(initialData?.metadata || {}),
+                    isMultiShipment: true,
+                    ...(stuffingGroupId ? { stuffingGroupId } : {}),
+                    ...(groupShipmentIds.length > 0
+                      ? { shipmentIds: groupShipmentIds }
+                      : {}),
+                  },
+                }
+              : {}),
+          }}
           onClose={() => setShowPreview(false)}
         />
       )}

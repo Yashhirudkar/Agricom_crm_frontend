@@ -101,6 +101,7 @@ export function useSalesMasters({ includeBrokers = true, includePartners = true 
     currencies: [], shipmentTypes: [], paymentTerms: [],
     tradeDocuments: [], partners: [], products: [], countries: [],
     bagTypes: [], packingTypes: [], bagSpecifications: [],
+    stitchingTypes: [], markingTypes: [],
   });
   const [loading, setLoading] = useState(true);
 

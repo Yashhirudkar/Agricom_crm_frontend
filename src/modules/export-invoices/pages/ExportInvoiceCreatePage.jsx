@@ -10,28 +10,49 @@ export default function ExportInvoiceCreatePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const shipmentId = searchParams.get("shipmentId");
+  const stuffingGroupId = searchParams.get("stuffingGroupId");
+  const shipmentIdsParam = searchParams.get("shipmentIds");
 
-  const [loading, setLoading] = useState(Boolean(shipmentId));
+  const hasInitTarget = Boolean(stuffingGroupId || shipmentIdsParam || shipmentId);
+  const [loading, setLoading] = useState(hasInitTarget);
   const [initData, setInitData] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
-    if (shipmentId) {
-      exportInvoicesApi
-        .getInitData(shipmentId)
+    const loadInit = stuffingGroupId
+      ? exportInvoicesApi.getInitDataFromGroup(stuffingGroupId)
+      : shipmentIdsParam
+        ? exportInvoicesApi.getInitDataFromShipments(shipmentIdsParam)
+        : shipmentId
+          ? exportInvoicesApi.getInitData(shipmentId)
+          : null;
+
+    if (loadInit) {
+      loadInit
         .then((res) => {
           if (!isMounted) return;
+          if (res?.data?.existingInvoiceId) {
+            toast.info(
+              `Opening existing combined invoice ${res.data.existingInvoiceNumber || ""}`.trim(),
+            );
+            router.replace(`/documents/export-invoices/${res.data.existingInvoiceId}`);
+            return;
+          }
           if (res?.data) {
             setInitData(res.data);
           }
         })
         .catch((err) => {
           if (!isMounted) return;
-          console.error("Failed to initialize invoice from shipment", err);
+          console.error("Failed to initialize invoice", err);
           const msg =
             err.response?.data?.message ||
-            "Failed to load ERP mapping data for shipment #" + shipmentId;
+            (stuffingGroupId
+              ? "Failed to load ERP mapping data for stuffing group #" + stuffingGroupId
+              : shipmentIdsParam
+                ? "Failed to load ERP mapping data for selected shipments"
+                : "Failed to load ERP mapping data for shipment #" + shipmentId);
           setError(msg);
           toast.error(msg);
         })
@@ -42,7 +63,7 @@ export default function ExportInvoiceCreatePage() {
     return () => {
       isMounted = false;
     };
-  }, [shipmentId]);
+  }, [shipmentId, stuffingGroupId, shipmentIdsParam, router]);
 
   if (loading) {
     return (

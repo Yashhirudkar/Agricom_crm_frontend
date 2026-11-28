@@ -1,6 +1,7 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import { useEscapeKey } from "@/hooks/useEscapeKey";
 import { toast } from "sonner";
 import { parseTime } from "@internationalized/date";
@@ -518,10 +519,12 @@ function SimpleTimePicker({ label, value, onChange, required = false, disabled =
   );
 }
 
+const EMPTY_SHIPMENTS = [];
+
 export default function ShipmentStuffingExecutionModal({
   isOpen,
   shipment,
-  shipments = [],
+  shipments = EMPTY_SHIPMENTS,
   onClose,
   onSaveSuccess,
 }) {
@@ -529,18 +532,26 @@ export default function ShipmentStuffingExecutionModal({
 
   const targetShipments = useMemo(() => {
     if (Array.isArray(shipments) && shipments.length > 1) return shipments;
-    return shipment ? [shipment] : [];
+    return shipment ? [shipment] : EMPTY_SHIPMENTS;
   }, [shipments, shipment]);
 
   const primaryShipment = targetShipments[0] || shipment || null;
-  const targetShipmentIds = useMemo(
+  const primaryShipmentId = Number(primaryShipment?.id) || 0;
+  const targetShipmentIdsKey = useMemo(
     () =>
       targetShipments
         .map((s) => Number(s?.id))
-        .filter((id) => Number.isSafeInteger(id) && id > 0),
+        .filter((id) => Number.isSafeInteger(id) && id > 0)
+        .join(","),
     [targetShipments],
   );
-  const targetShipmentIdsKey = targetShipmentIds.join(",");
+  const targetShipmentIds = useMemo(
+    () =>
+      targetShipmentIdsKey
+        ? targetShipmentIdsKey.split(",").map(Number)
+        : EMPTY_SHIPMENTS,
+    [targetShipmentIdsKey],
+  );
   const isMultiShipmentMode = targetShipmentIds.length > 1;
   const multiExecutionCategory = useMemo(
     () => getMultiExecutionTransportCategory(primaryShipment),
@@ -549,11 +560,11 @@ export default function ShipmentStuffingExecutionModal({
 
   const router = useRouter();
   const {
-    data: currencies = [],
+    data: currencies = EMPTY_SHIPMENTS,
     isLoading: currenciesLoading,
     isError: currenciesError,
   } = useCurrencyMaster({ enabled: isOpen });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => Boolean(isOpen && primaryShipmentId));
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successToast, setSuccessToast] = useState("");
@@ -577,6 +588,32 @@ export default function ShipmentStuffingExecutionModal({
     const refList = isMultiShipmentMode
       ? targetShipments.map((s) => s.shipmentReference || `SHP-${s.id}`).join(", ")
       : primaryShipment.shipmentReference || `SHP-${primaryShipment.id}`;
+    const multiBusinessRefs = isMultiShipmentMode
+      ? Array.from(
+          new Set(
+            targetShipments
+              .map(
+                (s) =>
+                  s.businessReference ||
+                  s.businessTransaction?.businessReference,
+              )
+              .filter(Boolean),
+          ),
+        ).join(", ")
+      : "";
+    const multiPcNos = isMultiShipmentMode
+      ? Array.from(
+          new Set(
+            targetShipments
+              .flatMap((s) =>
+                String(s.purchaseContractNo || "")
+                  .split(",")
+                  .map((v) => v.trim()),
+              )
+              .filter((v) => v && v !== "—" && v !== "-"),
+          ),
+        ).join(", ")
+      : "";
     return {
       isMultiShipment: isMultiShipmentMode,
       multiShipmentMode: multiExecutionCategory,
@@ -584,22 +621,27 @@ export default function ShipmentStuffingExecutionModal({
         id: s.id,
         shipmentNo: s.shipmentNo,
         shipmentReference: s.shipmentReference || `SHP-${s.id}`,
+        businessReference:
+          s.businessReference || s.businessTransaction?.businessReference || null,
+        noOfContainers: Number(s.noOfContainers || 0),
         quantity: Number(s.quantity || 0),
         status: s.status,
       })),
       shipmentRef: refList,
       businessRefNo:
+        multiBusinessRefs ||
         primaryShipment.businessReference ||
         primaryShipment.businessTransaction?.businessReference ||
         "—",
       salesContractNo: contract.contractNumber || "—",
-      purchaseContractNo: "—",
+      purchaseContractNo: multiPcNos || primaryShipment.purchaseContractNo || "—",
       enquiryRef: contract.enquiry?.enquiryReference || "—",
       buyer: contract.buyer?.entityName || "—",
       seller: contract.seller?.entityName || "—",
       product: product.name || "—",
       commodityGrade: product.grade || item.remarks || "—",
       quantityMt: qtyMt,
+      bagType: item.bagType?.name || "—",
       packingType: item.packingType?.name || "—",
       bagSize: bagSizeKg ? `${bagSizeKg} Kg` : "—",
       totalBags: bagSizeKg ? Math.round((qtyMt * 1000) / bagSizeKg) : 0,
@@ -610,8 +652,8 @@ export default function ShipmentStuffingExecutionModal({
       transportMode:
         primaryShipment.logistics?.transportMode ||
         primaryShipment.transportMode ||
-        contract.transportMode ||
         contract.originTransportMode ||
+        contract.transportMode ||
         "",
       freightType: contract.shipmentType?.name || "—",
       shipmentType: contract.contractType || "Export",
@@ -766,6 +808,8 @@ export default function ShipmentStuffingExecutionModal({
   // Existing stuffing execution status
   const [stuffingStatus, setStuffingStatus] = useState("Draft");
   const [executionStatus, setExecutionStatus] = useState("Draft");
+  const [stuffingGroupId, setStuffingGroupId] = useState(null);
+  const [existingGroupInvoice, setExistingGroupInvoice] = useState(null);
 
   const existingStuffingRecord = autoData?.existingStuffing || primaryShipment?.stuffingExecution || null;
   const isExecutionCompleted = isMultiShipmentMode
@@ -786,49 +830,99 @@ export default function ShipmentStuffingExecutionModal({
     oneTimeEditUsed: existingStuffingRecord?.oneTimeCompletedEditUsed,
   });
 
+  const latestFetchContextRef = useRef({
+    primaryShipment,
+    fallbackAuto,
+    targetShipmentIds,
+    isMultiShipmentMode,
+  });
+
+  useEffect(() => {
+    latestFetchContextRef.current = {
+      primaryShipment,
+      fallbackAuto,
+      targetShipmentIds,
+      isMultiShipmentMode,
+    };
+  });
+
   // Fetch Auto-Populated Data and Trade Documents Master
   useEffect(() => {
-    if (!isOpen || !primaryShipment?.id) return;
+    if (!isOpen || !primaryShipmentId) return;
 
     let isMounted = true;
-    setAutoData(fallbackAuto);
-    setDowntimes([]);
-    setCustomDowntimeReasons([]);
-    setLoading(true);
-    setErrorMsg("");
-
-    const initialMode = detectMode(
-      fallbackAuto.transportMode ||
-      primaryShipment?.logistics?.transportMode ||
-      primaryShipment?.transportMode ||
-      primaryShipment?.salesContract?.transportMode ||
-      primaryShipment?.salesContract?.originTransportMode ||
-      fallbackAuto.freightType ||
-      fallbackAuto.shipmentType ||
-      "Sea"
-    );
-    const initialIsCad = isCadPayment(
-      primaryShipment?.salesContract?.paymentTerm?.name ||
-      fallbackAuto.paymentTerms ||
-      fallbackAuto.incoterm ||
-      ""
-    );
-    setShipmentMode(initialMode);
-    setAttachments(buildAttachmentsForMode(initialMode, initialIsCad, []));
+    const controller = new AbortController();
 
     const fetchData = async () => {
+      // Defer past StrictMode's immediate mount/cleanup cycle so cancelled mounts never fire duplicate API requests.
+      await Promise.resolve();
+      if (!isMounted) return;
+
+      const {
+        primaryShipment: currentPrimaryShipment,
+        fallbackAuto: currentFallbackAuto,
+        targetShipmentIds: currentTargetShipmentIds,
+        isMultiShipmentMode: currentIsMultiShipmentMode,
+      } = latestFetchContextRef.current;
+
+      if (!currentPrimaryShipment?.id) return;
+
+      setAutoData(currentFallbackAuto);
+      setStuffingGroupId(currentPrimaryShipment?.stuffingGroupId || null);
+      setExistingGroupInvoice(
+        currentPrimaryShipment?.stuffingGroupExportInvoiceId
+          ? {
+              id: currentPrimaryShipment.stuffingGroupExportInvoiceId,
+              invoiceNumber: currentPrimaryShipment.stuffingGroupExportInvoiceNumber || null,
+            }
+          : null,
+      );
+      setDowntimes([]);
+      setCustomDowntimeReasons([]);
+      setLoading(true);
+      setErrorMsg("");
+
+      const initialMode = detectMode(
+        currentFallbackAuto.transportMode ||
+        currentPrimaryShipment?.logistics?.transportMode ||
+        currentPrimaryShipment?.transportMode ||
+        currentPrimaryShipment?.salesContract?.transportMode ||
+        currentPrimaryShipment?.salesContract?.originTransportMode ||
+        currentFallbackAuto.freightType ||
+        currentFallbackAuto.shipmentType ||
+        "Sea"
+      );
+      const initialIsCad = isCadPayment(
+        currentPrimaryShipment?.salesContract?.paymentTerm?.name ||
+        currentFallbackAuto.paymentTerms ||
+        currentFallbackAuto.incoterm ||
+        ""
+      );
+      setShipmentMode(initialMode);
+      setAttachments(buildAttachmentsForMode(initialMode, initialIsCad, []));
+
       try {
         const res = await shipmentsApi.getStuffingExecution(
-          primaryShipment.id,
-          isMultiShipmentMode ? targetShipmentIds : undefined,
+          currentPrimaryShipment.id,
+          currentIsMultiShipmentMode ? currentTargetShipmentIds : undefined,
+          { signal: controller.signal },
         );
 
         const data = res?.data || res || {};
         const auto = data.autoPopulated || {};
 
         if (isMounted) {
+          if (data.stuffingGroupId) {
+            setStuffingGroupId(data.stuffingGroupId);
+          }
+          if (data.existingExportInvoiceId) {
+            setExistingGroupInvoice({
+              id: data.existingExportInvoiceId,
+              invoiceNumber: data.existingExportInvoiceNumber || null,
+            });
+          }
           const mergedAuto = {
-            ...fallbackAuto,
+            ...currentFallbackAuto,
             ...auto,
             ...(Array.isArray(data.selectedShipments)
               ? { selectedShipments: data.selectedShipments }
@@ -860,10 +954,10 @@ export default function ShipmentStuffingExecutionModal({
           const savedMode = existing?.freightOverrides?.shipmentMode;
           const detectedMode = detectMode(
             mergedAuto.transportMode ||
-              primaryShipment?.logistics?.transportMode ||
-              primaryShipment?.transportMode ||
-              primaryShipment?.salesContract?.transportMode ||
-              primaryShipment?.salesContract?.originTransportMode ||
+              currentPrimaryShipment?.logistics?.transportMode ||
+              currentPrimaryShipment?.transportMode ||
+              currentPrimaryShipment?.salesContract?.transportMode ||
+              currentPrimaryShipment?.salesContract?.originTransportMode ||
               savedMode ||
               mergedAuto.freightType ||
               mergedAuto.shipmentType ||
@@ -872,7 +966,7 @@ export default function ShipmentStuffingExecutionModal({
           setShipmentMode(detectedMode);
 
           const isCadActive = isCadPayment(
-            primaryShipment?.salesContract?.paymentTerm?.name ||
+            currentPrimaryShipment?.salesContract?.paymentTerm?.name ||
             mergedAuto.paymentTerms ||
             mergedAuto.paymentTerm ||
             mergedAuto.incoterm ||
@@ -974,15 +1068,24 @@ export default function ShipmentStuffingExecutionModal({
 
         // 2. Fetch Document Master
         try {
-          const docRes = await axiosClient.get("/masters/trade-documents", { params: { limit: 100 } });
+          const docRes = await axiosClient.get("/masters/trade-documents", {
+            params: { limit: 100 },
+            signal: controller.signal,
+          });
           const docItems = docRes.data?.data || docRes.data || [];
           if (isMounted) {
             setTradeDocsList(docItems);
           }
         } catch (docErr) {
+          if (axios.isCancel(docErr) || docErr?.name === "CanceledError" || docErr?.code === "ERR_CANCELED") {
+            return;
+          }
           console.warn("Could not load Document Master, using presets fallback:", docErr);
         }
       } catch (err) {
+        if (axios.isCancel(err) || err?.name === "CanceledError" || err?.code === "ERR_CANCELED") {
+          return;
+        }
         console.error("Failed to fetch stuffing execution data:", err);
         if (isMounted) {
           setErrorMsg(
@@ -999,8 +1102,9 @@ export default function ShipmentStuffingExecutionModal({
 
     return () => {
       isMounted = false;
+      controller.abort();
     };
-  }, [isOpen, primaryShipment, isMultiShipmentMode, targetShipmentIdsKey, targetShipmentIds, fallbackAuto]);
+  }, [isOpen, primaryShipmentId, targetShipmentIdsKey]);
 
   // Combined Document Options (Trade Document Master + Presets)
   const availableDocumentNames = useMemo(() => {
@@ -1482,6 +1586,9 @@ export default function ShipmentStuffingExecutionModal({
 
       const res = await shipmentsApi.saveStuffingExecution(primaryShipment.id, payload);
       const data = res.data || res;
+      if (data?.stuffingGroupId) {
+        setStuffingGroupId(data.stuffingGroupId);
+      }
 
       const successMsg = action === "complete"
         ? isMultiShipmentMode
@@ -1585,6 +1692,12 @@ export default function ShipmentStuffingExecutionModal({
                     <span>Business Ref: <strong className="font-semibold text-slate-800">{autoData.businessRefNo || primaryShipment?.businessReference || "N/A"}</strong></span>
                     <span className="text-slate-300">•</span>
                     <span>Sales Contract: <strong className="font-semibold text-slate-800">{autoData.salesContractNo || "N/A"}</strong></span>
+                    {autoData.purchaseContractNo && autoData.purchaseContractNo !== "—" && autoData.purchaseContractNo !== "N/A" && (
+                      <>
+                        <span className="text-slate-300">•</span>
+                        <span>Purchase Contract: <strong className="font-semibold text-slate-800">{autoData.purchaseContractNo}</strong></span>
+                      </>
+                    )}
                     <span className="text-slate-300">•</span>
                     <span>Total: <strong className="font-semibold text-indigo-700">{autoData.quantityMt || 0} MT across {(autoData.selectedShipments || targetShipments).length} shipments</strong></span>
                   </p>
@@ -1686,7 +1799,9 @@ export default function ShipmentStuffingExecutionModal({
             <span className="text-[11px] font-semibold text-indigo-700">
               {shipmentMode === "Wagon" || multiExecutionCategory === "rail"
                 ? "Rail Freight / Wagon: Shared Rail Freight Allocation across selected shipments"
-                : "Truck: Independent Freight Quote per shipment"}
+                : multiExecutionCategory === "truck"
+                  ? "Truck: Independent Freight Quote per shipment"
+                  : `${activeTransportMode || shipmentMode || "Combined"}: Combined Multi-Shipment Stuffing Execution`}
             </span>
           </div>
         )}
@@ -1814,6 +1929,8 @@ export default function ShipmentStuffingExecutionModal({
                               <thead>
                                 <tr className="bg-slate-50 border-b border-slate-200">
                                   <th className="text-left px-2.5 py-1.5 font-bold text-slate-600">Shipment Ref</th>
+                                  <th className="text-left px-2.5 py-1.5 font-bold text-slate-600">Business Ref</th>
+                                  <th className="text-center px-2.5 py-1.5 font-bold text-slate-600">Containers</th>
                                   <th className="text-right px-2.5 py-1.5 font-bold text-slate-600">Contracted Qty</th>
                                   <th className="text-right px-2.5 py-1.5 font-bold text-slate-600">Allocated</th>
                                   <th className="text-left px-2.5 py-1.5 font-bold text-slate-600">Shipment Date</th>
@@ -1827,6 +1944,8 @@ export default function ShipmentStuffingExecutionModal({
                                     className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"}
                                   >
                                     <td className="px-2.5 py-1.5 font-mono font-bold text-indigo-800">{sel.shipmentReference || `SHP-${sel.id}`}</td>
+                                    <td className="px-2.5 py-1.5 font-mono text-slate-700">{sel.businessReference || "—"}</td>
+                                    <td className="px-2.5 py-1.5 text-center font-semibold text-slate-700">{sel.noOfContainers || "—"}</td>
                                     <td className="px-2.5 py-1.5 text-right font-semibold text-slate-900">{Number(sel.quantity || 0)} MT</td>
                                     <td className="px-2.5 py-1.5 text-right font-semibold text-emerald-700">{Number(sel.allocatedWeight || 0)} MT</td>
                                     <td className="px-2.5 py-1.5 text-slate-700">{sel.shipmentDate || "—"}</td>
@@ -1843,6 +1962,10 @@ export default function ShipmentStuffingExecutionModal({
                                 ))}
                                 <tr className="bg-indigo-50/60 border-t border-indigo-200 font-bold text-[11px]">
                                   <td className="px-2.5 py-1.5 text-indigo-800">Total ({(autoData.selectedShipments || targetShipments).length} Shipments)</td>
+                                  <td className="px-2.5 py-1.5" />
+                                  <td className="px-2.5 py-1.5 text-center text-indigo-700">
+                                    {(autoData.selectedShipments || targetShipments).reduce((sum, sel) => sum + Number(sel.noOfContainers || 0), 0) || "—"}
+                                  </td>
                                   <td className="px-2.5 py-1.5 text-right text-indigo-700">{autoData.quantityMt || 0} MT</td>
                                   <td className="px-2.5 py-1.5 text-right text-emerald-700">{autoData.allocatedWeight || 0} MT</td>
                                   <td colSpan={2} />
@@ -1894,6 +2017,10 @@ export default function ShipmentStuffingExecutionModal({
                         <div>
                           <span className="text-slate-400 font-medium">Quantity (MT)</span>
                           <p className="font-bold text-indigo-700">{autoData.quantityMt || 0} MT</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 font-medium">Bag Type</span>
+                          <p className="font-semibold text-slate-900">{autoData.bagType || "—"}</p>
                         </div>
                         <div>
                           <span className="text-slate-400 font-medium">Packing Type</span>
@@ -2014,12 +2141,13 @@ export default function ShipmentStuffingExecutionModal({
                         </div>
                       </div>
                       {isMultiShipmentMode &&
-                        multiExecutionCategory === "truck" &&
                         Array.isArray(autoData.perShipmentFreights) &&
                         autoData.perShipmentFreights.length > 0 && (
                           <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50/70 p-2.5 text-xs">
                             <p className="text-[11px] font-bold text-slate-700 mb-1.5">
-                              Independent Freight Quotes per Truck Shipment
+                              {multiExecutionCategory === "truck"
+                                ? "Independent Freight Quotes per Truck Shipment"
+                                : "Freight Quotes & Allocation Across Selected Shipments"}
                             </p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                               {autoData.perShipmentFreights.map((pf) => (
@@ -2965,18 +3093,44 @@ export default function ShipmentStuffingExecutionModal({
               {isReadOnly ? "Close" : "Cancel"}
             </button>
 
-            {/* GENERATE INVOICE */}
+            {/* GENERATE / VIEW INVOICE */}
             <button
               type="button"
               onClick={() => {
                 onClose();
-                router.push(`/documents/export-invoices/new?shipmentId=${shipment.id}`);
+                if (isMultiShipmentMode) {
+                  if (existingGroupInvoice?.id) {
+                    router.push(
+                      `/documents/export-invoices/${existingGroupInvoice.id}`,
+                    );
+                  } else if (stuffingGroupId) {
+                    router.push(
+                      `/documents/export-invoices/new?stuffingGroupId=${stuffingGroupId}`,
+                    );
+                  } else {
+                    router.push(
+                      `/documents/export-invoices/new?shipmentIds=${targetShipmentIds.join(",")}`,
+                    );
+                  }
+                } else {
+                  router.push(
+                    `/documents/export-invoices/new?shipmentId=${shipment.id}`,
+                  );
+                }
               }}
               className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-              title="Generate Commercial Export Invoice from this execution"
+              title={
+                isMultiShipmentMode && existingGroupInvoice?.id
+                  ? `Open Combined Export Invoice (${existingGroupInvoice.invoiceNumber || "#" + existingGroupInvoice.id})`
+                  : "Generate Commercial Export Invoice from this execution"
+              }
             >
               <Receipt className="h-3.5 w-3.5 text-emerald-600" />
-              <span>Generate Invoice</span>
+              <span>
+                {isMultiShipmentMode && existingGroupInvoice?.id
+                  ? "View Combined Invoice"
+                  : "Generate Invoice"}
+              </span>
             </button>
 
             {/* SAVE AS DRAFT */}

@@ -17,12 +17,20 @@ export const shipmentsApi = {
       params,
       responseType: "blob",
     }),
-  getStuffingExecution: (id, shipmentIds) =>
+  getStuffingExecution: (id, shipmentIds, config = {}) =>
     axiosClient.get(
       `/sales-contracts/shipments/${id}/stuffing-execution`,
-      Array.isArray(shipmentIds) && shipmentIds.length > 1
-        ? { params: { shipmentIds: shipmentIds.join(",") } }
-        : undefined,
+      {
+        ...config,
+        ...(Array.isArray(shipmentIds) && shipmentIds.length > 1
+          ? {
+              params: {
+                ...(config?.params || {}),
+                shipmentIds: shipmentIds.join(","),
+              },
+            }
+          : {}),
+      },
     ),
   saveStuffingExecution: (id, data) => axiosClient.post(`/sales-contracts/shipments/${id}/stuffing-execution`, data),
   uploadStuffingAttachment: (id, formData) =>

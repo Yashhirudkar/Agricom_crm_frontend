@@ -663,6 +663,11 @@ export default function ContractFormPage({ editId, viewId }) {
         if (idx === 0) {
           updatedPrintOverrides.marking_0 = String(item.marking).trim();
         }
+      } else {
+        delete updatedPrintOverrides[`marking_${idx}`];
+        if (idx === 0) {
+          delete updatedPrintOverrides.marking_0;
+        }
       }
     });
 

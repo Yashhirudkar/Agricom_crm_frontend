@@ -183,6 +183,14 @@ export default function DocumentsShipmentsTable({
                             "—"}
                         </span>
                       </ShipmentRefTooltip>
+                      {s.stuffingGroupId && (
+                        <span
+                          className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                          title={`Combined Stuffing Group (${s.stuffingGroupShipmentIds?.length || 2} shipments)`}
+                        >
+                          Grouped ({s.stuffingGroupShipmentIds?.length || 2})
+                        </span>
+                      )}
                       {(s.businessReference ||
                         s.businessTransaction?.businessReference) && (
                           <button
@@ -299,10 +307,28 @@ export default function DocumentsShipmentsTable({
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         type="button"
-                        title="Generate / View Export Invoice"
+                        title={
+                          s.stuffingGroupExportInvoiceId
+                            ? `Open Combined Export Invoice (${s.stuffingGroupExportInvoiceNumber || "#" + s.stuffingGroupExportInvoiceId})`
+                            : s.stuffingGroupId
+                              ? "Generate Combined Export Invoice for Stuffing Group"
+                              : "Generate / View Export Invoice"
+                        }
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/documents/export-invoices/new?shipmentId=${s.id}`);
+                          if (s.stuffingGroupId && s.stuffingGroupExportInvoiceId) {
+                            router.push(
+                              `/documents/export-invoices/${s.stuffingGroupExportInvoiceId}`,
+                            );
+                          } else if (s.stuffingGroupId) {
+                            router.push(
+                              `/documents/export-invoices/new?stuffingGroupId=${s.stuffingGroupId}`,
+                            );
+                          } else {
+                            router.push(
+                              `/documents/export-invoices/new?shipmentId=${s.id}`,
+                            );
+                          }
                         }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer transition-colors"
                       >

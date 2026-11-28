@@ -24,6 +24,30 @@ const emptyItem = () => ({
   bagTypeId: "", packingTypeId: "", bagSpecificationId: "", marking: "", remarks: "",
 });
 
+function getMarkingOptions(markingTypes, currentValue) {
+  let options = Array.isArray(markingTypes)
+    ? markingTypes.map((opt) => ({
+        id: opt.id || opt.code || opt.name || opt,
+        name: opt.name || opt.code || opt,
+        code: opt.code,
+      }))
+    : [];
+
+  if (currentValue) {
+    const existingOpt = options.find(
+      (opt) =>
+        opt.name === currentValue ||
+        opt.id === currentValue ||
+        (opt.code && opt.code === currentValue) ||
+        String(opt.id) === String(currentValue)
+    );
+    if (!existingOpt) {
+      options = [{ id: currentValue, name: currentValue }, ...options];
+    }
+  }
+  return options;
+}
+
 function ItemField({ label, children, required, isView }) {
   return (
     <label className="min-w-0">
@@ -100,6 +124,7 @@ export default function ItemsTable({ form, setForm, errors, masters, isView }) {
       ) : (
         <div className="p-4 space-y-3">
           {items.map((item, idx) => {
+            const markingOptions = getMarkingOptions(masters?.markingTypes, item.marking);
             const invalidQty = isRailFreight
               ? false
               : parseFloat(item.quantity) > 0 && parseFloat(item.qtyPerCount) > 0 && !isDivisible(item.quantity, item.qtyPerCount);
@@ -134,7 +159,21 @@ export default function ItemsTable({ form, setForm, errors, masters, isView }) {
                   <ItemField label="Qty Per Count" required isView={isView}>{numberField(item, idx, "qtyPerCount", "0")}</ItemField>
                   <ItemField label="Qty (MT)" required isView={isView}>{numberField(item, idx, "quantity", "0", "1")}</ItemField>
                   <ItemField label="Unit Price" required isView={isView}>{numberField(item, idx, "unitPrice", "0", "0.01")}</ItemField>
-                  <ItemField label="Marking" isView={isView}><input type="text" value={item.marking || ""} onChange={e => updateItem(idx, "marking", e.target.value)} disabled={isView} className={inputClass} placeholder="Marking" /></ItemField>
+                  <ItemField label="Marking" isView={isView}>
+                    <select
+                      value={item.marking || ""}
+                      onChange={e => updateItem(idx, "marking", e.target.value)}
+                      disabled={isView}
+                      className={selectClass}
+                    >
+                      <option value="">Select Marking</option>
+                      {markingOptions.map((opt) => (
+                        <option key={opt.id} value={opt.name}>
+                          {opt.name}
+                        </option>
+                      ))}
+                    </select>
+                  </ItemField>
                 </div>
                 <div className="flex justify-end pt-3 mt-3 text-xs border-t border-gray-100">
                   <span className="mr-2 font-semibold text-gray-500">Amount:</span>

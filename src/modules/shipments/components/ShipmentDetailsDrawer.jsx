@@ -558,6 +558,11 @@ export default function ShipmentDetailsDrawer({
         <ShipmentStuffingExecutionModal
           isOpen={openStuffingModal}
           shipment={shipment}
+          shipments={
+            shipment?.stuffingGroupShipments?.length > 1
+              ? shipment.stuffingGroupShipments
+              : undefined
+          }
           onClose={() => setOpenStuffingModal(false)}
           onSaveSuccess={() => {
             setOpenStuffingModal(false);

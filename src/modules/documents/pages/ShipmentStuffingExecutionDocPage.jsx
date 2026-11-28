@@ -313,6 +313,11 @@ export default function ShipmentStuffingExecutionDocPage({ contextContractNo }) 
         <ShipmentStuffingExecutionModal
           isOpen={!!stuffingShipment}
           shipment={stuffingShipment}
+          shipments={
+            stuffingShipment?.stuffingGroupShipments?.length > 1
+              ? stuffingShipment.stuffingGroupShipments
+              : undefined
+          }
           onClose={() => setStuffingShipment(null)}
           onSaveSuccess={() => {
             setStuffingShipment(null);

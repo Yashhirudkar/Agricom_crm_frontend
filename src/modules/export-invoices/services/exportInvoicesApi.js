@@ -1,9 +1,23 @@
 import axiosClient from "@/lib/axios";
 
 export const exportInvoicesApi = {
-  // Pre-populate ERP data from shipment
+  // Pre-populate ERP data from single shipment (existing flow)
   getInitData: (shipmentId) =>
     axiosClient.get(`/export-invoices/init/${shipmentId}`),
+
+  // Pre-populate combined ERP data from StuffingExecutionGroup
+  getInitDataFromGroup: (stuffingGroupId) =>
+    axiosClient.get(`/export-invoices/init-group/${stuffingGroupId}`),
+
+  // Pre-populate combined ERP data from multiple selected shipmentIds
+  getInitDataFromShipments: (shipmentIds) =>
+    axiosClient.get(`/export-invoices/init-multi`, {
+      params: {
+        shipmentIds: Array.isArray(shipmentIds)
+          ? shipmentIds.join(",")
+          : shipmentIds,
+      },
+    }),
 
   // Preview next number based on contract and manual sequence
   getNextNumber: (contractNumber, manualSequence) =>

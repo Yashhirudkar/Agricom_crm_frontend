@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Search, X, RotateCcw, Rocket, Train } from "lucide-react";
+import { Search, X, RotateCcw, Rocket, Loader2 } from "lucide-react";
 
 export default function ShipmentsFilter({
   filters,
@@ -9,12 +9,7 @@ export default function ShipmentsFilter({
   statsConfig = [],
   selectedShipments = [],
   onExecuteBulk,
-  canOpenRailTransportWorkspace = false,
-  railTransportCount = 0,
-  onOpenRailTransportWorkspace,
-  canOpenMultiStuffingExecution = false,
-  multiStuffingExecutionCount = 0,
-  onOpenMultiStuffingExecution,
+  isExecutingBulk = false,
   onDeselect,
   activeTab = "pending",
 }) {
@@ -50,52 +45,28 @@ export default function ShipmentsFilter({
 
         {/* Action Controls */}
         <div className="flex items-center gap-1.5 order-3 shrink-0">
-          {/* Bulk Execute Workspace Action */}
+          {/* Unified Bulk Execute Workspace Action */}
           {selectedShipments.length > 0 && activeTab !== "executed" && (
             <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
-              {selectedShipments.length > 1 &&
-                canOpenRailTransportWorkspace &&
-                onOpenRailTransportWorkspace && (
-                  <button
-                    type="button"
-                    onClick={onOpenRailTransportWorkspace}
-                    className="px-2.5 md:px-3 h-8 md:h-9 lg:h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg lg:rounded-xl text-[11px] lg:text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-indigo-500/20 whitespace-nowrap"
-                    title="Open Transport Workspace for selected Rail shipments (Freight Quote auto-applies to all selected shipments)"
-                  >
-                    <Train className="h-3.5 w-3.5 text-indigo-100" />
-                    <span>
-                      Transport Workspace ({railTransportCount || selectedShipments.length})
-                    </span>
-                  </button>
-                )}
-              {selectedShipments.length > 1 &&
-                canOpenMultiStuffingExecution &&
-                onOpenMultiStuffingExecution && (
-                  <button
-                    type="button"
-                    onClick={onOpenMultiStuffingExecution}
-                    className="px-2.5 md:px-3 h-8 md:h-9 lg:h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg lg:rounded-xl text-[11px] lg:text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-emerald-500/20 whitespace-nowrap"
-                    title="Execute Stuffing together for selected Truck or Rail shipments"
-                  >
-                    <Rocket className="h-3.5 w-3.5 text-emerald-100" />
-                    <span>
-                      Execute Stuffing ({multiStuffingExecutionCount || selectedShipments.length})
-                    </span>
-                  </button>
-                )}
               <button
                 type="button"
                 onClick={onExecuteBulk}
-                className="px-2.5 md:px-3 h-8 md:h-9 lg:h-10 bg-[#007aff] hover:bg-blue-600 text-white rounded-lg lg:rounded-xl text-[11px] lg:text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-blue-500/20 whitespace-nowrap"
+                disabled={isExecutingBulk}
+                className="px-2.5 md:px-3 h-8 md:h-9 lg:h-10 bg-[#007aff] hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg lg:rounded-xl text-[11px] lg:text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-blue-500/20 whitespace-nowrap"
                 title="Execute workspace for selected shipments"
               >
-                <Rocket className="h-3.5 w-3.5 text-purple-200 animate-pulse" />
+                {isExecutingBulk ? (
+                  <Loader2 className="h-3.5 w-3.5 text-blue-100 animate-spin" />
+                ) : (
+                  <Rocket className="h-3.5 w-3.5 text-purple-200 animate-pulse" />
+                )}
                 <span>Execute Workspace ({selectedShipments.length})</span>
               </button>
               <button
                 type="button"
                 onClick={onDeselect}
-                className="px-2 py-2 text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
+                disabled={isExecutingBulk}
+                className="px-2 py-2 text-xs font-medium text-gray-400 hover:text-gray-700 disabled:opacity-50 transition-colors cursor-pointer"
                 title="Clear selected shipments"
               >
                 Clear

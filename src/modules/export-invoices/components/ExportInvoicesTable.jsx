@@ -93,7 +93,16 @@ export default function ExportInvoicesTable({
               >
                 {/* Invoice No */}
                 <td className="p-3 font-mono font-bold text-blue-700 whitespace-nowrap">
-                  {inv.invoiceNumber}
+                  <div className="flex items-center gap-1.5">
+                    <span>{inv.invoiceNumber}</span>
+                    {(inv.isMultiShipment ||
+                      inv.stuffingGroupId ||
+                      (Array.isArray(inv.shipmentIds) && inv.shipmentIds.length > 1)) && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-sans font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        Grouped ({inv.shipmentIds?.length || inv.goodsItems?.length || 2})
+                      </span>
+                    )}
+                  </div>
                 </td>
 
                 {/* Business Ref No */}

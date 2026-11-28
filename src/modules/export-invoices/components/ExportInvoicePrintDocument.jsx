@@ -59,6 +59,15 @@ export default function ExportInvoicePrintDocument({
   const bank = invoice.bankDetails || {};
   const goods = Array.isArray(invoice.goodsItems) ? invoice.goodsItems : [];
   const trucks = Array.isArray(invoice.truckNumbers) ? invoice.truckNumbers : [];
+  const isCombinedGroupInvoice = Boolean(
+    invoice.isMultiShipment ||
+      invoice.stuffingGroupId ||
+      invoice.metadata?.isMultiShipment ||
+      invoice.metadata?.stuffingGroupId ||
+      (Array.isArray(invoice.shipmentIds) && invoice.shipmentIds.length > 1) ||
+      (Array.isArray(invoice.metadata?.shipmentIds) &&
+        invoice.metadata.shipmentIds.length > 1),
+  );
 
   // Match company config from seller
   const sellerNameForHeader = (
@@ -664,9 +673,15 @@ export default function ExportInvoicePrintDocument({
                   className="px-1.5 py-1 align-top font-normal border-b border-black"
                   style={{ borderBottom: "1px solid #000" }}
                 >
-                  Mark &amp; Nos./
-                  <br />
-                  Container No.
+                  {isCombinedGroupInvoice ? (
+                    "Marks & Nos."
+                  ) : (
+                    <>
+                      Mark &amp; Nos./
+                      <br />
+                      Container No.
+                    </>
+                  )}
                 </th>
                 <th
                   className="px-1.5 py-1 align-top font-normal border-b border-black"
@@ -722,7 +737,7 @@ export default function ExportInvoicePrintDocument({
                 <tr key={item.id || idx} className="text-[11px]">
                   {/* Col 1: Marks & Nos + Truck No underneath on first row */}
                   <td className="px-1.5 pt-2 pb-1 align-top whitespace-pre-line leading-[1.25]">
-                    <div>{item.marksAndNos || "BIG BAGS"}</div>
+                    <div>{item.marksAndNos || (isCombinedGroupInvoice ? "" : "BIG BAGS")}</div>
                     {idx === 0 && trucksStr && (
                       <div className="mt-4">
                         <div className="font-bold uppercase">TRUCK NO:</div>

@@ -598,6 +598,10 @@ export default function ShipmentsTable({
                             title="Shipment executed. Click to view or edit Stuffing Execution."
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (onExecuteStuffing && s.stuffingGroupShipments?.length > 1) {
+                                onExecuteStuffing(s);
+                                return;
+                              }
                               setStuffingShipment(s);
                             }}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 shadow-xs transition-colors cursor-pointer"
@@ -652,8 +656,17 @@ export default function ShipmentsTable({
         <ShipmentStuffingExecutionModal
           isOpen={!!stuffingShipment}
           shipment={stuffingShipment}
+          shipments={
+            stuffingShipment?.stuffingGroupShipments?.length > 1
+              ? stuffingShipment.stuffingGroupShipments
+              : undefined
+          }
           onClose={() => setStuffingShipment(null)}
           onSaveSuccess={(data) => {
+            const savedIds =
+              Array.isArray(data?.shipmentIds) && data.shipmentIds.length > 0
+                ? data.shipmentIds
+                : [stuffingShipment.id];
             const executedShipment = {
               ...stuffingShipment,
               status: "Executed",
@@ -665,7 +678,7 @@ export default function ShipmentsTable({
                 data?.record || stuffingShipment.stuffingExecution,
             };
             setExecutedShipmentIds(
-              (prev) => new Set([...prev, stuffingShipment.id]),
+              (prev) => new Set([...prev, ...savedIds]),
             );
             setStuffingShipment(null);
             if (onShipmentExecuted) onShipmentExecuted(executedShipment);
